@@ -18,6 +18,8 @@ Get up and running in 5 minutes with installation, your first script, and common
 | **[BTrace Tutorial](BTraceTutorial.md)** | Comprehensive lessons covering all features | All users, in-depth learning |
 | **[Troubleshooting Guide](Troubleshooting.md)** | Common errors, debugging, performance, compatibility | Problem-solving, debugging |
 | **[FAQ](FAQ.md)** | Common questions, best practices, comparisons | All users, decision-making |
+| **[MCP Server](MCPServer.md)** | Using BTrace from AI clients via the Model Context Protocol | AI-assisted debugging, LLM integrations |
+| **[Extension Registry](ExtensionRegistry.md)** | JSON catalog and GitHub workflow for discovering published extensions | Extension authors, platform maintainers |
 
 ## Learning Paths
 
@@ -52,6 +54,12 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 6. **Level Filtering** → [Quick Reference: @Level](QuickReference.md#level)
 7. **Extensions Architecture** → [Extension invokedynamic Bridge](architecture/ExtensionInvokeDynamicBridge.md)
 
+### I'm Working on AI/LLM Applications
+1. **Observe LLM API calls** → [Tutorial Lesson 12.1](BTraceTutorial.md#121-llm-inference-tracing-btrace-llm-trace) — token counts, latency, cost tracking
+2. **Observe RAG pipelines** → [Tutorial Lesson 12.2](BTraceTutorial.md#122-rag-pipeline-observability-btrace-rag-quality) — vector DB queries, similarity scores
+3. **Observe on-device inference** → [Tutorial Lesson 12.3](BTraceTutorial.md#123-gpu-and-inference-observability-btrace-gpu-bridge) — ONNX, DJL, TensorFlow
+4. **Use BTrace from an AI agent** → [MCP Server](MCPServer.md) for Claude Desktop, Claude Code, Cursor
+
 ## Documentation by Topic
 
 ### Core Features
@@ -66,6 +74,13 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 - **Level Control** → [Quick Reference: @Level](QuickReference.md#level)
 - **Aggregations** → [Quick Reference: Aggregation Functions](QuickReference.md#aggregation-functions)
 - **Periodic Events** → [Quick Reference: @OnTimer](QuickReference.md#ontimer), [@PeriodicEvent](QuickReference.md#periodicevent)
+- **Runtime Contracts** → [Tutorial Lesson 11](BTraceTutorial.md#lesson-11--runtime-contracts-btrace-contracts) — latency budgets, call-rate limits, assertions, tagged path profiling
+
+### AI/LLM Observability
+- **LLM Inference Tracing** → [Tutorial Lesson 12.1](BTraceTutorial.md#121-llm-inference-tracing-btrace-llm-trace) — token counts, latency, cost, streaming TTFT
+- **RAG Pipeline Observability** → [Tutorial Lesson 12.2](BTraceTutorial.md#122-rag-pipeline-observability-btrace-rag-quality) — vector DB queries, similarity scores, empty retrievals
+- **GPU / Inference Observability** → [Tutorial Lesson 12.3](BTraceTutorial.md#123-gpu-and-inference-observability-btrace-gpu-bridge) — ONNX Runtime, DJL, TensorFlow, Panama FFM
+- **AI Agents (MCP)** → [MCP Server](MCPServer.md) — connect Claude Desktop, Claude Code, or Cursor to live JVMs
 
 ### Deployment & Operations
 - **Installation** → [Getting Started: Installation](GettingStarted.md#installation)
@@ -88,11 +103,14 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 - **Third-Party Libraries** → [FAQ: Third-Party](FAQ.md#how-do-i-trace-methods-from-third-party-libraries)
 - **JMX Export** → [Quick Reference: @Export](QuickReference.md#export), [FAQ: Monitoring Integration](FAQ.md#can-i-integrate-btrace-with-monitoring-systems)
 - **Service Mesh** → [FAQ: Service Mesh](FAQ.md#does-btrace-work-with-service-meshes-istiolinkerd)
+- **AI / LLM Clients (MCP)** → [MCP Server](MCPServer.md) for Claude Desktop, Claude Code, Cursor
+- **Published Extensions** → [Extension Registry](ExtensionRegistry.md) for the catalog format and PR flow
 
 ### Architecture
 - **Masked JAR** → [Masked JAR Architecture](architecture/MaskedJarArchitecture.md) — single-JAR distribution with classdata masking
 - **v2 Binary Protocol** → [Version 2 Protocol Architecture](architecture/Version2ProtocolArchitecture.md) — custom binary serialization
 - **Extension Framework** → [Extension invokedynamic Bridge](architecture/ExtensionInvokeDynamicBridge.md), [Extension Configuration](architecture/ExtensionConfiguration.md), [Extension Manifest](architecture/ExtensionManifestFormat.md), [Extension Storage](architecture/ExtensionStorageDesign.md)
+- **Extension Catalog** → [Extension Registry](ExtensionRegistry.md) for the public registry contract
 - **Instrumentation** → [BTrace Instrumentation Analysis](architecture/BTraceInstrAnalysis.md)
 
 ## Sample Scripts

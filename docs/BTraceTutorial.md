@@ -1406,3 +1406,565 @@ btrace -n '/com\.example\..*/::/handle.*/ @return { time }' <PID>
 - Filters support simple comparisons only; no `&&`/`||`
 
 For complex scenarios — multiple probe points, state across probes, aggregations — convert to a full BTrace script. See the [Oneliner Guide](OnelinerGuide.md) for the complete syntax reference and more examples.
+
+---
+
+## Lesson 11 — Runtime Contracts (`btrace-contracts`)
+
+**Extension ID:** `btrace-contracts`  
+**Service class:** `io.btrace.contracts.ContractService`
+
+`ContractService` enforces behavioral invariants at runtime — latency budgets, call-rate limits, null checks, value-range assertions — without modifying the target code. All checks are non-throwing: a violation is counted internally and the target application keeps running. It also tracks call count and average latency per user-supplied tag, so you can compare any two code paths side by side (e.g. `"cached"` vs `"direct"`, `"v1"` vs `"v2"`).
+
+#### API
+
+```java
+void checkLatency(String contract, long durationNanos, long budgetNanos)
+void checkCallRate(String contract, int maxPerSecond)
+void assertCondition(String contract, boolean condition, String message)
+void checkRange(String contract, long value, long min, long max)
+void checkNotNull(String contract, Object value)
+void trackCodePath(String contract, long durationNanos, String tag)
+String getSummary()
+boolean hasViolations()
+long getTotalViolations()
+```
+
+#### Example — enforcing contracts on a service endpoint
+
+```java
+import io.btrace.contracts.ContractService;
+import io.btrace.core.annotations.*;
+import static io.btrace.BTrace.*;
+
+@BTrace
+public class ContractCheck {
+
+    @Injected private static ContractService contracts;
+
+    @OnMethod(
+        clazz  = "com.example.RecommendationService",
+        method = "recommend",
+        location = @Location(Kind.ENTRY)
+    )
+    public static void onEntry() {
+        contracts.checkCallRate("recommend/rate", 10);
+    }
+
+    @OnMethod(
+        clazz  = "com.example.RecommendationService",
+        method = "recommend",
+        location = @Location(Kind.RETURN)
+    )
+    public static void onReturn(@Return Object result, @Duration long dur) {
+        contracts.checkLatency("recommend/latency", dur, 500_000_000L);
+        contracts.checkNotNull("recommend/non-null-result", result);
+        contracts.trackCodePath("recommend", dur, "impl-a");
+    }
+
+    @OnEvent
+    public static void report() {
+        println(contracts.getSummary());
+        if (contracts.hasViolations()) {
+            println(strcat("Total violations: ", str(contracts.getTotalViolations())));
+        }
+    }
+
+    @OnTimer(15000)
+    public static void periodicReport() { report(); }
+}
+```
+
+Copy `btrace-contracts.jar` to `$BTRACE_HOME/extensions/`, then run:
+
+```bash
+btrace <PID> ContractCheck.java
+```
+
+---
+
+## Lesson 12 — AI/LLM Application Observability
+
+Modern Java applications increasingly embed LLM inference, RAG pipelines, and on-device model execution. BTrace ships three optional extension JARs that add purpose-built services for observing these workloads without modifying application code.
+
+All three extensions use the standard `@Injected` mechanism: declare a field in your BTrace script, annotate it, and BTrace wires up the implementation at deploy time. No reflection, no extra threads, no allocation on the hot path.
+
+#### 12.1 LLM Inference Tracing (`btrace-llm-trace`)
+
+**Extension ID:** `btrace-llm-trace`  
+**Service class:** `io.btrace.llm.LlmTraceService`  
+**Builder class:** `io.btrace.llm.CallRecord`
+
+`LlmTraceService` records LLM API calls: token counts (input, output, cache-read, cache-creation), latency, streaming time-to-first-token, errors, tool calls, and embeddings. It maintains per-model statistics — call count, total tokens, and latency min/mean/max — and estimates cost using a built-in pricing table covering Claude, GPT-4o, Gemini, and other common models. The implementation is thread-safe and allocation-free on the hot path via a `ThreadLocal`-pooled builder.
+
+##### Simple API
+
+```java
+void recordCall(String model, long durationNanos)
+void recordCall(String model, int inputTokens, int outputTokens, long durationNanos)
+CallRecord call(String model)            // returns a fluent builder
+void recordEmbedding(String model, int tokenCount, long durationNanos)
+void recordToolUse(String model, String toolName)
+void recordError(String model, String errorType, long durationNanos)
+String getSummary()
+double getEstimatedCostUsd()
+```
+
+The fluent builder lets you attach every detail of a call in one expression:
+
+```java
+llm.call("claude-sonnet-4-20250514")
+    .provider("anthropic")
+    .inputTokens(1500)
+    .outputTokens(300)
+    .cacheReadTokens(800)
+    .streaming()
+    .timeToFirstToken(200_000_000L)
+    .duration(durationNanos)
+    .record();
+```
+
+##### Full example — instrumenting LangChain4j
+
+The following script instruments the `ChatLanguageModel.generate()` method from the LangChain4j library and extracts token usage from the `AiMessage` response via `@Return`:
+
+```java
+import io.btrace.llm.LlmTraceService;
+import io.btrace.llm.CallRecord;
+import io.btrace.core.annotations.*;
+import static io.btrace.BTrace.*;
+
+@BTrace
+public class LlmTrace {
+
+    @Injected
+    private static LlmTraceService llm;
+
+    // @Duration is available at Kind.RETURN and Kind.ERROR — no manual timestamps needed.
+    // @ProbeClassName identifies the concrete implementation class at the probe site.
+
+    @OnMethod(
+        clazz  = "+dev.langchain4j.model.chat.ChatLanguageModel",
+        method = "generate",
+        location = @Location(Kind.RETURN)
+    )
+    public static void onChatReturn(@ProbeClassName String cls,
+                                    @Return Object response,
+                                    @Duration long durationNanos) {
+        // Extract token counts via BTrace field-access helpers.
+        // TokenUsage is nested inside Response<AiMessage>.
+        Object tokenUsage = get(
+            field("dev.langchain4j.model.output.Response", "tokenUsage"),
+            response);
+        int inputTokens  = 0;
+        int outputTokens = 0;
+        if (tokenUsage != null) {
+            inputTokens  = (Integer) get(
+                field("dev.langchain4j.model.output.TokenUsage", "inputTokenCount"),
+                tokenUsage);
+            outputTokens = (Integer) get(
+                field("dev.langchain4j.model.output.TokenUsage", "outputTokenCount"),
+                tokenUsage);
+        }
+
+        llm.call(cls)
+            .inputTokens(inputTokens)
+            .outputTokens(outputTokens)
+            .duration(durationNanos)
+            .record();
+    }
+
+    @OnMethod(
+        clazz  = "+dev.langchain4j.model.chat.ChatLanguageModel",
+        method = "generate",
+        location = @Location(Kind.ERROR)
+    )
+    public static void onChatError(@ProbeClassName String cls,
+                                   Throwable t,
+                                   @Duration long durationNanos) {
+        llm.recordError(cls, str(classOf(t)), durationNanos);
+    }
+
+    // Print a summary on demand (btrace send event) or every 60 seconds.
+    @OnEvent
+    public static void printSummary() {
+        println(llm.getSummary());
+        println(strcat("Estimated cost: $",
+                       str(llm.getEstimatedCostUsd())));
+    }
+
+    @OnTimer(60000)
+    public static void periodicSummary() {
+        printSummary();
+    }
+}
+```
+
+Copy `btrace-llm-trace.jar` to `$BTRACE_HOME/extensions/` — the agent discovers and loads it automatically. Then run as normal:
+
+```bash
+btrace <PID> LlmTrace.java
+```
+
+---
+
+#### 12.2 RAG Pipeline Observability (`btrace-rag-quality`)
+
+**Extension ID:** `btrace-rag-quality`  
+**Service class:** `io.btrace.rag.RagQualityService`  
+**Builder class:** `io.btrace.rag.QueryRecord`
+
+`RagQualityService` tracks vector database query performance, result counts, similarity scores, and end-to-end pipeline latency broken down into retrieval and generation phases. It counts empty retrievals and chunk token sizes and works with any vector store: Pinecone, Milvus, Weaviate, Chroma, pgvector, Qdrant, and others.
+
+##### Simple API
+
+```java
+void recordQuery(String source, long durationNanos)
+void recordQuery(String source, int resultCount, long durationNanos)
+QueryRecord query(String source)         // returns a fluent builder
+void recordPipeline(String pipelineName, long retrievalNanos, long generationNanos)
+void recordChunk(String source, int chunkTokens)
+void recordEmptyRetrieval(String source)
+String getSummary()
+float getAverageTopScore()
+```
+
+Fluent builder:
+
+```java
+rag.query("pinecone")
+    .resultCount(5)
+    .topScore(0.92f)
+    .lowScore(0.71f)
+    .embeddingDimension(1536)
+    .duration(durationNanos)
+    .record();
+```
+
+##### Full example — RAG pipeline with Pinecone and LangChain4j
+
+This script instruments the retrieval call to a Pinecone-backed `EmbeddingStore` and the downstream LLM call together, giving a unified view of the pipeline:
+
+```java
+import io.btrace.rag.RagQualityService;
+import io.btrace.rag.QueryRecord;
+import io.btrace.llm.LlmTraceService;
+import io.btrace.core.annotations.*;
+import static io.btrace.BTrace.*;
+
+@BTrace
+public class RagPipeline {
+
+    @Injected private static RagQualityService rag;
+    @Injected private static LlmTraceService   llm;
+
+    // Carries the retrieval duration from the retrieval handler into the pipeline
+    // handler, which runs after retrieval completes on the same thread.
+    @TLS private static long lastRetrievalDur;
+
+    // --- Retrieval phase ---
+
+    @OnMethod(
+        clazz  = "+dev.langchain4j.store.embedding.EmbeddingStore",
+        method = "findRelevant",
+        location = @Location(Kind.RETURN)
+    )
+    public static void onRetrievalReturn(@Return Object results,
+                                         @ProbeClassName String store,
+                                         @Duration long dur) {
+        int count = (results != null) ? (Integer) call(
+            method("java.util.List", "size"), results) : 0;
+
+        if (count == 0) {
+            rag.recordEmptyRetrieval(store);
+        } else {
+            rag.query(store)
+               .resultCount(count)
+               .duration(dur)
+               .record();
+        }
+        lastRetrievalDur = dur;
+    }
+
+    // --- Generation phase ---
+
+    @OnMethod(
+        clazz  = "+dev.langchain4j.chain.ConversationalRetrievalChain",
+        method = "execute",
+        location = @Location(Kind.ENTRY)
+    )
+    public static void onPipelineEntry() {
+        lastRetrievalDur = 0;
+    }
+
+    @OnMethod(
+        clazz  = "+dev.langchain4j.chain.ConversationalRetrievalChain",
+        method = "execute",
+        location = @Location(Kind.RETURN)
+    )
+    public static void onPipelineReturn(@ProbeClassName String cls,
+                                        @Duration long totalNanos) {
+        long generationNanos = totalNanos - lastRetrievalDur;
+        rag.recordPipeline(cls, lastRetrievalDur, generationNanos);
+        llm.recordCall(cls, generationNanos);
+    }
+
+    @OnEvent
+    public static void printSummary() {
+        println("=== RAG Summary ===");
+        println(rag.getSummary());
+        println(strcat("Average top similarity score: ",
+                       str(rag.getAverageTopScore())));
+        println("=== LLM Summary ===");
+        println(llm.getSummary());
+    }
+
+    @OnTimer(30000)
+    public static void periodicSummary() {
+        printSummary();
+    }
+}
+```
+
+Copy both extension JARs to `$BTRACE_HOME/extensions/`, then run:
+
+```bash
+btrace <PID> RagPipeline.java
+```
+
+---
+
+#### 12.3 GPU and Inference Observability (`btrace-gpu-bridge`)
+
+**Extension ID:** `btrace-gpu-bridge`  
+**Service class:** `io.btrace.gpu.GpuBridgeService`  
+**Builder class:** `io.btrace.gpu.InferenceRecord`
+
+`GpuBridgeService` traces the boundary between JVM code and GPU-accelerated inference runtimes: ONNX Runtime, Deep Java Library (DJL), TensorFlow Java, and Panama FFM calls into CUDA/ROCm native libraries. It tracks batch sizes, tensor dimensions, device type and ID, GPU memory allocation and deallocation, and model load times.
+
+##### Simple API
+
+```java
+void recordInference(String runtime, String modelName, long durationNanos)
+void recordInference(String runtime, String modelName, int batchSize, long durationNanos)
+InferenceRecord inference(String runtime, String modelName)   // fluent builder
+void recordMemoryAlloc(String deviceType, int deviceId, long bytes)
+void recordMemoryFree(String deviceType, int deviceId, long bytes)
+void recordNativeCall(String library, String function, long durationNanos)
+void recordModelLoad(String runtime, String modelName, long durationNanos)
+String getSummary()
+long getCurrentGpuMemoryBytes()
+long getPeakGpuMemoryBytes()
+```
+
+##### Example — instrumenting ONNX Runtime
+
+```java
+import io.btrace.gpu.GpuBridgeService;
+import io.btrace.gpu.InferenceRecord;
+import io.btrace.core.annotations.*;
+import static io.btrace.BTrace.*;
+
+@BTrace
+public class OnnxTrace {
+
+    @Injected private static GpuBridgeService gpu;
+
+    // @Self is available at Kind.RETURN, so no TLS is needed to carry the session reference.
+    // @Duration provides the call duration without manual timestamp diffing.
+
+    @OnMethod(
+        clazz  = "ai.onnxruntime.OrtSession",
+        method = "run",
+        location = @Location(Kind.RETURN)
+    )
+    public static void onRunReturn(@Self Object session, @Duration long dur) {
+        String modelPath = str(get(
+            field("ai.onnxruntime.OrtSession", "modelPath"), session));
+        gpu.inference("onnxruntime", modelPath)
+           .duration(dur)
+           .record();
+    }
+
+    @OnMethod(
+        clazz  = "ai.onnxruntime.OrtSession",
+        method = "run",
+        location = @Location(Kind.ERROR)
+    )
+    public static void onRunError(Throwable t, @Duration long dur) {
+        gpu.recordNativeCall("onnxruntime", "run/error", dur);
+    }
+
+    // @Duration at Kind.RETURN gives the load duration directly; no ENTRY handler needed.
+    @OnMethod(
+        clazz  = "ai.onnxruntime.OrtEnvironment",
+        method = "createSession",
+        location = @Location(Kind.RETURN)
+    )
+    public static void onLoadReturn(@Return Object sess, @Duration long dur) {
+        String mp = str(get(
+            field("ai.onnxruntime.OrtSession", "modelPath"), sess));
+        gpu.recordModelLoad("onnxruntime", mp, dur);
+    }
+
+    @OnEvent
+    public static void printSummary() {
+        println(gpu.getSummary());
+        println(strcat("Current GPU memory: ",
+                       str(gpu.getCurrentGpuMemoryBytes() / (1024 * 1024)) + " MB"));
+        println(strcat("Peak GPU memory:    ",
+                       str(gpu.getPeakGpuMemoryBytes()    / (1024 * 1024)) + " MB"));
+    }
+
+    @OnTimer(60000)
+    public static void periodicSummary() {
+        printSummary();
+    }
+}
+```
+
+Copy `btrace-gpu-bridge.jar` to `$BTRACE_HOME/extensions/`, then run:
+
+```bash
+btrace <PID> OnnxTrace.java
+```
+
+---
+
+#### Using multiple AI extensions together
+
+All four extensions can be combined in a single script. Copy all the extension JARs you need to `$BTRACE_HOME/extensions/` — the agent discovers and loads them automatically:
+
+```bash
+cp btrace-llm-trace.jar btrace-rag-quality.jar \
+   btrace-gpu-bridge.jar \
+   $BTRACE_HOME/extensions/
+btrace <PID> MyAIObservability.java
+```
+
+When using the fat agent at JVM startup, the same rule applies — extensions under `$BTRACE_HOME/extensions/` are loaded automatically:
+
+```bash
+java -javaagent:btrace.jar=script=MyAIObservability.java -jar myapp.jar
+```
+
+Use `@OnEvent` for on-demand reporting triggered by `btrace send event <PID>` and `@OnTimer` for periodic snapshots. Both can coexist in the same script.
+
+---
+
+## Lesson 13 — BTrace MCP Server: AI Agents as Diagnosticians
+
+#### What is MCP?
+
+MCP (Model Context Protocol) is a protocol that lets AI assistants call external tools during a conversation. Instead of the AI only producing text, it can invoke structured operations — search, read a file, query a database — and incorporate the results into its response. The BTrace MCP server exposes BTrace operations as MCP tools, so an LLM client such as Claude Desktop or Claude Code can attach to running JVMs, deploy probes, read output, and clean up — all through natural language conversation.
+
+#### How the BTrace MCP server works
+
+The BTrace MCP server runs as a local subprocess on the same machine as the target JVM. The AI client starts and manages the server process; you do not need to keep a terminal open for it. When the AI calls a BTrace tool, the server forwards the request to the BTrace agent (or attaches one if none is present) and returns the result. Because the server only connects to local JVMs, and because BTrace's safety model — no loops, no allocation, no exceptions, no field assignment — still applies to every probe, the AI cannot break or hang the target application.
+
+#### Starting the server manually
+
+For testing or scripting, you can start the MCP server directly:
+
+```bash
+java -jar btrace-mcp-server.jar
+```
+
+By default the server listens on `stdio` (the MCP transport used by most clients) and connects to the BTrace agent on port 2020. Override the port with:
+
+```bash
+java -Dbtrace.port=2021 -jar btrace-mcp-server.jar
+```
+
+Or via the environment variable `BTRACE_PORT=2021`.
+
+If no BTrace agent is attached to the target JVM, the `deploy_oneliner` and `deploy_script` tools auto-attach one using the JVM's attach API — no extra step required.
+
+#### Client setup
+
+See [MCPServer.md](MCPServer.md) for per-client configuration instructions covering Claude Desktop, Claude Code, Cursor, OpenAI Codex CLI, VS Code, Windsurf, Continue.dev, and Zed. Every client follows the same pattern — point it at `btrace-mcp-server.jar` as the server command — but the configuration file location and schema differ slightly between hosts.
+
+#### Available tools
+
+| Tool | Description |
+|---|---|
+| `list_jvms` | List all local JVMs with their PIDs, main class, and BTrace attachment status |
+| `deploy_oneliner` | Deploy a single-expression probe using oneliner syntax (auto-attaches agent) |
+| `deploy_script` | Deploy a full BTrace script file to a target JVM |
+| `list_probes` | List active probes on a target JVM |
+| `send_event` | Send a named event to trigger `@OnEvent` handlers |
+| `detach_probe` | Detach a single probe without stopping BTrace |
+| `exit_probe` | Stop all BTrace probes and detach the agent from the JVM |
+
+#### Available prompts
+
+The server ships three pre-built diagnostic workflows that the AI can invoke as structured prompts:
+
+| Prompt | What it does |
+|---|---|
+| `diagnose_slow_endpoint` | Attaches timing probes to HTTP handler methods and reports latency distribution |
+| `find_exception_source` | Traces exception construction and propagation across the call stack |
+| `profile_method` | Measures throughput and latency of a named method over a configurable window |
+
+#### Example conversation
+
+The following exchange shows how an AI assistant uses BTrace MCP tools to diagnose a slow HTTP endpoint. Lines marked `[tool]` represent MCP tool calls made by the AI during the conversation.
+
+---
+
+**User:** My `/recommendations` endpoint is taking over two seconds. Can you help me find out why?
+
+**AI:** I will start by finding which JVMs are running on this machine.
+
+`[tool: list_jvms]`
+
+```
+PID    MAIN CLASS                          BTRACE
+12345  com.example.app.ApplicationMain     not attached
+```
+
+I found your application at PID 12345. Let me deploy a timing probe to the HTTP handler layer.
+
+`[tool: deploy_oneliner]`
+```
+pid: 12345
+probe: /com\.example\..*/::/.*recommendations.*/i @return { time }
+```
+
+```
+Probe deployed. Waiting for output…
+[12345] com.example.recommendation.RecommendationController.handle: 2341 ms
+[12345] com.example.recommendation.RecommendationController.handle: 2289 ms
+```
+
+The controller itself is taking over two seconds. Let me look inside it — I will check whether the delay is in the database call or the LLM call.
+
+`[tool: deploy_oneliner]`
+```
+pid: 12345
+probe: /com\.example\.recommendation\..*/::/.+/ @return { time }
+```
+
+```
+[12345] RecommendationRepository.findCandidates:  1987 ms
+[12345] LlmRankingService.rank:                    312 ms
+```
+
+The database retrieval accounts for most of the latency. The LLM ranking step is fast. Let me clean up the probes.
+
+`[tool: exit_probe]`
+```
+pid: 12345
+```
+
+```
+BTrace agent detached from PID 12345.
+```
+
+**AI:** The bottleneck is `RecommendationRepository.findCandidates`, which takes roughly 2 seconds out of the total 2.3 seconds. The LLM ranking step adds only about 300 ms. I recommend investigating the query or index used by `findCandidates` — adding an index on the candidate-selection columns would likely resolve most of the latency.
+
+---
+
+#### Security note
+
+The BTrace MCP server only attaches to JVMs on the local machine; it cannot connect to remote processes. Every probe the AI deploys goes through BTrace's standard verifier, which enforces the same restrictions as any other BTrace script: no loops, no object allocation, no exceptions, no field writes. The AI can observe your application in detail but cannot alter its behavior or cause it to crash.

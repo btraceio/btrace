@@ -638,7 +638,7 @@ task buildDockerContext(type: Copy, dependsOn: [btraceJar, copyDtraceLib, proces
 
     from "${distTarget}"
     into layout.buildDirectory.dir("docker-context/btrace")
-    fileMode = 0644
+    filePermissions { unix(0644) }
 
     doLast {
         // Copy entrypoint script
@@ -807,7 +807,7 @@ task buildDockerImages {
         description "Generates Javadoc API documentation for the btrace-${name}."
 
         title = "btrace-${name}"
-        destinationDir = file("${project.docsDir}/${name}/javadoc")
+        destinationDir = layout.buildDirectory.dir("docs/${name}/javadoc").get().asFile
         classpath = files(compileJava.destinationDirectory) + configurations.artifact.asFileTree
         options.addStringOption('Xdoclint:all,-missing', '-quiet')
         failOnError false

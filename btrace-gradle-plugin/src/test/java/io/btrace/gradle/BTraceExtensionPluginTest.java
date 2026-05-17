@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -154,6 +155,111 @@ class BTraceExtensionPluginTest {
         }
     }
 
+    @Test
+    @DisplayName("updateRegistryCatalog writes entry into local registry checkout")
+    void updateRegistryCatalogWritesLocalRegistry() throws IOException {
+        Path registryDir = projectDir.resolve("registry-repo");
+        Files.createDirectories(registryDir.resolve("registry"));
+        writeFile(
+                registryDir.resolve("registry/extensions.json"),
+                "{\n"
+                        + "  \"schema_version\": 1,\n"
+                        + "  \"extensions\": []\n"
+                        + "}\n");
+
+        writeExtensionProject(
+                "btraceRegistry {\n"
+                        + "  prMode = 'off'\n"
+                        + "  verifyPublishedCoordinates = false\n"
+                        + "  registryWorktreeDir = file('"
+                        + registryDir.toString().replace("\\", "/")
+                        + "')\n"
+                        + "  tags = ['metrics']\n"
+                        + "}\n");
+
+        BuildResult result = createRunner().withArguments(":ext:updateRegistryCatalog").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":ext:updateRegistryCatalog").getOutcome());
+        String json =
+                Files.readString(
+                        registryDir.resolve("registry/extensions.json"), StandardCharsets.UTF_8);
+        assertTrue(json.contains("\"id\" : \"test.ext\""));
+        assertTrue(json.contains("\"artifactId\" : \"ext\""));
+        assertTrue(json.contains("\"version\" : \"1.0\""));
+    }
+
+    @Test
+    @DisplayName("updateRegistryCatalog uses a fork-based PR when no direct push repo is configured")
+    void updateRegistryCatalogUsesForkBasedPr() throws IOException {
+        Path registryDir = projectDir.resolve("registry-repo");
+        Files.createDirectories(registryDir.resolve("registry"));
+        writeFile(
+                registryDir.resolve("registry/extensions.json"),
+                "{\n"
+                        + "  \"schema_version\": 1,\n"
+                        + "  \"extensions\": []\n"
+                        + "}\n");
+        initGitRepo(registryDir);
+
+        Path forkRemote = projectDir.resolve("registry-fork.git");
+        runCommand(projectDir, "git", "init", "--bare", forkRemote.toString());
+
+        Path ghScript = projectDir.resolve("fake-gh.sh");
+        Path prLog = projectDir.resolve("gh-pr.log");
+        writeFile(
+                ghScript,
+                "#!/bin/sh\n"
+                        + "set -eu\n"
+                        + "if [ \"$1\" = \"repo\" ] && [ \"$2\" = \"fork\" ]; then\n"
+                        + "  if git remote get-url registry-fork >/dev/null 2>&1; then\n"
+                        + "    git remote set-url registry-fork '" + forkRemote.toString().replace("\\", "/") + "'\n"
+                        + "  else\n"
+                        + "    git remote add registry-fork '" + forkRemote.toString().replace("\\", "/") + "'\n"
+                        + "  fi\n"
+                        + "  exit 0\n"
+                        + "fi\n"
+                        + "if [ \"$1\" = \"api\" ] && [ \"$2\" = \"user\" ]; then\n"
+                        + "  echo 'fork-user'\n"
+                        + "  exit 0\n"
+                        + "fi\n"
+                        + "if [ \"$1\" = \"pr\" ] && [ \"$2\" = \"create\" ]; then\n"
+                        + "  printf '%s\\n' \"$@\" > '" + prLog.toString().replace("\\", "/") + "'\n"
+                        + "  exit 0\n"
+                        + "fi\n"
+                        + "echo 'unexpected gh args: '$* >&2\n"
+                        + "exit 1\n");
+        ghScript.toFile().setExecutable(true);
+
+        writeExtensionProject(
+                "btraceRegistry {\n"
+                        + "  prMode = 'auto'\n"
+                        + "  verifyPublishedCoordinates = false\n"
+                        + "  registryWorktreeDir = file('"
+                        + registryDir.toString().replace("\\", "/")
+                        + "')\n"
+                        + "  githubCli = '"
+                        + ghScript.toString().replace("\\", "/")
+                        + "'\n"
+                        + "  tags = ['metrics']\n"
+                        + "}\n");
+
+        BuildResult result = createRunner().withArguments(":ext:updateRegistryCatalog").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":ext:updateRegistryCatalog").getOutcome());
+        String json =
+                Files.readString(
+                        registryDir.resolve("registry/extensions.json"), StandardCharsets.UTF_8);
+        assertTrue(json.contains("\"id\" : \"test.ext\""));
+        assertTrue(json.contains("\"artifactId\" : \"ext\""));
+        assertTrue(json.contains("\"version\" : \"1.0\""));
+
+        String prArgs = Files.readString(prLog, StandardCharsets.UTF_8);
+        assertTrue(prArgs.contains("--repo"));
+        assertTrue(prArgs.contains("btraceio/btrace-extensions"));
+        assertTrue(prArgs.contains("--head"));
+        assertTrue(prArgs.contains("fork-user:btrace-registry/ext-1.0"));
+    }
+
     private void writeStubCoreProject() throws IOException {
         Path dir = projectDir.resolve("btrace-core");
         Files.createDirectories(dir.resolve("src/main/java/org/openjdk/btrace/core/extensions"));
@@ -219,6 +325,10 @@ class BTraceExtensionPluginTest {
     }
 
     private void writeExtensionProject() throws IOException {
+        writeExtensionProject("");
+    }
+
+    private void writeExtensionProject(String extraBuildLogic) throws IOException {
         Path dir = projectDir.resolve("ext");
         Files.createDirectories(dir.resolve("src/main/java/com/example/api"));
         Files.createDirectories(dir.resolve("src/main/java/com/example/impl"));
@@ -228,7 +338,7 @@ class BTraceExtensionPluginTest {
                 "plugins {\n"
                         + "  id 'java-library'\n"
                         + "  id 'io.btrace.extension'\n"
-                        + "  id 'com.github.johnrengelman.shadow'\n"
+                        + "  id 'com.gradleup.shadow'\n"
                         + "}\n"
                         + "group = 'com.example'\n"
                         + "version = '1.0'\n"
@@ -242,7 +352,8 @@ class BTraceExtensionPluginTest {
                         + "  services = ['com.example.api.PublicService']\n"
                         + "  requiredPermissions = ['NONE']\n"
                         + "  scanPermissions = false\n"
-                        + "}\n");
+                        + "}\n"
+                        + extraBuildLogic);
         writeFile(
                 dir.resolve("src/main/java/com/example/api/PublicValue.java"),
                 "package com.example.api;\n"
@@ -322,6 +433,10 @@ class BTraceExtensionPluginTest {
                 projectDir.resolve(
                         "buildSrc/src/main/resources/META-INF/gradle-plugins/com.github.johnrengelman.shadow.properties"),
                 "implementation-class=com.github.jengelman.gradle.plugins.shadow.ShadowPlugin\n");
+        writeFile(
+                projectDir.resolve(
+                        "buildSrc/src/main/resources/META-INF/gradle-plugins/com.gradleup.shadow.properties"),
+                "implementation-class=com.github.jengelman.gradle.plugins.shadow.ShadowPlugin\n");
     }
 
     private GradleRunner createRunner() {
@@ -330,6 +445,33 @@ class BTraceExtensionPluginTest {
                 .withPluginClasspath()
                 .withDebug(true)
                 .forwardOutput();
+    }
+
+    private void initGitRepo(Path dir) throws IOException {
+        runCommand(dir, "git", "init");
+        runCommand(dir, "git", "-C", dir.toString(), "config", "user.name", "Test User");
+        runCommand(dir, "git", "-C", dir.toString(), "config", "user.email", "test@example.com");
+        runCommand(dir, "git", "-C", dir.toString(), "add", ".");
+        runCommand(dir, "git", "-C", dir.toString(), "commit", "-m", "init");
+    }
+
+    private void runCommand(Path dir, String... command) throws IOException {
+        ProcessBuilder builder = new ProcessBuilder(command);
+        builder.directory(dir.toFile());
+        builder.redirectErrorStream(true);
+        Process process = builder.start();
+        String output;
+        try (InputStream stream = process.getInputStream()) {
+            output = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        try {
+            if (process.waitFor() != 0) {
+                throw new IOException("Command failed: " + String.join(" ", command) + "\n" + output);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while running: " + String.join(" ", command), e);
+        }
     }
 
     private void writeFile(Path path, String content) throws IOException {

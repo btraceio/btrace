@@ -34,19 +34,19 @@ class BTraceExtensionPlugin implements Plugin<Project> {
         // Try to ensure Shadow is available; if resolution is blocked, we will emit a clear
         // error later with guidance. This is best-effort and safe when already applied.
         try {
-            if (!project.pluginManager.hasPlugin('com.github.johnrengelman.shadow')) {
+            if (!project.pluginManager.hasPlugin('com.gradleup.shadow')) {
                 // Respect opt-out
                 def ext = project.extensions.findByType(BTraceExtensionMetadata)
                 boolean shouldAutoApply = (ext == null) ? true : (ext.autoApplyShadow != false)
                 if (shouldAutoApply) {
-                    project.logger.lifecycle("[BTRACE-EXT] Applying Shadow plugin automatically (com.github.johnrengelman.shadow) for ${project.path}")
-                    project.pluginManager.apply('com.github.johnrengelman.shadow')
+                    project.logger.lifecycle("[BTRACE-EXT] Applying Shadow plugin automatically (com.gradleup.shadow) for ${project.path}")
+                    project.pluginManager.apply('com.gradleup.shadow')
                 } else {
                     project.logger.lifecycle("[BTRACE-EXT] Shadow auto-apply disabled (btraceExtension.autoApplyShadow=false) for ${project.path}")
                 }
             }
         } catch (Throwable t) {
-            project.logger.warn("[BTRACE-EXT] Unable to auto-apply Shadow plugin: ${t.message}. Apply it explicitly via plugins { id 'com.github.johnrengelman.shadow' } or alias(libs.plugins.shadow), or set btraceExtension.autoApplyShadow=true.")
+            project.logger.warn("[BTRACE-EXT] Unable to auto-apply Shadow plugin: ${t.message}. Apply it explicitly via plugins { id 'com.gradleup.shadow' } or alias(libs.plugins.shadow), or set btraceExtension.autoApplyShadow=true.")
         }
 
         // Create extension for metadata
@@ -604,7 +604,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
 
         // Task: Build Implementation JAR (requires Shadow plugin applied by the consumer project)
         def implJarProviderRef = new Object[1]
-        project.pluginManager.withPlugin('com.github.johnrengelman.shadow') {
+        project.pluginManager.withPlugin('com.gradleup.shadow') {
             def shadowJarProvider = project.tasks.named('shadowJar', Jar)
             project.afterEvaluate {
                 shadowJarProvider.configure {
@@ -634,7 +634,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
         def buildImplJar = project.tasks.register('buildImplJar') {
             doFirst {
                 if (implJarProviderRef[0] == null) {
-                    throw new IllegalStateException("Shadow plugin ('com.github.johnrengelman.shadow') must be applied in the project using the BTrace extension plugin.")
+                    throw new IllegalStateException("Shadow plugin ('com.gradleup.shadow') must be applied in the project using the BTrace extension plugin.")
                 }
             }
             dependsOn { implJarProviderRef[0] }
@@ -646,7 +646,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                 def ext = project.extensions.findByType(BTraceExtensionMetadata)
                 boolean autoApplied = (ext == null) ? true : (ext.autoApplyShadow != false)
                 String hint = autoApplied ? "Ensure the Shadow plugin is resolvable/available." : "Enable auto-apply (btraceExtension.autoApplyShadow=true) or apply Shadow explicitly."
-                throw new GradleException("[BTRACE-EXT] Shadow plugin is required for ${project.path}. Apply id 'com.github.johnrengelman.shadow' (or alias(libs.plugins.shadow)). ${hint}")
+                throw new GradleException("[BTRACE-EXT] Shadow plugin is required for ${project.path}. Apply id 'com.gradleup.shadow' (or alias(libs.plugins.shadow)). ${hint}")
             }
             def implArchiveProvider = ((org.gradle.api.tasks.TaskProvider) implJarProviderRef[0]).flatMap { it.archiveFile }
             buildApiJar.configure {
@@ -1371,6 +1371,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
             project.tasks.matching { it.name == 'check' }.configureEach { it.dependsOn validateServiceApis }
         }
     }
+
 }
 
 class BTraceExtensionMetadata {

@@ -108,7 +108,9 @@ final class Installer {
         throw new IOException("Failed to download extension from provided repositories.");
     } else {
       throw new IllegalArgumentException(
-          "Unrecognized input: provide a zip path, URL, or group:artifact:version");
+          "Unrecognised target: '"
+              + target
+              + "'. Expected a URL, .zip path, or groupId:artifactId:version coordinate.");
     }
 
     // Validate zip contains -api.jar and -impl.jar, and install

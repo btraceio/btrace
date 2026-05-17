@@ -1,0 +1,28 @@
+// MCP server requires Java 11+ (uses ConcurrentHashMap.forEach, etc.)
+compileJava {
+    sourceCompatibility = 11
+    targetCompatibility = 11
+}
+
+dependencies {
+    implementation libs.slf4j
+    implementation libs.slf4j.simple
+
+    def toolsJar = getToolsJar()
+    if (toolsJar.getAsFile().exists()) {
+        compileOnly files("${toolsJar}")
+    }
+
+    implementation project(':btrace-core')
+    implementation project(':btrace-client')
+    implementation project(':btrace-compiler')
+    implementation project(':btrace-boot')
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'io.btrace.mcp.BTraceMcpServer'
+        )
+    }
+}

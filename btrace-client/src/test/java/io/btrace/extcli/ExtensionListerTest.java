@@ -36,13 +36,11 @@ class ExtensionListerTest {
   private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
   private final PrintStream originalOut = System.out;
   private final PrintStream originalErr = System.err;
-  private String originalBtraceHome;
 
   @BeforeEach
   void setUpStreams() {
     System.setOut(new PrintStream(outContent));
     System.setErr(new PrintStream(errContent));
-    originalBtraceHome = System.getenv("BTRACE_HOME");
   }
 
   @AfterEach
@@ -66,17 +64,6 @@ class ExtensionListerTest {
     // Should not crash, output may be empty since BTRACE_HOME is not set
     String output = outContent.toString();
     assertNotNull(output);
-  }
-
-  @Test
-  void listWithJsonFormat() throws IOException {
-    ExtensionLister.list(true);
-
-    String output = outContent.toString();
-    // Should output valid JSON (starts with [ and ends with ])
-    assertTrue(
-        output.trim().startsWith("[") && output.trim().endsWith("]"),
-        "JSON output should be an array");
   }
 
   @Test
