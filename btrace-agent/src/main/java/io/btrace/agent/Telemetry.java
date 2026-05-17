@@ -26,7 +26,7 @@ final class Telemetry {
 
   // Public project API key — safe to commit (PostHog design intent).
   // Replace with the actual key from your PostHog project settings.
-  static final String API_KEY = "phc_REPLACE_WITH_YOUR_KEY";
+  static final String API_KEY = "phc_tGurJ2fAYeouW4k8Txkn3zrfrKgoiuXgrAJP33ufX9Hv";
 
   static final String ENDPOINT = "https://app.posthog.com/capture/";
 
