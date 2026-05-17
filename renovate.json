@@ -5,13 +5,12 @@
     ":semanticCommits",
     "group:allNonMajor"
   ],
-  "baseBranches": ["develop"],
   "schedule": ["before 9am on monday"],
   "labels": ["dependencies"],
   "packageRules": [
     {
       "matchManagers": ["github-actions"],
-      "additionalLabels": ["github-actions"]
+      "addLabels": ["github-actions"]
     },
     {
       "matchUpdateTypes": ["minor", "patch"],
