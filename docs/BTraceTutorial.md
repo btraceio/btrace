@@ -2,6 +2,20 @@
 
 > **Note:** Examples use `btrace.jar` -- the single masked JAR (BTrace 2.2+). If using a legacy multi-JAR distribution, replace `btrace.jar` with `btrace-agent.jar` (and add `-Xbootclasspath/a:btrace-boot.jar` where needed).
 
+> **Package namespace:** BTrace 2.3+ uses the `io.btrace` package (previously `org.openjdk.btrace`). The compiler auto-injects `import static io.btrace.BTrace.*` into every script, so common helpers like `println`, `str`, `monotonic`, etc. are available without any import. Legacy probes compiled against `org.openjdk.btrace` are transparently migrated at load time.
+
+**Related documentation**
+
+| Document | What's in it |
+|----------|-------------|
+| [Getting Started](GettingStarted.md) | Installation, first run |
+| [Quick Reference](QuickReference.md) | All annotations, parameters, built-in functions |
+| [Oneliner Guide](OnelinerGuide.md) | DTrace-style one-liners (`btrace -n '...'`) |
+| [Extension Development Guide](BTraceExtensionDevelopmentGuide.md) | Writing and shipping extensions |
+| [Extension Interface Rules](ExtensionInterfaceRules.md) | API design contract that the build enforces |
+| [FAQ](FAQ.md) | Common questions and answers |
+| [Troubleshooting](Troubleshooting.md) | Diagnosing agent and probe problems |
+
 ## 1. Hello World
 
 Accustoms the learner to 'btrace' command and the way it is used.
@@ -157,6 +171,8 @@ The syntax is straightforward - `./btracep <binary trace file>`. The tool will p
 #### Lesson 2 - Tracing methods
 
 This is the main purpose of BTrace - inject a custom code to custom locations to give the insights about the internal state and dynamics of the application.
+
+> **Import convention:** Code examples in this lesson use `import ...;` as a shorthand. In practice you need **no explicit imports at all**: the compiler auto-injects both `import static io.btrace.BTrace.*;` (utility methods like `println`, `str`, `monotonic`) and `import io.btrace.core.annotations.*;` (all BTrace annotations). The `import ...;` placeholder is kept in these examples only to signal which packages are in use. See [Lesson 7](#lesson-7---flat-dsl) for details.
 
 1. Getting just the information that any method is being executed
 ```java
@@ -470,6 +486,8 @@ public class HelloWorldTrace {
 
 Global callbacks are not directly related to the tracing code injection but they allow us to observe the global state and act correspondingly.
 
+> **Import convention:** Same as Lesson 2 — both annotation and utility imports are auto-injected; no explicit imports are required.
+
 #### __@OnExit__
 
 Called when the traced application is about to exit. Allows to capture the exit code.
@@ -698,6 +716,8 @@ specific methods.
 #### Lesson 6 - Extensions and Permissions
 
 BTrace supports extensions that provide additional functionality beyond the core tracing capabilities. Extensions can send metrics to external systems, integrate with DTrace, and more. To ensure safety, extensions require explicit permissions.
+
+> See the [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for the full guide on building and deploying extensions, and the [Extension Interface Rules](ExtensionInterfaceRules.md) for the API design contract.
 
 ##### Permission System
 
@@ -1053,3 +1073,336 @@ Please enter your option:
 ```
 
 This is useful for diagnosing issues when probes that rely on specific extensions are not working as expected.
+
+##### Writing Your Own Extension (Quick Start)
+
+Extensions are standalone Gradle projects that expose a typed service interface to BTrace scripts. The full workflow is covered in the [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md); the steps below are the minimum to get started.
+
+**1. Apply the BTrace extension Gradle plugin**
+
+```gradle
+plugins {
+    id("io.btrace.extension") version "<btraceVersion>"
+}
+
+btraceExtension {
+    id = "com.example.myext"
+    services = ["com.example.myext.api.MyService"]
+}
+```
+
+**2. Define the service API (what scripts see)**
+
+```java
+// src/main/java/com/example/myext/api/MyService.java
+package com.example.myext.api;
+
+public interface MyService {
+    void record(String key, long value);
+}
+```
+
+**3. Implement the service (stays isolated from scripts)**
+
+```java
+// src/main/java/com/example/myext/impl/MyServiceImpl.java
+package com.example.myext.impl;
+
+import com.example.myext.api.MyService;
+import io.btrace.ext.spi.Extension;
+
+public class MyServiceImpl extends Extension implements MyService {
+    @Override
+    public void record(String key, long value) {
+        // emit metric, write to log, etc.
+    }
+}
+```
+
+**4. Inject and use the service in a script**
+
+```java
+import io.btrace.core.annotations.*;
+import com.example.myext.api.MyService;
+
+@BTrace
+public class MyProbe {
+    @Injected
+    private static MyService myService;
+
+    @OnMethod(clazz="com.example.App", method="processRequest",
+              location=@Location(Kind.RETURN))
+    public static void onReturn(@Duration long d) {
+        myService.record("app.processRequest", d);
+    }
+}
+```
+
+The plugin generates the service descriptor manifest, computes the required permission set, and produces a distributable ZIP that installs under `$BTRACE_HOME/extensions/`. See the [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for detailed coverage of: classloader isolation, permission declarations, `@ExternalType` adapters, fat-agent embedding, and the full API design rules documented in [ExtensionInterfaceRules.md](ExtensionInterfaceRules.md).
+
+---
+
+#### Lesson 7 - Flat DSL
+
+BTrace 2.3+ ships a flat DSL class `io.btrace.BTrace` that exposes the most common helper operations as plain static methods. The compiler **automatically injects two imports** into every script:
+
+* `import static io.btrace.BTrace.*;` — all flat DSL helpers (`println`, `str`, `monotonic`, …)
+* `import io.btrace.core.annotations.*;` — all BTrace annotations (`@BTrace`, `@OnMethod`, `@TLS`, `@Level`, …)
+
+This means a minimal BTrace script requires **zero import statements** — just annotate your class and write the probe logic.
+
+##### What the flat DSL provides
+
+| Category | Methods |
+|----------|---------|
+| Output | `print(s)`, `println(s)`, `println()`, `printf(fmt, args...)` |
+| Strings | `str(o)`, `concat(a,b)`, `substr(s,start,end)`, `matches(s,regex)`, `startsWith(s,prefix)`, `endsWith(s,suffix)`, `length(s)` |
+| Numbers | `abs(l/d)`, `min(a,b)`, `max(a,b)` |
+| Time | `timestamp()` (wall clock ms), `monotonic()` (nanos) |
+| Thread | `currentThread()`, `threadName(t)`, `threadId(t)` |
+| Stack | `stackTrace()`, `printStack()`, `stackDepth()` |
+| Object | `className(o)`, `identity(o)`, `size(o)` |
+| Control | `exit(code)` |
+
+For everything else (aggregations, reflection, profiling, JFR, data structures, thread operations) use `BTraceUtils` or an injected extension service.
+
+##### Writing scripts without explicit imports
+
+Before (classic style):
+
+```java
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.*;
+
+@BTrace
+public class HelloWorldTrace {
+    @OnMethod(clazz="extra.HelloWorld", method="/.*/")
+    public static void onMethod(@ProbeMethodName String pmn) {
+        BTraceUtils.println("Hello from method " + pmn);
+    }
+}
+```
+
+After (modern zero-import style — both imports auto-injected by the compiler):
+
+```java
+@BTrace
+public class HelloWorldTrace {
+    @OnMethod(clazz="extra.HelloWorld", method="/.*/")
+    public static void onMethod(@ProbeMethodName String pmn) {
+        println("Hello from method " + pmn);
+    }
+}
+```
+
+You can still write the imports explicitly if you prefer (for IDE auto-complete, for example) — the compiler skips injection when they are already present:
+
+```java
+import static io.btrace.BTrace.*;
+import io.btrace.core.annotations.*;
+
+@BTrace
+public class HelloWorldTrace { ... }
+```
+
+##### Mixing flat DSL with BTraceUtils
+
+The flat DSL covers the most frequent operations. When you need something it does not offer, import `BTraceUtils` directly alongside it:
+
+```java
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.*;
+
+@BTrace
+public class HelloWorldTrace {
+    @OnMethod(clazz="extra.HelloWorld", method="/call.*/", location=@Location(Kind.RETURN))
+    public static void onMethod(@ProbeMethodName(fqn = true) String pmn,
+                                @Self Object thiz) {
+        // println/str come from the flat DSL (auto-injected)
+        println("Hello from method " + pmn);
+        // getInt/classOf come from BTraceUtils (explicit import)
+        println("field = " + str(BTraceUtils.getInt("field", thiz)));
+    }
+}
+```
+
+##### How it works under the hood
+
+At compile time, every `INVOKESTATIC` targeting `io.btrace.BTrace.*` is rewritten by the post-processor to an `INVOKEDYNAMIC` instruction that routes the call through `BTraceBootstrap`. This gives probe code stronger isolation from the target application's classloader hierarchy without any visible change in the script source.
+
+---
+
+#### Lesson 8 - Thread-Local Storage
+
+When a probe spans two separate handler methods — for example, recording a start time at method entry and computing duration at method return — you need per-thread state. BTrace provides the `@TLS` annotation for exactly this purpose: a field marked `@TLS` behaves like a `ThreadLocal`, with each thread seeing its own independent copy.
+
+__Note:__ Fields annotated with `@TLS` must be `static`. Primitive types and `String` are the most reliable choices; object references work too but require care because the field is null-initialized per thread on first access.
+
+##### Measuring per-thread duration
+
+```java
+import io.btrace.core.annotations.*;
+
+@BTrace
+public class HelloWorldTrace {
+    @TLS
+    private static long startTime;   // one copy per thread
+
+    @OnMethod(clazz="extra.HelloWorld", method="/call.*/")
+    public static void onEntry(@ProbeMethodName(fqn = true) String pmn) {
+        startTime = monotonic();     // record entry time for this thread
+        println("Entering " + pmn);
+    }
+
+    @OnMethod(clazz="extra.HelloWorld", method="/call.*/",
+              location=@Location(Kind.RETURN))
+    public static void onReturn(@ProbeMethodName(fqn = true) String pmn) {
+        long dur = monotonic() - startTime;
+        println(pmn + " took " + str(dur) + " ns");
+    }
+}
+```
+
+__Note:__ `@TLS` is reset to its zero/null value when the thread exits, so it is safe under thread pools where threads are reused across requests.
+
+---
+
+#### Lesson 9 - Instrumentation Levels
+
+Tracing everything at once can be overwhelming and expensive. The `@Level` annotation lets you define multiple probe handlers that are enabled at different _instrumentation levels_. At runtime you switch the active level through `@OnEvent` handlers, dialing the detail up or down without stopping and restarting the probe.
+
+##### Defining level-aware handlers
+
+```java
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.*;
+
+@BTrace
+public class HelloWorldTrace {
+    /**
+     * Level 0 (default): only trace entry into HelloWorld's own methods.
+     * Enabled when the instrumentation level equals exactly 0.
+     */
+    @OnMethod(clazz="extra.HelloWorld", method="/.*/",
+              enableAt=@Level("=0"))
+    public static void onMethodL0(@ProbeMethodName(fqn = true) String pmn) {
+        println("[L0] " + pmn);
+    }
+
+    /**
+     * Level 1+: trace the whole class hierarchy including subclasses.
+     * Enabled when the instrumentation level is 1 or higher.
+     */
+    @OnMethod(clazz="+extra.HelloWorld", method="/.*/",
+              enableAt=@Level(">=1"))
+    public static void onMethodL1(@ProbeMethodName(fqn = true) String pmn) {
+        println("[L1] " + pmn);
+    }
+
+    /** Raise to level 1 by sending a named event. */
+    @OnEvent("verbose")
+    public static void setVerbose() {
+        BTraceUtils.setInstrumentationLevel(1);
+        println("Switched to verbose tracing (level 1)");
+    }
+
+    /** Drop back to level 0. */
+    @OnEvent("quiet")
+    public static void setQuiet() {
+        BTraceUtils.setInstrumentationLevel(0);
+        println("Switched back to quiet tracing (level 0)");
+    }
+}
+```
+
+##### Level expression syntax
+
+| Expression | Meaning |
+|------------|---------|
+| `@Level` (no value) | Always enabled (default) |
+| `@Level("N")` | Level >= N (shorthand for `>=N`) |
+| `@Level("=N")` | Exactly level N |
+| `@Level(">N")` | Strictly greater than N |
+| `@Level(">=N")` | Greater than or equal to N |
+| `@Level("<N")` | Strictly less than N |
+| `@Level("<=N")` | Less than or equal to N |
+
+Where N is a non-negative integer.
+
+##### Switching levels from the command line
+
+While attached interactively (press Ctrl-C), choose option **2** or **3** to send an event. For the example above:
+
+```
+Please enter your option: 3
+Please enter event name: verbose
+```
+
+The `setVerbose()` handler fires immediately and BTrace retransforms the target classes to activate the higher-detail probes.
+
+---
+
+#### Lesson 10 - Oneliners
+
+For quick, ad-hoc investigations you do not need a `.java` file at all. BTrace supports **oneliners** via the `-n` flag: a compact, DTrace-inspired syntax that compiles to a full BTrace script internally.
+
+```bash
+btrace -n 'CLASS::METHOD @LOCATION [filter] { ACTION }' <PID>
+```
+
+##### Components
+
+| Part | Description |
+|------|-------------|
+| `CLASS` | Class name, wildcard (`*`, `**`), or `/regex/` |
+| `METHOD` | Method name, wildcards, or `/regex/`; `<init>` for constructors |
+| `@LOCATION` | `@entry`, `@return`, or `@error` |
+| `filter` | Optional: `if duration>100ms` or `if args[0]=="VALUE"` |
+| `ACTION` | One or more of `print`, `count`, `time`, `stack(N)`, separated by commas |
+
+##### Available identifiers in actions
+
+| Identifier | Available at | Description |
+|------------|-------------|-------------|
+| `method` | all | Method name |
+| `class` | all | Class name |
+| `args` | all | Method arguments array |
+| `self` | all | Receiver (`this`) |
+| `duration` | `@return`, `@error` | Execution time in nanoseconds |
+| `return` | `@return` | Return value |
+
+##### Examples
+
+**Print every call into `callA`:**
+```bash
+btrace -n 'extra.HelloWorld::callA @entry { print method, args }' <PID>
+```
+
+**Find calls slower than 5 ms:**
+```bash
+btrace -n 'extra.HelloWorld::* @return if duration>5ms { print method, duration }' <PID>
+```
+
+**Count all file opens:**
+```bash
+btrace -n 'java.io.FileInputStream::<init> @entry { count }' <PID>
+```
+
+**Print the stack when an `IOException` is constructed:**
+```bash
+btrace -n 'java.io.IOException::<init> @entry { print args, stack(8) }' <PID>
+```
+
+**Match methods by regex and time them:**
+```bash
+btrace -n '/com\.example\..*/::/handle.*/ @return { time }' <PID>
+```
+
+##### Limitations
+
+- Single probe point per oneliner (no `|`-separated multi-probe)
+- No `@call` location, no field access probes
+- No aggregations (histograms, averages) — use a full script for those
+- Filters support simple comparisons only; no `&&`/`||`
+
+For complex scenarios — multiple probe points, state across probes, aggregations — convert to a full BTrace script. See the [Oneliner Guide](OnelinerGuide.md) for the complete syntax reference and more examples.
