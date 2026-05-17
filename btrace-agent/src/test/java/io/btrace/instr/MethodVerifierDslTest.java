@@ -47,19 +47,13 @@ public class MethodVerifierDslTest {
     cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, "TestProbe", null, "java/lang/Object", null);
     cw.visitAnnotation("Lio/btrace/core/annotations/BTrace;", true).visitEnd();
     MethodVisitor mv =
-        cw.visitMethod(
-            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "probe", "()V", null, null);
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "probe", "()V", null, null);
     AnnotationVisitor av = mv.visitAnnotation("Lio/btrace/core/annotations/OnMethod;", true);
     av.visit("clazz", "java.lang.String");
     av.visitEnd();
     mv.visitCode();
     Handle bsm =
-        new Handle(
-            Opcodes.H_INVOKESTATIC,
-            bootstrapOwner,
-            "bootstrap",
-            BOOTSTRAP_DESC,
-            false);
+        new Handle(Opcodes.H_INVOKESTATIC, bootstrapOwner, "bootstrap", BOOTSTRAP_DESC, false);
     mv.visitInvokeDynamicInsn("println", "()V", bsm);
     mv.visitInsn(Opcodes.RETURN);
     mv.visitMaxs(1, 0);
