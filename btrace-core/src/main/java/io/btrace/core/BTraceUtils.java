@@ -16,7 +16,6 @@
  */
 package io.btrace.core;
 
-import io.btrace.BTrace;
 import io.btrace.core.annotations.OnMethod;
 import io.btrace.core.annotations.ProbeClassName;
 import io.btrace.core.annotations.ProbeMethodName;
