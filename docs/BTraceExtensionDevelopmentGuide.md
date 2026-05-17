@@ -1,10 +1,12 @@
 # BTrace Extension Development Guide
 
+> **New to BTrace?** Start with the [BTrace Tutorial](BTraceTutorial.md). The tutorial's [Lesson 6](BTraceTutorial.md#lesson-6---extensions-and-permissions) covers using existing extensions and includes a [Writing Your Own Extension quick-start](BTraceTutorial.md#writing-your-own-extension-quick-start) that links back here for full details.
+
 ## Overview
 
 BTrace extensions provide reusable services that can be injected into BTrace scripts. This guide covers the recommended, plugin-based workflow using a single Gradle module with a single authored source tree under `src/main`. The plugin still separates runtime artifacts, generates metadata, shades implementation dependencies, and prepares distributables.
 
-For API authoring rules that the build verifies, see `docs/ExtensionInterfaceRules.md`.
+For API authoring rules that the build verifies, see [ExtensionInterfaceRules.md](ExtensionInterfaceRules.md).
 
 ## Architecture
 
