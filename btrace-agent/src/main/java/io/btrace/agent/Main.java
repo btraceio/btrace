@@ -144,11 +144,15 @@ public final class Main {
 
   private static final Logger log = LoggerFactory.getLogger(Main.class);
 
+  private static volatile String agentMode = "unknown";
+
   public static void premain(String args, Instrumentation inst) {
+    agentMode = "premain";
     startAgent(args, inst);
   }
 
   public static void agentmain(String args, Instrumentation inst) {
+    agentMode = "agentmain";
     startAgent(args, inst);
   }
 
@@ -187,6 +191,7 @@ public final class Main {
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Parsing arguments");
       parseArgs();
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Arguments parsed");
+      Telemetry.fireAsync(readBTraceVersion(), agentMode);
       // settings are all built-up; set the logging system properties accordingly
       DebugSupport.initLoggers(settings.isDebug(), log);
 
