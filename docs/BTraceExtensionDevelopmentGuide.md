@@ -256,6 +256,31 @@ btraceExtension {
 
 At runtime, the agent consults this metadata to validate and enforce permissions.
 
+## Publishing and Registry Listing
+
+If you want users to discover your extension through the public catalog, publish the extension artifacts to Maven Central first and then add the extension to the BTrace registry.
+
+The registry bootstrap currently lives in this repository at [extension-registry/](/Users/jbachorik/src/btrace/extension-registry/README.md:1) and is intended to move to a dedicated GitHub repository with GitHub Pages hosting. The canonical entry shape is documented in [ExtensionRegistry.md](ExtensionRegistry.md).
+
+Registry entries store a single recommended base coordinate:
+
+```json
+{
+  "id": "my-extension",
+  "name": "My Extension",
+  "description": "What it does",
+  "owner": "example-org",
+  "source_repo": "https://github.com/example-org/my-extension",
+  "maven": {
+    "groupId": "org.example",
+    "artifactId": "my-extension",
+    "version": "1.2.3"
+  }
+}
+```
+
+Consumers are expected to resolve the standard BTrace extension artifacts from that base coordinate.
+
 ## Dependency Management
 
 - Keep the API free of external library types; prefer JDK and your API classes.

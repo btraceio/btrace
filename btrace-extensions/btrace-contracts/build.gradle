@@ -15,10 +15,10 @@ compileJava {
 }
 
 btraceExtension {
-    id = 'btrace-vibe-guard'
-    name = 'BTrace Vibe Guard'
-    description = 'Behavioral contracts and runtime validation for AI-generated code paths'
-    services = ['io.btrace.vibeguard.VibeGuardService']
+    id = 'btrace-contracts'
+    name = 'BTrace Contracts'
+    description = 'Runtime behavioral contracts: latency budgets, call-rate limits, value assertions, and tagged code path profiling'
+    services = ['io.btrace.contracts.ContractService']
 }
 
 dependencies {

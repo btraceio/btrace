@@ -14,20 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.btrace.vibeguard;
+package io.btrace.contracts;
 
 import io.btrace.core.extensions.Extension;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** Thread-safe behavioral contract enforcement with lock-free statistics. */
-public final class VibeGuardServiceImpl extends Extension implements VibeGuardService {
+public final class ContractServiceImpl extends Extension implements ContractService {
 
-  private final Map<String, ContractStats> contracts = new ConcurrentHashMap<>();
-  private final Map<String, RateWindow> rateWindows = new ConcurrentHashMap<>();
-  private final Map<String, CodePathStats> aiPaths = new ConcurrentHashMap<>();
-  private final Map<String, CodePathStats> humanPaths = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, ContractStats> contracts = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, RateWindow> rateWindows = new ConcurrentHashMap<>();
+  // contract -> tag -> stats
+  private final ConcurrentHashMap<String, ConcurrentHashMap<String, CodePathStats>> taggedPaths =
+      new ConcurrentHashMap<>();
 
   // ==================== Contract checks ====================
 
@@ -95,15 +99,10 @@ public final class VibeGuardServiceImpl extends Extension implements VibeGuardSe
   // ==================== Tracking ====================
 
   @Override
-  public void trackAiCodePath(String contract, long durationNanos) {
-    CodePathStats s = aiPaths.computeIfAbsent(contract, k -> new CodePathStats());
-    s.calls.incrementAndGet();
-    s.totalDurationNanos.addAndGet(durationNanos);
-  }
-
-  @Override
-  public void trackHumanCodePath(String contract, long durationNanos) {
-    CodePathStats s = humanPaths.computeIfAbsent(contract, k -> new CodePathStats());
+  public void trackCodePath(String contract, long durationNanos, String tag) {
+    ConcurrentHashMap<String, CodePathStats> byTag =
+        taggedPaths.computeIfAbsent(contract, k -> new ConcurrentHashMap<>());
+    CodePathStats s = byTag.computeIfAbsent(tag, k -> new CodePathStats());
     s.calls.incrementAndGet();
     s.totalDurationNanos.addAndGet(durationNanos);
   }
@@ -112,12 +111,12 @@ public final class VibeGuardServiceImpl extends Extension implements VibeGuardSe
 
   @Override
   public String getSummary() {
-    if (contracts.isEmpty() && aiPaths.isEmpty()) {
+    if (contracts.isEmpty() && taggedPaths.isEmpty()) {
       return "No contracts checked.";
     }
 
     StringBuilder sb = new StringBuilder();
-    sb.append("=== Vibe Guard Summary ===\n\n");
+    sb.append("=== Contract Summary ===\n\n");
 
     long totalChecks = 0;
     long totalViolations = 0;
@@ -140,7 +139,6 @@ public final class VibeGuardServiceImpl extends Extension implements VibeGuardSe
       }
       sb.append("\n");
 
-      // Latency stats if tracked
       long dur = s.totalDurationNanos.get();
       if (dur > 0 && checks > 0) {
         long avgMs = (dur / checks) / 1_000_000;
@@ -152,57 +150,51 @@ public final class VibeGuardServiceImpl extends Extension implements VibeGuardSe
         sb.append(", max ").append(maxMs).append("ms\n");
       }
 
-      // Last violation
       if (violations > 0 && s.lastViolationMessage != null) {
         sb.append("  Last: ").append(s.lastViolationMessage).append("\n");
       }
       sb.append("\n");
     }
 
-    // AI vs Human comparison
-    if (!aiPaths.isEmpty() || !humanPaths.isEmpty()) {
-      sb.append(
-          humanPaths.isEmpty() ? "--- AI Code Paths ---\n" : "--- AI vs Human Code Paths ---\n");
-      // Collect all contract names from both
-      ConcurrentHashMap<String, Boolean> allNames = new ConcurrentHashMap<>();
-      for (String k : aiPaths.keySet()) allNames.put(k, Boolean.TRUE);
-      for (String k : humanPaths.keySet()) allNames.put(k, Boolean.TRUE);
+    if (!taggedPaths.isEmpty()) {
+      sb.append("--- Tracked Code Paths ---\n");
+      for (Map.Entry<String, ConcurrentHashMap<String, CodePathStats>> e :
+          taggedPaths.entrySet()) {
+        String contractName = e.getKey();
+        Map<String, CodePathStats> byTag = e.getValue();
 
-      for (String name : allNames.keySet()) {
-        CodePathStats ai = aiPaths.get(name);
-        CodePathStats human = humanPaths.get(name);
+        List<String> tags = new ArrayList<>(byTag.keySet());
+        Collections.sort(tags);
 
-        sb.append("  ").append(name).append(": ");
-        if (ai != null) {
-          long aiCalls = ai.calls.get();
-          long aiAvgMs = aiCalls > 0 ? (ai.totalDurationNanos.get() / aiCalls) / 1_000_000 : 0;
-          sb.append("AI ").append(aiCalls).append(" calls avg ").append(aiAvgMs).append("ms");
-        }
-        if (ai != null && human != null) sb.append(" | ");
-        if (human != null) {
-          long hCalls = human.calls.get();
-          long hAvgMs = hCalls > 0 ? (human.totalDurationNanos.get() / hCalls) / 1_000_000 : 0;
-          sb.append("Human ").append(hCalls).append(" calls avg ").append(hAvgMs).append("ms");
+        sb.append("  ").append(contractName).append(":\n");
+        for (String tag : tags) {
+          CodePathStats s = byTag.get(tag);
+          long calls = s.calls.get();
+          long avgMs = calls > 0 ? (s.totalDurationNanos.get() / calls) / 1_000_000 : 0;
+          sb.append("    ").append(tag).append(": ").append(calls).append(" calls  avg ")
+              .append(avgMs).append("ms\n");
         }
 
-        // Performance comparison
-        if (ai != null && human != null) {
-          long aiCalls = ai.calls.get();
-          long hCalls = human.calls.get();
-          if (aiCalls > 0 && hCalls > 0) {
-            long aiAvg = ai.totalDurationNanos.get() / aiCalls;
-            long hAvg = human.totalDurationNanos.get() / hCalls;
-            if (hAvg > 0) {
-              long pctDiff = ((aiAvg - hAvg) * 100) / hAvg;
-              if (pctDiff > 0) {
-                sb.append(" [AI ").append(pctDiff).append("% slower]");
-              } else if (pctDiff < 0) {
-                sb.append(" [AI ").append(-pctDiff).append("% faster]");
+        // Cross-compare when exactly 2 tags
+        if (tags.size() == 2) {
+          CodePathStats s0 = byTag.get(tags.get(0));
+          CodePathStats s1 = byTag.get(tags.get(1));
+          long c0 = s0.calls.get(), c1 = s1.calls.get();
+          if (c0 > 0 && c1 > 0) {
+            long avg0 = s0.totalDurationNanos.get() / c0;
+            long avg1 = s1.totalDurationNanos.get() / c1;
+            if (avg1 > 0) {
+              long pct = ((avg0 - avg1) * 100) / avg1;
+              if (pct > 0) {
+                sb.append("    [").append(tags.get(0)).append(' ').append(pct)
+                    .append("% slower than ").append(tags.get(1)).append("]\n");
+              } else if (pct < 0) {
+                sb.append("    [").append(tags.get(0)).append(' ').append(-pct)
+                    .append("% faster than ").append(tags.get(1)).append("]\n");
               }
             }
           }
         }
-        sb.append("\n");
       }
       sb.append("\n");
     }
@@ -254,8 +246,7 @@ public final class VibeGuardServiceImpl extends Extension implements VibeGuardSe
   public void reset() {
     contracts.clear();
     rateWindows.clear();
-    aiPaths.clear();
-    humanPaths.clear();
+    taggedPaths.clear();
   }
 
   @Override
@@ -319,14 +310,12 @@ public final class VibeGuardServiceImpl extends Extension implements VibeGuardSe
       int bucket = (int) ((nowNanos / BUCKET_NS) % BUCKETS);
       long bucketTime = (nowNanos / BUCKET_NS) * BUCKET_NS;
 
-      // Reset bucket if stale
       if (timestamps[bucket].get() != bucketTime) {
         timestamps[bucket].set(bucketTime);
         counts[bucket].set(0);
       }
       counts[bucket].incrementAndGet();
 
-      // Sum all non-stale buckets
       long total = 0;
       long windowStart = nowNanos - (BUCKETS * BUCKET_NS);
       for (int i = 0; i < BUCKETS; i++) {

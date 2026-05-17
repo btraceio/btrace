@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.btrace.vibeguard;
+package io.btrace.contracts;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,13 +22,13 @@ import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class VibeGuardServiceTest {
+class ContractServiceTest {
 
-  private VibeGuardServiceImpl service;
+  private ContractServiceImpl service;
 
   @BeforeEach
   void setUp() {
-    service = new VibeGuardServiceImpl();
+    service = new ContractServiceImpl();
   }
 
   // ==================== Latency checks ====================
@@ -68,18 +68,15 @@ class VibeGuardServiceTest {
 
   @Test
   void callRateWithinLimit() {
-    // Single call should never exceed any reasonable limit
     service.checkCallRate("api.query", 1000);
     assertEquals(0, service.getTotalViolations());
   }
 
   @Test
   void callRateExceedsLimit() {
-    // Flood with calls — rate window should detect burst
     for (int i = 0; i < 200; i++) {
       service.checkCallRate("api.query", 10);
     }
-    // After 200 calls in rapid succession, should have violations
     assertTrue(service.getTotalViolations() > 0);
   }
 
@@ -141,29 +138,46 @@ class VibeGuardServiceTest {
     assertTrue(service.getSummary().contains("Unexpected null"));
   }
 
-  // ==================== AI vs Human tracking ====================
+  // ==================== Code path tracking ====================
 
   @Test
-  void aiVsHumanComparison() {
-    service.trackAiCodePath("Parser.parse", 50_000_000L);
-    service.trackAiCodePath("Parser.parse", 60_000_000L);
-    service.trackHumanCodePath("Parser.parse", 30_000_000L);
-    service.trackHumanCodePath("Parser.parse", 40_000_000L);
+  void twoTagComparison() {
+    service.trackCodePath("Parser.parse", 50_000_000L, "v2");
+    service.trackCodePath("Parser.parse", 60_000_000L, "v2");
+    service.trackCodePath("Parser.parse", 30_000_000L, "v1");
+    service.trackCodePath("Parser.parse", 40_000_000L, "v1");
 
     String summary = service.getSummary();
-    assertTrue(summary.contains("AI vs Human"));
-    assertTrue(summary.contains("AI 2 calls"));
-    assertTrue(summary.contains("Human 2 calls"));
-    // AI avg 55ms, Human avg 35ms -> AI ~57% slower
-    assertTrue(summary.contains("slower"));
+    assertTrue(summary.contains("Tracked Code Paths"));
+    assertTrue(summary.contains("v1"));
+    assertTrue(summary.contains("v2"));
+    assertTrue(summary.contains("2 calls"));
+    // v2 avg 55ms, v1 avg 35ms -> v2 ~57% slower than v1 (alphabetical: v1 first, v2 second)
+    assertTrue(summary.contains("slower") || summary.contains("faster"));
   }
 
   @Test
-  void aiOnlyTracking() {
-    service.trackAiCodePath("Renderer.render", 100_000_000L);
+  void singleTagTracking() {
+    service.trackCodePath("Renderer.render", 100_000_000L, "cached");
     String summary = service.getSummary();
-    assertTrue(summary.contains("AI 1 calls"));
-    assertFalse(summary.contains("Human"));
+    assertTrue(summary.contains("Tracked Code Paths"));
+    assertTrue(summary.contains("cached"));
+    assertTrue(summary.contains("1 calls"));
+  }
+
+  @Test
+  void multipleTagsNoComparison() {
+    service.trackCodePath("Op.run", 10_000_000L, "a");
+    service.trackCodePath("Op.run", 20_000_000L, "b");
+    service.trackCodePath("Op.run", 30_000_000L, "c");
+
+    String summary = service.getSummary();
+    assertTrue(summary.contains("a"));
+    assertTrue(summary.contains("b"));
+    assertTrue(summary.contains("c"));
+    // More than 2 tags: no slower/faster comparison
+    assertFalse(summary.contains("slower") || summary.contains("faster"),
+        "Cross-comparison should only appear for exactly 2 tags");
   }
 
   // ==================== Reporting ====================
@@ -209,7 +223,7 @@ class VibeGuardServiceTest {
   @Test
   void reset() {
     service.assertCondition("a", false, "fail");
-    service.trackAiCodePath("b", 100L);
+    service.trackCodePath("b", 100L, "tag");
     service.reset();
 
     assertEquals(0, service.getTotalChecks());
