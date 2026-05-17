@@ -93,27 +93,6 @@ public final class MaskedClassLoader extends URLClassLoader {
   }
 
   @Override
-  protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-    synchronized (getClassLoadingLock(name)) {
-      // Check if already loaded
-      Class<?> c = findLoadedClass(name);
-      if (c == null) {
-        try {
-          // Try masked sections first (agent/client, then shared)
-          c = findClass(name);
-        } catch (ClassNotFoundException e) {
-          // Not in masked sections; delegate to parent (bootstrap or system)
-          c = super.loadClass(name, false);
-        }
-      }
-      if (resolve) {
-        resolveClass(c);
-      }
-      return c;
-    }
-  }
-
-  @Override
   protected Class<?> findClass(String name) throws ClassNotFoundException {
     debug("findClass: " + name);
 
