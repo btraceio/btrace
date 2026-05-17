@@ -16,9 +16,9 @@
  */
 package io.btrace.instr;
 
-import static org.objectweb.asm.Opcodes.*;
-
 import org.objectweb.asm.MethodVisitor;
+
+import static org.objectweb.asm.Opcodes.*;
 
 /**
  * This visitor helps in inserting code whenever an exception is about to be thrown. The code to

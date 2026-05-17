@@ -16,14 +16,16 @@
  */
 package io.btrace.compiler.oneliner;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import io.btrace.compiler.Compiler;
-import io.btrace.compiler.oneliner.OnelinerAST.OnelinerNode;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Map;
+
+import io.btrace.compiler.Compiler;
+import io.btrace.compiler.oneliner.OnelinerAST.OnelinerNode;
+
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /** Integration tests that verify oneliner-generated code compiles with the real BTrace compiler. */
 class OnelinerIntegrationTest {

@@ -16,11 +16,12 @@
  */
 package io.btrace.compiler;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.io.BufferedReader;
 import java.io.StringReader;
+
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class ConcatenatingReaderTest {
 

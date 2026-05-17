@@ -16,11 +16,12 @@
  */
 package io.btrace.instr;
 
-import static org.objectweb.asm.Opcodes.*;
-
 import io.btrace.core.annotations.Sampled;
+
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
+
+import static org.objectweb.asm.Opcodes.*;
 
 /**
  * Context for emitting method tracking bytecode (sampling and timing). Replaces the template system

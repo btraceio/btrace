@@ -16,13 +16,15 @@
  */
 package io.btrace.instr;
 
-import static org.objectweb.asm.Opcodes.*;
-
-import io.btrace.core.types.AnyType;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
+
+import io.btrace.core.types.AnyType;
+
 import org.objectweb.asm.Type;
+
+import static org.objectweb.asm.Opcodes.*;
 
 public final class TypeUtils {
   public static final Type objectArrayType = Type.getType(Object[].class);

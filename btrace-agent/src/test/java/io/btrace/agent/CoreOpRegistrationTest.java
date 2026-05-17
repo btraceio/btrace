@@ -16,12 +16,14 @@
  */
 package io.btrace.agent;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import io.btrace.runtime.BTraceBootstrap;
 import java.lang.reflect.Field;
 import java.util.concurrent.ConcurrentHashMap;
+
+import io.btrace.runtime.BTraceBootstrap;
+
 import org.junit.jupiter.api.*;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class CoreOpRegistrationTest {
 

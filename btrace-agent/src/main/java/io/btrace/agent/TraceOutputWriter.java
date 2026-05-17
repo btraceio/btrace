@@ -16,13 +16,15 @@
  */
 package io.btrace.agent;
 
-import io.btrace.core.SharedSettings;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import io.btrace.core.SharedSettings;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

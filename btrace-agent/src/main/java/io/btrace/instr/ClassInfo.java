@@ -16,7 +16,6 @@
  */
 package io.btrace.instr;
 
-import io.btrace.core.BTraceRuntime;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
@@ -25,6 +24,9 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
+
+import io.btrace.core.BTraceRuntime;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

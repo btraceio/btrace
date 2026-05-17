@@ -16,11 +16,12 @@
  */
 package io.btrace.compiler.oneliner;
 
-import io.btrace.compiler.oneliner.OnelinerAST.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import io.btrace.compiler.oneliner.OnelinerAST.*;
 
 /** Generates BTrace Java source code from oneliner AST */
 public class OnelinerCodeGenerator {

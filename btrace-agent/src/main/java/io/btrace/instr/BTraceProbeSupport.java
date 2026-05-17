@@ -16,12 +16,6 @@
  */
 package io.btrace.instr;
 
-import static io.btrace.instr.ClassFilter.isSubTypeOf;
-
-import io.btrace.core.ArgsMap;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.extensions.Permission;
-import io.btrace.runtime.BTraceRuntimeAccess;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
@@ -35,8 +29,16 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
+
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.extensions.Permission;
+import io.btrace.runtime.BTraceRuntimeAccess;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static io.btrace.instr.ClassFilter.isSubTypeOf;
 
 public final class BTraceProbeSupport {
   private static final Logger log = LoggerFactory.getLogger(BTraceProbeSupport.class);

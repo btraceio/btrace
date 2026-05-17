@@ -16,8 +16,9 @@
  */
 package io.btrace.instr.random;
 
-import io.btrace.instr.RandomIntProvider;
 import java.util.Random;
+
+import io.btrace.instr.RandomIntProvider;
 
 /**
  * @author Jaroslav Bachorik

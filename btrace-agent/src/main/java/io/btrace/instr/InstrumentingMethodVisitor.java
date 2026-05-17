@@ -16,8 +16,6 @@
  */
 package io.btrace.instr;
 
-import static org.objectweb.asm.Opcodes.*;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -28,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
+
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
@@ -37,6 +36,8 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.TypePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.objectweb.asm.Opcodes.*;
 
 /**
  * A method visitor providing support for introducing new local variables in bytecode recomputing

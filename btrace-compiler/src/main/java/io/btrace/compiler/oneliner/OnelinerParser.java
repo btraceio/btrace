@@ -16,11 +16,12 @@
  */
 package io.btrace.compiler.oneliner;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import io.btrace.compiler.oneliner.OnelinerAST.*;
 import io.btrace.compiler.oneliner.OnelinerLexer.Token;
 import io.btrace.compiler.oneliner.OnelinerLexer.TokenType;
-import java.util.ArrayList;
-import java.util.List;
 
 /** Parser for BTrace oneliner language */
 public class OnelinerParser {

@@ -16,14 +16,14 @@
  */
 package io.btrace.instr;
 
-import static org.objectweb.asm.Opcodes.*;
-
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
+
+import static org.objectweb.asm.Opcodes.*;
 
 final class ProbeUpgradeVisitor_1_2 extends ClassVisitor {
 

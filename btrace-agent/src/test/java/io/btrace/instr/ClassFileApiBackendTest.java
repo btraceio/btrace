@@ -16,19 +16,21 @@
  */
 package io.btrace.instr;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import io.btrace.core.ArgsMap;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.extensions.Permission;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
+
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.extensions.Permission;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
 import org.objectweb.asm.ClassVisitor;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for ClassFileApiBackend. All tests are enabled only on JDK 24+ where java.lang.classfile is

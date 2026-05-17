@@ -16,8 +16,10 @@
  */
 package io.btrace.agent;
 
-import io.btrace.runtime.PerfReader;
 import java.net.URISyntaxException;
+
+import io.btrace.runtime.PerfReader;
+
 import sun.jvmstat.monitor.IntegerMonitor;
 import sun.jvmstat.monitor.LongMonitor;
 import sun.jvmstat.monitor.Monitor;

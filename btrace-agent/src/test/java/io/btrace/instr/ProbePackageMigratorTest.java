@@ -16,14 +16,14 @@
  */
 package io.btrace.instr;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class ProbePackageMigratorTest {
 

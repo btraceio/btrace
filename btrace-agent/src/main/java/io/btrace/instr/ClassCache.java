@@ -16,7 +16,6 @@
  */
 package io.btrace.instr;
 
-import io.btrace.instr.ClassInfo.ClassName;
 import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;
 import java.util.Map;
@@ -24,6 +23,9 @@ import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentMap;
+
+import io.btrace.instr.ClassInfo.ClassName;
+
 import org.jctools.maps.NonBlockingHashMap;
 import org.jctools.maps.NonBlockingIdentityHashMap;
 

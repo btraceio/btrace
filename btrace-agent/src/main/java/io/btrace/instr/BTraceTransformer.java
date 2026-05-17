@@ -16,8 +16,6 @@
  */
 package io.btrace.instr;
 
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.DebugSupport;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
@@ -28,6 +26,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
+
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.DebugSupport;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -16,14 +16,16 @@
  */
 package io.btrace.agent;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import io.btrace.core.ArgsMap;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+
+import io.btrace.core.ArgsMap;
+
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MainTest {
   @Test

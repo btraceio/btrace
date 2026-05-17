@@ -17,6 +17,7 @@
 package io.btrace.instr;
 
 import java.util.function.Supplier;
+
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
 

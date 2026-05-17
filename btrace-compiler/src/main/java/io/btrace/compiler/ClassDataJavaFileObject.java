@@ -25,6 +25,7 @@ import java.io.Writer;
 import java.net.URI;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.NestingKind;
 import javax.tools.JavaFileObject;

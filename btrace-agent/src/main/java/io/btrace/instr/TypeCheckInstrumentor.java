@@ -16,10 +16,10 @@
  */
 package io.btrace.instr;
 
+import org.objectweb.asm.MethodVisitor;
+
 import static org.objectweb.asm.Opcodes.CHECKCAST;
 import static org.objectweb.asm.Opcodes.INSTANCEOF;
-
-import org.objectweb.asm.MethodVisitor;
 
 /**
  * This class helps in inserting code whenever a type check (instanceof or checkcast) is done. The

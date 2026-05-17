@@ -16,10 +16,11 @@
  */
 package io.btrace.compiler.oneliner;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import io.btrace.compiler.oneliner.OnelinerAST.*;
+
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class OnelinerParserTest {
 

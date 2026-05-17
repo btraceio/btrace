@@ -16,15 +16,17 @@
  */
 package io.btrace.instr;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.management.ManagementFactory;
+
 import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceRuntime;
 import io.btrace.core.SharedSettings;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.CommandListener;
 import io.btrace.runtime.BTraceRuntimes;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.management.ManagementFactory;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;

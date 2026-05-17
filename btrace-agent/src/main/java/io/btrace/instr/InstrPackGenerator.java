@@ -16,11 +16,12 @@
  */
 package io.btrace.instr;
 
-import io.btrace.core.PackGenerator;
-import io.btrace.core.SharedSettings;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+
+import io.btrace.core.PackGenerator;
+import io.btrace.core.SharedSettings;
 
 public final class InstrPackGenerator implements PackGenerator {
   @Override

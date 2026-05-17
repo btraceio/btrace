@@ -16,13 +16,6 @@
  */
 package io.btrace.instr;
 
-import static org.objectweb.asm.Opcodes.*;
-
-import io.btrace.core.MethodID;
-import io.btrace.core.annotations.Kind;
-import io.btrace.core.annotations.Sampled;
-import io.btrace.core.annotations.Where;
-import io.btrace.core.types.AnyType;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -32,6 +25,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.PatternSyntaxException;
+
+import io.btrace.core.MethodID;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Sampled;
+import io.btrace.core.annotations.Where;
+import io.btrace.core.types.AnyType;
+
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Handle;
@@ -39,6 +39,8 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+
+import static org.objectweb.asm.Opcodes.*;
 
 /**
  * This instruments a probed class with BTrace probe action class.

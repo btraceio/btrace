@@ -16,11 +16,12 @@
  */
 package io.btrace;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import io.btrace.core.ArgsMap;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ArgsMapTest {
   private static final String KEY1 = "key1";

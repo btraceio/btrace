@@ -19,6 +19,7 @@ package io.btrace.instr;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.objectweb.asm.Label;
 
 public class VariableMapper {

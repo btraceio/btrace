@@ -16,10 +16,10 @@
  */
 package io.btrace.instr;
 
+import org.objectweb.asm.MethodVisitor;
+
 import static org.objectweb.asm.Opcodes.ANEWARRAY;
 import static org.objectweb.asm.Opcodes.NEWARRAY;
-
-import org.objectweb.asm.MethodVisitor;
 
 /**
  * This visitor helps in inserting code whenever an array is allocated. The code to insert on method
