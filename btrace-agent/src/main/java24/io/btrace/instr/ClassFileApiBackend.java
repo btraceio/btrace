@@ -20,11 +20,15 @@ import java.lang.classfile.Attributes;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.ClassTransform;
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.CodeElement;
 import java.lang.classfile.CodeModel;
 import java.lang.classfile.CodeTransform;
+import java.lang.classfile.Label;
 import java.lang.classfile.MethodModel;
 import java.lang.classfile.MethodTransform;
 import java.lang.classfile.PseudoInstruction;
+import java.lang.classfile.TypeKind;
 import java.lang.classfile.instruction.ReturnInstruction;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.DirectMethodHandleDesc;
@@ -49,10 +53,13 @@ import org.slf4j.LoggerFactory;
  * Uses the JDK ClassFile API ({@code java.lang.classfile.*}), available since JDK 24.
  *
  * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}. Handlers with the
- * {@code @Self} parameter on instance methods are supported. Handlers with other unsupported
- * special parameters ({@code @Return}, {@code @TargetInstance}, {@code @Duration}) or
- * type-constrained method matching are skipped with a debug-level log; the remaining handlers
- * are applied.
+ * {@code @Self} parameter on instance methods are supported. {@code @Return} parameters are
+ * supported for non-void methods (void methods are silently skipped). {@code @Duration}
+ * parameters are supported covering both normal and exceptional method exits.
+ *
+ * <p>Handlers with {@code @TargetInstance} or {@code Kind.CALL} are not supported and are
+ * skipped with a debug-level log; a separate GitHub issue tracks this work.
+ * Type-constrained method matching ({@code type="..."} in {@code @OnMethod}) is not supported.
  */
 public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final Logger log = LoggerFactory.getLogger(ClassFileApiBackend.class);
@@ -222,20 +229,145 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       boolean isStatic,
       List<ProbeHandler> entryHandlers,
       List<ProbeHandler> returnHandlers) {
-    boolean[] entryInjected = {false};
-    return (codeBuilder, codeElement) -> {
-      if (!entryInjected[0] && !(codeElement instanceof PseudoInstruction)) {
-        entryInjected[0] = true;
-        for (ProbeHandler ph : entryHandlers) {
-          emitProbeCall(codeBuilder, ph, javaClassName, methodName, isStatic, true);
+
+    boolean hasDuration =
+        returnHandlers.stream().anyMatch(ph -> ph.om.getDurationParameter() != -1);
+    boolean hasReturnParam =
+        returnHandlers.stream().anyMatch(ph -> ph.om.getReturnParameter() != -1);
+
+    return new CodeTransform() {
+      private final int[] entryTsSlot = {-1};
+      private final int[] retValSlot = {-1};
+      private final int[] durationSlot = {-1};
+      private final boolean[] entryInjected = {false};
+      private Label startLabel;
+
+      @Override
+      public void atStart(CodeBuilder cb) {
+        if (hasDuration) {
+          startLabel = cb.newLabel();
+          // labelBinding deferred to accept() so it is only emitted when entryTsSlot is allocated
         }
       }
-      if (!returnHandlers.isEmpty() && codeElement instanceof ReturnInstruction) {
+
+      @Override
+      public void accept(CodeBuilder cb, CodeElement ce) {
+        if (!entryInjected[0] && !(ce instanceof PseudoInstruction)) {
+          entryInjected[0] = true;
+          if (hasDuration) {
+            // Bind try-region start here, in sync with entryTsSlot allocation
+            cb.labelBinding(startLabel);
+            entryTsSlot[0] = cb.allocateLocal(TypeKind.LONG);
+            cb.invokestatic(
+                ClassDesc.ofInternalName("java/lang/System"),
+                "nanoTime",
+                MethodTypeDesc.ofDescriptor("()J"));
+            cb.storeLocal(TypeKind.LONG, entryTsSlot[0]);
+          }
+          for (ProbeHandler ph : entryHandlers) {
+            emitProbeCall(cb, ph, javaClassName, methodName, isStatic, true, -1, TypeKind.VOID, -1);
+          }
+        }
+
+        if (!returnHandlers.isEmpty() && ce instanceof ReturnInstruction ri) {
+          TypeKind returnKind = ri.typeKind();
+
+          // @Return: dup and store (skip void silently)
+          int localRetValSlot = -1;
+          if (hasReturnParam && returnKind != TypeKind.VOID) {
+            if (retValSlot[0] == -1) {
+              // Java source-compiled methods have a single return type, so all RETURN instructions
+              // use the same TypeKind. This slot reuse is valid for well-formed class files.
+              retValSlot[0] = cb.allocateLocal(returnKind);
+            }
+            localRetValSlot = retValSlot[0];
+            if (returnKind.slotSize() == 2) {
+              cb.dup2();
+            } else {
+              cb.dup();
+            }
+            cb.storeLocal(returnKind, localRetValSlot);
+          }
+
+          // @Duration: compute nanoTime - entryTs
+          int localDurationSlot = -1;
+          if (hasDuration && entryTsSlot[0] != -1) {
+            if (durationSlot[0] == -1) {
+              durationSlot[0] = cb.allocateLocal(TypeKind.LONG);
+            }
+            localDurationSlot = durationSlot[0];
+            cb.invokestatic(
+                ClassDesc.ofInternalName("java/lang/System"),
+                "nanoTime",
+                MethodTypeDesc.ofDescriptor("()J"));
+            cb.loadLocal(TypeKind.LONG, entryTsSlot[0]);
+            cb.lsub();
+            cb.storeLocal(TypeKind.LONG, localDurationSlot);
+          }
+
+          for (ProbeHandler ph : returnHandlers) {
+            emitProbeCall(
+                cb,
+                ph,
+                javaClassName,
+                methodName,
+                isStatic,
+                false,
+                localRetValSlot,
+                returnKind,
+                localDurationSlot);
+          }
+        }
+
+        cb.with(ce);
+      }
+
+      @Override
+      public void atEnd(CodeBuilder cb) {
+        // Inject finally-block style exception handler for @Duration
+        if (!hasDuration || entryTsSlot[0] == -1 || startLabel == null) return;
+
+        List<ProbeHandler> durationHandlers = new ArrayList<>();
         for (ProbeHandler ph : returnHandlers) {
-          emitProbeCall(codeBuilder, ph, javaClassName, methodName, isStatic, false);
+          if (ph.om.getDurationParameter() != -1) durationHandlers.add(ph);
         }
+        if (durationHandlers.isEmpty()) return;
+
+        Label endLabel = cb.newLabel();
+        Label handlerLabel = cb.newLabel();
+
+        // Bind end-of-try and handler-start positions before registering the catch range.
+        // The ClassFile API resolves label byte offsets at method build time, so all three
+        // labels just need to be bound before the CodeBuilder is finalized.
+        cb.labelBinding(endLabel);
+        cb.labelBinding(handlerLabel);
+        cb.exceptionCatchAll(startLabel, endLabel, handlerLabel);
+
+        // Stack: [Throwable]
+        int exSlot = cb.allocateLocal(TypeKind.REFERENCE);
+        cb.astore(exSlot);
+
+        // Compute duration delta
+        int exDurationSlot =
+            durationSlot[0] != -1 ? durationSlot[0] : cb.allocateLocal(TypeKind.LONG);
+        cb.invokestatic(
+            ClassDesc.ofInternalName("java/lang/System"),
+            "nanoTime",
+            MethodTypeDesc.ofDescriptor("()J"));
+        cb.loadLocal(TypeKind.LONG, entryTsSlot[0]);
+        cb.lsub();
+        cb.storeLocal(TypeKind.LONG, exDurationSlot);
+
+        // Fire handlers (retValSlot=-1: no return value on exception path)
+        for (ProbeHandler ph : durationHandlers) {
+          emitProbeCall(
+              cb, ph, javaClassName, methodName, isStatic, false, -1, TypeKind.VOID, exDurationSlot);
+        }
+
+        // Rethrow
+        cb.aload(exSlot);
+        cb.athrow();
       }
-      codeBuilder.with(codeElement);
     };
   }
 
@@ -252,6 +384,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         nameMatch = pattern.equals(methodName);
       }
       if (!nameMatch) continue;
+      // om.getType() returns the 'type' attribute of @OnMethod — only set when the user
+      // explicitly constrains the handler to a specific method signature. For @Return /
+      // @Duration handlers this is normally empty, so they pass through unaffected.
       String typePattern = ph.om.getType();
       if (!typePattern.isEmpty()) {
         log.debug(
@@ -266,17 +401,18 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   }
 
   private static void emitProbeCall(
-      java.lang.classfile.CodeBuilder cb,
+      CodeBuilder cb,
       ProbeHandler ph,
       String javaClassName,
       String methodName,
       boolean isStatic,
-      boolean isEntry) {
+      boolean isEntry,
+      int retValSlot,
+      TypeKind returnKind,
+      int durationSlot) {
     OnMethod om = ph.om;
-    if (om.getReturnParameter() != -1
-        || om.getTargetInstanceParameter() != -1
-        || om.getDurationParameter() != -1
-        || om.getTargetMethodOrFieldParameter() != -1) {
+    // @TargetInstance and @TargetMethodOrField are not supported in this backend
+    if (om.getTargetInstanceParameter() != -1 || om.getTargetMethodOrFieldParameter() != -1) {
       log.debug(
           "ClassFileApiBackend: skipping handler {}.{} — unsupported special params",
           ph.probe.getClassName(),
@@ -288,12 +424,18 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
     Type[] argTypes = Type.getArgumentTypes(rawDesc);
 
+    // Pre-validate: every argument must be satisfiable before we push anything onto the stack.
+    // An early return mid-loop would leave orphaned stack values, causing a VerifyError.
     for (int i = 0; i < argTypes.length; i++) {
-      if (i != om.getClassNameParameter()
-          && i != om.getMethodParameter()
-          && i != om.getSelfParameter()) {
+      boolean satisfiable =
+          i == om.getSelfParameter()
+              || i == om.getClassNameParameter()
+              || i == om.getMethodParameter()
+              || (i == om.getReturnParameter() && retValSlot != -1)
+              || (i == om.getDurationParameter() && durationSlot != -1);
+      if (!satisfiable) {
         log.debug(
-            "ClassFileApiBackend: skipping handler {}.{} — unsupported arg at index {}",
+            "ClassFileApiBackend: skipping handler {}.{} — arg {} cannot be satisfied",
             ph.probe.getClassName(),
             om.getTargetName(),
             i);
@@ -312,6 +454,12 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         cb.ldc(javaClassName);
       } else if (i == om.getMethodParameter()) {
         cb.ldc(methodName);
+      } else if (i == om.getReturnParameter()) {
+        // Use the actual store TypeKind, not the handler descriptor's TypeKind.
+        // The handler may declare AnyType (→ Object), but the slot holds the raw JVM type.
+        cb.loadLocal(returnKind, retValSlot);
+      } else if (i == om.getDurationParameter()) {
+        cb.loadLocal(TypeKind.LONG, durationSlot);
       }
     }
 
