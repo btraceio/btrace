@@ -27,6 +27,7 @@ import java.lang.classfile.CodeTransform;
 import java.lang.classfile.Label;
 import java.lang.classfile.MethodModel;
 import java.lang.classfile.MethodTransform;
+import java.lang.classfile.Opcode;
 import java.lang.classfile.PseudoInstruction;
 import java.lang.classfile.TypeKind;
 import java.lang.classfile.instruction.InvokeInstruction;
@@ -54,11 +55,11 @@ import org.slf4j.LoggerFactory;
  * Instrumentation backend for class file versions that ASM cannot parse (&gt; 69, i.e. Java 26+).
  * Uses the JDK ClassFile API ({@code java.lang.classfile.*}), available since JDK 24.
  *
- * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}, and no-argument
- * {@link Kind#CALL}. Handlers with the {@code @Self} parameter on instance methods are supported.
- * {@code @Return} parameters are supported for non-void methods (void methods are silently
- * skipped). {@code @Duration} parameters are supported covering both normal and exceptional method
- * exits.
+ * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}, and {@link Kind#CALL}.
+ * Handlers with the {@code @Self} parameter on instance methods are supported. {@code @Return}
+ * parameters are supported for non-void methods (void methods are silently skipped).
+ * {@code @Duration} parameters are supported covering both normal and exceptional method exits.
+ * Method call handlers support ordinary called arguments.
  *
  * <p>Handlers with {@code @TargetInstance} are not supported and are skipped with a debug-level
  * log; a separate GitHub issue tracks this work. Type-constrained method matching
@@ -132,6 +133,24 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     ProbeHandler(BTraceProbe probe, OnMethod om) {
       this.probe = probe;
       this.om = om;
+    }
+  }
+
+  private static final class CallContext {
+    final Type[] argumentTypes;
+    final boolean staticCall;
+    final int[] argumentSlots;
+    final int receiverSlot;
+
+    CallContext(
+        Type[] argumentTypes,
+        boolean staticCall,
+        int[] argumentSlots,
+        int receiverSlot) {
+      this.argumentTypes = argumentTypes;
+      this.staticCall = staticCall;
+      this.argumentSlots = argumentSlots;
+      this.receiverSlot = receiverSlot;
     }
   }
 
@@ -345,18 +364,32 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         if (!callHandlers.isEmpty() && ce instanceof InvokeInstruction ii) {
           List<ProbeHandler> matchedCallHandlers = filterForCall(callHandlers, ii);
           if (!matchedCallHandlers.isEmpty()) {
-            boolean emitted = false;
+            List<ProbeHandler> emittableBefore = new ArrayList<>();
+            List<ProbeHandler> emittableAfter = new ArrayList<>();
+            Type[] callArgTypes = Type.getArgumentTypes(ii.type().stringValue());
             for (ProbeHandler ph : matchedCallHandlers) {
-              if (ph.om.getLocation().getWhere() == Where.BEFORE) {
-                if (isConstructorCall(ii)) continue;
-                emitted |= emitCallProbe(cb, ph, javaClassName, methodName, isStatic, true);
+              Where where = ph.om.getLocation().getWhere();
+              if (where == Where.BEFORE && isConstructorCall(ii)) continue;
+              if (!canEmitCallProbe(ph, callArgTypes)) continue;
+              if (where == Where.BEFORE) {
+                emittableBefore.add(ph);
+              } else if (where == Where.AFTER) {
+                emittableAfter.add(ph);
               }
             }
+            if (emittableBefore.isEmpty() && emittableAfter.isEmpty()) {
+              cb.with(ce);
+              return;
+            }
+            CallContext callContext = backupCallStack(cb, ii);
+            boolean emitted = false;
+            for (ProbeHandler ph : emittableBefore) {
+              emitted |= emitCallProbe(cb, ph, javaClassName, methodName, isStatic, true, callContext);
+            }
+            restoreCallStack(cb, callContext);
             emitInvoke(cb, ii);
-            for (ProbeHandler ph : matchedCallHandlers) {
-              if (ph.om.getLocation().getWhere() == Where.AFTER) {
-                emitted |= emitCallProbe(cb, ph, javaClassName, methodName, isStatic, false);
-              }
+            for (ProbeHandler ph : emittableAfter) {
+              emitted |= emitCallProbe(cb, ph, javaClassName, methodName, isStatic, false, callContext);
             }
             if (emitted) {
               anyMatch[0] = true;
@@ -477,23 +510,121 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return Constants.CONSTRUCTOR.equals(ii.name().stringValue());
   }
 
+  private static TypeKind typeKind(Type type) {
+    switch (type.getSort()) {
+      case Type.BOOLEAN:
+      case Type.BYTE:
+      case Type.CHAR:
+      case Type.SHORT:
+      case Type.INT:
+        return TypeKind.INT;
+      case Type.LONG:
+        return TypeKind.LONG;
+      case Type.FLOAT:
+        return TypeKind.FLOAT;
+      case Type.DOUBLE:
+        return TypeKind.DOUBLE;
+      case Type.VOID:
+        return TypeKind.VOID;
+      default:
+        return TypeKind.REFERENCE;
+    }
+  }
+
+  private static CallContext backupCallStack(CodeBuilder cb, InvokeInstruction ii) {
+    Type[] args = Type.getArgumentTypes(ii.type().stringValue());
+    boolean staticCall = ii.opcode() == Opcode.INVOKESTATIC;
+    int[] argSlots = new int[args.length];
+    for (int i = args.length - 1; i >= 0; i--) {
+      TypeKind kind = typeKind(args[i]);
+      int slot = cb.allocateLocal(kind);
+      cb.storeLocal(kind, slot);
+      argSlots[i] = slot;
+    }
+
+    int receiverSlot = -1;
+    if (!staticCall) {
+      receiverSlot = cb.allocateLocal(TypeKind.REFERENCE);
+      cb.astore(receiverSlot);
+    }
+
+    return new CallContext(args, staticCall, argSlots, receiverSlot);
+  }
+
+  private static void restoreCallStack(CodeBuilder cb, CallContext ctx) {
+    if (!ctx.staticCall) {
+      cb.aload(ctx.receiverSlot);
+    }
+    for (int i = 0; i < ctx.argumentTypes.length; i++) {
+      cb.loadLocal(typeKind(ctx.argumentTypes[i]), ctx.argumentSlots[i]);
+    }
+  }
+
+  private static int callArgumentIndex(OnMethod om, int handlerIndex) {
+    int callArg = 0;
+    for (int i = 0; i <= handlerIndex; i++) {
+      if (i == om.getSelfParameter()
+          || i == om.getClassNameParameter()
+          || i == om.getMethodParameter()
+          || i == om.getReturnParameter()
+          || i == om.getDurationParameter()
+          || i == om.getTargetInstanceParameter()
+          || i == om.getTargetMethodOrFieldParameter()) {
+        continue;
+      }
+      if (i == handlerIndex) return callArg;
+      callArg++;
+    }
+    return -1;
+  }
+
+  private static boolean canEmitCallProbe(ProbeHandler ph, Type[] callArgTypes) {
+    OnMethod om = ph.om;
+    if (om.getTargetInstanceParameter() != -1 || om.getTargetMethodOrFieldParameter() != -1) {
+      return false;
+    }
+    String rawDesc =
+        om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+    Type[] handlerArgTypes = Type.getArgumentTypes(rawDesc);
+    for (int i = 0; i < handlerArgTypes.length; i++) {
+      if (i == om.getSelfParameter()
+          || i == om.getClassNameParameter()
+          || i == om.getMethodParameter()) {
+        continue;
+      }
+      if (i == om.getReturnParameter() || i == om.getDurationParameter()) {
+        return false;
+      }
+      int callArgIndex = callArgumentIndex(om, i);
+      if (callArgIndex < 0 || callArgIndex >= callArgTypes.length) {
+        return false;
+      }
+      if (!sameStackType(callArgTypes[callArgIndex], handlerArgTypes[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean sameStackType(Type actual, Type expected) {
+    TypeKind actualKind = typeKind(actual);
+    TypeKind expectedKind = typeKind(expected);
+    if (actualKind != expectedKind) return false;
+    if (actualKind != TypeKind.REFERENCE) return true;
+    if (Constants.OBJECT_DESC.equals(expected.getDescriptor())) return true;
+    return actual.equals(expected);
+  }
+
   private static boolean emitCallProbe(
       CodeBuilder cb,
       ProbeHandler ph,
       String javaClassName,
       String methodName,
       boolean isStatic,
-      boolean isBefore) {
-    String rawDesc =
-        ph.om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
-    if (Type.getArgumentTypes(rawDesc).length != 0) {
-      log.debug(
-          "ClassFileApiBackend: skipping call handler {}.{} — call args unsupported",
-          ph.probe.getClassName(),
-          ph.om.getTargetName());
-      return false;
-    }
-    return emitProbeCall(cb, ph, javaClassName, methodName, isStatic, isBefore, -1, TypeKind.VOID, -1);
+      boolean isBefore,
+      CallContext callContext) {
+    return emitProbeCall(
+        cb, ph, javaClassName, methodName, isStatic, isBefore, -1, TypeKind.VOID, -1, callContext);
   }
 
   private static boolean emitProbeCall(
@@ -506,6 +637,21 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       int retValSlot,
       TypeKind returnKind,
       int durationSlot) {
+    return emitProbeCall(
+        cb, ph, javaClassName, methodName, isStatic, isEntry, retValSlot, returnKind, durationSlot, null);
+  }
+
+  private static boolean emitProbeCall(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      boolean isEntry,
+      int retValSlot,
+      TypeKind returnKind,
+      int durationSlot,
+      CallContext callContext) {
     OnMethod om = ph.om;
     // @TargetInstance and @TargetMethodOrField are not supported in this backend
     if (om.getTargetInstanceParameter() != -1 || om.getTargetMethodOrFieldParameter() != -1) {
@@ -523,12 +669,14 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     // Pre-validate: every argument must be satisfiable before we push anything onto the stack.
     // An early return mid-loop would leave orphaned stack values, causing a VerifyError.
     for (int i = 0; i < argTypes.length; i++) {
+      int callArgIndex = callContext != null ? callArgumentIndex(om, i) : -1;
       boolean satisfiable =
           i == om.getSelfParameter()
               || i == om.getClassNameParameter()
               || i == om.getMethodParameter()
               || (i == om.getReturnParameter() && retValSlot != -1)
-              || (i == om.getDurationParameter() && durationSlot != -1);
+              || (i == om.getDurationParameter() && durationSlot != -1)
+              || (callArgIndex >= 0 && callArgIndex < callContext.argumentTypes.length);
       if (!satisfiable) {
         log.debug(
             "ClassFileApiBackend: skipping handler {}.{} — arg {} cannot be satisfied",
@@ -556,6 +704,11 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         cb.loadLocal(returnKind, retValSlot);
       } else if (i == om.getDurationParameter()) {
         cb.loadLocal(TypeKind.LONG, durationSlot);
+      } else if (callContext != null) {
+        int callArgIndex = callArgumentIndex(om, i);
+        cb.loadLocal(
+            typeKind(callContext.argumentTypes[callArgIndex]),
+            callContext.argumentSlots[callArgIndex]);
       }
     }
 

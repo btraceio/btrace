@@ -172,6 +172,59 @@ class ClassFileApiBackendTest {
   }
 
   @Test
+  void callProbeBeforePassesCalledArguments() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    Location location = new Location();
+    location.setValue(Kind.CALL);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("com.example.Target");
+    location.setMethod("callTarget");
+    location.setType("(Ljava/lang/String;J)J");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            location,
+            "(Ljava/lang/String;J)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    String desc = getInvokeDynamicDescriptor(patchVersion(result, 65), "callTopLevel", "$btrace$");
+    assertEquals("(Ljava/lang/String;J)V", desc);
+    assertTrue(
+        isBTraceCallBeforeTargetCall(patchVersion(result, 65), "callTopLevel", "callTarget"),
+        "Expected BTrace call before matched callTarget invocation");
+  }
+
+  @Test
+  void callProbeBeforeSkipsIncompatibleCalledArgumentDescriptor() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    Location location = new Location();
+    location.setValue(Kind.CALL);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("com.example.Target");
+    location.setMethod("callTarget");
+    location.setType("(Ljava/lang/String;J)J");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            location,
+            "(Ljava/lang/Integer;J)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "Expected incompatible call argument descriptor to be skipped");
+  }
+
+  @Test
   void callProbeInjectedAfterMatchingCall() {
     requireJdk26ForVersion70();
     byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
