@@ -220,6 +220,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
         String methodName = mm.methodName().stringValue();
+        Type methodReturnType = Type.getReturnType(mm.methodType().stringValue());
         boolean isStatic = mm.flags().has(AccessFlag.STATIC);
         List<ProbeHandler> mEntry = filterForMethod(entryHandlers, methodName);
         List<ProbeHandler> mReturn = filterForMethod(returnHandlers, methodName);
@@ -231,7 +232,15 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           classBuilder.transformMethod(
               mm,
               buildMethodTransform(
-                  loader, javaClassName, methodName, isStatic, mEntry, mReturn, mCall, anyMatch));
+                  loader,
+                  javaClassName,
+                  methodName,
+                  methodReturnType,
+                  isStatic,
+                  mEntry,
+                  mReturn,
+                  mCall,
+                  anyMatch));
         } else {
           classBuilder.with(classElement);
         }
@@ -245,6 +254,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       ClassLoader loader,
       String javaClassName,
       String methodName,
+      Type methodReturnType,
       boolean isStatic,
       List<ProbeHandler> entryHandlers,
       List<ProbeHandler> returnHandlers,
@@ -258,6 +268,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 loader,
                 javaClassName,
                 methodName,
+                methodReturnType,
                 isStatic,
                 entryHandlers,
                 returnHandlers,
@@ -273,6 +284,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       ClassLoader loader,
       String javaClassName,
       String methodName,
+      Type methodReturnType,
       boolean isStatic,
       List<ProbeHandler> entryHandlers,
       List<ProbeHandler> returnHandlers,
@@ -363,8 +375,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 isStatic,
                 false,
                 localRetValSlot,
+                methodReturnType,
                 returnKind,
-                localDurationSlot);
+                localDurationSlot,
+                null);
           }
         }
 
@@ -388,14 +402,63 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
               return;
             }
             CallContext callContext = backupCallStack(cb, ii);
+            boolean hasAfterDuration =
+                emittableAfter.stream().anyMatch(ph -> ph.om.getDurationParameter() != -1);
+            Type callReturnType = Type.getReturnType(ii.type().stringValue());
+            TypeKind callReturnKind = typeKind(callReturnType);
+            boolean hasAfterReturn =
+                callReturnKind != TypeKind.VOID
+                    && emittableAfter.stream().anyMatch(ph -> ph.om.getReturnParameter() != -1);
+            int callStartSlot = -1;
             boolean emitted = false;
             for (ProbeHandler ph : emittableBefore) {
               emitted |= emitCallProbe(cb, ph, javaClassName, methodName, isStatic, true, callContext);
             }
+            if (hasAfterDuration) {
+              callStartSlot = cb.allocateLocal(TypeKind.LONG);
+              cb.invokestatic(
+                  ClassDesc.ofInternalName("java/lang/System"),
+                  "nanoTime",
+                  MethodTypeDesc.ofDescriptor("()J"));
+              cb.storeLocal(TypeKind.LONG, callStartSlot);
+            }
             restoreCallStack(cb, callContext);
             emitInvoke(cb, ii);
+            int callReturnSlot = -1;
+            if (hasAfterReturn) {
+              callReturnSlot = cb.allocateLocal(callReturnKind);
+              if (callReturnKind.slotSize() == 2) {
+                cb.dup2();
+              } else {
+                cb.dup();
+              }
+              cb.storeLocal(callReturnKind, callReturnSlot);
+            }
+            int callDurationSlot = -1;
+            if (hasAfterDuration) {
+              callDurationSlot = cb.allocateLocal(TypeKind.LONG);
+              cb.invokestatic(
+                  ClassDesc.ofInternalName("java/lang/System"),
+                  "nanoTime",
+                  MethodTypeDesc.ofDescriptor("()J"));
+              cb.loadLocal(TypeKind.LONG, callStartSlot);
+              cb.lsub();
+              cb.storeLocal(TypeKind.LONG, callDurationSlot);
+            }
             for (ProbeHandler ph : emittableAfter) {
-              emitted |= emitCallProbe(cb, ph, javaClassName, methodName, isStatic, false, callContext);
+              emitted |=
+                  emitProbeCall(
+                      cb,
+                      ph,
+                      javaClassName,
+                      methodName,
+                      isStatic,
+                      false,
+                      callReturnSlot,
+                      callReturnType,
+                      callReturnKind,
+                      callDurationSlot,
+                      callContext);
             }
             if (emitted) {
               anyMatch[0] = true;
@@ -613,8 +676,31 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         }
         continue;
       }
-      if (i == om.getReturnParameter() || i == om.getDurationParameter()) {
-        return false;
+      if (i == om.getReturnParameter()) {
+        Type returnType = Type.getReturnType(ii.type().stringValue());
+        if (om.getLocation().getWhere() != Where.AFTER || returnType.equals(Type.VOID_TYPE)) {
+          return false;
+        }
+        if (typeKind(returnType) == TypeKind.REFERENCE) {
+          if (!InstrumentUtils.isAssignable(
+              handlerArgTypes[i], returnType, loader, om.isExactTypeMatch())) {
+            return false;
+          }
+        } else if (typeKind(handlerArgTypes[i]) == TypeKind.REFERENCE) {
+          if (!Constants.OBJECT_DESC.equals(handlerArgTypes[i].getDescriptor())) {
+            return false;
+          }
+        } else if (!sameStackType(returnType, handlerArgTypes[i])) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getDurationParameter()) {
+        if (om.getLocation().getWhere() != Where.AFTER
+            || !Type.LONG_TYPE.equals(handlerArgTypes[i])) {
+          return false;
+        }
+        continue;
       }
       int callArgIndex = callArgumentIndex(om, i);
       if (callArgIndex < 0 || callArgIndex >= callArgTypes.length) {
@@ -673,6 +759,32 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       TypeKind returnKind,
       int durationSlot,
       CallContext callContext) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        isEntry,
+        retValSlot,
+        null,
+        returnKind,
+        durationSlot,
+        callContext);
+  }
+
+  private static boolean emitProbeCall(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      boolean isEntry,
+      int retValSlot,
+      Type returnType,
+      TypeKind returnKind,
+      int durationSlot,
+      CallContext callContext) {
     OnMethod om = ph.om;
 
     String rawDesc =
@@ -717,6 +829,11 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         // Use the actual store TypeKind, not the handler descriptor's TypeKind.
         // The handler may declare AnyType (→ Object), but the slot holds the raw JVM type.
         cb.loadLocal(returnKind, retValSlot);
+        if (returnKind != TypeKind.REFERENCE
+            && returnKind != TypeKind.VOID
+            && typeKind(argTypes[i]) == TypeKind.REFERENCE) {
+          boxPrimitiveReturn(cb, returnType, returnKind);
+        }
       } else if (i == om.getDurationParameter()) {
         cb.loadLocal(TypeKind.LONG, durationSlot);
       } else if (i == om.getTargetInstanceParameter()) {
@@ -747,6 +864,49 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             MethodTypeDesc.ofDescriptor(rawDesc),
             ph.probe.getClassName(true)));
     return true;
+  }
+
+  private static void boxPrimitiveReturn(CodeBuilder cb, Type returnType, TypeKind returnKind) {
+    String primitiveDesc = returnType != null ? returnType.getDescriptor() : primitiveDesc(returnKind);
+    String wrapperInternalName = wrapperInternalName(primitiveDesc);
+    cb.invokestatic(
+        ClassDesc.ofInternalName(wrapperInternalName),
+        "valueOf",
+        MethodTypeDesc.ofDescriptor("(" + primitiveDesc + ")L" + wrapperInternalName + ";"));
+  }
+
+  private static String primitiveDesc(TypeKind returnKind) {
+    switch (returnKind) {
+      case LONG:
+        return "J";
+      case FLOAT:
+        return "F";
+      case DOUBLE:
+        return "D";
+      default:
+        return "I";
+    }
+  }
+
+  private static String wrapperInternalName(String primitiveDesc) {
+    switch (primitiveDesc) {
+      case "Z":
+        return "java/lang/Boolean";
+      case "B":
+        return "java/lang/Byte";
+      case "C":
+        return "java/lang/Character";
+      case "S":
+        return "java/lang/Short";
+      case "J":
+        return "java/lang/Long";
+      case "F":
+        return "java/lang/Float";
+      case "D":
+        return "java/lang/Double";
+      default:
+        return "java/lang/Integer";
+    }
   }
 
   private static String targetMethodName(OnMethod om, CallContext ctx) {

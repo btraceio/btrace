@@ -400,6 +400,138 @@ class ClassFileApiBackendTest {
   }
 
   @Test
+  void callProbeAfterPassesReturnValue() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    Location location = new Location();
+    location.setValue(Kind.CALL);
+    location.setWhere(Where.AFTER);
+    location.setClazz("com.example.Target");
+    location.setMethod("callTarget");
+    location.setType("(Ljava/lang/String;J)J");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            location,
+            "(J)V",
+            0,
+            -1,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    String desc = getInvokeDynamicDescriptor(readable, "callTopLevel", "$btrace$");
+    assertEquals("(J)V", desc);
+    assertTrue(
+        isBTraceCallAfterTargetCall(readable, "callTopLevel", "callTarget"),
+        "Expected return probe after target call");
+  }
+
+  @Test
+  void callProbeAfterPassesDuration() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    Location location = new Location();
+    location.setValue(Kind.CALL);
+    location.setWhere(Where.AFTER);
+    location.setClazz("com.example.Target");
+    location.setMethod("callTarget");
+    location.setType("(Ljava/lang/String;J)J");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            location,
+            "(J)V",
+            -1,
+            0,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    String desc = getInvokeDynamicDescriptor(readable, "callTopLevel", "$btrace$");
+    assertEquals("(J)V", desc);
+    assertEquals(2, countMethodCalls(readable, "callTopLevel", "java/lang/System", "nanoTime"));
+    assertTrue(
+        isBTraceCallAfterTargetCall(readable, "callTopLevel", "callTarget"),
+        "Expected duration probe after target call");
+    assertTrue(
+        loadsLongBeforeBTrace(readable, "callTopLevel"),
+        "Expected computed duration loaded before probe call");
+  }
+
+  @Test
+  void callProbeAfterBoxesPrimitiveReturnForObjectHandler() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    Location location = new Location();
+    location.setValue(Kind.CALL);
+    location.setWhere(Where.AFTER);
+    location.setClazz("com.example.Target");
+    location.setMethod("callTarget");
+    location.setType("(Ljava/lang/String;J)J");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            location,
+            "(Ljava/lang/Object;)V",
+            0,
+            -1,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    String desc = getInvokeDynamicDescriptor(readable, "callTopLevel", "$btrace$");
+    assertEquals("(Ljava/lang/Object;)V", desc);
+    assertEquals(1, countMethodCalls(readable, "callTopLevel", "java/lang/Long", "valueOf"));
+  }
+
+  @Test
+  void callProbeAfterSkipsVoidReturnParameter() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithVoidCall(70, "com/example/Target", "callTopLevel");
+    Location location = new Location();
+    location.setValue(Kind.CALL);
+    location.setWhere(Where.AFTER);
+    location.setClazz("com.example.Target");
+    location.setMethod("callTargetVoid");
+    location.setType("()V");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            location,
+            "(Ljava/lang/Object;)V",
+            0,
+            -1,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "Expected @Return on void call to be skipped");
+  }
+
+  @Test
   void callProbeInjectedAfterMatchingCall() {
     requireJdk26ForVersion70();
     byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
@@ -635,6 +767,33 @@ class ClassFileApiBackendTest {
         "(Ljava/lang/String;J)J",
         false);
     caller.visitInsn(Opcodes.LRETURN);
+    caller.visitMaxs(0, 0);
+    caller.visitEnd();
+
+    cw.visitEnd();
+    byte[] bytes = cw.toByteArray();
+    bytes[6] = (byte) (majorVersion >> 8);
+    bytes[7] = (byte) (majorVersion & 0xFF);
+    return bytes;
+  }
+
+  private static byte[] buildClassWithVoidCall(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor target = cw.visitMethod(Opcodes.ACC_PUBLIC, "callTargetVoid", "()V", null, null);
+    target.visitCode();
+    target.visitInsn(Opcodes.RETURN);
+    target.visitMaxs(0, 0);
+    target.visitEnd();
+
+    MethodVisitor caller = cw.visitMethod(Opcodes.ACC_PUBLIC, methodName, "()V", null, null);
+    caller.visitCode();
+    caller.visitVarInsn(Opcodes.ALOAD, 0);
+    caller.visitMethodInsn(
+        Opcodes.INVOKEVIRTUAL, internalClassName, "callTargetVoid", "()V", false);
+    caller.visitInsn(Opcodes.RETURN);
     caller.visitMaxs(0, 0);
     caller.visitEnd();
 
@@ -1111,6 +1270,60 @@ class ClassFileApiBackendTest {
     return calls.indexOf("btrace") < calls.indexOf("target");
   }
 
+  private static boolean isBTraceCallAfterTargetCall(
+      byte[] classBytes, String methodName, String targetCallName) {
+    List<String> calls = new ArrayList<>();
+    ClassReader cr = new ClassReader(classBytes);
+    cr.accept(
+        new ClassVisitor(Opcodes.ASM9) {
+          @Override
+          public MethodVisitor visitMethod(
+              int access, String name, String desc, String sig, String[] exs) {
+            if (!name.equals(methodName)) return null;
+            return new MethodVisitor(Opcodes.ASM9) {
+              @Override
+              public void visitInvokeDynamicInsn(
+                  String name, String desc, Handle bsm, Object... bsmArgs) {
+                if (name.contains("$btrace$")) calls.add("btrace");
+              }
+
+              @Override
+              public void visitMethodInsn(
+                  int opcode, String owner, String name, String desc, boolean isInterface) {
+                if (name.equals(targetCallName)) calls.add("target");
+              }
+            };
+          }
+        },
+        0);
+    assertTrue(calls.contains("btrace"), "Expected BTrace invokedynamic marker in call sequence");
+    assertTrue(calls.contains("target"), "Expected target call marker in call sequence");
+    return calls.indexOf("btrace") > calls.indexOf("target");
+  }
+
+  private static int countMethodCalls(
+      byte[] classBytes, String methodName, String ownerName, String targetMethodName) {
+    int[] count = {0};
+    ClassReader cr = new ClassReader(classBytes);
+    cr.accept(
+        new ClassVisitor(Opcodes.ASM9) {
+          @Override
+          public MethodVisitor visitMethod(
+              int access, String name, String desc, String sig, String[] exs) {
+            if (!name.equals(methodName)) return null;
+            return new MethodVisitor(Opcodes.ASM9) {
+              @Override
+              public void visitMethodInsn(
+                  int opcode, String owner, String name, String desc, boolean isInterface) {
+                if (ownerName.equals(owner) && targetMethodName.equals(name)) count[0]++;
+              }
+            };
+          }
+        },
+        0);
+    return count[0];
+  }
+
   private static boolean containsLdc(byte[] classBytes, String methodName, String expectedValue) {
     boolean[] found = {false};
     ClassReader cr = new ClassReader(classBytes);
@@ -1159,6 +1372,19 @@ class ClassFileApiBackendTest {
           && ((InvokeDynamicInsnNode) instruction).name.contains("$btrace$")) {
         AbstractInsnNode previous = previousExecutable(instruction);
         return previous instanceof InsnNode && previous.getOpcode() == Opcodes.ACONST_NULL;
+      }
+    }
+    return false;
+  }
+
+  private static boolean loadsLongBeforeBTrace(byte[] classBytes, String methodName) {
+    MethodNode method = treeMethod(classBytes, methodName);
+    if (method == null) return false;
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction instanceof InvokeDynamicInsnNode
+          && ((InvokeDynamicInsnNode) instruction).name.contains("$btrace$")) {
+        AbstractInsnNode previous = previousExecutable(instruction);
+        return previous instanceof VarInsnNode && previous.getOpcode() == Opcodes.LLOAD;
       }
     }
     return false;
@@ -1275,6 +1501,31 @@ class ClassFileApiBackendTest {
     String desc = getInvokeDynamicDescriptor(patchVersion(result, 65), "compute", "$btrace$");
     assertNotNull(desc);
     assertTrue(desc.startsWith("(J"), "Expected long parameter in descriptor, got: " + desc);
+  }
+
+  @Test
+  void returnProbeBoxesBooleanForObjectHandler() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithNonVoidMethod(70, "com/example/Target", "compute", "Z");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "compute",
+            Kind.RETURN,
+            "(Ljava/lang/Object;)V",
+            0,
+            -1);
+
+    InstrumentationBackend backend = BackendSelector.select(70);
+    byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    String desc = getInvokeDynamicDescriptor(readable, "compute", "$btrace$");
+    assertEquals("(Ljava/lang/Object;)V", desc);
+    assertEquals(1, countMethodCalls(readable, "compute", "java/lang/Boolean", "valueOf"));
+    assertEquals(0, countMethodCalls(readable, "compute", "java/lang/Integer", "valueOf"));
   }
 
   @Test
