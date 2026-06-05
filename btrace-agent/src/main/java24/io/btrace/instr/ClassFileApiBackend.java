@@ -55,14 +55,13 @@ import org.slf4j.LoggerFactory;
  * Instrumentation backend for class file versions that ASM cannot parse (&gt; 69, i.e. Java 26+).
  * Uses the JDK ClassFile API ({@code java.lang.classfile.*}), available since JDK 24.
  *
- * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}, and {@link Kind#CALL}.
- * Handlers with the {@code @Self} parameter on instance methods are supported. {@code @Return}
- * parameters are supported for non-void methods (void methods are silently skipped).
- * {@code @Duration} parameters are supported covering both normal and exceptional method exits.
- * Method call handlers support ordinary called arguments.
+ * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}, and {@link Kind#CALL}. Method
+ * entry/return handlers support {@code @Self}, {@code @Return}, and {@code @Duration} as
+ * applicable. Method call handlers support called arguments, {@code @TargetInstance}, {@code
+ * @TargetMethodOrField}, {@code @Return} for {@link Where#AFTER}, and {@code @Duration} for {@link
+ * Where#AFTER}.
  *
- * <p>Method call handlers support {@code @TargetInstance} and {@code @TargetMethodOrField}.
- * Type-constrained method matching ({@code type="..."} in {@code @OnMethod}) is not supported.
+ * <p>Type-constrained method matching ({@code type="..."} in {@code @OnMethod}) is not supported.
  */
 public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final Logger log = LoggerFactory.getLogger(ClassFileApiBackend.class);
