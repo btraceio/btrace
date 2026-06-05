@@ -61,9 +61,8 @@ import org.slf4j.LoggerFactory;
  * {@code @Duration} parameters are supported covering both normal and exceptional method exits.
  * Method call handlers support ordinary called arguments.
  *
- * <p>Handlers with {@code @TargetInstance} are not supported and are skipped with a debug-level
- * log; a separate GitHub issue tracks this work. Type-constrained method matching
- * ({@code type="..."} in {@code @OnMethod}) is not supported.
+ * <p>Method call handlers support {@code @TargetInstance} and {@code @TargetMethodOrField}.
+ * Type-constrained method matching ({@code type="..."} in {@code @OnMethod}) is not supported.
  */
 public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final Logger log = LoggerFactory.getLogger(ClassFileApiBackend.class);
@@ -122,7 +121,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     byte[] result =
         cf.transformClass(
             classModel,
-            buildClassTransform(javaClassName, entryHandlers, returnHandlers, callHandlers, anyMatch));
+            buildClassTransform(
+                loader, javaClassName, entryHandlers, returnHandlers, callHandlers, anyMatch));
     return anyMatch[0] ? result : null;
   }
 
@@ -137,16 +137,19 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   }
 
   private static final class CallContext {
+    final InvokeInstruction instruction;
     final Type[] argumentTypes;
     final boolean staticCall;
     final int[] argumentSlots;
     final int receiverSlot;
 
     CallContext(
+        InvokeInstruction instruction,
         Type[] argumentTypes,
         boolean staticCall,
         int[] argumentSlots,
         int receiverSlot) {
+      this.instruction = instruction;
       this.argumentTypes = argumentTypes;
       this.staticCall = staticCall;
       this.argumentSlots = argumentSlots;
@@ -208,6 +211,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   }
 
   private static ClassTransform buildClassTransform(
+      ClassLoader loader,
       String javaClassName,
       List<ProbeHandler> entryHandlers,
       List<ProbeHandler> returnHandlers,
@@ -227,7 +231,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           classBuilder.transformMethod(
               mm,
               buildMethodTransform(
-                  javaClassName, methodName, isStatic, mEntry, mReturn, mCall, anyMatch));
+                  loader, javaClassName, methodName, isStatic, mEntry, mReturn, mCall, anyMatch));
         } else {
           classBuilder.with(classElement);
         }
@@ -238,6 +242,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   }
 
   private static MethodTransform buildMethodTransform(
+      ClassLoader loader,
       String javaClassName,
       String methodName,
       boolean isStatic,
@@ -250,6 +255,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         methodBuilder.transformCode(
             cm,
             buildCodeTransform(
+                loader,
                 javaClassName,
                 methodName,
                 isStatic,
@@ -264,6 +270,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   }
 
   private static CodeTransform buildCodeTransform(
+      ClassLoader loader,
       String javaClassName,
       String methodName,
       boolean isStatic,
@@ -366,11 +373,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           if (!matchedCallHandlers.isEmpty()) {
             List<ProbeHandler> emittableBefore = new ArrayList<>();
             List<ProbeHandler> emittableAfter = new ArrayList<>();
-            Type[] callArgTypes = Type.getArgumentTypes(ii.type().stringValue());
             for (ProbeHandler ph : matchedCallHandlers) {
               Where where = ph.om.getLocation().getWhere();
               if (where == Where.BEFORE && isConstructorCall(ii)) continue;
-              if (!canEmitCallProbe(ph, callArgTypes)) continue;
+              if (!canEmitCallProbe(ph, ii, loader)) continue;
               if (where == Where.BEFORE) {
                 emittableBefore.add(ph);
               } else if (where == Where.AFTER) {
@@ -548,7 +554,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       cb.astore(receiverSlot);
     }
 
-    return new CallContext(args, staticCall, argSlots, receiverSlot);
+    return new CallContext(ii, args, staticCall, argSlots, receiverSlot);
   }
 
   private static void restoreCallStack(CodeBuilder cb, CallContext ctx) {
@@ -578,18 +584,33 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return -1;
   }
 
-  private static boolean canEmitCallProbe(ProbeHandler ph, Type[] callArgTypes) {
+  private static boolean canEmitCallProbe(ProbeHandler ph, InvokeInstruction ii, ClassLoader loader) {
     OnMethod om = ph.om;
-    if (om.getTargetInstanceParameter() != -1 || om.getTargetMethodOrFieldParameter() != -1) {
-      return false;
-    }
     String rawDesc =
         om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
     Type[] handlerArgTypes = Type.getArgumentTypes(rawDesc);
+    Type[] callArgTypes = Type.getArgumentTypes(ii.type().stringValue());
+    boolean staticCall = ii.opcode() == Opcode.INVOKESTATIC;
+    Type ownerType = Type.getObjectType(ii.owner().asInternalName());
     for (int i = 0; i < handlerArgTypes.length; i++) {
       if (i == om.getSelfParameter()
           || i == om.getClassNameParameter()
           || i == om.getMethodParameter()) {
+        continue;
+      }
+      if (i == om.getTargetMethodOrFieldParameter()) {
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.STRING_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getTargetInstanceParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], ownerType, loader, om.isExactTypeMatch())) {
+          return false;
+        }
         continue;
       }
       if (i == om.getReturnParameter() || i == om.getDurationParameter()) {
@@ -653,14 +674,6 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       int durationSlot,
       CallContext callContext) {
     OnMethod om = ph.om;
-    // @TargetInstance and @TargetMethodOrField are not supported in this backend
-    if (om.getTargetInstanceParameter() != -1 || om.getTargetMethodOrFieldParameter() != -1) {
-      log.debug(
-          "ClassFileApiBackend: skipping handler {}.{} — unsupported special params",
-          ph.probe.getClassName(),
-          om.getTargetName());
-      return false;
-    }
 
     String rawDesc =
         om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
@@ -676,6 +689,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
               || i == om.getMethodParameter()
               || (i == om.getReturnParameter() && retValSlot != -1)
               || (i == om.getDurationParameter() && durationSlot != -1)
+              || (i == om.getTargetInstanceParameter() && callContext != null)
+              || (i == om.getTargetMethodOrFieldParameter() && callContext != null)
               || (callArgIndex >= 0 && callArgIndex < callContext.argumentTypes.length);
       if (!satisfiable) {
         log.debug(
@@ -704,6 +719,14 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         cb.loadLocal(returnKind, retValSlot);
       } else if (i == om.getDurationParameter()) {
         cb.loadLocal(TypeKind.LONG, durationSlot);
+      } else if (i == om.getTargetInstanceParameter()) {
+        if (callContext == null || callContext.staticCall) {
+          cb.aconst_null();
+        } else {
+          cb.aload(callContext.receiverSlot);
+        }
+      } else if (i == om.getTargetMethodOrFieldParameter()) {
+        cb.ldc(targetMethodName(om, callContext));
       } else if (callContext != null) {
         int callArgIndex = callArgumentIndex(om, i);
         cb.loadLocal(
@@ -724,5 +747,33 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             MethodTypeDesc.ofDescriptor(rawDesc),
             ph.probe.getClassName(true)));
     return true;
+  }
+
+  private static String targetMethodName(OnMethod om, CallContext ctx) {
+    String name = ctx.instruction.name().stringValue();
+    if (om.isTargetMethodOrFieldFqn()) {
+      return invocationKind(ctx.instruction.opcode())
+          + " "
+          + TypeUtils.descriptorToSimplified(
+              ctx.instruction.type().stringValue(), ctx.instruction.owner().asInternalName(), name);
+    }
+    return name;
+  }
+
+  private static String invocationKind(Opcode opcode) {
+    switch (opcode) {
+      case INVOKEINTERFACE:
+        return "interface";
+      case INVOKESPECIAL:
+        return "special";
+      case INVOKESTATIC:
+        return "static";
+      case INVOKEVIRTUAL:
+        return "virtual";
+      case INVOKEDYNAMIC:
+        return "dynamic";
+      default:
+        return "";
+    }
   }
 }
