@@ -29,6 +29,7 @@ import java.lang.classfile.MethodModel;
 import java.lang.classfile.MethodTransform;
 import java.lang.classfile.PseudoInstruction;
 import java.lang.classfile.TypeKind;
+import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.classfile.instruction.ReturnInstruction;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.DirectMethodHandleDesc;
@@ -43,6 +44,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Where;
 
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
@@ -52,14 +54,15 @@ import org.slf4j.LoggerFactory;
  * Instrumentation backend for class file versions that ASM cannot parse (&gt; 69, i.e. Java 26+).
  * Uses the JDK ClassFile API ({@code java.lang.classfile.*}), available since JDK 24.
  *
- * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}. Handlers with the
- * {@code @Self} parameter on instance methods are supported. {@code @Return} parameters are
- * supported for non-void methods (void methods are silently skipped). {@code @Duration}
- * parameters are supported covering both normal and exceptional method exits.
+ * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}, and no-argument
+ * {@link Kind#CALL}. Handlers with the {@code @Self} parameter on instance methods are supported.
+ * {@code @Return} parameters are supported for non-void methods (void methods are silently
+ * skipped). {@code @Duration} parameters are supported covering both normal and exceptional method
+ * exits.
  *
- * <p>Handlers with {@code @TargetInstance} or {@code Kind.CALL} are not supported and are
- * skipped with a debug-level log; a separate GitHub issue tracks this work.
- * Type-constrained method matching ({@code type="..."} in {@code @OnMethod}) is not supported.
+ * <p>Handlers with {@code @TargetInstance} are not supported and are skipped with a debug-level
+ * log; a separate GitHub issue tracks this work. Type-constrained method matching
+ * ({@code type="..."} in {@code @OnMethod}) is not supported.
  */
 public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final Logger log = LoggerFactory.getLogger(ClassFileApiBackend.class);
@@ -104,19 +107,21 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
 
     List<ProbeHandler> entryHandlers = new ArrayList<>();
     List<ProbeHandler> returnHandlers = new ArrayList<>();
+    List<ProbeHandler> callHandlers = new ArrayList<>();
     for (ProbeHandler ph : handlers) {
       Kind kind = ph.om.getLocation().getValue();
       if (kind == Kind.ENTRY) entryHandlers.add(ph);
       else if (kind == Kind.RETURN) returnHandlers.add(ph);
+      else if (kind == Kind.CALL) callHandlers.add(ph);
       else log.debug("Skipping unsupported probe kind {} for class {}", kind, javaClassName);
     }
-    if (entryHandlers.isEmpty() && returnHandlers.isEmpty()) return null;
+    if (entryHandlers.isEmpty() && returnHandlers.isEmpty() && callHandlers.isEmpty()) return null;
 
     boolean[] anyMatch = {false};
     byte[] result =
         cf.transformClass(
             classModel,
-            buildClassTransform(javaClassName, entryHandlers, returnHandlers, anyMatch));
+            buildClassTransform(javaClassName, entryHandlers, returnHandlers, callHandlers, anyMatch));
     return anyMatch[0] ? result : null;
   }
 
@@ -187,6 +192,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       String javaClassName,
       List<ProbeHandler> entryHandlers,
       List<ProbeHandler> returnHandlers,
+      List<ProbeHandler> callHandlers,
       boolean[] anyMatch) {
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
@@ -194,10 +200,15 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         boolean isStatic = mm.flags().has(AccessFlag.STATIC);
         List<ProbeHandler> mEntry = filterForMethod(entryHandlers, methodName);
         List<ProbeHandler> mReturn = filterForMethod(returnHandlers, methodName);
-        if (!mEntry.isEmpty() || !mReturn.isEmpty()) {
-          anyMatch[0] = true;
+        List<ProbeHandler> mCall = filterForMethod(callHandlers, methodName);
+        if (!mEntry.isEmpty() || !mReturn.isEmpty() || !mCall.isEmpty()) {
+          if (!mEntry.isEmpty() || !mReturn.isEmpty()) {
+            anyMatch[0] = true;
+          }
           classBuilder.transformMethod(
-              mm, buildMethodTransform(javaClassName, methodName, isStatic, mEntry, mReturn));
+              mm,
+              buildMethodTransform(
+                  javaClassName, methodName, isStatic, mEntry, mReturn, mCall, anyMatch));
         } else {
           classBuilder.with(classElement);
         }
@@ -212,11 +223,21 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       String methodName,
       boolean isStatic,
       List<ProbeHandler> entryHandlers,
-      List<ProbeHandler> returnHandlers) {
+      List<ProbeHandler> returnHandlers,
+      List<ProbeHandler> callHandlers,
+      boolean[] anyMatch) {
     return (methodBuilder, methodElement) -> {
       if (methodElement instanceof CodeModel cm) {
         methodBuilder.transformCode(
-            cm, buildCodeTransform(javaClassName, methodName, isStatic, entryHandlers, returnHandlers));
+            cm,
+            buildCodeTransform(
+                javaClassName,
+                methodName,
+                isStatic,
+                entryHandlers,
+                returnHandlers,
+                callHandlers,
+                anyMatch));
       } else {
         methodBuilder.with(methodElement);
       }
@@ -228,7 +249,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       String methodName,
       boolean isStatic,
       List<ProbeHandler> entryHandlers,
-      List<ProbeHandler> returnHandlers) {
+      List<ProbeHandler> returnHandlers,
+      List<ProbeHandler> callHandlers,
+      boolean[] anyMatch) {
 
     boolean hasDuration =
         returnHandlers.stream().anyMatch(ph -> ph.om.getDurationParameter() != -1);
@@ -319,6 +342,29 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           }
         }
 
+        if (!callHandlers.isEmpty() && ce instanceof InvokeInstruction ii) {
+          List<ProbeHandler> matchedCallHandlers = filterForCall(callHandlers, ii);
+          if (!matchedCallHandlers.isEmpty()) {
+            boolean emitted = false;
+            for (ProbeHandler ph : matchedCallHandlers) {
+              if (ph.om.getLocation().getWhere() == Where.BEFORE) {
+                if (isConstructorCall(ii)) continue;
+                emitted |= emitCallProbe(cb, ph, javaClassName, methodName, isStatic, true);
+              }
+            }
+            emitInvoke(cb, ii);
+            for (ProbeHandler ph : matchedCallHandlers) {
+              if (ph.om.getLocation().getWhere() == Where.AFTER) {
+                emitted |= emitCallProbe(cb, ph, javaClassName, methodName, isStatic, false);
+              }
+            }
+            if (emitted) {
+              anyMatch[0] = true;
+            }
+            return;
+          }
+        }
+
         cb.with(ce);
       }
 
@@ -400,7 +446,57 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return result;
   }
 
-  private static void emitProbeCall(
+  private static List<ProbeHandler> filterForCall(List<ProbeHandler> handlers, InvokeInstruction ii) {
+    List<ProbeHandler> result = new ArrayList<>();
+    String owner = ii.owner().asInternalName().replace('/', '.');
+    String name = ii.name().stringValue();
+    String desc = ii.type().stringValue();
+    for (ProbeHandler ph : handlers) {
+      Location loc = ph.om.getLocation();
+      if (!matches(loc.getClazz(), owner)) continue;
+      if (!matches(loc.getMethod(), name)) continue;
+      if (!matches(loc.getType(), desc)) continue;
+      result.add(ph);
+    }
+    return result;
+  }
+
+  private static boolean matches(String pattern, String value) {
+    if (pattern == null || pattern.isEmpty()) return true;
+    if (pattern.startsWith("/") && pattern.endsWith("/")) {
+      return value.matches(pattern.substring(1, pattern.length() - 1));
+    }
+    return pattern.equals(value);
+  }
+
+  private static void emitInvoke(CodeBuilder cb, InvokeInstruction ii) {
+    cb.invoke(ii.opcode(), ii.method());
+  }
+
+  private static boolean isConstructorCall(InvokeInstruction ii) {
+    return Constants.CONSTRUCTOR.equals(ii.name().stringValue());
+  }
+
+  private static boolean emitCallProbe(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      boolean isBefore) {
+    String rawDesc =
+        ph.om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+    if (Type.getArgumentTypes(rawDesc).length != 0) {
+      log.debug(
+          "ClassFileApiBackend: skipping call handler {}.{} — call args unsupported",
+          ph.probe.getClassName(),
+          ph.om.getTargetName());
+      return false;
+    }
+    return emitProbeCall(cb, ph, javaClassName, methodName, isStatic, isBefore, -1, TypeKind.VOID, -1);
+  }
+
+  private static boolean emitProbeCall(
       CodeBuilder cb,
       ProbeHandler ph,
       String javaClassName,
@@ -417,7 +513,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           "ClassFileApiBackend: skipping handler {}.{} — unsupported special params",
           ph.probe.getClassName(),
           om.getTargetName());
-      return;
+      return false;
     }
 
     String rawDesc =
@@ -439,7 +535,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             ph.probe.getClassName(),
             om.getTargetName(),
             i);
-        return;
+        return false;
       }
     }
 
@@ -474,5 +570,6 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             actionMethodName,
             MethodTypeDesc.ofDescriptor(rawDesc),
             ph.probe.getClassName(true)));
+    return true;
   }
 }

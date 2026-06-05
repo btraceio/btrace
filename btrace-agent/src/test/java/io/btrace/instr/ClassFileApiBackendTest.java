@@ -20,16 +20,25 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceRuntime;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Where;
 import io.btrace.core.extensions.Permission;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 
 /**
  * Tests for ClassFileApiBackend. All tests are enabled only on JDK 24+ where java.lang.classfile is
@@ -66,7 +75,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace",
             "com.example.Target",
             "doWork",
-            io.btrace.core.annotations.Kind.ENTRY,
+            Kind.ENTRY,
             "()V");
 
     InstrumentationBackend backend = BackendSelector.select(70);
@@ -87,7 +96,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace",
             "com.example.Target",
             "otherMethod",
-            io.btrace.core.annotations.Kind.ENTRY,
+            Kind.ENTRY,
             "()V");
 
     InstrumentationBackend backend = BackendSelector.select(70);
@@ -105,7 +114,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace",
             "com.example.Target",
             "compute",
-            io.btrace.core.annotations.Kind.RETURN,
+            Kind.RETURN,
             "()V");
 
     InstrumentationBackend backend = BackendSelector.select(70);
@@ -118,20 +127,100 @@ class ClassFileApiBackendTest {
   }
 
   @Test
-  void noInjectionForUnsupportedKind() {
+  void noInjectionWhenCallProbeHasNoCallSite() {
     byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "doWork");
     BTraceProbe probe =
         buildStubProbe(
             "com/example/MyTrace",
             "com.example.Target",
             "doWork",
-            io.btrace.core.annotations.Kind.CALL, // unsupported by ClassFileApiBackend
+            Kind.CALL,
             "()V");
 
     InstrumentationBackend backend = BackendSelector.select(70);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
-    assertNull(result, "Expected null for unsupported probe kind");
+    assertNull(result, "Expected null when CALL probe has no matching call site");
+  }
+
+  @Test
+  void callProbeInjectedBeforeMatchingCall() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    Location location = new Location();
+    location.setValue(Kind.CALL);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("com.example.Target");
+    location.setMethod("callTarget");
+    location.setType("(Ljava/lang/String;J)J");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            location,
+            "()V");
+
+    InstrumentationBackend backend = BackendSelector.select(70);
+    byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected instrumented bytes for matching CALL probe");
+    assertEquals(1, countInvokeDynamic(patchVersion(result, 65), "callTopLevel", "$btrace$"));
+    assertTrue(
+        isBTraceCallBeforeTargetCall(patchVersion(result, 65), "callTopLevel", "callTarget"),
+        "Expected BTrace call before matched callTarget invocation");
+  }
+
+  @Test
+  void callProbeInjectedAfterMatchingCall() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    Location location = new Location();
+    location.setValue(Kind.CALL);
+    location.setWhere(Where.AFTER);
+    location.setClazz("com.example.Target");
+    location.setMethod("callTarget");
+    location.setType("(Ljava/lang/String;J)J");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            location,
+            "()V");
+
+    InstrumentationBackend backend = BackendSelector.select(70);
+    byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected instrumented bytes for matching CALL probe");
+    assertEquals(1, countInvokeDynamic(patchVersion(result, 65), "callTopLevel", "$btrace$"));
+    assertFalse(
+        isBTraceCallBeforeTargetCall(patchVersion(result, 65), "callTopLevel", "callTarget"),
+        "Expected BTrace call after matched callTarget invocation");
+  }
+
+  @Test
+  void callProbeBeforeConstructorCallIsSkipped() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithConstructorCall(70, "com/example/Target", "callTopLevel");
+    Location location = new Location();
+    location.setValue(Kind.CALL);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("com.example.Target");
+    location.setMethod("<init>");
+    location.setType("()V");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            location,
+            "()V");
+
+    InstrumentationBackend backend = BackendSelector.select(70);
+    byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "Expected no instrumentation before constructor call site");
   }
 
   // ---------------------------------------------------------------------------
@@ -198,6 +287,103 @@ class ClassFileApiBackendTest {
     return bytes;
   }
 
+  private static byte[] buildClassWithInstanceCall(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(
+        Opcodes.V11,
+        Opcodes.ACC_PUBLIC,
+        internalClassName,
+        null,
+        "java/lang/Object",
+        null);
+
+    MethodVisitor ctor = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
+    ctor.visitCode();
+    ctor.visitVarInsn(Opcodes.ALOAD, 0);
+    ctor.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+    ctor.visitInsn(Opcodes.RETURN);
+    ctor.visitMaxs(0, 0);
+    ctor.visitEnd();
+
+    MethodVisitor target =
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC,
+            "callTarget",
+            "(Ljava/lang/String;J)J",
+            null,
+            null);
+    target.visitCode();
+    target.visitVarInsn(Opcodes.LLOAD, 2);
+    target.visitInsn(Opcodes.LRETURN);
+    target.visitMaxs(0, 0);
+    target.visitEnd();
+
+    MethodVisitor caller =
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC,
+            methodName,
+            "(Ljava/lang/String;J)J",
+            null,
+            null);
+    caller.visitCode();
+    caller.visitVarInsn(Opcodes.ALOAD, 0);
+    caller.visitVarInsn(Opcodes.ALOAD, 1);
+    caller.visitVarInsn(Opcodes.LLOAD, 2);
+    caller.visitMethodInsn(
+        Opcodes.INVOKEVIRTUAL,
+        internalClassName,
+        "callTarget",
+        "(Ljava/lang/String;J)J",
+        false);
+    caller.visitInsn(Opcodes.LRETURN);
+    caller.visitMaxs(0, 0);
+    caller.visitEnd();
+
+    cw.visitEnd();
+    byte[] bytes = cw.toByteArray();
+    bytes[6] = (byte) (majorVersion >> 8);
+    bytes[7] = (byte) (majorVersion & 0xFF);
+    return bytes;
+  }
+
+  private static byte[] buildClassWithConstructorCall(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(
+        Opcodes.V11,
+        Opcodes.ACC_PUBLIC,
+        internalClassName,
+        null,
+        "java/lang/Object",
+        null);
+
+    MethodVisitor ctor = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
+    ctor.visitCode();
+    ctor.visitVarInsn(Opcodes.ALOAD, 0);
+    ctor.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+    ctor.visitInsn(Opcodes.RETURN);
+    ctor.visitMaxs(0, 0);
+    ctor.visitEnd();
+
+    MethodVisitor caller =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, methodName, "()V", null, null);
+    caller.visitCode();
+    caller.visitTypeInsn(Opcodes.NEW, internalClassName);
+    caller.visitInsn(Opcodes.DUP);
+    caller.visitMethodInsn(Opcodes.INVOKESPECIAL, internalClassName, "<init>", "()V", false);
+    caller.visitInsn(Opcodes.POP);
+    caller.visitInsn(Opcodes.RETURN);
+    caller.visitMaxs(0, 0);
+    caller.visitEnd();
+
+    cw.visitEnd();
+    byte[] bytes = cw.toByteArray();
+    bytes[6] = (byte) (majorVersion >> 8);
+    bytes[7] = (byte) (majorVersion & 0xFF);
+    return bytes;
+  }
+
   /** Patches bytes 6-7 of a class file to the given major version. */
   private static byte[] patchVersion(byte[] bytes, int majorVersion) {
     byte[] copy = Arrays.copyOf(bytes, bytes.length);
@@ -244,7 +430,7 @@ class ClassFileApiBackendTest {
   private static boolean containsInvokeDynamic(
       byte[] classBytes, String methodName, String nameSubstring) {
     final boolean[] found = {false};
-    org.objectweb.asm.ClassReader cr = new org.objectweb.asm.ClassReader(classBytes);
+    ClassReader cr = new ClassReader(classBytes);
     cr.accept(
         new org.objectweb.asm.ClassVisitor(org.objectweb.asm.Opcodes.ASM9) {
           @Override
@@ -254,7 +440,7 @@ class ClassFileApiBackendTest {
             return new org.objectweb.asm.MethodVisitor(org.objectweb.asm.Opcodes.ASM9) {
               @Override
               public void visitInvokeDynamicInsn(
-                  String name, String desc, org.objectweb.asm.Handle bsm, Object... bsmArgs) {
+                  String name, String desc, Handle bsm, Object... bsmArgs) {
                 if (name.contains(nameSubstring)) found[0] = true;
               }
             };
@@ -273,7 +459,7 @@ class ClassFileApiBackendTest {
       final String probeInternalName,
       final String targetJavaClass,
       final String targetMethod,
-      final io.btrace.core.annotations.Kind kind,
+      final Kind kind,
       final String targetDescriptor) {
     return buildStubProbe(
         probeInternalName, targetJavaClass, targetMethod, kind, targetDescriptor, -1, -1);
@@ -289,7 +475,7 @@ class ClassFileApiBackendTest {
       final String probeInternalName,
       final String targetJavaClass,
       final String targetMethod,
-      final io.btrace.core.annotations.Kind kind,
+      final Kind kind,
       final String targetDescriptor,
       final int returnParameter,
       final int durationParameter) {
@@ -310,6 +496,62 @@ class ClassFileApiBackendTest {
     }
     // All other special parameter indices default to -1 (absent) — no @Self etc.
 
+    return buildStubProbe(probeInternalName, targetJavaClass, om);
+  }
+
+  private static BTraceProbe buildStubProbe(
+      final String probeInternalName,
+      final String targetJavaClass,
+      final String targetMethod,
+      final Location location,
+      final String targetDescriptor) {
+    return buildStubProbe(
+        probeInternalName,
+        targetJavaClass,
+        targetMethod,
+        location,
+        targetDescriptor,
+        -1,
+        -1,
+        -1,
+        -1);
+  }
+
+  private static BTraceProbe buildStubProbe(
+      final String probeInternalName,
+      final String targetJavaClass,
+      final String targetMethod,
+      final Location location,
+      final String targetDescriptor,
+      final int returnParameter,
+      final int durationParameter,
+      final int targetInstanceParameter,
+      final int targetMethodOrFieldParameter) {
+
+    final OnMethod om = new OnMethod();
+    om.setClazz(targetJavaClass);
+    om.setMethod(targetMethod);
+    om.setLocation(location);
+    om.setTargetName("onProbe");
+    om.setTargetDescriptor(targetDescriptor);
+    if (returnParameter != -1) {
+      om.setReturnParameter(returnParameter);
+    }
+    if (durationParameter != -1) {
+      om.setDurationParameter(durationParameter);
+    }
+    if (targetInstanceParameter != -1) {
+      om.setTargetInstanceParameter(targetInstanceParameter);
+    }
+    if (targetMethodOrFieldParameter != -1) {
+      om.setTargetMethodOrFieldParameter(targetMethodOrFieldParameter);
+    }
+
+    return buildStubProbe(probeInternalName, targetJavaClass, om);
+  }
+
+  private static BTraceProbe buildStubProbe(
+      final String probeInternalName, final String targetJavaClass, final OnMethod om) {
     return new BTraceProbe() {
       @Override
       public String getActionPrefix() {
@@ -552,6 +794,37 @@ class ClassFileApiBackendTest {
     return count[0];
   }
 
+  private static boolean isBTraceCallBeforeTargetCall(
+      byte[] classBytes, String methodName, String targetCallName) {
+    List<String> calls = new ArrayList<>();
+    ClassReader cr = new ClassReader(classBytes);
+    cr.accept(
+        new ClassVisitor(Opcodes.ASM9) {
+          @Override
+          public MethodVisitor visitMethod(
+              int access, String name, String desc, String sig, String[] exs) {
+            if (!name.equals(methodName)) return null;
+            return new MethodVisitor(Opcodes.ASM9) {
+              @Override
+              public void visitInvokeDynamicInsn(
+                  String name, String desc, Handle bsm, Object... bsmArgs) {
+                if (name.contains("$btrace$")) calls.add("btrace");
+              }
+
+              @Override
+              public void visitMethodInsn(
+                  int opcode, String owner, String name, String desc, boolean isInterface) {
+                if (name.equals(targetCallName)) calls.add("target");
+              }
+            };
+          }
+        },
+        0);
+    assertTrue(calls.contains("btrace"), "Expected BTrace invokedynamic marker in call sequence");
+    assertTrue(calls.contains("target"), "Expected target call marker in call sequence");
+    return calls.indexOf("btrace") < calls.indexOf("target");
+  }
+
   /**
    * Scans local variable store instructions in the named method and returns the set of slot indices
    * that are written to. Used to verify no slot collisions.
@@ -603,7 +876,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace",
             "com.example.Target",
             "compute",
-            io.btrace.core.annotations.Kind.RETURN,
+            Kind.RETURN,
             "(I)V",
             0, // returnParameter at index 0
             -1);
@@ -630,7 +903,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace",
             "com.example.Target",
             "compute",
-            io.btrace.core.annotations.Kind.RETURN,
+            Kind.RETURN,
             "(J)V",
             0, // returnParameter at index 0
             -1);
@@ -654,7 +927,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace",
             "com.example.Target",
             "doWork",
-            io.btrace.core.annotations.Kind.RETURN,
+            Kind.RETURN,
             "(I)V", // handler expects int return value, but method is void
             0, // returnParameter
             -1);
@@ -701,7 +974,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace",
             "com.example.Target",
             "timed",
-            io.btrace.core.annotations.Kind.RETURN,
+            Kind.RETURN,
             "(J)V",
             -1, // no @Return
             0); // durationParameter at index 0
@@ -726,7 +999,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace",
             "com.example.Target",
             "risky",
-            io.btrace.core.annotations.Kind.RETURN,
+            Kind.RETURN,
             "(J)V",
             -1, // no @Return
             0); // durationParameter
@@ -761,7 +1034,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace",
             "com.example.Target",
             "combined",
-            io.btrace.core.annotations.Kind.RETURN,
+            Kind.RETURN,
             "(IJ)V", // @Return at 0, @Duration at 1
             0, // returnParameter
             1); // durationParameter
