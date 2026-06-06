@@ -324,6 +324,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       private final boolean[] entryInjected = {false};
       private Label startLabel;
       private int pendingLine = -1;
+      private int lastLine = -1;
 
       @Override
       public void atStart(CodeBuilder cb) {
@@ -336,7 +337,11 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       @Override
       public void accept(CodeBuilder cb, CodeElement ce) {
         if (ce instanceof LineNumber lineNumber) {
+          if (lastLine != -1) {
+            emitLineHandlers(cb, Where.AFTER, lineNumber.line() - 1);
+          }
           pendingLine = lineNumber.line();
+          lastLine = lineNumber.line();
           cb.with(ce);
           return;
         }
@@ -359,15 +364,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         }
 
         if (pendingLine != -1 && !(ce instanceof PseudoInstruction)) {
-          for (ProbeHandler ph : lineHandlers) {
-            if (ph.om.getLocation().getWhere() == Where.BEFORE
-                && ph.om.getLocation().getLine() == pendingLine
-                && canEmitLineProbe(ph, javaClassName, isStatic, loader)) {
-              if (emitLineProbe(cb, ph, javaClassName, methodName, isStatic, pendingLine)) {
-                anyMatch[0] = true;
-              }
-            }
-          }
+          emitLineHandlers(cb, Where.BEFORE, pendingLine);
           pendingLine = -1;
         }
 
@@ -511,8 +508,24 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         cb.with(ce);
       }
 
+      private void emitLineHandlers(CodeBuilder cb, Where where, int line) {
+        for (ProbeHandler ph : lineHandlers) {
+          if (ph.om.getLocation().getWhere() == where
+              && lineMatches(ph.om.getLocation(), line)
+              && canEmitLineProbe(ph, javaClassName, isStatic, loader)) {
+            if (emitLineProbe(cb, ph, javaClassName, methodName, isStatic, line)) {
+              anyMatch[0] = true;
+            }
+          }
+        }
+      }
+
       @Override
       public void atEnd(CodeBuilder cb) {
+        if (lastLine != -1) {
+          emitLineHandlers(cb, Where.AFTER, lastLine);
+        }
+
         // Inject finally-block style exception handler for @Duration
         if (!hasDuration || entryTsSlot[0] == -1 || startLabel == null) return;
 
@@ -617,6 +630,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       return value.matches(pattern.substring(1, pattern.length() - 1));
     }
     return pattern.equals(value);
+  }
+
+  private static boolean lineMatches(Location location, int line) {
+    return location.getLine() == -1 || location.getLine() == line;
   }
 
   private static void emitInvoke(CodeBuilder cb, InvokeInstruction ii) {

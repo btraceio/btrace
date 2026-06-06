@@ -105,13 +105,16 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 - [x] Collect line handlers separately from entry/return/call handlers.
 - [x] Track the current line from ClassFile API line number elements.
 - [x] Emit `Where.BEFORE` line probes at the next real executable element after a matching line marker.
+- [x] Emit `Where.AFTER` line probes at the next line boundary and method end.
 - [x] Load ordinary line number argument as `int`.
-- [ ] Load `@Self`, `@ProbeClassName`, and `@ProbeMethodName`.
+- [x] Load `@Self`, `@ProbeClassName`, and `@ProbeMethodName`.
 - [ ] Add tests:
   - [x] exact line match
   - [x] non-matching line
-  - [ ] repeated line entry only emits at intended executable point
-  - [ ] line probe combined with entry, return, and call probes
+  - [x] repeated line entry only emits at intended executable point
+  - [x] line probe combined with entry, return, and call probes
+  - [x] after-line emission
+  - [x] core special parameters
 
 **Commit:** `feat(agent): support ClassFile API line probes`
 

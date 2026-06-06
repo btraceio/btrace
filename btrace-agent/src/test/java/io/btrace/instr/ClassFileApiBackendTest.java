@@ -212,6 +212,115 @@ class ClassFileApiBackendTest {
   }
 
   @Test
+  void lineProbePassesSelfClassAndMethod() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithLineNumber(70, "com/example/Target", "doWork", 42);
+    Location location = new Location();
+    location.setValue(Kind.LINE);
+    location.setLine(42);
+    BTraceProbe probe =
+        buildStubProbeWithCoreParams(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "doWork",
+            location,
+            "(ILjava/lang/Object;Ljava/lang/String;Ljava/lang/String;)V",
+            1,
+            2,
+            3);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(ILjava/lang/Object;Ljava/lang/String;Ljava/lang/String;)V",
+        getInvokeDynamicDescriptor(readable, "doWork", "$btrace$"));
+    assertTrue(containsLdc(readable, "doWork", "com.example.Target"));
+    assertTrue(containsLdc(readable, "doWork", "doWork"));
+  }
+
+  @Test
+  void lineProbeAfterInjectedAtNextLineBoundary() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithLineNumbers(70, "com/example/Target", "doWork", 42, 43);
+    Location location = new Location();
+    location.setValue(Kind.LINE);
+    location.setWhere(Where.AFTER);
+    location.setLine(42);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "doWork", location, "(I)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals("(I)V", getInvokeDynamicDescriptor(readable, "doWork", "$btrace$"));
+    assertBTraceBetweenOpcodes(readable, "doWork", Opcodes.POP, Opcodes.RETURN);
+  }
+
+  @Test
+  void lineProbeRepeatedLineOnlyEmitsAtExecutablePoint() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithRepeatedLineNumber(70, "com/example/Target", "doWork", 42);
+    Location location = new Location();
+    location.setValue(Kind.LINE);
+    location.setLine(42);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "doWork", location, "(I)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(2, countInvokeDynamic(readable, "doWork", "$btrace$"));
+    assertBTraceBeforeOpcode(readable, "doWork", Opcodes.ICONST_0);
+  }
+
+  @Test
+  void lineProbeCombinesWithEntryReturnAndCallProbes() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithLineAndCall(70, "com/example/Target", "doWork", 42);
+
+    Location lineLocation = new Location();
+    lineLocation.setValue(Kind.LINE);
+    lineLocation.setLine(42);
+    BTraceProbe lineProbe =
+        buildStubProbe(
+            "com/example/LineTrace", "com.example.Target", "doWork", lineLocation, "(I)V");
+
+    BTraceProbe entryProbe =
+        buildStubProbe("com/example/EntryTrace", "com.example.Target", "doWork", Kind.ENTRY, "()V");
+    BTraceProbe returnProbe =
+        buildStubProbe(
+            "com/example/ReturnTrace", "com.example.Target", "doWork", Kind.RETURN, "()V");
+
+    Location callLocation = new Location();
+    callLocation.setValue(Kind.CALL);
+    callLocation.setWhere(Where.BEFORE);
+    callLocation.setClazz("com.example.Target");
+    callLocation.setMethod("callTargetVoid");
+    callLocation.setType("()V");
+    BTraceProbe callProbe =
+        buildStubProbe(
+            "com/example/CallTrace", "com.example.Target", "doWork", callLocation, "()V");
+
+    byte[] result =
+        BackendSelector.select(70)
+            .instrument(
+                null, classBytes, Arrays.asList(lineProbe, entryProbe, returnProbe, callProbe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(4, countInvokeDynamic(readable, "doWork", "$btrace$"));
+    assertBTraceBeforeOpcode(readable, "doWork", Opcodes.RETURN);
+    assertTrue(isBTraceCallBeforeTargetCall(readable, "doWork", "callTargetVoid"));
+  }
+
+  @Test
   void phaseZeroFixturesContainExpectedBytecodeShapes() {
     byte[] lineFixture =
         patchVersion(buildClassWithLineNumber(70, "com/example/Target", "line", 42), 65);
@@ -966,6 +1075,86 @@ class ClassFileApiBackendTest {
     return patchVersion(cw.toByteArray(), majorVersion);
   }
 
+  private static byte[] buildClassWithLineNumbers(
+      int majorVersion,
+      String internalClassName,
+      String methodName,
+      int firstLine,
+      int secondLine) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, methodName, "()V", null, null);
+    Label first = new Label();
+    Label second = new Label();
+    mv.visitCode();
+    mv.visitLabel(first);
+    mv.visitLineNumber(firstLine, first);
+    mv.visitInsn(Opcodes.ICONST_0);
+    mv.visitInsn(Opcodes.POP);
+    mv.visitLabel(second);
+    mv.visitLineNumber(secondLine, second);
+    mv.visitInsn(Opcodes.RETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
+  private static byte[] buildClassWithRepeatedLineNumber(
+      int majorVersion, String internalClassName, String methodName, int line) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, methodName, "()V", null, null);
+    Label first = new Label();
+    Label second = new Label();
+    mv.visitCode();
+    mv.visitLabel(first);
+    mv.visitLineNumber(line, first);
+    mv.visitInsn(Opcodes.ICONST_0);
+    mv.visitInsn(Opcodes.POP);
+    mv.visitLabel(second);
+    mv.visitLineNumber(line, second);
+    mv.visitInsn(Opcodes.RETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
+  private static byte[] buildClassWithLineAndCall(
+      int majorVersion, String internalClassName, String methodName, int line) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor target =
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "callTargetVoid", "()V", null, null);
+    target.visitCode();
+    target.visitInsn(Opcodes.RETURN);
+    target.visitMaxs(0, 0);
+    target.visitEnd();
+
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, methodName, "()V", null, null);
+    Label start = new Label();
+    mv.visitCode();
+    mv.visitLabel(start);
+    mv.visitLineNumber(line, start);
+    mv.visitMethodInsn(Opcodes.INVOKESTATIC, internalClassName, "callTargetVoid", "()V", false);
+    mv.visitInsn(Opcodes.RETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
   private static byte[] buildClassWithFieldAccesses(
       int majorVersion, String internalClassName, String methodName) {
     ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
@@ -1329,6 +1518,33 @@ class ClassFileApiBackendTest {
     om.setTargetName("onProbe");
     om.setTargetDescriptor(targetDescriptor);
     om.setType(typeDeclaration);
+    return buildStubProbe(probeInternalName, targetJavaClass, om);
+  }
+
+  private static BTraceProbe buildStubProbeWithCoreParams(
+      final String probeInternalName,
+      final String targetJavaClass,
+      final String targetMethod,
+      final Location location,
+      final String targetDescriptor,
+      final int selfParameter,
+      final int classNameParameter,
+      final int methodParameter) {
+    final OnMethod om = new OnMethod();
+    om.setClazz(targetJavaClass);
+    om.setMethod(targetMethod);
+    om.setLocation(location);
+    om.setTargetName("onProbe");
+    om.setTargetDescriptor(targetDescriptor);
+    if (selfParameter != -1) {
+      om.setSelfParameter(selfParameter);
+    }
+    if (classNameParameter != -1) {
+      om.setClassNameParameter(classNameParameter);
+    }
+    if (methodParameter != -1) {
+      om.setMethodParameter(methodParameter);
+    }
     return buildStubProbe(probeInternalName, targetJavaClass, om);
   }
 
@@ -1711,16 +1927,17 @@ class ClassFileApiBackendTest {
   private static void assertBTraceBetweenOpcodes(
       byte[] classBytes, String methodName, int beforeOpcode, int afterOpcode) {
     MethodNode method = requireTreeMethod(classBytes, methodName);
+    boolean seenBefore = false;
+    boolean seenBtrace = false;
     for (AbstractInsnNode instruction : method.instructions) {
       if (instruction.getOpcode() == beforeOpcode) {
-        AbstractInsnNode next = nextExecutable(instruction);
-        if (next instanceof InvokeDynamicInsnNode
-            && ((InvokeDynamicInsnNode) next).name.contains("$btrace$")) {
-          AbstractInsnNode afterBtrace = nextExecutable(next);
-          if (afterBtrace != null && afterBtrace.getOpcode() == afterOpcode) {
-            return;
-          }
-        }
+        seenBefore = true;
+      } else if (seenBefore
+          && instruction instanceof InvokeDynamicInsnNode
+          && ((InvokeDynamicInsnNode) instruction).name.contains("$btrace$")) {
+        seenBtrace = true;
+      } else if (seenBtrace && instruction.getOpcode() == afterOpcode) {
+        return;
       }
     }
     fail("Expected BTrace invokedynamic between opcodes " + beforeOpcode + " and " + afterOpcode);
