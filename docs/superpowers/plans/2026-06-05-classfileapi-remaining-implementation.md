@@ -102,14 +102,14 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 **Purpose:** Implement the lowest stack-risk remaining location.
 
-- [ ] Collect line handlers separately from entry/return/call handlers.
-- [ ] Track the current line from ClassFile API line number elements.
-- [ ] Emit line probes at the next real executable element after a matching line marker.
-- [ ] Load ordinary line number argument as `int`.
+- [x] Collect line handlers separately from entry/return/call handlers.
+- [x] Track the current line from ClassFile API line number elements.
+- [x] Emit `Where.BEFORE` line probes at the next real executable element after a matching line marker.
+- [x] Load ordinary line number argument as `int`.
 - [ ] Load `@Self`, `@ProbeClassName`, and `@ProbeMethodName`.
 - [ ] Add tests:
-  - [ ] exact line match
-  - [ ] non-matching line
+  - [x] exact line match
+  - [x] non-matching line
   - [ ] repeated line entry only emits at intended executable point
   - [ ] line probe combined with entry, return, and call probes
 

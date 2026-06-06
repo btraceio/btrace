@@ -177,7 +177,7 @@ class ClassFileApiBackendTest {
   }
 
   @Test
-  void unsupportedLineProbeCurrentlyReturnsNull() {
+  void lineProbeInjectedBeforeMatchingLine() {
     requireJdk26ForVersion70();
     byte[] classBytes = buildClassWithLineNumber(70, "com/example/Target", "doWork", 42);
     Location location = new Location();
@@ -189,7 +189,26 @@ class ClassFileApiBackendTest {
     byte[] result =
         BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
 
-    assertNull(result, "Expected LINE probe to remain unsupported before its implementation phase");
+    assertNotNull(result, "Expected instrumented bytes for matching LINE probe");
+    byte[] readable = patchVersion(result, 65);
+    assertEquals("(I)V", getInvokeDynamicDescriptor(readable, "doWork", "$btrace$"));
+    assertBTraceBeforeOpcode(readable, "doWork", Opcodes.RETURN);
+  }
+
+  @Test
+  void lineProbeNotInjectedWhenLineMismatches() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithLineNumber(70, "com/example/Target", "doWork", 42);
+    Location location = new Location();
+    location.setValue(Kind.LINE);
+    location.setLine(43);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "doWork", location, "(I)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "Expected no instrumentation for a non-matching line");
   }
 
   @Test

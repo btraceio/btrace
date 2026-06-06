@@ -31,6 +31,7 @@ import java.lang.classfile.Opcode;
 import java.lang.classfile.PseudoInstruction;
 import java.lang.classfile.TypeKind;
 import java.lang.classfile.instruction.InvokeInstruction;
+import java.lang.classfile.instruction.LineNumber;
 import java.lang.classfile.instruction.ReturnInstruction;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.DirectMethodHandleDesc;
@@ -108,21 +109,34 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     List<ProbeHandler> entryHandlers = new ArrayList<>();
     List<ProbeHandler> returnHandlers = new ArrayList<>();
     List<ProbeHandler> callHandlers = new ArrayList<>();
+    List<ProbeHandler> lineHandlers = new ArrayList<>();
     for (ProbeHandler ph : handlers) {
       Kind kind = ph.om.getLocation().getValue();
       if (kind == Kind.ENTRY) entryHandlers.add(ph);
       else if (kind == Kind.RETURN) returnHandlers.add(ph);
       else if (kind == Kind.CALL) callHandlers.add(ph);
+      else if (kind == Kind.LINE) lineHandlers.add(ph);
       else log.debug("Skipping unsupported probe kind {} for class {}", kind, javaClassName);
     }
-    if (entryHandlers.isEmpty() && returnHandlers.isEmpty() && callHandlers.isEmpty()) return null;
+    if (entryHandlers.isEmpty()
+        && returnHandlers.isEmpty()
+        && callHandlers.isEmpty()
+        && lineHandlers.isEmpty()) {
+      return null;
+    }
 
     boolean[] anyMatch = {false};
     byte[] result =
         cf.transformClass(
             classModel,
             buildClassTransform(
-                loader, javaClassName, entryHandlers, returnHandlers, callHandlers, anyMatch));
+                loader,
+                javaClassName,
+                entryHandlers,
+                returnHandlers,
+                callHandlers,
+                lineHandlers,
+                anyMatch));
     return anyMatch[0] ? result : null;
   }
 
@@ -216,6 +230,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> entryHandlers,
       List<ProbeHandler> returnHandlers,
       List<ProbeHandler> callHandlers,
+      List<ProbeHandler> lineHandlers,
       boolean[] anyMatch) {
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
@@ -226,7 +241,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         List<ProbeHandler> mEntry = filterForMethod(entryHandlers, methodName, methodDesc, loader);
         List<ProbeHandler> mReturn = filterForMethod(returnHandlers, methodName, methodDesc, loader);
         List<ProbeHandler> mCall = filterForMethod(callHandlers, methodName, methodDesc, loader);
-        if (!mEntry.isEmpty() || !mReturn.isEmpty() || !mCall.isEmpty()) {
+        List<ProbeHandler> mLine = filterForMethod(lineHandlers, methodName, methodDesc, loader);
+        if (!mEntry.isEmpty() || !mReturn.isEmpty() || !mCall.isEmpty() || !mLine.isEmpty()) {
           if (!mEntry.isEmpty() || !mReturn.isEmpty()) {
             anyMatch[0] = true;
           }
@@ -241,6 +257,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                   mEntry,
                   mReturn,
                   mCall,
+                  mLine,
                   anyMatch));
         } else {
           classBuilder.with(classElement);
@@ -260,6 +277,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> entryHandlers,
       List<ProbeHandler> returnHandlers,
       List<ProbeHandler> callHandlers,
+      List<ProbeHandler> lineHandlers,
       boolean[] anyMatch) {
     return (methodBuilder, methodElement) -> {
       if (methodElement instanceof CodeModel cm) {
@@ -274,6 +292,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 entryHandlers,
                 returnHandlers,
                 callHandlers,
+                lineHandlers,
                 anyMatch));
       } else {
         methodBuilder.with(methodElement);
@@ -290,6 +309,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> entryHandlers,
       List<ProbeHandler> returnHandlers,
       List<ProbeHandler> callHandlers,
+      List<ProbeHandler> lineHandlers,
       boolean[] anyMatch) {
 
     boolean hasDuration =
@@ -303,6 +323,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       private final int[] durationSlot = {-1};
       private final boolean[] entryInjected = {false};
       private Label startLabel;
+      private int pendingLine = -1;
 
       @Override
       public void atStart(CodeBuilder cb) {
@@ -314,6 +335,12 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
 
       @Override
       public void accept(CodeBuilder cb, CodeElement ce) {
+        if (ce instanceof LineNumber lineNumber) {
+          pendingLine = lineNumber.line();
+          cb.with(ce);
+          return;
+        }
+
         if (!entryInjected[0] && !(ce instanceof PseudoInstruction)) {
           entryInjected[0] = true;
           if (hasDuration) {
@@ -329,6 +356,19 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           for (ProbeHandler ph : entryHandlers) {
             emitProbeCall(cb, ph, javaClassName, methodName, isStatic, true, -1, TypeKind.VOID, -1);
           }
+        }
+
+        if (pendingLine != -1 && !(ce instanceof PseudoInstruction)) {
+          for (ProbeHandler ph : lineHandlers) {
+            if (ph.om.getLocation().getWhere() == Where.BEFORE
+                && ph.om.getLocation().getLine() == pendingLine
+                && canEmitLineProbe(ph, javaClassName, isStatic, loader)) {
+              if (emitLineProbe(cb, ph, javaClassName, methodName, isStatic, pendingLine)) {
+                anyMatch[0] = true;
+              }
+            }
+          }
+          pendingLine = -1;
         }
 
         if (!returnHandlers.isEmpty() && ce instanceof ReturnInstruction ri) {
@@ -638,6 +678,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   }
 
   private static int callArgumentIndex(OnMethod om, int handlerIndex) {
+    return ordinaryArgumentIndex(om, handlerIndex);
+  }
+
+  private static int ordinaryArgumentIndex(OnMethod om, int handlerIndex) {
     int callArg = 0;
     for (int i = 0; i <= handlerIndex; i++) {
       if (i == om.getSelfParameter()
@@ -653,6 +697,44 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       callArg++;
     }
     return -1;
+  }
+
+  private static boolean canEmitLineProbe(
+      ProbeHandler ph, String javaClassName, boolean methodStatic, ClassLoader loader) {
+    OnMethod om = ph.om;
+    String rawDesc =
+        om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+    Type[] handlerArgTypes = Type.getArgumentTypes(rawDesc);
+    Type selfType = Type.getObjectType(javaClassName.replace('.', '/'));
+    for (int i = 0; i < handlerArgTypes.length; i++) {
+      if (i == om.getSelfParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        if (!methodStatic
+            && !InstrumentUtils.isAssignable(
+                handlerArgTypes[i], selfType, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getClassNameParameter() || i == om.getMethodParameter()) {
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.STRING_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getReturnParameter()
+          || i == om.getDurationParameter()
+          || i == om.getTargetInstanceParameter()
+          || i == om.getTargetMethodOrFieldParameter()) {
+        return false;
+      }
+      int lineArgIndex = ordinaryArgumentIndex(om, i);
+      if (lineArgIndex != 0 || !sameStackType(Type.INT_TYPE, handlerArgTypes[i])) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static boolean canEmitCallProbe(ProbeHandler ph, InvokeInstruction ii, ClassLoader loader) {
@@ -742,6 +824,17 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         cb, ph, javaClassName, methodName, isStatic, isBefore, -1, TypeKind.VOID, -1, callContext);
   }
 
+  private static boolean emitLineProbe(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      int lineNumber) {
+    return emitProbeCall(
+        cb, ph, javaClassName, methodName, isStatic, false, -1, null, TypeKind.VOID, -1, null, lineNumber);
+  }
+
   private static boolean emitProbeCall(
       CodeBuilder cb,
       ProbeHandler ph,
@@ -793,6 +886,34 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       TypeKind returnKind,
       int durationSlot,
       CallContext callContext) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        isEntry,
+        retValSlot,
+        returnType,
+        returnKind,
+        durationSlot,
+        callContext,
+        -1);
+  }
+
+  private static boolean emitProbeCall(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      boolean isEntry,
+      int retValSlot,
+      Type returnType,
+      TypeKind returnKind,
+      int durationSlot,
+      CallContext callContext,
+      int lineNumber) {
     OnMethod om = ph.om;
 
     String rawDesc =
@@ -803,6 +924,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     // An early return mid-loop would leave orphaned stack values, causing a VerifyError.
     for (int i = 0; i < argTypes.length; i++) {
       int callArgIndex = callContext != null ? callArgumentIndex(om, i) : -1;
+      int lineArgIndex = lineNumber != -1 ? ordinaryArgumentIndex(om, i) : -1;
       boolean satisfiable =
           i == om.getSelfParameter()
               || i == om.getClassNameParameter()
@@ -811,6 +933,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
               || (i == om.getDurationParameter() && durationSlot != -1)
               || (i == om.getTargetInstanceParameter() && callContext != null)
               || (i == om.getTargetMethodOrFieldParameter() && callContext != null)
+              || lineArgIndex == 0
               || (callArgIndex >= 0 && callArgIndex < callContext.argumentTypes.length);
       if (!satisfiable) {
         log.debug(
@@ -852,6 +975,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         }
       } else if (i == om.getTargetMethodOrFieldParameter()) {
         cb.ldc(targetMethodName(om, callContext));
+      } else if (lineNumber != -1 && ordinaryArgumentIndex(om, i) == 0) {
+        cb.ldc(lineNumber);
       } else if (callContext != null) {
         int callArgIndex = callArgumentIndex(om, i);
         cb.loadLocal(
