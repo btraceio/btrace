@@ -10,16 +10,16 @@ and push to `develop`:
 
 | JDK Version | SDKMan Identifier | Distribution | Status |
 |-------------|-------------------|--------------|--------|
-| 8 | `8.0.492-tem` | Eclipse Temurin | Supported |
-| 11 | `11.0.31-tem` | Eclipse Temurin | Supported — minimum build JDK |
-| 17 | `17.0.19-tem` | Eclipse Temurin | Supported |
-| 21 | `21.0.11-tem` | Eclipse Temurin | Supported |
-| 25 | `25.0.3-tem` | Eclipse Temurin | Supported |
+| 8 | `8.0.492-tem` | Eclipse Temurin | Supported (LTS) |
+| 11 | `11.0.31-tem` | Eclipse Temurin | Supported (LTS) — minimum build JDK |
+| 17 | `17.0.19-tem` | Eclipse Temurin | Supported (LTS) |
+| 21 | `21.0.11-tem` | Eclipse Temurin | Supported (LTS) |
+| 25 | `25.0.3-tem` | Eclipse Temurin | Supported (LTS) |
 | 27 (EA) | `27.ea.20-open` | OpenJDK Early Access | Experimental — tracked for future readiness |
 
-Version identifiers are updated automatically each Monday via
-[`.github/workflows/update-jdk-versions.yml`](./../.github/workflows/update-jdk-versions.yml)
-using the SDKMan API.
+Version identifiers are checked every Monday via
+[`.github/workflows/update-jdk-versions.yml`](../.github/workflows/update-jdk-versions.yml)
+using the SDKMan API; a pull request is opened automatically when a newer version is available.
 
 ## Distribution Support Policy
 
@@ -32,7 +32,9 @@ If you discover a distribution-specific issue, please [open a GitHub issue](#rep
 ## Minimum Java Version
 
 BTrace compiles with `sourceCompatibility = 8` and `targetCompatibility = 8`, targeting the widest
-possible deployment base. The build toolchain requires JDK 11 or later.
+possible deployment base. The build toolchain auto-provisions a JDK 11 compiler via Gradle
+toolchains; the CI pipeline runs with JDK 24. A local build requires JDK 11 or later available
+to Gradle (installed locally or auto-provisioned).
 
 ## Reporting Compatibility Issues
 
