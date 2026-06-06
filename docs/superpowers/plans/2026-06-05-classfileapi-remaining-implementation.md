@@ -26,21 +26,41 @@ Do not stream Gradle logs. Always redirect to `/tmp/...` and summarize with `rg`
 
 **Purpose:** Lock down the remaining work before changing backend behavior.
 
-- [ ] Create a parity table in this plan or a companion doc listing each remaining `Kind`, supported `Where` values, ordinary parameters, special parameters, and ASM instrumentor section.
-- [ ] Add test fixture helpers for Java 26 class-file generation:
-  - [ ] line number fixtures
-  - [ ] field get/set fixtures
-  - [ ] array get/set fixtures
-  - [ ] `checkcast` and `instanceof` fixtures
-  - [ ] `new`, `newarray`, `anewarray`, and `multianewarray` fixtures
-  - [ ] `athrow`, catch table, and uncaught error fixtures
-  - [ ] `monitorenter` and `monitorexit` fixtures
-- [ ] Add bytecode assertion helpers:
-  - [ ] find invokedynamic actions by action method name
-  - [ ] assert invokedynamic before or after a specific opcode
-  - [ ] assert generated local stores/loads preserve target instruction operands
-  - [ ] assert `System.nanoTime` placement for duration-sensitive probes
-- [ ] Add one negative test proving a still-unsupported kind returns `null` until its phase is implemented.
+### Parity Table
+
+| Kind | ASM reference | Where | Ordinary parameters | Special parameters | Primary risk |
+| --- | --- | --- | --- | --- | --- |
+| `LINE` | `LineNumberInstrumentor` | `BEFORE`, `AFTER` | line `int` | `@Self`, `@ProbeClassName`, `@ProbeMethodName` | emitting into pseudo-instruction regions and constructor prologue placement |
+| `FIELD_GET` | `FieldAccessInstrumentor` get hooks | `BEFORE`, `AFTER` | none | `@Self`, `@TargetInstance`, `@TargetMethodOrField`, `@Return` after get | preserving `getfield` owner and category-2 field values |
+| `FIELD_SET` | `FieldAccessInstrumentor` put hooks | `BEFORE`, `AFTER` | new field value | `@Self`, `@TargetInstance`, `@TargetMethodOrField` | restoring `putfield` owner/value stack order |
+| `ARRAY_GET` | `ArrayAccessInstrumentor` load hooks | `BEFORE`, `AFTER` | index `int` | `@Self`, `@TargetInstance`, `@Return` after load | preserving arrayref/index and category-2 element values |
+| `ARRAY_SET` | `ArrayAccessInstrumentor` store hooks | `BEFORE`, `AFTER` | index `int`, new element value | `@Self`, `@TargetInstance` | restoring arrayref/index/value stack order |
+| `CHECKCAST` | `TypeCheckInstrumentor` checkcast hooks | `BEFORE`, `AFTER` | target type `String` | `@Self`, `@TargetInstance` | preserving failing-cast semantics |
+| `INSTANCEOF` | `TypeCheckInstrumentor` instanceof hooks | `BEFORE`, `AFTER` | target type `String` | `@Self`, `@TargetInstance` | preserving boolean result and null behavior |
+| `THROW` | `ThrowInstrumentor` | at `athrow` | enclosing method args | `@Self`, `@TargetInstance` thrown throwable | preserving thrown object identity |
+| `CATCH` | `CatchInstrumentor` | handler entry | enclosing method args | `@Self`, `@TargetInstance` caught throwable | typed catch-handler filtering and frame compatibility |
+| `ERROR` | `ErrorReturnInstrumentor` | uncaught method exit | thrown `Throwable` | `@Self`, `@TargetInstance`, `@Duration` | synthetic handler range and duration state |
+| `NEWARRAY` | `ArrayAllocInstrumentor` | `BEFORE`, `AFTER` | array type `String`, dimensions `int` | `@Self`, `@Return` after allocation | multidimensional descriptors and return capture |
+| `NEW` | object allocation hooks in ASM path | `BEFORE`, `AFTER` | object type `String` | `@Self`, `@Return` after allocation | uninitialized object verifier rules |
+| `SYNC_ENTRY` | `SynchronizedInstrumentor` entry hooks | `BEFORE`, `AFTER` | lock object | `@Self`, `@TargetInstance` | lock object preservation and synchronized methods |
+| `SYNC_EXIT` | `SynchronizedInstrumentor` exit hooks | `BEFORE`, `AFTER` | lock object | `@Self`, `@TargetInstance`, `@Duration` | unlock semantics on normal and exceptional paths |
+| sampled/level guards | `MethodTrackingContext` and level checks | guard-dependent | n/a | n/a | guard placement before stack-mutating argument capture |
+
+- [x] Create a parity table in this plan or a companion doc listing each remaining `Kind`, supported `Where` values, ordinary parameters, special parameters, and ASM instrumentor section.
+- [x] Add test fixture helpers for Java 26 class-file generation:
+  - [x] line number fixtures
+  - [x] field get/set fixtures
+  - [x] array get/set fixtures
+  - [x] `checkcast` and `instanceof` fixtures
+  - [x] `new`, `newarray`, `anewarray`, and `multianewarray` fixtures
+  - [x] `athrow`, catch table, and uncaught error fixtures
+  - [x] `monitorenter` and `monitorexit` fixtures
+- [x] Add bytecode assertion helpers:
+  - [x] find invokedynamic actions by action method name
+  - [x] assert invokedynamic before or after a specific opcode
+  - [x] assert generated local stores/loads preserve target instruction operands
+  - [x] assert `System.nanoTime` placement for duration-sensitive probes
+- [x] Add one negative test proving a still-unsupported kind returns `null` until its phase is implemented.
 
 **Verification:**
 

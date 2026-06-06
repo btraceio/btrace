@@ -37,14 +37,20 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Handle;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.IntInsnNode;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.LdcInsnNode;
+import org.objectweb.asm.tree.LineNumberNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
 /**
@@ -129,6 +135,85 @@ class ClassFileApiBackendTest {
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Expected null when CALL probe has no matching call site");
+  }
+
+  @Test
+  void unsupportedLineProbeCurrentlyReturnsNull() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithLineNumber(70, "com/example/Target", "doWork", 42);
+    Location location = new Location();
+    location.setValue(Kind.LINE);
+    location.setLine(42);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "doWork", location, "(I)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "Expected LINE probe to remain unsupported before its implementation phase");
+  }
+
+  @Test
+  void phaseZeroFixturesContainExpectedBytecodeShapes() {
+    byte[] lineFixture =
+        patchVersion(buildClassWithLineNumber(70, "com/example/Target", "line", 42), 65);
+    assertTrue(containsLineNumber(lineFixture, "line", 42));
+
+    byte[] fieldFixture =
+        patchVersion(buildClassWithFieldAccesses(70, "com/example/Target", "fields"), 65);
+    assertEquals(
+        1, countFieldInsn(fieldFixture, "fields", Opcodes.GETFIELD, "com/example/Target", "value"));
+    assertEquals(
+        1, countFieldInsn(fieldFixture, "fields", Opcodes.PUTFIELD, "com/example/Target", "value"));
+    assertEquals(
+        1,
+        countFieldInsn(
+            fieldFixture, "fields", Opcodes.GETSTATIC, "com/example/Target", "staticValue"));
+    assertEquals(
+        1,
+        countFieldInsn(
+            fieldFixture, "fields", Opcodes.PUTSTATIC, "com/example/Target", "staticValue"));
+
+    byte[] arrayFixture =
+        patchVersion(buildClassWithArrayAccesses(70, "com/example/Target", "arrays"), 65);
+    assertEquals(1, countOpcode(arrayFixture, "arrays", Opcodes.IALOAD));
+    assertEquals(1, countOpcode(arrayFixture, "arrays", Opcodes.IASTORE));
+    assertEquals(1, countOpcode(arrayFixture, "arrays", Opcodes.AALOAD));
+    assertEquals(1, countOpcode(arrayFixture, "arrays", Opcodes.AASTORE));
+
+    byte[] typeFixture =
+        patchVersion(buildClassWithTypeChecks(70, "com/example/Target", "types"), 65);
+    assertEquals(1, countTypeInsn(typeFixture, "types", Opcodes.INSTANCEOF, "java/util/List"));
+    assertEquals(1, countTypeInsn(typeFixture, "types", Opcodes.CHECKCAST, "java/lang/String"));
+
+    byte[] allocationFixture =
+        patchVersion(buildClassWithArrayAllocations(70, "com/example/Target", "allocations"), 65);
+    assertEquals(
+        1, countIntInsn(allocationFixture, "allocations", Opcodes.NEWARRAY, Opcodes.T_INT));
+    assertEquals(
+        1, countTypeInsn(allocationFixture, "allocations", Opcodes.ANEWARRAY, "java/lang/String"));
+    assertEquals(1, countOpcode(allocationFixture, "allocations", Opcodes.MULTIANEWARRAY));
+
+    byte[] objectAllocationFixture =
+        patchVersion(buildClassWithObjectAllocation(70, "com/example/Target", "objects"), 65);
+    assertEquals(
+        1,
+        countTypeInsn(objectAllocationFixture, "objects", Opcodes.NEW, "java/lang/StringBuilder"));
+
+    byte[] exceptionFixture =
+        patchVersion(buildClassWithThrowAndCatch(70, "com/example/Target", "exceptions"), 65);
+    assertEquals(2, countOpcode(exceptionFixture, "exceptions", Opcodes.ATHROW));
+    assertEquals(1, countTryCatchBlocks(exceptionFixture, "exceptions"));
+    assertEquals(
+        1,
+        handlerStartsForCatchType(exceptionFixture, "exceptions", "java/lang/RuntimeException")
+            .size());
+
+    byte[] monitorFixture =
+        patchVersion(buildClassWithMonitorBlock(70, "com/example/Target", "monitor"), 65);
+    assertEquals(1, countOpcode(monitorFixture, "monitor", Opcodes.MONITORENTER));
+    assertEquals(2, countOpcode(monitorFixture, "monitor", Opcodes.MONITOREXIT));
+    assertEquals(2, countTryCatchBlocks(monitorFixture, "monitor"));
   }
 
   @Test
@@ -804,6 +889,257 @@ class ClassFileApiBackendTest {
     return bytes;
   }
 
+  private static byte[] buildClassWithLineNumber(
+      int majorVersion, String internalClassName, String methodName, int line) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, methodName, "()V", null, null);
+    Label start = new Label();
+    mv.visitCode();
+    mv.visitLabel(start);
+    mv.visitLineNumber(line, start);
+    mv.visitInsn(Opcodes.RETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
+  private static byte[] buildClassWithFieldAccesses(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+    cw.visitField(Opcodes.ACC_PUBLIC, "value", "I", null, null).visitEnd();
+    cw.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "staticValue", "J", null, null)
+        .visitEnd();
+
+    MethodVisitor ctor = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
+    ctor.visitCode();
+    ctor.visitVarInsn(Opcodes.ALOAD, 0);
+    ctor.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+    ctor.visitInsn(Opcodes.RETURN);
+    ctor.visitMaxs(0, 0);
+    ctor.visitEnd();
+
+    MethodVisitor mv =
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
+            methodName,
+            "(L" + internalClassName + ";)J",
+            null,
+            null);
+    mv.visitCode();
+    mv.visitVarInsn(Opcodes.ALOAD, 0);
+    mv.visitFieldInsn(Opcodes.GETFIELD, internalClassName, "value", "I");
+    mv.visitInsn(Opcodes.POP);
+    mv.visitVarInsn(Opcodes.ALOAD, 0);
+    mv.visitInsn(Opcodes.ICONST_1);
+    mv.visitFieldInsn(Opcodes.PUTFIELD, internalClassName, "value", "I");
+    mv.visitInsn(Opcodes.LCONST_0);
+    mv.visitFieldInsn(Opcodes.PUTSTATIC, internalClassName, "staticValue", "J");
+    mv.visitFieldInsn(Opcodes.GETSTATIC, internalClassName, "staticValue", "J");
+    mv.visitInsn(Opcodes.LRETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
+  private static byte[] buildClassWithArrayAccesses(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor mv =
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
+            methodName,
+            "([I[Ljava/lang/Object;)I",
+            null,
+            null);
+    mv.visitCode();
+    mv.visitVarInsn(Opcodes.ALOAD, 0);
+    mv.visitInsn(Opcodes.ICONST_0);
+    mv.visitInsn(Opcodes.IALOAD);
+    mv.visitVarInsn(Opcodes.ISTORE, 2);
+    mv.visitVarInsn(Opcodes.ALOAD, 0);
+    mv.visitInsn(Opcodes.ICONST_1);
+    mv.visitVarInsn(Opcodes.ILOAD, 2);
+    mv.visitInsn(Opcodes.IASTORE);
+    mv.visitVarInsn(Opcodes.ALOAD, 1);
+    mv.visitInsn(Opcodes.ICONST_0);
+    mv.visitInsn(Opcodes.AALOAD);
+    mv.visitInsn(Opcodes.POP);
+    mv.visitVarInsn(Opcodes.ALOAD, 1);
+    mv.visitInsn(Opcodes.ICONST_1);
+    mv.visitInsn(Opcodes.ACONST_NULL);
+    mv.visitInsn(Opcodes.AASTORE);
+    mv.visitVarInsn(Opcodes.ILOAD, 2);
+    mv.visitInsn(Opcodes.IRETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
+  private static byte[] buildClassWithTypeChecks(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor mv =
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
+            methodName,
+            "(Ljava/lang/Object;)Z",
+            null,
+            null);
+    mv.visitCode();
+    mv.visitVarInsn(Opcodes.ALOAD, 0);
+    mv.visitTypeInsn(Opcodes.INSTANCEOF, "java/util/List");
+    mv.visitInsn(Opcodes.POP);
+    mv.visitVarInsn(Opcodes.ALOAD, 0);
+    mv.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/String");
+    mv.visitInsn(Opcodes.POP);
+    mv.visitInsn(Opcodes.ICONST_1);
+    mv.visitInsn(Opcodes.IRETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
+  private static byte[] buildClassWithArrayAllocations(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor mv =
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
+            methodName,
+            "()Ljava/lang/Object;",
+            null,
+            null);
+    mv.visitCode();
+    mv.visitIntInsn(Opcodes.BIPUSH, 3);
+    mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_INT);
+    mv.visitInsn(Opcodes.POP);
+    mv.visitIntInsn(Opcodes.BIPUSH, 2);
+    mv.visitTypeInsn(Opcodes.ANEWARRAY, "java/lang/String");
+    mv.visitInsn(Opcodes.POP);
+    mv.visitInsn(Opcodes.ICONST_2);
+    mv.visitInsn(Opcodes.ICONST_3);
+    mv.visitMultiANewArrayInsn("[[Ljava/lang/String;", 2);
+    mv.visitInsn(Opcodes.ARETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
+  private static byte[] buildClassWithObjectAllocation(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor mv =
+        cw.visitMethod(
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
+            methodName,
+            "()Ljava/lang/Object;",
+            null,
+            null);
+    mv.visitCode();
+    mv.visitTypeInsn(Opcodes.NEW, "java/lang/StringBuilder");
+    mv.visitInsn(Opcodes.DUP);
+    mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "()V", false);
+    mv.visitInsn(Opcodes.ARETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
+  private static byte[] buildClassWithThrowAndCatch(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, methodName, "()V", null, null);
+    Label start = new Label();
+    Label end = new Label();
+    Label handler = new Label();
+    Label done = new Label();
+    mv.visitTryCatchBlock(start, end, handler, "java/lang/RuntimeException");
+    mv.visitCode();
+    mv.visitLabel(start);
+    mv.visitTypeInsn(Opcodes.NEW, "java/lang/RuntimeException");
+    mv.visitInsn(Opcodes.DUP);
+    mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/RuntimeException", "<init>", "()V", false);
+    mv.visitInsn(Opcodes.ATHROW);
+    mv.visitLabel(end);
+    mv.visitJumpInsn(Opcodes.GOTO, done);
+    mv.visitLabel(handler);
+    mv.visitVarInsn(Opcodes.ASTORE, 0);
+    mv.visitLabel(done);
+    mv.visitInsn(Opcodes.RETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
+  private static byte[] buildClassWithMonitorBlock(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, methodName, "()V", null, null);
+    Label start = new Label();
+    Label end = new Label();
+    Label handler = new Label();
+    Label done = new Label();
+    mv.visitTryCatchBlock(start, end, handler, null);
+    mv.visitTryCatchBlock(handler, done, handler, null);
+    mv.visitCode();
+    mv.visitTypeInsn(Opcodes.NEW, "java/lang/Object");
+    mv.visitInsn(Opcodes.DUP);
+    mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+    mv.visitVarInsn(Opcodes.ASTORE, 0);
+    mv.visitVarInsn(Opcodes.ALOAD, 0);
+    mv.visitInsn(Opcodes.DUP);
+    mv.visitVarInsn(Opcodes.ASTORE, 1);
+    mv.visitInsn(Opcodes.MONITORENTER);
+    mv.visitLabel(start);
+    mv.visitVarInsn(Opcodes.ALOAD, 1);
+    mv.visitInsn(Opcodes.MONITOREXIT);
+    mv.visitLabel(end);
+    mv.visitJumpInsn(Opcodes.GOTO, done);
+    mv.visitLabel(handler);
+    mv.visitVarInsn(Opcodes.ALOAD, 1);
+    mv.visitInsn(Opcodes.MONITOREXIT);
+    mv.visitInsn(Opcodes.ATHROW);
+    mv.visitLabel(done);
+    mv.visitInsn(Opcodes.RETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
   /** Patches bytes 6-7 of a class file to the given major version. */
   private static byte[] patchVersion(byte[] bytes, int majorVersion) {
     byte[] copy = Arrays.copyOf(bytes, bytes.length);
@@ -1239,6 +1575,225 @@ class ClassFileApiBackendTest {
     return count[0];
   }
 
+  private static List<InvokeDynamicInsnNode> btraceInvokeDynamics(
+      byte[] classBytes, String methodName) {
+    MethodNode method = treeMethod(classBytes, methodName);
+    if (method == null) return Collections.emptyList();
+    List<InvokeDynamicInsnNode> result = new ArrayList<>();
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction instanceof InvokeDynamicInsnNode
+          && ((InvokeDynamicInsnNode) instruction).name.contains("$btrace$")) {
+        result.add((InvokeDynamicInsnNode) instruction);
+      }
+    }
+    return result;
+  }
+
+  private static List<Integer> instructionOpcodes(byte[] classBytes, String methodName) {
+    MethodNode method = treeMethod(classBytes, methodName);
+    if (method == null) return Collections.emptyList();
+    List<Integer> opcodes = new ArrayList<>();
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction.getOpcode() != -1) {
+        opcodes.add(instruction.getOpcode());
+      }
+    }
+    return opcodes;
+  }
+
+  private static void assertBTraceBeforeOpcode(
+      byte[] classBytes, String methodName, int targetOpcode) {
+    MethodNode method = requireTreeMethod(classBytes, methodName);
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction instanceof InvokeDynamicInsnNode
+          && ((InvokeDynamicInsnNode) instruction).name.contains("$btrace$")) {
+        AbstractInsnNode next = nextExecutable(instruction);
+        if (next != null && next.getOpcode() == targetOpcode) {
+          return;
+        }
+      }
+    }
+    fail("Expected BTrace invokedynamic immediately before opcode " + targetOpcode);
+  }
+
+  private static void assertBTraceAfterOpcode(
+      byte[] classBytes, String methodName, int targetOpcode) {
+    MethodNode method = requireTreeMethod(classBytes, methodName);
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction.getOpcode() == targetOpcode) {
+        AbstractInsnNode next = nextExecutable(instruction);
+        if (next instanceof InvokeDynamicInsnNode
+            && ((InvokeDynamicInsnNode) next).name.contains("$btrace$")) {
+          return;
+        }
+      }
+    }
+    fail("Expected BTrace invokedynamic immediately after opcode " + targetOpcode);
+  }
+
+  private static void assertBTraceBetweenOpcodes(
+      byte[] classBytes, String methodName, int beforeOpcode, int afterOpcode) {
+    MethodNode method = requireTreeMethod(classBytes, methodName);
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction.getOpcode() == beforeOpcode) {
+        AbstractInsnNode next = nextExecutable(instruction);
+        if (next instanceof InvokeDynamicInsnNode
+            && ((InvokeDynamicInsnNode) next).name.contains("$btrace$")) {
+          AbstractInsnNode afterBtrace = nextExecutable(next);
+          if (afterBtrace != null && afterBtrace.getOpcode() == afterOpcode) {
+            return;
+          }
+        }
+      }
+    }
+    fail("Expected BTrace invokedynamic between opcodes " + beforeOpcode + " and " + afterOpcode);
+  }
+
+  private static void assertStoresBeforeOpcode(
+      byte[] classBytes, String methodName, int targetOpcode, int... storeOpcodes) {
+    MethodNode method = requireTreeMethod(classBytes, methodName);
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction.getOpcode() == targetOpcode) {
+        AbstractInsnNode current = previousExecutable(instruction);
+        for (int i = storeOpcodes.length - 1; i >= 0; i--) {
+          assertNotNull(current, "Expected store opcode " + storeOpcodes[i]);
+          assertEquals(storeOpcodes[i], current.getOpcode());
+          current = previousExecutable(current);
+        }
+        return;
+      }
+    }
+    fail("Expected target opcode " + targetOpcode);
+  }
+
+  private static void assertLoadsBeforeBTrace(
+      byte[] classBytes, String methodName, int... loadOpcodes) {
+    MethodNode method = requireTreeMethod(classBytes, methodName);
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction instanceof InvokeDynamicInsnNode
+          && ((InvokeDynamicInsnNode) instruction).name.contains("$btrace$")) {
+        AbstractInsnNode current = previousExecutable(instruction);
+        for (int i = loadOpcodes.length - 1; i >= 0; i--) {
+          assertNotNull(current, "Expected load opcode " + loadOpcodes[i]);
+          assertEquals(loadOpcodes[i], current.getOpcode());
+          current = previousExecutable(current);
+        }
+        return;
+      }
+    }
+    fail("Expected BTrace invokedynamic in method " + methodName);
+  }
+
+  private static void assertNanoTimeBeforeOpcode(
+      byte[] classBytes, String methodName, int targetOpcode) {
+    MethodNode method = requireTreeMethod(classBytes, methodName);
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (isNanoTimeCall(instruction)) {
+        AbstractInsnNode next = nextExecutable(instruction);
+        if (next != null && next.getOpcode() == targetOpcode) {
+          return;
+        }
+      }
+    }
+    fail("Expected System.nanoTime call immediately before opcode " + targetOpcode);
+  }
+
+  private static void assertNanoTimeAfterOpcode(
+      byte[] classBytes, String methodName, int targetOpcode) {
+    MethodNode method = requireTreeMethod(classBytes, methodName);
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction.getOpcode() == targetOpcode) {
+        AbstractInsnNode next = nextExecutable(instruction);
+        if (isNanoTimeCall(next)) {
+          return;
+        }
+      }
+    }
+    fail("Expected System.nanoTime call immediately after opcode " + targetOpcode);
+  }
+
+  private static int countTryCatchBlocks(byte[] classBytes, String methodName) {
+    return requireTreeMethod(classBytes, methodName).tryCatchBlocks.size();
+  }
+
+  private static List<AbstractInsnNode> handlerStartsForCatchType(
+      byte[] classBytes, String methodName, String internalCatchType) {
+    MethodNode method = requireTreeMethod(classBytes, methodName);
+    List<AbstractInsnNode> starts = new ArrayList<>();
+    method.tryCatchBlocks.forEach(
+        block -> {
+          if (internalCatchType == null
+              ? block.type == null
+              : internalCatchType.equals(block.type)) {
+            starts.add(nextExecutable(block.handler));
+          }
+        });
+    return starts;
+  }
+
+  private static int countOpcode(byte[] classBytes, String methodName, int opcode) {
+    int count = 0;
+    for (int instructionOpcode : instructionOpcodes(classBytes, methodName)) {
+      if (instructionOpcode == opcode) count++;
+    }
+    return count;
+  }
+
+  private static int countFieldInsn(
+      byte[] classBytes, String methodName, int opcode, String owner, String fieldName) {
+    int count = 0;
+    MethodNode method = requireTreeMethod(classBytes, methodName);
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction instanceof FieldInsnNode && instruction.getOpcode() == opcode) {
+        FieldInsnNode field = (FieldInsnNode) instruction;
+        if (owner.equals(field.owner) && fieldName.equals(field.name)) count++;
+      }
+    }
+    return count;
+  }
+
+  private static int countTypeInsn(
+      byte[] classBytes, String methodName, int opcode, String descriptor) {
+    int count = 0;
+    MethodNode method = requireTreeMethod(classBytes, methodName);
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction instanceof TypeInsnNode && instruction.getOpcode() == opcode) {
+        TypeInsnNode type = (TypeInsnNode) instruction;
+        if (descriptor.equals(type.desc)) count++;
+      }
+    }
+    return count;
+  }
+
+  private static int countIntInsn(byte[] classBytes, String methodName, int opcode, int operand) {
+    int count = 0;
+    MethodNode method = requireTreeMethod(classBytes, methodName);
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction instanceof IntInsnNode && instruction.getOpcode() == opcode) {
+        IntInsnNode intInsn = (IntInsnNode) instruction;
+        if (intInsn.operand == operand) count++;
+      }
+    }
+    return count;
+  }
+
+  private static boolean containsLineNumber(byte[] classBytes, String methodName, int line) {
+    MethodNode method = treeMethod(classBytes, methodName);
+    if (method == null) return false;
+    for (AbstractInsnNode instruction : method.instructions) {
+      if (instruction instanceof LineNumberNode && ((LineNumberNode) instruction).line == line) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean isNanoTimeCall(AbstractInsnNode instruction) {
+    if (!(instruction instanceof MethodInsnNode)) return false;
+    MethodInsnNode methodInsn = (MethodInsnNode) instruction;
+    return "java/lang/System".equals(methodInsn.owner) && "nanoTime".equals(methodInsn.name);
+  }
+
   private static boolean isBTraceCallBeforeTargetCall(
       byte[] classBytes, String methodName, String targetCallName) {
     List<String> calls = new ArrayList<>();
@@ -1400,6 +1955,12 @@ class ClassFileApiBackendTest {
     return null;
   }
 
+  private static MethodNode requireTreeMethod(byte[] classBytes, String methodName) {
+    MethodNode method = treeMethod(classBytes, methodName);
+    assertNotNull(method, "Expected method " + methodName);
+    return method;
+  }
+
   private static AbstractInsnNode previousExecutable(AbstractInsnNode instruction) {
     AbstractInsnNode current = instruction.getPrevious();
     while (current != null
@@ -1407,6 +1968,17 @@ class ClassFileApiBackendTest {
             || current.getType() == AbstractInsnNode.LINE
             || current.getType() == AbstractInsnNode.FRAME)) {
       current = current.getPrevious();
+    }
+    return current;
+  }
+
+  private static AbstractInsnNode nextExecutable(AbstractInsnNode instruction) {
+    AbstractInsnNode current = instruction.getNext();
+    while (current != null
+        && (current.getType() == AbstractInsnNode.LABEL
+            || current.getType() == AbstractInsnNode.LINE
+            || current.getType() == AbstractInsnNode.FRAME)) {
+      current = current.getNext();
     }
     return current;
   }
