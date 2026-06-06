@@ -568,6 +568,162 @@ class ClassFileApiBackendTest {
   }
 
   @Test
+  void fieldSetBeforePassesValueTargetInstanceAndFieldName() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    Location location = new Location();
+    location.setValue(Kind.FIELD_SET);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("com.example.Target");
+    location.setField("value");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "fields",
+            location,
+            "(ILjava/lang/Object;Ljava/lang/String;)V",
+            -1,
+            -1,
+            1,
+            2,
+            true);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(ILjava/lang/Object;Ljava/lang/String;)V",
+        getInvokeDynamicDescriptor(readable, "fields", "$btrace$"));
+    assertTrue(containsLdc(readable, "fields", "field int com.example.Target#value"));
+    assertBTracePrecedesOpcode(readable, "fields", Opcodes.PUTFIELD);
+  }
+
+  @Test
+  void fieldSetBeforeUsesNullTargetInstanceForStaticField() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    Location location = new Location();
+    location.setValue(Kind.FIELD_SET);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("com.example.Target");
+    location.setField("staticValue");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "fields",
+            location,
+            "(Ljava/lang/Object;)V",
+            -1,
+            -1,
+            0,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    assertTrue(loadsNullBeforeBTrace(patchVersion(result, 65), "fields"));
+  }
+
+  @Test
+  void fieldSetAfterPassesStaticLongValue() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    Location location = new Location();
+    location.setValue(Kind.FIELD_SET);
+    location.setWhere(Where.AFTER);
+    location.setClazz("com.example.Target");
+    location.setField("staticValue");
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "fields", location, "(J)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals("(J)V", getInvokeDynamicDescriptor(readable, "fields", "$btrace$"));
+    assertBTraceBetweenOpcodes(readable, "fields", Opcodes.PUTSTATIC, Opcodes.GETSTATIC);
+  }
+
+  @Test
+  void fieldSetBeforeBoxesPrimitiveValueForObjectHandler() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    Location location = new Location();
+    location.setValue(Kind.FIELD_SET);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("com.example.Target");
+    location.setField("value");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "fields",
+            location,
+            "(Ljava/lang/Object;)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(Ljava/lang/Object;)V", getInvokeDynamicDescriptor(readable, "fields", "$btrace$"));
+    assertEquals(1, countMethodCalls(readable, "fields", "java/lang/Integer", "valueOf"));
+  }
+
+  @Test
+  void fieldSetSkipsWhenFieldNameMismatches() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    Location location = new Location();
+    location.setValue(Kind.FIELD_SET);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("com.example.Target");
+    location.setField("missing");
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "fields", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result);
+  }
+
+  @Test
+  void fieldSetSkipsInvalidStaticTargetInstanceDescriptor() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    Location location = new Location();
+    location.setValue(Kind.FIELD_SET);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("com.example.Target");
+    location.setField("staticValue");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "fields",
+            location,
+            "(Ljava/lang/Integer;)V",
+            -1,
+            -1,
+            0,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(
+        result, "Expected incompatible static field @TargetInstance descriptor to be skipped");
+  }
+
+  @Test
   void phaseZeroFixturesContainExpectedBytecodeShapes() {
     byte[] lineFixture =
         patchVersion(buildClassWithLineNumber(70, "com/example/Target", "line", 42), 65);

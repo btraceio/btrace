@@ -149,20 +149,20 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 **Purpose:** Implement write access after the field-get stack patterns are proven.
 
-- [ ] Match `putfield` and `putstatic` owner/name against location filters.
-- [ ] Backup field value before the put instruction for ordinary handler arguments.
-- [ ] Backup `putfield` owner when `@TargetInstance` is requested.
-- [ ] Restore operands in the exact JVM order before emitting the original instruction.
-- [ ] Support `Where.BEFORE` and `Where.AFTER`.
-- [ ] Support primitive value boxing for `Object` and `AnyType`.
-- [ ] Add tests:
-  - [ ] `putfield` before/after
-  - [ ] `putstatic` before/after
-  - [ ] primitive values
-  - [ ] category-2 values
-  - [ ] reference values
-  - [ ] FQN target field
-  - [ ] no-match owner/name filters
+- [x] Match `putfield` and `putstatic` owner/name against location filters.
+- [x] Backup field value before the put instruction for ordinary handler arguments.
+- [x] Backup `putfield` owner when `@TargetInstance` is requested.
+- [x] Restore operands in the exact JVM order before emitting the original instruction.
+- [x] Support `Where.BEFORE` and `Where.AFTER`.
+- [x] Support primitive value boxing for `Object` and `AnyType`.
+- [x] Add tests:
+  - [x] `putfield` before/after
+  - [x] `putstatic` before/after
+  - [x] primitive values
+  - [x] category-2 values
+  - [x] reference values
+  - [x] FQN target field
+  - [x] no-match owner/name filters
 
 **Review Focus:** Verify `putfield` value/owner order and category-2 local allocation.
 

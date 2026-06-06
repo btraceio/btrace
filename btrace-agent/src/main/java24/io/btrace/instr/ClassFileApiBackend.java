@@ -112,6 +112,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     List<ProbeHandler> callHandlers = new ArrayList<>();
     List<ProbeHandler> lineHandlers = new ArrayList<>();
     List<ProbeHandler> fieldGetHandlers = new ArrayList<>();
+    List<ProbeHandler> fieldSetHandlers = new ArrayList<>();
     for (ProbeHandler ph : handlers) {
       Kind kind = ph.om.getLocation().getValue();
       if (kind == Kind.ENTRY) entryHandlers.add(ph);
@@ -119,13 +120,15 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       else if (kind == Kind.CALL) callHandlers.add(ph);
       else if (kind == Kind.LINE) lineHandlers.add(ph);
       else if (kind == Kind.FIELD_GET) fieldGetHandlers.add(ph);
+      else if (kind == Kind.FIELD_SET) fieldSetHandlers.add(ph);
       else log.debug("Skipping unsupported probe kind {} for class {}", kind, javaClassName);
     }
     if (entryHandlers.isEmpty()
         && returnHandlers.isEmpty()
         && callHandlers.isEmpty()
         && lineHandlers.isEmpty()
-        && fieldGetHandlers.isEmpty()) {
+        && fieldGetHandlers.isEmpty()
+        && fieldSetHandlers.isEmpty()) {
       return null;
     }
 
@@ -141,6 +144,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 callHandlers,
                 lineHandlers,
                 fieldGetHandlers,
+                fieldSetHandlers,
                 anyMatch));
     return anyMatch[0] ? result : null;
   }
@@ -187,6 +191,27 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       this.fieldType = fieldType;
       this.staticAccess = staticAccess;
       this.ownerSlot = ownerSlot;
+    }
+  }
+
+  private static final class FieldSetContext {
+    final FieldInstruction instruction;
+    final Type fieldType;
+    final boolean staticAccess;
+    final int ownerSlot;
+    final int valueSlot;
+
+    FieldSetContext(
+        FieldInstruction instruction,
+        Type fieldType,
+        boolean staticAccess,
+        int ownerSlot,
+        int valueSlot) {
+      this.instruction = instruction;
+      this.fieldType = fieldType;
+      this.staticAccess = staticAccess;
+      this.ownerSlot = ownerSlot;
+      this.valueSlot = valueSlot;
     }
   }
 
@@ -251,6 +276,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> callHandlers,
       List<ProbeHandler> lineHandlers,
       List<ProbeHandler> fieldGetHandlers,
+      List<ProbeHandler> fieldSetHandlers,
       boolean[] anyMatch) {
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
@@ -264,11 +290,14 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         List<ProbeHandler> mLine = filterForMethod(lineHandlers, methodName, methodDesc, loader);
         List<ProbeHandler> mFieldGet =
             filterForMethod(fieldGetHandlers, methodName, methodDesc, loader);
+        List<ProbeHandler> mFieldSet =
+            filterForMethod(fieldSetHandlers, methodName, methodDesc, loader);
         if (!mEntry.isEmpty()
             || !mReturn.isEmpty()
             || !mCall.isEmpty()
             || !mLine.isEmpty()
-            || !mFieldGet.isEmpty()) {
+            || !mFieldGet.isEmpty()
+            || !mFieldSet.isEmpty()) {
           if (!mEntry.isEmpty() || !mReturn.isEmpty()) {
             anyMatch[0] = true;
           }
@@ -285,6 +314,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                   mCall,
                   mLine,
                   mFieldGet,
+                  mFieldSet,
                   anyMatch));
         } else {
           classBuilder.with(classElement);
@@ -306,6 +336,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> callHandlers,
       List<ProbeHandler> lineHandlers,
       List<ProbeHandler> fieldGetHandlers,
+      List<ProbeHandler> fieldSetHandlers,
       boolean[] anyMatch) {
     return (methodBuilder, methodElement) -> {
       if (methodElement instanceof CodeModel cm) {
@@ -322,6 +353,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 callHandlers,
                 lineHandlers,
                 fieldGetHandlers,
+                fieldSetHandlers,
                 anyMatch));
       } else {
         methodBuilder.with(methodElement);
@@ -340,6 +372,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> callHandlers,
       List<ProbeHandler> lineHandlers,
       List<ProbeHandler> fieldGetHandlers,
+      List<ProbeHandler> fieldSetHandlers,
       boolean[] anyMatch) {
 
     boolean hasDuration =
@@ -608,6 +641,58 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                       null,
                       -1,
                       fieldContext);
+            }
+            if (emitted) {
+              anyMatch[0] = true;
+            }
+            return;
+          }
+        }
+
+        if (!fieldSetHandlers.isEmpty()
+            && ce instanceof FieldInstruction fi
+            && (fi.opcode() == Opcode.PUTFIELD || fi.opcode() == Opcode.PUTSTATIC)) {
+          List<ProbeHandler> matchedFieldSetHandlers = filterForField(fieldSetHandlers, fi);
+          if (!matchedFieldSetHandlers.isEmpty()) {
+            List<ProbeHandler> emittableBefore = new ArrayList<>();
+            List<ProbeHandler> emittableAfter = new ArrayList<>();
+            for (ProbeHandler ph : matchedFieldSetHandlers) {
+              if (!canEmitFieldSetProbe(ph, fi, loader)) continue;
+              Where where = ph.om.getLocation().getWhere();
+              if (where == Where.BEFORE) {
+                emittableBefore.add(ph);
+              } else if (where == Where.AFTER) {
+                emittableAfter.add(ph);
+              }
+            }
+            if (emittableBefore.isEmpty() && emittableAfter.isEmpty()) {
+              cb.with(ce);
+              return;
+            }
+
+            Type fieldType = Type.getType(fi.type().stringValue());
+            TypeKind fieldKind = typeKind(fieldType);
+            boolean staticAccess = fi.opcode() == Opcode.PUTSTATIC;
+            int valueSlot = cb.allocateLocal(fieldKind);
+            cb.storeLocal(fieldKind, valueSlot);
+            int ownerSlot = -1;
+            if (!staticAccess) {
+              ownerSlot = cb.allocateLocal(TypeKind.REFERENCE);
+              cb.astore(ownerSlot);
+            }
+            FieldSetContext fieldContext =
+                new FieldSetContext(fi, fieldType, staticAccess, ownerSlot, valueSlot);
+            boolean emitted = false;
+            for (ProbeHandler ph : emittableBefore) {
+              emitted |= emitFieldSetProbe(cb, ph, javaClassName, methodName, isStatic, fieldContext);
+            }
+            if (!staticAccess) {
+              cb.aload(ownerSlot);
+            }
+            cb.loadLocal(fieldKind, valueSlot);
+            emitFieldAccess(cb, fi);
+            for (ProbeHandler ph : emittableAfter) {
+              emitted |= emitFieldSetProbe(cb, ph, javaClassName, methodName, isStatic, fieldContext);
             }
             if (emitted) {
               anyMatch[0] = true;
@@ -942,6 +1027,62 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return true;
   }
 
+  private static boolean canEmitFieldSetProbe(
+      ProbeHandler ph, FieldInstruction fi, ClassLoader loader) {
+    OnMethod om = ph.om;
+    String rawDesc =
+        om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+    Type[] handlerArgTypes = Type.getArgumentTypes(rawDesc);
+    Type fieldType = Type.getType(fi.type().stringValue());
+    Type ownerType = Type.getObjectType(fi.owner().asInternalName());
+    for (int i = 0; i < handlerArgTypes.length; i++) {
+      if (i == om.getSelfParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        continue;
+      }
+      if (i == om.getClassNameParameter() || i == om.getMethodParameter()) {
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.STRING_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getTargetMethodOrFieldParameter()) {
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.STRING_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getTargetInstanceParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], ownerType, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getReturnParameter() || i == om.getDurationParameter()) {
+        return false;
+      }
+      int valueArgIndex = ordinaryArgumentIndex(om, i);
+      if (valueArgIndex != 0) return false;
+      if (typeKind(fieldType) == TypeKind.REFERENCE) {
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], fieldType, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+      } else if (typeKind(handlerArgTypes[i]) == TypeKind.REFERENCE) {
+        if (!Constants.OBJECT_DESC.equals(handlerArgTypes[i].getDescriptor())) {
+          return false;
+        }
+      } else if (!sameStackType(fieldType, handlerArgTypes[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private static boolean canEmitCallProbe(ProbeHandler ph, InvokeInstruction ii, ClassLoader loader) {
     OnMethod om = ph.om;
     String rawDesc =
@@ -1063,6 +1204,30 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         fieldContext);
   }
 
+  private static boolean emitFieldSetProbe(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      FieldSetContext fieldContext) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        false,
+        -1,
+        null,
+        TypeKind.VOID,
+        -1,
+        null,
+        -1,
+        null,
+        fieldContext);
+  }
+
   private static boolean emitProbeCall(
       CodeBuilder cb,
       ProbeHandler ph,
@@ -1155,6 +1320,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         durationSlot,
         callContext,
         lineNumber,
+        null,
         null);
   }
 
@@ -1172,6 +1338,38 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       CallContext callContext,
       int lineNumber,
       FieldGetContext fieldContext) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        isEntry,
+        retValSlot,
+        returnType,
+        returnKind,
+        durationSlot,
+        callContext,
+        lineNumber,
+        fieldContext,
+        null);
+  }
+
+  private static boolean emitProbeCall(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      boolean isEntry,
+      int retValSlot,
+      Type returnType,
+      TypeKind returnKind,
+      int durationSlot,
+      CallContext callContext,
+      int lineNumber,
+      FieldGetContext fieldContext,
+      FieldSetContext fieldSetContext) {
     OnMethod om = ph.om;
 
     String rawDesc =
@@ -1190,10 +1388,11 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
               || (i == om.getReturnParameter() && retValSlot != -1)
               || (i == om.getDurationParameter() && durationSlot != -1)
               || (i == om.getTargetInstanceParameter()
-                  && (callContext != null || fieldContext != null))
+                  && (callContext != null || fieldContext != null || fieldSetContext != null))
               || (i == om.getTargetMethodOrFieldParameter()
-                  && (callContext != null || fieldContext != null))
+                  && (callContext != null || fieldContext != null || fieldSetContext != null))
               || lineArgIndex == 0
+              || (fieldSetContext != null && ordinaryArgumentIndex(om, i) == 0)
               || (callArgIndex >= 0 && callArgIndex < callContext.argumentTypes.length);
       if (!satisfiable) {
         log.debug(
@@ -1234,15 +1433,32 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           } else {
             cb.aload(fieldContext.ownerSlot);
           }
+        } else if (fieldSetContext != null) {
+          if (fieldSetContext.staticAccess) {
+            cb.aconst_null();
+          } else {
+            cb.aload(fieldSetContext.ownerSlot);
+          }
         } else if (callContext == null || callContext.staticCall) {
           cb.aconst_null();
         } else {
           cb.aload(callContext.receiverSlot);
         }
       } else if (i == om.getTargetMethodOrFieldParameter()) {
-        cb.ldc(fieldContext != null ? targetFieldName(om, fieldContext) : targetMethodName(om, callContext));
+        cb.ldc(
+            fieldContext != null
+                ? targetFieldName(om, fieldContext.instruction, fieldContext.staticAccess)
+                : fieldSetContext != null
+                    ? targetFieldName(om, fieldSetContext.instruction, fieldSetContext.staticAccess)
+                    : targetMethodName(om, callContext));
       } else if (lineNumber != -1 && ordinaryArgumentIndex(om, i) == 0) {
         cb.ldc(lineNumber);
+      } else if (fieldSetContext != null && ordinaryArgumentIndex(om, i) == 0) {
+        cb.loadLocal(typeKind(fieldSetContext.fieldType), fieldSetContext.valueSlot);
+        if (typeKind(fieldSetContext.fieldType) != TypeKind.REFERENCE
+            && typeKind(argTypes[i]) == TypeKind.REFERENCE) {
+          boxPrimitiveReturn(cb, fieldSetContext.fieldType, typeKind(fieldSetContext.fieldType));
+        }
       } else if (callContext != null) {
         int callArgIndex = callArgumentIndex(om, i);
         cb.loadLocal(
@@ -1319,14 +1535,15 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return name;
   }
 
-  private static String targetFieldName(OnMethod om, FieldGetContext ctx) {
-    String name = ctx.instruction.name().stringValue();
+  private static String targetFieldName(
+      OnMethod om, FieldInstruction instruction, boolean staticAccess) {
+    String name = instruction.name().stringValue();
     if (om.isTargetMethodOrFieldFqn()) {
-      String prefix = ctx.staticAccess ? "static field" : "field";
+      String prefix = staticAccess ? "static field" : "field";
       return prefix
           + " "
           + TypeUtils.descriptorToSimplified(
-              ctx.instruction.type().stringValue(), ctx.instruction.owner().asInternalName(), name);
+              instruction.type().stringValue(), instruction.owner().asInternalName(), name);
     }
     return name;
   }
