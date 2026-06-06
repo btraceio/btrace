@@ -196,18 +196,19 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 **Purpose:** Implement array writes using the proven field-set backup pattern.
 
-- [ ] Match all JVM array store opcodes.
-- [ ] Backup value, index, and array reference in stack order.
-- [ ] Restore operands before the original array store.
-- [ ] Load ordinary handler arguments: array reference, index, new value, matching ASM order.
-- [ ] Support primitive value boxing for `Object` and `AnyType`.
-- [ ] Add tests:
-  - [ ] object array store
-  - [ ] primitive int array store
-  - [ ] `long` and `double` array store
-  - [ ] before/after placement
-  - [ ] value capture
-  - [ ] no-match type filters
+- [x] Match all JVM array store opcodes.
+- [x] Backup value, index, and array reference in stack order.
+- [x] Restore operands before the original array store.
+- [x] Load ordinary handler arguments: index and new value, with array reference via
+      `@TargetInstance`, matching ASM order.
+- [x] Support primitive value boxing for `Object` and `AnyType`.
+- [x] Add tests:
+  - [x] object array store
+  - [x] primitive int array store
+  - [x] `long` and `double` array store
+  - [x] before/after placement
+  - [x] value capture
+  - [x] no-match type filters
 
 **Review Focus:** Confirm category-2 values do not corrupt arrayref/index restore order.
 
