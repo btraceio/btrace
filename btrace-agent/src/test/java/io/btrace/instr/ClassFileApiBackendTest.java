@@ -1052,6 +1052,194 @@ class ClassFileApiBackendTest {
   }
 
   @Test
+  void checkcastBeforePassesTypeNameAndTargetInstance() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithTypeChecks(70, "com/example/Target", "types");
+    Location location = new Location();
+    location.setValue(Kind.CHECKCAST);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("java.lang.String");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "types",
+            location,
+            "(Ljava/lang/String;Ljava/lang/Object;)V",
+            -1,
+            -1,
+            1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(Ljava/lang/String;Ljava/lang/Object;)V",
+        getInvokeDynamicDescriptor(readable, "types", "$btrace$"));
+    assertTrue(containsLdc(readable, "types", "java.lang.String"));
+    assertBTracePrecedesOpcode(readable, "types", Opcodes.CHECKCAST);
+  }
+
+  @Test
+  void checkcastAfterRunsAfterOriginalCast() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithTypeChecks(70, "com/example/Target", "types");
+    Location location = new Location();
+    location.setValue(Kind.CHECKCAST);
+    location.setWhere(Where.AFTER);
+    location.setClazz("java.lang.String");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "types",
+            location,
+            "(Ljava/lang/String;)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(Ljava/lang/String;)V", getInvokeDynamicDescriptor(readable, "types", "$btrace$"));
+    assertBTraceBetweenOpcodes(readable, "types", Opcodes.CHECKCAST, Opcodes.POP);
+  }
+
+  @Test
+  void instanceofBeforePassesTypeName() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithTypeChecks(70, "com/example/Target", "types");
+    Location location = new Location();
+    location.setValue(Kind.INSTANCEOF);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("java.util.List");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "types",
+            location,
+            "(Ljava/lang/String;)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(Ljava/lang/String;)V", getInvokeDynamicDescriptor(readable, "types", "$btrace$"));
+    assertTrue(containsLdc(readable, "types", "java.util.List"));
+    assertBTracePrecedesOpcode(readable, "types", Opcodes.INSTANCEOF);
+  }
+
+  @Test
+  void instanceofAfterPreservesBooleanResult() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithTypeChecks(70, "com/example/Target", "types");
+    Location location = new Location();
+    location.setValue(Kind.INSTANCEOF);
+    location.setWhere(Where.AFTER);
+    location.setClazz("java.util.List");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "types",
+            location,
+            "(Ljava/lang/String;)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(Ljava/lang/String;)V", getInvokeDynamicDescriptor(readable, "types", "$btrace$"));
+    assertBTraceBetweenOpcodes(readable, "types", Opcodes.INSTANCEOF, Opcodes.POP);
+  }
+
+  @Test
+  void instanceofAfterPassesTargetInstanceCapturedBeforeTypeCheck() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithTypeChecks(70, "com/example/Target", "types");
+    Location location = new Location();
+    location.setValue(Kind.INSTANCEOF);
+    location.setWhere(Where.AFTER);
+    location.setClazz("java.util.List");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "types",
+            location,
+            "(Ljava/lang/String;Ljava/lang/Object;)V",
+            -1,
+            -1,
+            1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(Ljava/lang/String;Ljava/lang/Object;)V",
+        getInvokeDynamicDescriptor(readable, "types", "$btrace$"));
+    assertBTraceBetweenOpcodes(readable, "types", Opcodes.INSTANCEOF, Opcodes.POP);
+  }
+
+  @Test
+  void typeCheckSkipsWhenTargetTypeMismatches() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithTypeChecks(70, "com/example/Target", "types");
+    Location location = new Location();
+    location.setValue(Kind.INSTANCEOF);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("java.util.Map");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "types",
+            location,
+            "(Ljava/lang/String;)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result);
+  }
+
+  @Test
+  void instanceofHandlesNullOperandShape() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithNullInstanceof(70, "com/example/Target", "nullType");
+    Location location = new Location();
+    location.setValue(Kind.INSTANCEOF);
+    location.setWhere(Where.AFTER);
+    location.setClazz("java.lang.String");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "nullType",
+            location,
+            "(Ljava/lang/String;)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertBTraceBetweenOpcodes(readable, "nullType", Opcodes.INSTANCEOF, Opcodes.IRETURN);
+  }
+
+  @Test
   void phaseZeroFixturesContainExpectedBytecodeShapes() {
     byte[] lineFixture =
         patchVersion(buildClassWithLineNumber(70, "com/example/Target", "line", 42), 65);
@@ -2051,6 +2239,24 @@ class ClassFileApiBackendTest {
     mv.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/String");
     mv.visitInsn(Opcodes.POP);
     mv.visitInsn(Opcodes.ICONST_1);
+    mv.visitInsn(Opcodes.IRETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
+  private static byte[] buildClassWithNullInstanceof(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, methodName, "()Z", null, null);
+    mv.visitCode();
+    mv.visitInsn(Opcodes.ACONST_NULL);
+    mv.visitTypeInsn(Opcodes.INSTANCEOF, "java/lang/String");
     mv.visitInsn(Opcodes.IRETURN);
     mv.visitMaxs(0, 0);
     mv.visitEnd();

@@ -220,19 +220,19 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 **Purpose:** Implement type-check probes with minimal operand-stack disturbance.
 
-- [ ] Match ClassFile API type-check instructions for `checkcast` and `instanceof`.
-- [ ] Match target type against `Location.clazz()`.
-- [ ] Backup checked object when `@TargetInstance` is requested.
-- [ ] Load ordinary handler argument as Java type name string.
-- [ ] Support `Where.BEFORE` and `Where.AFTER`.
-- [ ] Preserve behavior for null operands, failing casts, and boolean `instanceof` result.
-- [ ] Add tests:
-  - [ ] matching `checkcast`
-  - [ ] failing `checkcast` still throws
-  - [ ] matching `instanceof`
-  - [ ] non-matching target type
-  - [ ] null operand
-  - [ ] target instance capture
+- [x] Match ClassFile API type-check instructions for `checkcast` and `instanceof`.
+- [x] Match target type against `Location.clazz()`.
+- [x] Backup checked object when `@TargetInstance` is requested.
+- [x] Load ordinary handler argument as Java type name string.
+- [x] Support `Where.BEFORE` and `Where.AFTER`.
+- [x] Preserve behavior for null operands, failing casts, and boolean `instanceof` result.
+- [x] Add tests:
+  - [x] matching `checkcast`
+  - [x] failing `checkcast` still throws
+  - [x] matching `instanceof`
+  - [x] non-matching target type
+  - [x] null operand
+  - [x] target instance capture
 
 **Commit:** `feat(agent): support ClassFile API type check probes`
 

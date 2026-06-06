@@ -36,6 +36,7 @@ import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.classfile.instruction.LineNumber;
 import java.lang.classfile.instruction.ReturnInstruction;
+import java.lang.classfile.instruction.TypeCheckInstruction;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.DirectMethodHandleDesc;
 import java.lang.constant.DynamicCallSiteDesc;
@@ -117,6 +118,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     List<ProbeHandler> fieldSetHandlers = new ArrayList<>();
     List<ProbeHandler> arrayGetHandlers = new ArrayList<>();
     List<ProbeHandler> arraySetHandlers = new ArrayList<>();
+    List<ProbeHandler> checkcastHandlers = new ArrayList<>();
+    List<ProbeHandler> instanceofHandlers = new ArrayList<>();
     for (ProbeHandler ph : handlers) {
       Kind kind = ph.om.getLocation().getValue();
       if (kind == Kind.ENTRY) entryHandlers.add(ph);
@@ -127,6 +130,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       else if (kind == Kind.FIELD_SET) fieldSetHandlers.add(ph);
       else if (kind == Kind.ARRAY_GET) arrayGetHandlers.add(ph);
       else if (kind == Kind.ARRAY_SET) arraySetHandlers.add(ph);
+      else if (kind == Kind.CHECKCAST) checkcastHandlers.add(ph);
+      else if (kind == Kind.INSTANCEOF) instanceofHandlers.add(ph);
       else log.debug("Skipping unsupported probe kind {} for class {}", kind, javaClassName);
     }
     if (entryHandlers.isEmpty()
@@ -136,7 +141,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         && fieldGetHandlers.isEmpty()
         && fieldSetHandlers.isEmpty()
         && arrayGetHandlers.isEmpty()
-        && arraySetHandlers.isEmpty()) {
+        && arraySetHandlers.isEmpty()
+        && checkcastHandlers.isEmpty()
+        && instanceofHandlers.isEmpty()) {
       return null;
     }
 
@@ -155,6 +162,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 fieldSetHandlers,
                 arrayGetHandlers,
                 arraySetHandlers,
+                checkcastHandlers,
+                instanceofHandlers,
                 anyMatch));
     return anyMatch[0] ? result : null;
   }
@@ -266,6 +275,16 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     }
   }
 
+  private static final class TypeCheckContext {
+    final String typeName;
+    final int targetSlot;
+
+    TypeCheckContext(String typeName, int targetSlot) {
+      this.typeName = typeName;
+      this.targetSlot = targetSlot;
+    }
+  }
+
   private static Collection<String> collectAnnotationTypes(ClassModel classModel) {
     return classModel
         .findAttribute(Attributes.runtimeVisibleAnnotations())
@@ -330,6 +349,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> fieldSetHandlers,
       List<ProbeHandler> arrayGetHandlers,
       List<ProbeHandler> arraySetHandlers,
+      List<ProbeHandler> checkcastHandlers,
+      List<ProbeHandler> instanceofHandlers,
       boolean[] anyMatch) {
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
@@ -349,6 +370,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             filterForMethod(arrayGetHandlers, methodName, methodDesc, loader);
         List<ProbeHandler> mArraySet =
             filterForMethod(arraySetHandlers, methodName, methodDesc, loader);
+        List<ProbeHandler> mCheckcast =
+            filterForMethod(checkcastHandlers, methodName, methodDesc, loader);
+        List<ProbeHandler> mInstanceof =
+            filterForMethod(instanceofHandlers, methodName, methodDesc, loader);
         if (!mEntry.isEmpty()
             || !mReturn.isEmpty()
             || !mCall.isEmpty()
@@ -356,7 +381,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             || !mFieldGet.isEmpty()
             || !mFieldSet.isEmpty()
             || !mArrayGet.isEmpty()
-            || !mArraySet.isEmpty()) {
+            || !mArraySet.isEmpty()
+            || !mCheckcast.isEmpty()
+            || !mInstanceof.isEmpty()) {
           if (!mEntry.isEmpty() || !mReturn.isEmpty()) {
             anyMatch[0] = true;
           }
@@ -376,6 +403,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                   mFieldSet,
                   mArrayGet,
                   mArraySet,
+                  mCheckcast,
+                  mInstanceof,
                   anyMatch));
         } else {
           classBuilder.with(classElement);
@@ -400,6 +429,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> fieldSetHandlers,
       List<ProbeHandler> arrayGetHandlers,
       List<ProbeHandler> arraySetHandlers,
+      List<ProbeHandler> checkcastHandlers,
+      List<ProbeHandler> instanceofHandlers,
       boolean[] anyMatch) {
     return (methodBuilder, methodElement) -> {
       if (methodElement instanceof CodeModel cm) {
@@ -419,6 +450,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 fieldSetHandlers,
                 arrayGetHandlers,
                 arraySetHandlers,
+                checkcastHandlers,
+                instanceofHandlers,
                 anyMatch));
       } else {
         methodBuilder.with(methodElement);
@@ -440,6 +473,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> fieldSetHandlers,
       List<ProbeHandler> arrayGetHandlers,
       List<ProbeHandler> arraySetHandlers,
+      List<ProbeHandler> checkcastHandlers,
+      List<ProbeHandler> instanceofHandlers,
       boolean[] anyMatch) {
 
     boolean hasDuration =
@@ -892,6 +927,70 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           }
         }
 
+        if (ce instanceof TypeCheckInstruction ti
+            && (ti.opcode() == Opcode.CHECKCAST || ti.opcode() == Opcode.INSTANCEOF)) {
+          List<ProbeHandler> typeCheckHandlers =
+              ti.opcode() == Opcode.CHECKCAST ? checkcastHandlers : instanceofHandlers;
+          if (!typeCheckHandlers.isEmpty()) {
+            Type targetType = Type.getObjectType(ti.type().asInternalName());
+            String targetTypeName = targetType.getClassName();
+            List<ProbeHandler> matchedTypeCheckHandlers =
+                filterForTypeCheck(typeCheckHandlers, targetTypeName);
+            if (!matchedTypeCheckHandlers.isEmpty()) {
+              List<ProbeHandler> emittableBefore = new ArrayList<>();
+              List<ProbeHandler> emittableAfter = new ArrayList<>();
+              for (ProbeHandler ph : matchedTypeCheckHandlers) {
+                if (!canEmitTypeCheckProbe(ph, loader)) continue;
+                Where where = ph.om.getLocation().getWhere();
+                if (where == Where.BEFORE) {
+                  emittableBefore.add(ph);
+                } else if (where == Where.AFTER) {
+                  emittableAfter.add(ph);
+                }
+              }
+              if (emittableBefore.isEmpty() && emittableAfter.isEmpty()) {
+                cb.with(ce);
+                return;
+              }
+
+              boolean emitted = false;
+              int targetSlot = -1;
+              boolean needsTargetBefore =
+                  emittableBefore.stream().anyMatch(ph -> ph.om.getTargetInstanceParameter() != -1);
+              boolean needsTargetAfter =
+                  emittableAfter.stream().anyMatch(ph -> ph.om.getTargetInstanceParameter() != -1);
+              if (needsTargetBefore || (ti.opcode() == Opcode.INSTANCEOF && needsTargetAfter)) {
+                targetSlot = cb.allocateLocal(TypeKind.REFERENCE);
+                cb.dup();
+                cb.astore(targetSlot);
+              }
+
+              TypeCheckContext typeCheckContext = new TypeCheckContext(targetTypeName, targetSlot);
+              for (ProbeHandler ph : emittableBefore) {
+                emitted |=
+                    emitTypeCheckProbe(cb, ph, javaClassName, methodName, isStatic, typeCheckContext);
+              }
+
+              emitTypeCheck(cb, ti);
+
+              if (ti.opcode() == Opcode.CHECKCAST && needsTargetAfter && targetSlot == -1) {
+                targetSlot = cb.allocateLocal(TypeKind.REFERENCE);
+                cb.dup();
+                cb.astore(targetSlot);
+                typeCheckContext = new TypeCheckContext(targetTypeName, targetSlot);
+              }
+              for (ProbeHandler ph : emittableAfter) {
+                emitted |=
+                    emitTypeCheckProbe(cb, ph, javaClassName, methodName, isStatic, typeCheckContext);
+              }
+              if (emitted) {
+                anyMatch[0] = true;
+              }
+              return;
+            }
+          }
+        }
+
         cb.with(ce);
       }
 
@@ -1041,6 +1140,16 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return result;
   }
 
+  private static List<ProbeHandler> filterForTypeCheck(
+      List<ProbeHandler> handlers, String targetTypeName) {
+    List<ProbeHandler> result = new ArrayList<>();
+    for (ProbeHandler ph : handlers) {
+      if (!matches(ph.om.getLocation().getClazz(), targetTypeName)) continue;
+      result.add(ph);
+    }
+    return result;
+  }
+
   private static boolean matches(String pattern, String value) {
     if (pattern == null || pattern.isEmpty()) return true;
     if (pattern.startsWith("/") && pattern.endsWith("/")) {
@@ -1059,6 +1168,14 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
 
   private static void emitFieldAccess(CodeBuilder cb, FieldInstruction fi) {
     cb.fieldAccess(fi.opcode(), fi.field());
+  }
+
+  private static void emitTypeCheck(CodeBuilder cb, TypeCheckInstruction ti) {
+    if (ti.opcode() == Opcode.CHECKCAST) {
+      cb.checkcast(ti.type());
+    } else {
+      cb.instanceOf(ti.type());
+    }
   }
 
   private static boolean isConstructorCall(InvokeInstruction ii) {
@@ -1399,6 +1516,46 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return true;
   }
 
+  private static boolean canEmitTypeCheckProbe(ProbeHandler ph, ClassLoader loader) {
+    OnMethod om = ph.om;
+    String rawDesc =
+        om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+    Type[] handlerArgTypes = Type.getArgumentTypes(rawDesc);
+    for (int i = 0; i < handlerArgTypes.length; i++) {
+      if (i == om.getSelfParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        continue;
+      }
+      if (i == om.getClassNameParameter() || i == om.getMethodParameter()) {
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.STRING_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getTargetInstanceParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.OBJECT_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getReturnParameter()
+          || i == om.getDurationParameter()
+          || i == om.getTargetMethodOrFieldParameter()) {
+        return false;
+      }
+      int typeArgIndex = ordinaryArgumentIndex(om, i);
+      if (typeArgIndex != 0
+          || !InstrumentUtils.isAssignable(
+              handlerArgTypes[i], Constants.STRING_TYPE, loader, om.isExactTypeMatch())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private static boolean canEmitCallProbe(ProbeHandler ph, InvokeInstruction ii, ClassLoader loader) {
     OnMethod om = ph.om;
     String rawDesc =
@@ -1593,6 +1750,33 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         null,
         null,
         arrayContext);
+  }
+
+  private static boolean emitTypeCheckProbe(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      TypeCheckContext typeCheckContext) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        false,
+        -1,
+        null,
+        TypeKind.VOID,
+        -1,
+        null,
+        -1,
+        null,
+        null,
+        null,
+        null,
+        typeCheckContext);
   }
 
   private static boolean emitProbeCall(
@@ -1808,6 +1992,44 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       FieldSetContext fieldSetContext,
       ArrayGetContext arrayContext,
       ArraySetContext arraySetContext) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        isEntry,
+        retValSlot,
+        returnType,
+        returnKind,
+        durationSlot,
+        callContext,
+        lineNumber,
+        fieldContext,
+        fieldSetContext,
+        arrayContext,
+        arraySetContext,
+        null);
+  }
+
+  private static boolean emitProbeCall(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      boolean isEntry,
+      int retValSlot,
+      Type returnType,
+      TypeKind returnKind,
+      int durationSlot,
+      CallContext callContext,
+      int lineNumber,
+      FieldGetContext fieldContext,
+      FieldSetContext fieldSetContext,
+      ArrayGetContext arrayContext,
+      ArraySetContext arraySetContext,
+      TypeCheckContext typeCheckContext) {
     OnMethod om = ph.om;
 
     String rawDesc =
@@ -1830,7 +2052,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                       || fieldContext != null
                       || fieldSetContext != null
                       || arrayContext != null
-                      || arraySetContext != null))
+                      || arraySetContext != null
+                      || (typeCheckContext != null && typeCheckContext.targetSlot != -1)))
               || (i == om.getTargetMethodOrFieldParameter()
                   && (callContext != null || fieldContext != null || fieldSetContext != null))
               || lineArgIndex == 0
@@ -1838,6 +2061,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
               || (arrayContext != null && ordinaryArgumentIndex(om, i) == 0)
               || (arraySetContext != null
                   && (ordinaryArgumentIndex(om, i) == 0 || ordinaryArgumentIndex(om, i) == 1))
+              || (typeCheckContext != null && ordinaryArgumentIndex(om, i) == 0)
               || (callArgIndex >= 0 && callArgIndex < callContext.argumentTypes.length);
       if (!satisfiable) {
         log.debug(
@@ -1888,6 +2112,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           cb.aload(arrayContext.arraySlot);
         } else if (arraySetContext != null) {
           cb.aload(arraySetContext.arraySlot);
+        } else if (typeCheckContext != null && typeCheckContext.targetSlot != -1) {
+          cb.aload(typeCheckContext.targetSlot);
         } else if (callContext == null || callContext.staticCall) {
           cb.aconst_null();
         } else {
@@ -1918,6 +2144,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             && typeKind(argTypes[i]) == TypeKind.REFERENCE) {
           boxPrimitiveReturn(cb, arraySetContext.elementType, arraySetContext.elementKind);
         }
+      } else if (typeCheckContext != null && ordinaryArgumentIndex(om, i) == 0) {
+        cb.ldc(typeCheckContext.typeName);
       } else if (callContext != null) {
         int callArgIndex = callArgumentIndex(om, i);
         cb.loadLocal(
