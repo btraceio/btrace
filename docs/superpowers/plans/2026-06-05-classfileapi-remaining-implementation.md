@@ -124,22 +124,22 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 **Purpose:** Implement read access before field writes, because stack preservation is simpler.
 
-- [ ] Match `getfield` and `getstatic` owner/name against `Location.clazz()` and `Location.field()`.
-- [ ] For `Where.BEFORE`:
-  - [ ] preserve `getfield` owner when `@TargetInstance` is requested
-  - [ ] load `null` target instance for `getstatic`
-  - [ ] load target field name and FQN form compatible with ASM
-- [ ] For `Where.AFTER`:
-  - [ ] duplicate and store the field value when `@Return` is requested
-  - [ ] box primitive field values for `Object` and `AnyType`
-  - [ ] preserve category-2 `long` and `double` field values
-- [ ] Add tests:
-  - [ ] `getfield` before/after
-  - [ ] `getstatic` before/after
-  - [ ] primitive return boxing
-  - [ ] reference return
-  - [ ] FQN `@TargetMethodOrField`
-  - [ ] no-match owner/name filters
+- [x] Match `getfield` and `getstatic` owner/name against `Location.clazz()` and `Location.field()`.
+- [x] For `Where.BEFORE`:
+  - [x] preserve `getfield` owner when `@TargetInstance` is requested
+  - [x] load `null` target instance for `getstatic`
+  - [x] load target field name and FQN form compatible with ASM
+- [x] For `Where.AFTER`:
+  - [x] duplicate and store the field value when `@Return` is requested
+  - [x] box primitive field values for `Object` and `AnyType`
+  - [x] preserve category-2 `long` and `double` field values
+- [x] Add tests:
+  - [x] `getfield` before/after
+  - [x] `getstatic` before/after
+  - [x] primitive return boxing
+  - [x] reference return
+  - [x] FQN `@TargetMethodOrField`
+  - [x] no-match owner/name filters
 
 **Commit:** `feat(agent): support ClassFile API field get probes`
 
