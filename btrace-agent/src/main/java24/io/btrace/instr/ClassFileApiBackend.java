@@ -36,6 +36,7 @@ import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.classfile.instruction.LineNumber;
 import java.lang.classfile.instruction.ReturnInstruction;
+import java.lang.classfile.instruction.ThrowInstruction;
 import java.lang.classfile.instruction.TypeCheckInstruction;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.DirectMethodHandleDesc;
@@ -120,6 +121,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     List<ProbeHandler> arraySetHandlers = new ArrayList<>();
     List<ProbeHandler> checkcastHandlers = new ArrayList<>();
     List<ProbeHandler> instanceofHandlers = new ArrayList<>();
+    List<ProbeHandler> throwHandlers = new ArrayList<>();
     for (ProbeHandler ph : handlers) {
       Kind kind = ph.om.getLocation().getValue();
       if (kind == Kind.ENTRY) entryHandlers.add(ph);
@@ -132,6 +134,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       else if (kind == Kind.ARRAY_SET) arraySetHandlers.add(ph);
       else if (kind == Kind.CHECKCAST) checkcastHandlers.add(ph);
       else if (kind == Kind.INSTANCEOF) instanceofHandlers.add(ph);
+      else if (kind == Kind.THROW) throwHandlers.add(ph);
       else log.debug("Skipping unsupported probe kind {} for class {}", kind, javaClassName);
     }
     if (entryHandlers.isEmpty()
@@ -143,7 +146,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         && arrayGetHandlers.isEmpty()
         && arraySetHandlers.isEmpty()
         && checkcastHandlers.isEmpty()
-        && instanceofHandlers.isEmpty()) {
+        && instanceofHandlers.isEmpty()
+        && throwHandlers.isEmpty()) {
       return null;
     }
 
@@ -164,6 +168,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 arraySetHandlers,
                 checkcastHandlers,
                 instanceofHandlers,
+                throwHandlers,
                 anyMatch));
     return anyMatch[0] ? result : null;
   }
@@ -285,6 +290,14 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     }
   }
 
+  private static final class ThrowContext {
+    final int throwableSlot;
+
+    ThrowContext(int throwableSlot) {
+      this.throwableSlot = throwableSlot;
+    }
+  }
+
   private static Collection<String> collectAnnotationTypes(ClassModel classModel) {
     return classModel
         .findAttribute(Attributes.runtimeVisibleAnnotations())
@@ -351,6 +364,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> arraySetHandlers,
       List<ProbeHandler> checkcastHandlers,
       List<ProbeHandler> instanceofHandlers,
+      List<ProbeHandler> throwHandlers,
       boolean[] anyMatch) {
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
@@ -374,6 +388,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             filterForMethod(checkcastHandlers, methodName, methodDesc, loader);
         List<ProbeHandler> mInstanceof =
             filterForMethod(instanceofHandlers, methodName, methodDesc, loader);
+        List<ProbeHandler> mThrow = filterForMethod(throwHandlers, methodName, methodDesc, loader);
         if (!mEntry.isEmpty()
             || !mReturn.isEmpty()
             || !mCall.isEmpty()
@@ -383,7 +398,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             || !mArrayGet.isEmpty()
             || !mArraySet.isEmpty()
             || !mCheckcast.isEmpty()
-            || !mInstanceof.isEmpty()) {
+            || !mInstanceof.isEmpty()
+            || !mThrow.isEmpty()) {
           if (!mEntry.isEmpty() || !mReturn.isEmpty()) {
             anyMatch[0] = true;
           }
@@ -405,6 +421,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                   mArraySet,
                   mCheckcast,
                   mInstanceof,
+                  mThrow,
                   anyMatch));
         } else {
           classBuilder.with(classElement);
@@ -431,6 +448,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> arraySetHandlers,
       List<ProbeHandler> checkcastHandlers,
       List<ProbeHandler> instanceofHandlers,
+      List<ProbeHandler> throwHandlers,
       boolean[] anyMatch) {
     return (methodBuilder, methodElement) -> {
       if (methodElement instanceof CodeModel cm) {
@@ -452,6 +470,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 arraySetHandlers,
                 checkcastHandlers,
                 instanceofHandlers,
+                throwHandlers,
                 anyMatch));
       } else {
         methodBuilder.with(methodElement);
@@ -475,6 +494,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> arraySetHandlers,
       List<ProbeHandler> checkcastHandlers,
       List<ProbeHandler> instanceofHandlers,
+      List<ProbeHandler> throwHandlers,
       boolean[] anyMatch) {
 
     boolean hasDuration =
@@ -988,6 +1008,35 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
               }
               return;
             }
+          }
+        }
+
+        if (!throwHandlers.isEmpty() && ce instanceof ThrowInstruction) {
+          List<ProbeHandler> emittableThrow = new ArrayList<>();
+          for (ProbeHandler ph : throwHandlers) {
+            if (canEmitThrowProbe(ph, loader)) {
+              emittableThrow.add(ph);
+            }
+          }
+          if (!emittableThrow.isEmpty()) {
+            boolean needsThrowable =
+                emittableThrow.stream().anyMatch(ph -> ph.om.getTargetInstanceParameter() != -1);
+            int throwableSlot = -1;
+            if (needsThrowable) {
+              throwableSlot = cb.allocateLocal(TypeKind.REFERENCE);
+              cb.dup();
+              cb.astore(throwableSlot);
+            }
+            ThrowContext throwContext = new ThrowContext(throwableSlot);
+            boolean emitted = false;
+            for (ProbeHandler ph : emittableThrow) {
+              emitted |= emitThrowProbe(cb, ph, javaClassName, methodName, isStatic, throwContext);
+            }
+            cb.athrow();
+            if (emitted) {
+              anyMatch[0] = true;
+            }
+            return;
           }
         }
 
@@ -1556,6 +1605,36 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return true;
   }
 
+  private static boolean canEmitThrowProbe(ProbeHandler ph, ClassLoader loader) {
+    OnMethod om = ph.om;
+    String rawDesc =
+        om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+    Type[] handlerArgTypes = Type.getArgumentTypes(rawDesc);
+    for (int i = 0; i < handlerArgTypes.length; i++) {
+      if (i == om.getSelfParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        continue;
+      }
+      if (i == om.getClassNameParameter() || i == om.getMethodParameter()) {
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.STRING_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getTargetInstanceParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.THROWABLE_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
   private static boolean canEmitCallProbe(ProbeHandler ph, InvokeInstruction ii, ClassLoader loader) {
     OnMethod om = ph.om;
     String rawDesc =
@@ -1777,6 +1856,34 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         null,
         null,
         typeCheckContext);
+  }
+
+  private static boolean emitThrowProbe(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      ThrowContext throwContext) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        false,
+        -1,
+        null,
+        TypeKind.VOID,
+        -1,
+        null,
+        -1,
+        null,
+        null,
+        null,
+        null,
+        null,
+        throwContext);
   }
 
   private static boolean emitProbeCall(
@@ -2030,6 +2137,46 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       ArrayGetContext arrayContext,
       ArraySetContext arraySetContext,
       TypeCheckContext typeCheckContext) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        isEntry,
+        retValSlot,
+        returnType,
+        returnKind,
+        durationSlot,
+        callContext,
+        lineNumber,
+        fieldContext,
+        fieldSetContext,
+        arrayContext,
+        arraySetContext,
+        typeCheckContext,
+        null);
+  }
+
+  private static boolean emitProbeCall(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      boolean isEntry,
+      int retValSlot,
+      Type returnType,
+      TypeKind returnKind,
+      int durationSlot,
+      CallContext callContext,
+      int lineNumber,
+      FieldGetContext fieldContext,
+      FieldSetContext fieldSetContext,
+      ArrayGetContext arrayContext,
+      ArraySetContext arraySetContext,
+      TypeCheckContext typeCheckContext,
+      ThrowContext throwContext) {
     OnMethod om = ph.om;
 
     String rawDesc =
@@ -2053,7 +2200,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                       || fieldSetContext != null
                       || arrayContext != null
                       || arraySetContext != null
-                      || (typeCheckContext != null && typeCheckContext.targetSlot != -1)))
+                      || (typeCheckContext != null && typeCheckContext.targetSlot != -1)
+                      || (throwContext != null && throwContext.throwableSlot != -1)))
               || (i == om.getTargetMethodOrFieldParameter()
                   && (callContext != null || fieldContext != null || fieldSetContext != null))
               || lineArgIndex == 0
@@ -2114,6 +2262,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           cb.aload(arraySetContext.arraySlot);
         } else if (typeCheckContext != null && typeCheckContext.targetSlot != -1) {
           cb.aload(typeCheckContext.targetSlot);
+        } else if (throwContext != null && throwContext.throwableSlot != -1) {
+          cb.aload(throwContext.throwableSlot);
         } else if (callContext == null || callContext.staticCall) {
           cb.aconst_null();
         } else {

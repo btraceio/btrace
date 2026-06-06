@@ -242,16 +242,16 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 **Purpose:** Implement explicit throw probes before synthetic error/catch handling.
 
-- [ ] Match `athrow`.
-- [ ] Backup throwable when `@TargetInstance` or ordinary throwable argument is requested.
-- [ ] Load `@Self`, `@ProbeClassName`, and `@ProbeMethodName`.
-- [ ] Preserve thrown object identity.
-- [ ] Add tests:
-  - [ ] explicit throw probe
-  - [ ] rethrow probe
-  - [ ] target throwable capture
-  - [ ] thrown identity preserved
-  - [ ] no target stack change when handler does not validate
+- [x] Match `athrow`.
+- [x] Backup throwable when `@TargetInstance` is requested.
+- [x] Load `@Self`, `@ProbeClassName`, and `@ProbeMethodName`.
+- [x] Preserve thrown object identity.
+- [x] Add tests:
+  - [x] explicit throw probe
+  - [x] rethrow probe
+  - [x] target throwable capture
+  - [x] thrown identity preserved
+  - [x] no target stack change when handler does not validate
 
 **Commit:** `feat(agent): support ClassFile API throw probes`
 

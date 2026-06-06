@@ -1240,6 +1240,102 @@ class ClassFileApiBackendTest {
   }
 
   @Test
+  void throwProbeBeforeExplicitThrowPassesThrowableTarget() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "exceptions");
+    Location location = new Location();
+    location.setValue(Kind.THROW);
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "exceptions",
+            location,
+            "(Ljava/lang/Throwable;)V",
+            -1,
+            -1,
+            0,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(Ljava/lang/Throwable;)V", getInvokeDynamicDescriptor(readable, "exceptions", "$btrace$"));
+    assertBTracePrecedesOpcode(readable, "exceptions", Opcodes.ATHROW);
+  }
+
+  @Test
+  void throwProbePassesSelfClassAndMethod() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "exceptions");
+    Location location = new Location();
+    location.setValue(Kind.THROW);
+    BTraceProbe probe =
+        buildStubProbeWithCoreParams(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "exceptions",
+            location,
+            "(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)V",
+            0,
+            1,
+            2);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)V",
+        getInvokeDynamicDescriptor(readable, "exceptions", "$btrace$"));
+    assertTrue(containsLdc(readable, "exceptions", "com.example.Target"));
+    assertTrue(containsLdc(readable, "exceptions", "exceptions"));
+    assertBTracePrecedesOpcode(readable, "exceptions", Opcodes.ATHROW);
+  }
+
+  @Test
+  void throwProbeInstrumentsRethrowSite() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "sync");
+    Location location = new Location();
+    location.setValue(Kind.THROW);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "sync", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(1, countInvokeDynamic(readable, "sync", "$btrace$"));
+    assertBTracePrecedesOpcode(readable, "sync", Opcodes.ATHROW);
+  }
+
+  @Test
+  void throwProbeSkipsInvalidOrdinaryArgument() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "exceptions");
+    Location location = new Location();
+    location.setValue(Kind.THROW);
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "exceptions",
+            location,
+            "(Ljava/lang/String;)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result);
+  }
+
+  @Test
   void phaseZeroFixturesContainExpectedBytecodeShapes() {
     byte[] lineFixture =
         patchVersion(buildClassWithLineNumber(70, "com/example/Target", "line", 42), 65);
