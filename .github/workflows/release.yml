@@ -760,8 +760,8 @@ jobs:
 
       - name: Announce to SDKMan
         env:
-          SDKMAN_API_KEY: ${{ secrets.SDKMAN_KEY }}
-          SDKMAN_API_TOKEN: ${{ secrets.SDKMAN_TOKEN }}
+          SDKMAN_KEY: ${{ secrets.SDKMAN_KEY }}
+          SDKMAN_TOKEN: ${{ secrets.SDKMAN_TOKEN }}
         run: |
           ./gradlew :btrace-dist:sdkMajorRelease --no-daemon
 
