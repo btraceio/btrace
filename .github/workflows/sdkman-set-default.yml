@@ -45,8 +45,8 @@ jobs:
 
       - name: Set SDKMan default version
         env:
-          SDKMAN_API_KEY: ${{ secrets.SDKMAN_KEY }}
-          SDKMAN_API_TOKEN: ${{ secrets.SDKMAN_TOKEN }}
+          SDKMAN_KEY: ${{ secrets.SDKMAN_KEY }}
+          SDKMAN_TOKEN: ${{ secrets.SDKMAN_TOKEN }}
         run: |
           echo "Setting SDKMan default for btrace to ${{ inputs.version }}..."
           ./gradlew :btrace-dist:sdkDefaultVersion --no-daemon
