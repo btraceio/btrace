@@ -61,7 +61,8 @@ import org.slf4j.LoggerFactory;
  * @TargetMethodOrField}, {@code @Return} for {@link Where#AFTER}, and {@code @Duration} for {@link
  * Where#AFTER}.
  *
- * <p>Type-constrained method matching ({@code type="..."} in {@code @OnMethod}) is not supported.
+ * <p>Full ASM backend parity for line, field, array, allocation, exception, and synchronization
+ * locations is still in progress.
  */
 public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final Logger log = LoggerFactory.getLogger(ClassFileApiBackend.class);
@@ -219,11 +220,12 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
         String methodName = mm.methodName().stringValue();
-        Type methodReturnType = Type.getReturnType(mm.methodType().stringValue());
+        String methodDesc = mm.methodType().stringValue();
+        Type methodReturnType = Type.getReturnType(methodDesc);
         boolean isStatic = mm.flags().has(AccessFlag.STATIC);
-        List<ProbeHandler> mEntry = filterForMethod(entryHandlers, methodName);
-        List<ProbeHandler> mReturn = filterForMethod(returnHandlers, methodName);
-        List<ProbeHandler> mCall = filterForMethod(callHandlers, methodName);
+        List<ProbeHandler> mEntry = filterForMethod(entryHandlers, methodName, methodDesc, loader);
+        List<ProbeHandler> mReturn = filterForMethod(returnHandlers, methodName, methodDesc, loader);
+        List<ProbeHandler> mCall = filterForMethod(callHandlers, methodName, methodDesc, loader);
         if (!mEntry.isEmpty() || !mReturn.isEmpty() || !mCall.isEmpty()) {
           if (!mEntry.isEmpty() || !mReturn.isEmpty()) {
             anyMatch[0] = true;
@@ -519,7 +521,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   }
 
   private static List<ProbeHandler> filterForMethod(
-      List<ProbeHandler> handlers, String methodName) {
+      List<ProbeHandler> handlers, String methodName, String methodDesc, ClassLoader loader) {
     List<ProbeHandler> result = new ArrayList<>();
     for (ProbeHandler ph : handlers) {
       String pattern = ph.om.getMethod();
@@ -531,20 +533,27 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         nameMatch = pattern.equals(methodName);
       }
       if (!nameMatch) continue;
-      // om.getType() returns the 'type' attribute of @OnMethod — only set when the user
-      // explicitly constrains the handler to a specific method signature. For @Return /
-      // @Duration handlers this is normally empty, so they pass through unaffected.
-      String typePattern = ph.om.getType();
-      if (!typePattern.isEmpty()) {
-        log.debug(
-            "ClassFileApiBackend: skipping type-constrained handler {}.{} — type matching unsupported",
-            ph.probe.getClassName(),
-            ph.om.getTargetName());
-        continue;
-      }
+      if (!typeMatches(ph.om.getType(), methodDesc, loader, ph.om.isExactTypeMatch())) continue;
       result.add(ph);
     }
     return result;
+  }
+
+  private static boolean typeMatches(
+      String declaration, String descriptor, ClassLoader loader, boolean exactTypeMatch) {
+    if (declaration == null || declaration.isEmpty()) return true;
+    try {
+      String declaredDescriptor = TypeUtils.declarationToDescriptor(declaration);
+      Type[] declaredArgs = Type.getArgumentTypes(declaredDescriptor);
+      Type[] methodArgs = Type.getArgumentTypes(descriptor);
+      Type declaredReturn = Type.getReturnType(declaredDescriptor);
+      Type methodReturn = Type.getReturnType(descriptor);
+      return InstrumentUtils.isAssignable(declaredReturn, methodReturn, loader, exactTypeMatch)
+          && InstrumentUtils.isAssignable(declaredArgs, methodArgs, loader, exactTypeMatch);
+    } catch (IllegalArgumentException e) {
+      log.debug("ClassFileApiBackend: skipping invalid type declaration '{}'", declaration);
+      return false;
+    }
   }
 
   private static List<ProbeHandler> filterForCall(List<ProbeHandler> handlers, InvokeInstruction ii) {

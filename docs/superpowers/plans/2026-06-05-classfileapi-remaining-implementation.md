@@ -87,7 +87,7 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
   - [ ] `@Return`
   - [ ] `@Duration`
 - [ ] Add `AnyType[]` aggregate argument support where missing for existing `ENTRY`, `RETURN`, and `CALL`.
-- [ ] Add type-constrained outer method matching from method descriptor data.
+- [x] Add type-constrained outer method matching from method descriptor data.
 - [ ] Keep existing `ENTRY`, `RETURN`, and `CALL` tests green after each helper extraction.
 
 **Review Focus:**

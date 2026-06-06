@@ -110,6 +110,45 @@ class ClassFileApiBackendTest {
   }
 
   @Test
+  void entryProbeInjectedWhenTypeConstraintMatches() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithStaticCall(70, "com/example/Target", "callTopLevel");
+    BTraceProbe probe =
+        buildStubProbeWithType(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            Kind.ENTRY,
+            "()V",
+            "long (java.lang.String, long)");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected type-constrained ENTRY probe to match method descriptor");
+    assertTrue(containsInvokeDynamic(patchVersion(result, 65), "callTopLevel", "$btrace$"));
+  }
+
+  @Test
+  void entryProbeSkippedWhenTypeConstraintMismatches() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithStaticCall(70, "com/example/Target", "callTopLevel");
+    BTraceProbe probe =
+        buildStubProbeWithType(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            Kind.ENTRY,
+            "()V",
+            "int (java.lang.String, long)");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "Expected mismatched type-constrained ENTRY probe to be skipped");
+  }
+
+  @Test
   void returnProbeInjectedBeforeReturn() {
     requireJdk26ForVersion70();
     byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "compute");
@@ -1252,6 +1291,25 @@ class ClassFileApiBackendTest {
     }
     // All other special parameter indices default to -1 (absent) — no @Self etc.
 
+    return buildStubProbe(probeInternalName, targetJavaClass, om);
+  }
+
+  private static BTraceProbe buildStubProbeWithType(
+      final String probeInternalName,
+      final String targetJavaClass,
+      final String targetMethod,
+      final Kind kind,
+      final String targetDescriptor,
+      final String typeDeclaration) {
+    final Location loc = new Location();
+    loc.setValue(kind);
+    final OnMethod om = new OnMethod();
+    om.setClazz(targetJavaClass);
+    om.setMethod(targetMethod);
+    om.setLocation(loc);
+    om.setTargetName("onProbe");
+    om.setTargetDescriptor(targetDescriptor);
+    om.setType(typeDeclaration);
     return buildStubProbe(probeInternalName, targetJavaClass, om);
   }
 
