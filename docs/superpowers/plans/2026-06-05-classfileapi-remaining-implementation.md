@@ -174,19 +174,19 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 **Purpose:** Implement array reads before array writes.
 
-- [ ] Match all JVM array load opcodes.
-- [ ] Backup array reference and index before the array load when needed.
-- [ ] Load ordinary handler arguments: array index.
-- [ ] Load `@TargetInstance` as the array reference.
-- [ ] For `Where.AFTER`, duplicate and store the loaded element when `@Return` is requested.
-- [ ] Box primitive element returns for `Object` and `AnyType`.
-- [ ] Add tests:
-  - [ ] object array load
-  - [ ] primitive int array load
-  - [ ] `long` and `double` array load
-  - [ ] before/after placement
-  - [ ] return capture
-  - [ ] no-match type filters
+- [x] Match all JVM array load opcodes.
+- [x] Backup array reference and index before the array load when needed.
+- [x] Load ordinary handler arguments: array index.
+- [x] Load `@TargetInstance` as the array reference.
+- [x] For `Where.AFTER`, duplicate and store the loaded element when `@Return` is requested.
+- [x] Box primitive element returns for `Object` and `AnyType`.
+- [x] Add tests:
+  - [x] object array load
+  - [x] primitive int array load
+  - [x] `long` and `double` array load
+  - [x] before/after placement
+  - [x] return capture
+  - [x] no-match type filters
 
 **Commit:** `feat(agent): support ClassFile API array get probes`
 

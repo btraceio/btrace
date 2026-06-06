@@ -724,6 +724,193 @@ class ClassFileApiBackendTest {
   }
 
   @Test
+  void arrayGetBeforePassesIndexAndTargetInstance() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    Location location = new Location();
+    location.setValue(Kind.ARRAY_GET);
+    location.setWhere(Where.BEFORE);
+    location.setType("int[]");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "arrays",
+            location,
+            "(ILjava/lang/Object;)V",
+            -1,
+            -1,
+            1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(ILjava/lang/Object;)V", getInvokeDynamicDescriptor(readable, "arrays", "$btrace$"));
+    assertBTracePrecedesOpcode(readable, "arrays", Opcodes.IALOAD);
+  }
+
+  @Test
+  void arrayGetAfterPassesPrimitiveReturnValue() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    Location location = new Location();
+    location.setValue(Kind.ARRAY_GET);
+    location.setWhere(Where.AFTER);
+    location.setType("int");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace", "com.example.Target", "arrays", location, "(I)V", 0, -1, -1, -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals("(I)V", getInvokeDynamicDescriptor(readable, "arrays", "$btrace$"));
+    assertBTraceBetweenOpcodes(readable, "arrays", Opcodes.IALOAD, Opcodes.ISTORE);
+  }
+
+  @Test
+  void arrayGetAfterBoxesPrimitiveReturnForObjectHandler() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    Location location = new Location();
+    location.setValue(Kind.ARRAY_GET);
+    location.setWhere(Where.AFTER);
+    location.setType("int[]");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "arrays",
+            location,
+            "(Ljava/lang/Object;)V",
+            0,
+            -1,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(Ljava/lang/Object;)V", getInvokeDynamicDescriptor(readable, "arrays", "$btrace$"));
+    assertEquals(1, countMethodCalls(readable, "arrays", "java/lang/Integer", "valueOf"));
+  }
+
+  @Test
+  void arrayGetAfterPassesReferenceReturnValue() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    Location location = new Location();
+    location.setValue(Kind.ARRAY_GET);
+    location.setWhere(Where.AFTER);
+    location.setType("java.lang.Object[]");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "arrays",
+            location,
+            "(Ljava/lang/Object;)V",
+            0,
+            -1,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(
+        "(Ljava/lang/Object;)V", getInvokeDynamicDescriptor(readable, "arrays", "$btrace$"));
+    assertBTraceBetweenOpcodes(readable, "arrays", Opcodes.AALOAD, Opcodes.POP);
+    assertEquals(0, countMethodCalls(readable, "arrays", "java/lang/Object", "valueOf"));
+  }
+
+  @Test
+  void arrayGetAfterPassesWidePrimitiveReturnValue() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithLongArrayLoad(70, "com/example/Target", "wideArrays");
+    Location location = new Location();
+    location.setValue(Kind.ARRAY_GET);
+    location.setWhere(Where.AFTER);
+    location.setType("long[]");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "wideArrays",
+            location,
+            "(J)V",
+            0,
+            -1,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals("(J)V", getInvokeDynamicDescriptor(readable, "wideArrays", "$btrace$"));
+    assertBTraceBetweenOpcodes(readable, "wideArrays", Opcodes.LALOAD, Opcodes.LRETURN);
+  }
+
+  @Test
+  void arrayGetAfterPassesDoubleReturnValue() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithDoubleArrayLoad(70, "com/example/Target", "doubleArrays");
+    Location location = new Location();
+    location.setValue(Kind.ARRAY_GET);
+    location.setWhere(Where.AFTER);
+    location.setType("double");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "doubleArrays",
+            location,
+            "(D)V",
+            0,
+            -1,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals("(D)V", getInvokeDynamicDescriptor(readable, "doubleArrays", "$btrace$"));
+    assertBTraceBetweenOpcodes(readable, "doubleArrays", Opcodes.DALOAD, Opcodes.DRETURN);
+  }
+
+  @Test
+  void arrayGetSkipsWhenTypeMismatches() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    Location location = new Location();
+    location.setValue(Kind.ARRAY_GET);
+    location.setWhere(Where.BEFORE);
+    location.setType("long");
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "arrays", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result);
+  }
+
+  @Test
   void phaseZeroFixturesContainExpectedBytecodeShapes() {
     byte[] lineFixture =
         patchVersion(buildClassWithLineNumber(70, "com/example/Target", "line", 42), 65);
@@ -1634,6 +1821,44 @@ class ClassFileApiBackendTest {
     mv.visitInsn(Opcodes.AASTORE);
     mv.visitVarInsn(Opcodes.ILOAD, 2);
     mv.visitInsn(Opcodes.IRETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
+  private static byte[] buildClassWithLongArrayLoad(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, methodName, "([J)J", null, null);
+    mv.visitCode();
+    mv.visitVarInsn(Opcodes.ALOAD, 0);
+    mv.visitInsn(Opcodes.ICONST_0);
+    mv.visitInsn(Opcodes.LALOAD);
+    mv.visitInsn(Opcodes.LRETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
+  private static byte[] buildClassWithDoubleArrayLoad(
+      int majorVersion, String internalClassName, String methodName) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, methodName, "([D)D", null, null);
+    mv.visitCode();
+    mv.visitVarInsn(Opcodes.ALOAD, 0);
+    mv.visitInsn(Opcodes.ICONST_0);
+    mv.visitInsn(Opcodes.DALOAD);
+    mv.visitInsn(Opcodes.DRETURN);
     mv.visitMaxs(0, 0);
     mv.visitEnd();
 
