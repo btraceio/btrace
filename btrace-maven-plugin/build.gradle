@@ -22,7 +22,7 @@ dependencies {
 
     // Maven Resolver (Aether) for dependency resolution
     compileOnly 'org.apache.maven.resolver:maven-resolver-api:1.9.18'
-    implementation 'org.apache.maven.resolver:maven-resolver-util:1.9.18'
+    implementation 'org.apache.maven.resolver:maven-resolver-util:2.0.18'
 
     // JAR manipulation
     implementation 'org.codehaus.plexus:plexus-archiver:4.9.1'
