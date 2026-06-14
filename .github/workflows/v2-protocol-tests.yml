@@ -108,9 +108,9 @@ jobs:
 
       - name: Run Protocol Negotiation Tests
         run: |
-          ./gradlew :btrace-core:test --tests "org.openjdk.btrace.core.comm.ProtocolNegotiatorTest" \
-                                       --tests "org.openjdk.btrace.core.comm.ProtocolConfigTest" \
-                                       --tests "org.openjdk.btrace.core.comm.WireProtocolTest" \
+          ./gradlew :btrace-core:test --tests "io.btrace.core.comm.ProtocolNegotiatorTest" \
+                                       --tests "io.btrace.core.comm.ProtocolConfigTest" \
+                                       --tests "io.btrace.core.comm.WireProtocolTest" \
                                        --rerun-tasks
 
       - name: Verify Protocol Version Detection
@@ -160,7 +160,7 @@ jobs:
 
       - name: Run Edge Case Tests
         run: |
-          ./gradlew :btrace-core:test --tests "org.openjdk.btrace.core.comm.v2.BinaryProtocolEdgeCasesTest" \
+          ./gradlew :btrace-core:test --tests "io.btrace.core.comm.v2.BinaryProtocolEdgeCasesTest" \
                                        --rerun-tasks
 
       - name: Test Large Messages
@@ -273,7 +273,7 @@ jobs:
       - name: Test ${{ matrix.scenario.name }} Compatibility
         run: |
           echo "Testing compatibility: Client=${{ matrix.scenario.client }} Agent=${{ matrix.scenario.agent }}"
-          ./gradlew :btrace-core:test --tests "org.openjdk.btrace.core.comm.WireProtocolTest" \
+          ./gradlew :btrace-core:test --tests "io.btrace.core.comm.WireProtocolTest" \
                                        --rerun-tasks \
             -Dbtrace.comm.protocol=${{ matrix.scenario.client }}
 
