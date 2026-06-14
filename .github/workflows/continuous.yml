@@ -198,12 +198,17 @@ jobs:
       with:
         name: dist-build
     - name: Deploy Maven
-      run: ./gradlew -x test :btrace-dist:publish
+      run: |
+        if [ -z "${GPG_SIGNING_KEY}" ] || [ -z "${GPG_SIGNING_PWD}" ] || [ -z "${SONATYPE_USER}" ] || [ -z "${SONATYPE_PASSWORD}" ]; then
+          echo "::notice::Skipping Maven snapshot publish because signing or Sonatype credentials are not configured."
+          exit 0
+        fi
+        ./gradlew -x test :btrace-dist:publish
       env:
         GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
         GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
-        SONATYPE_USER: ${{ secrets.SONATYPE_USERNAME }}
-        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+        SONATYPE_USER: ${{ secrets.SONATYPE_USERNAME || secrets.BTRACE_SONATYPE_USER }}
+        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD || secrets.BTRACE_SONATYPE_PWD }}
 
   cleanup:
     runs-on: ubuntu-latest
