@@ -3873,4 +3873,144 @@ class ClassFileApiBackendTest {
         },
         "Instrumented class with ERROR probe must load without VerifyError");
   }
+
+  // ---------------------------------------------------------------------------
+  // Kind.NEWARRAY tests
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void primitiveNewarrayProbeBeforeAllocation() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithArrayAllocations(70, "com/example/Target", "allocations");
+    Location location = new Location();
+    location.setValue(Kind.NEWARRAY);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("int");
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "allocations", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(1, countInvokeDynamic(readable, "allocations", "$btrace$"));
+    assertBTracePrecedesOpcode(readable, "allocations", Opcodes.NEWARRAY);
+  }
+
+  @Test
+  void referenceAnewarrayProbeBeforeAllocation() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithArrayAllocations(70, "com/example/Target", "allocations");
+    Location location = new Location();
+    location.setValue(Kind.NEWARRAY);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("java.lang.String");
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "allocations", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    // Matches anewarray String and multianewarray String[][] (both have extName "java.lang.String")
+    assertEquals(2, countInvokeDynamic(readable, "allocations", "$btrace$"));
+    assertBTracePrecedesOpcode(readable, "allocations", Opcodes.ANEWARRAY);
+  }
+
+  @Test
+  void newarrayProbeMatchesAllTypesWhenClazzEmpty() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithArrayAllocations(70, "com/example/Target", "allocations");
+    Location location = new Location();
+    location.setValue(Kind.NEWARRAY);
+    location.setWhere(Where.BEFORE);
+    // empty clazz → matches all array allocations (newarray int, anewarray String, multianewarray)
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "allocations", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(3, countInvokeDynamic(readable, "allocations", "$btrace$"));
+  }
+
+  @Test
+  void newarrayAfterProbeGetsArrayRef() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithArrayAllocations(70, "com/example/Target", "allocations");
+    Location location = new Location();
+    location.setValue(Kind.NEWARRAY);
+    location.setWhere(Where.AFTER);
+    location.setClazz("int");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "allocations",
+            location,
+            "(Ljava/lang/Object;)V",
+            0,
+            -1,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(1, countInvokeDynamic(readable, "allocations", "$btrace$"));
+    // INVOKEDYNAMIC must appear after NEWARRAY and before POP
+    assertBTraceBetweenOpcodes(readable, "allocations", Opcodes.NEWARRAY, Opcodes.POP);
+    // Descriptor must carry the array reference arg
+    assertEquals(
+        "(Ljava/lang/Object;)V", getInvokeDynamicDescriptor(readable, "allocations", "$btrace$"));
+  }
+
+  @Test
+  void newarrayProbeTypeMismatchSkips() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithArrayAllocations(70, "com/example/Target", "allocations");
+    Location location = new Location();
+    location.setValue(Kind.NEWARRAY);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("float"); // fixture only has int and String arrays
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "allocations", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "Probe for float[] must not match int[] or String[] allocations");
+  }
+
+  @Test
+  void newarrayProbeSkipsUnsupportedParameter() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithArrayAllocations(70, "com/example/Target", "allocations");
+    Location location = new Location();
+    location.setValue(Kind.NEWARRAY);
+    location.setWhere(Where.BEFORE);
+    // Handler declares @Duration — not supported for NEWARRAY; canEmit must reject it
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "allocations",
+            location,
+            "(J)V",
+            -1,
+            0,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "Handler with @Duration must be rejected for NEWARRAY probes");
+  }
 }

@@ -37,6 +37,9 @@ import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.classfile.instruction.LabelTarget;
 import java.lang.classfile.instruction.LineNumber;
+import java.lang.classfile.instruction.NewMultiArrayInstruction;
+import java.lang.classfile.instruction.NewPrimitiveArrayInstruction;
+import java.lang.classfile.instruction.NewReferenceArrayInstruction;
 import java.lang.classfile.instruction.ReturnInstruction;
 import java.lang.classfile.instruction.ThrowInstruction;
 import java.lang.classfile.instruction.TypeCheckInstruction;
@@ -68,12 +71,14 @@ import org.slf4j.LoggerFactory;
  * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}, {@link Kind#CALL}, {@link
  * Kind#LINE}, {@link Kind#FIELD_GET}, {@link Kind#FIELD_SET}, {@link Kind#ARRAY_GET}, {@link
  * Kind#ARRAY_SET}, {@link Kind#CHECKCAST}, {@link Kind#INSTANCEOF}, {@link Kind#THROW}, {@link
- * Kind#CATCH}, and {@link Kind#ERROR}. Exception entry ({@code CATCH}) and uncaught-exit ({@code
- * ERROR}) handlers support {@code @TargetInstance} for the caught/escaping throwable and {@code
- * @Duration} for {@code ERROR}.
+ * Kind#CATCH}, {@link Kind#ERROR}, and {@link Kind#NEWARRAY}. Exception entry ({@code CATCH}) and
+ * uncaught-exit ({@code ERROR}) handlers support {@code @TargetInstance} for the caught/escaping
+ * throwable and {@code @Duration} for {@code ERROR}. Array-allocation ({@code NEWARRAY}) handlers
+ * support ordinary arguments (element type {@code String} and dimension count {@code int}) and
+ * {@code @Return} on {@code AFTER} probes.
  *
- * <p>Allocation ({@code NEWARRAY}, {@code NEW}) and synchronization ({@code SYNC_ENTRY}, {@code
- * SYNC_EXIT}) parity is still in progress.
+ * <p>Object allocation ({@code NEW}) and synchronization ({@code SYNC_ENTRY}, {@code SYNC_EXIT})
+ * parity is still in progress.
  */
 public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final Logger log = LoggerFactory.getLogger(ClassFileApiBackend.class);
@@ -129,6 +134,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     List<ProbeHandler> throwHandlers = new ArrayList<>();
     List<ProbeHandler> catchHandlers = new ArrayList<>();
     List<ProbeHandler> errorHandlers = new ArrayList<>();
+    List<ProbeHandler> newarrayHandlers = new ArrayList<>();
     for (ProbeHandler ph : handlers) {
       Kind kind = ph.om.getLocation().getValue();
       if (kind == Kind.ENTRY) entryHandlers.add(ph);
@@ -144,6 +150,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       else if (kind == Kind.THROW) throwHandlers.add(ph);
       else if (kind == Kind.CATCH) catchHandlers.add(ph);
       else if (kind == Kind.ERROR) errorHandlers.add(ph);
+      else if (kind == Kind.NEWARRAY) newarrayHandlers.add(ph);
       else log.debug("Skipping unsupported probe kind {} for class {}", kind, javaClassName);
     }
     if (entryHandlers.isEmpty()
@@ -158,7 +165,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         && instanceofHandlers.isEmpty()
         && throwHandlers.isEmpty()
         && catchHandlers.isEmpty()
-        && errorHandlers.isEmpty()) {
+        && errorHandlers.isEmpty()
+        && newarrayHandlers.isEmpty()) {
       return null;
     }
 
@@ -182,6 +190,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 throwHandlers,
                 catchHandlers,
                 errorHandlers,
+                newarrayHandlers,
                 anyMatch));
     return anyMatch[0] ? result : null;
   }
@@ -311,6 +320,20 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     }
   }
 
+  private static final class NewArrayContext {
+    final String extName;
+    final int dims;
+    final Type arrayType;
+    final int returnSlot;
+
+    NewArrayContext(String extName, int dims, Type arrayType, int returnSlot) {
+      this.extName = extName;
+      this.dims = dims;
+      this.arrayType = arrayType;
+      this.returnSlot = returnSlot;
+    }
+  }
+
   private static Collection<String> collectAnnotationTypes(ClassModel classModel) {
     return classModel
         .findAttribute(Attributes.runtimeVisibleAnnotations())
@@ -380,6 +403,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> throwHandlers,
       List<ProbeHandler> catchHandlers,
       List<ProbeHandler> errorHandlers,
+      List<ProbeHandler> newarrayHandlers,
       boolean[] anyMatch) {
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
@@ -406,6 +430,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         List<ProbeHandler> mThrow = filterForMethod(throwHandlers, methodName, methodDesc, loader);
         List<ProbeHandler> mCatch = filterForMethod(catchHandlers, methodName, methodDesc, loader);
         List<ProbeHandler> mError = filterForMethod(errorHandlers, methodName, methodDesc, loader);
+        List<ProbeHandler> mNewarray =
+            filterForMethod(newarrayHandlers, methodName, methodDesc, loader);
         if (!mEntry.isEmpty()
             || !mReturn.isEmpty()
             || !mCall.isEmpty()
@@ -418,7 +444,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             || !mInstanceof.isEmpty()
             || !mThrow.isEmpty()
             || !mCatch.isEmpty()
-            || !mError.isEmpty()) {
+            || !mError.isEmpty()
+            || !mNewarray.isEmpty()) {
           if (!mEntry.isEmpty() || !mReturn.isEmpty()) {
             anyMatch[0] = true;
           }
@@ -443,6 +470,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                   mThrow,
                   mCatch,
                   mError,
+                  mNewarray,
                   anyMatch));
         } else {
           classBuilder.with(classElement);
@@ -472,6 +500,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> throwHandlers,
       List<ProbeHandler> catchHandlers,
       List<ProbeHandler> errorHandlers,
+      List<ProbeHandler> newarrayHandlers,
       boolean[] anyMatch) {
     return (methodBuilder, methodElement) -> {
       if (methodElement instanceof CodeModel cm) {
@@ -508,6 +537,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 throwHandlers,
                 catchHandlers,
                 errorHandlers,
+                newarrayHandlers,
                 catchHandlerTypes,
                 anyMatch));
       } else {
@@ -535,6 +565,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> throwHandlers,
       List<ProbeHandler> catchHandlers,
       List<ProbeHandler> errorHandlers,
+      List<ProbeHandler> newarrayHandlers,
       Map<Label, String> catchHandlerTypes,
       boolean[] anyMatch) {
 
@@ -1122,6 +1153,70 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           }
         }
 
+        // NEWARRAY / ANEWARRAY / MULTIANEWARRAY: array allocation probes
+        if (!newarrayHandlers.isEmpty()
+            && (ce instanceof NewPrimitiveArrayInstruction
+                || ce instanceof NewReferenceArrayInstruction
+                || ce instanceof NewMultiArrayInstruction)) {
+          String extName;
+          int dims;
+          Type arrayType;
+          if (ce instanceof NewPrimitiveArrayInstruction pi) {
+            extName = typeKindToJavaName(pi.typeKind());
+            dims = 1;
+            arrayType = primitiveArrayType(pi.typeKind());
+          } else if (ce instanceof NewReferenceArrayInstruction ri) {
+            String internalName = ri.componentType().asInternalName();
+            extName = TypeUtils.getJavaType("L" + internalName + ";");
+            dims = 1;
+            arrayType = Type.getType("[L" + internalName + ";");
+          } else {
+            NewMultiArrayInstruction mi = (NewMultiArrayInstruction) ce;
+            String fullDesc = mi.arrayType().asInternalName();
+            dims = mi.dimensions();
+            int elementStart = 0;
+            while (elementStart < fullDesc.length() && fullDesc.charAt(elementStart) == '[') {
+              elementStart++;
+            }
+            extName = TypeUtils.getJavaType(fullDesc.substring(elementStart));
+            arrayType = Type.getType(fullDesc);
+          }
+          List<ProbeHandler> matchedHandlers = filterForNewArray(newarrayHandlers, extName);
+          if (!matchedHandlers.isEmpty()) {
+            List<ProbeHandler> emittableBefore = new ArrayList<>();
+            List<ProbeHandler> emittableAfter = new ArrayList<>();
+            for (ProbeHandler ph : matchedHandlers) {
+              if (!canEmitNewArrayProbe(ph, loader)) continue;
+              Where where = ph.om.getLocation().getWhere();
+              if (where == Where.BEFORE) emittableBefore.add(ph);
+              else if (where == Where.AFTER) emittableAfter.add(ph);
+            }
+            if (!emittableBefore.isEmpty() || !emittableAfter.isEmpty()) {
+              boolean emitted = false;
+              for (ProbeHandler ph : emittableBefore) {
+                emitted |=
+                    emitNewArrayProbe(
+                        cb, ph, javaClassName, methodName, isStatic,
+                        new NewArrayContext(extName, dims, arrayType, -1));
+              }
+              cb.with(ce); // execute allocation; array ref is now TOS
+              if (!emittableAfter.isEmpty()) {
+                int arrayRefSlot = cb.allocateLocal(TypeKind.REFERENCE);
+                cb.astore(arrayRefSlot);
+                for (ProbeHandler ph : emittableAfter) {
+                  emitted |=
+                      emitNewArrayProbe(
+                          cb, ph, javaClassName, methodName, isStatic,
+                          new NewArrayContext(extName, dims, arrayType, arrayRefSlot));
+                }
+                cb.aload(arrayRefSlot);
+              }
+              if (emitted) anyMatch[0] = true;
+              return;
+            }
+          }
+        }
+
         cb.with(ce);
       }
 
@@ -1289,6 +1384,16 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     List<ProbeHandler> result = new ArrayList<>();
     for (ProbeHandler ph : handlers) {
       if (!matches(ph.om.getLocation().getClazz(), targetTypeName)) continue;
+      result.add(ph);
+    }
+    return result;
+  }
+
+  private static List<ProbeHandler> filterForNewArray(
+      List<ProbeHandler> handlers, String extName) {
+    List<ProbeHandler> result = new ArrayList<>();
+    for (ProbeHandler ph : handlers) {
+      if (!matches(ph.om.getLocation().getClazz(), extName)) continue;
       result.add(ph);
     }
     return result;
@@ -1792,6 +1897,77 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       return false;
     }
     return true;
+  }
+
+  private static boolean canEmitNewArrayProbe(ProbeHandler ph, ClassLoader loader) {
+    OnMethod om = ph.om;
+    String rawDesc =
+        om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+    Type[] handlerArgTypes = Type.getArgumentTypes(rawDesc);
+    for (int i = 0; i < handlerArgTypes.length; i++) {
+      if (i == om.getSelfParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        continue;
+      }
+      if (i == om.getClassNameParameter() || i == om.getMethodParameter()) {
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.STRING_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getReturnParameter()) {
+        if (om.getLocation().getWhere() != Where.AFTER) return false;
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        continue;
+      }
+      if (i == om.getTargetInstanceParameter()
+          || i == om.getDurationParameter()
+          || i == om.getTargetMethodOrFieldParameter()) {
+        return false;
+      }
+      int argIndex = ordinaryArgumentIndex(om, i);
+      if (argIndex == 0) {
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.STRING_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+      } else if (argIndex == 1) {
+        if (!sameStackType(Type.INT_TYPE, handlerArgTypes[i])) return false;
+      } else {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean emitNewArrayProbe(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      NewArrayContext ctx) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        false,
+        ctx.returnSlot,
+        ctx.arrayType,
+        TypeKind.REFERENCE,
+        -1,
+        null,
+        -1,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        ctx);
   }
 
   private static boolean canEmitCallProbe(ProbeHandler ph, InvokeInstruction ii, ClassLoader loader) {
@@ -2393,6 +2569,48 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       ArraySetContext arraySetContext,
       TypeCheckContext typeCheckContext,
       ThrowContext throwContext) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        isEntry,
+        retValSlot,
+        returnType,
+        returnKind,
+        durationSlot,
+        callContext,
+        lineNumber,
+        fieldContext,
+        fieldSetContext,
+        arrayContext,
+        arraySetContext,
+        typeCheckContext,
+        throwContext,
+        null);
+  }
+
+  private static boolean emitProbeCall(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      boolean isEntry,
+      int retValSlot,
+      Type returnType,
+      TypeKind returnKind,
+      int durationSlot,
+      CallContext callContext,
+      int lineNumber,
+      FieldGetContext fieldContext,
+      FieldSetContext fieldSetContext,
+      ArrayGetContext arrayContext,
+      ArraySetContext arraySetContext,
+      TypeCheckContext typeCheckContext,
+      ThrowContext throwContext,
+      NewArrayContext newArrayContext) {
     OnMethod om = ph.om;
 
     String rawDesc =
@@ -2426,6 +2644,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
               || (arraySetContext != null
                   && (ordinaryArgumentIndex(om, i) == 0 || ordinaryArgumentIndex(om, i) == 1))
               || (typeCheckContext != null && ordinaryArgumentIndex(om, i) == 0)
+              || (newArrayContext != null && ordinaryArgumentIndex(om, i) == 0)
+              || (newArrayContext != null && ordinaryArgumentIndex(om, i) == 1)
               || (callArgIndex >= 0 && callArgIndex < callContext.argumentTypes.length);
       if (!satisfiable) {
         log.debug(
@@ -2512,6 +2732,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         }
       } else if (typeCheckContext != null && ordinaryArgumentIndex(om, i) == 0) {
         cb.ldc(typeCheckContext.typeName);
+      } else if (newArrayContext != null && ordinaryArgumentIndex(om, i) == 0) {
+        cb.ldc(newArrayContext.extName);
+      } else if (newArrayContext != null && ordinaryArgumentIndex(om, i) == 1) {
+        cb.ldc(newArrayContext.dims);
       } else if (callContext != null) {
         int callArgIndex = callArgumentIndex(om, i);
         cb.loadLocal(
@@ -2599,6 +2823,52 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
               instruction.type().stringValue(), instruction.owner().asInternalName(), name);
     }
     return name;
+  }
+
+  private static String typeKindToJavaName(TypeKind tk) {
+    switch (tk) {
+      case BOOLEAN:
+        return "boolean";
+      case CHAR:
+        return "char";
+      case FLOAT:
+        return "float";
+      case DOUBLE:
+        return "double";
+      case BYTE:
+        return "byte";
+      case SHORT:
+        return "short";
+      case INT:
+        return "int";
+      case LONG:
+        return "long";
+      default:
+        return tk.name().toLowerCase(java.util.Locale.ROOT);
+    }
+  }
+
+  private static Type primitiveArrayType(TypeKind tk) {
+    switch (tk) {
+      case BOOLEAN:
+        return Type.getType("[Z");
+      case CHAR:
+        return Type.getType("[C");
+      case FLOAT:
+        return Type.getType("[F");
+      case DOUBLE:
+        return Type.getType("[D");
+      case BYTE:
+        return Type.getType("[B");
+      case SHORT:
+        return Type.getType("[S");
+      case INT:
+        return Type.getType("[I");
+      case LONG:
+        return Type.getType("[J");
+      default:
+        throw new IllegalArgumentException("Not a primitive TypeKind: " + tk);
+    }
   }
 
   private static String invocationKind(Opcode opcode) {
