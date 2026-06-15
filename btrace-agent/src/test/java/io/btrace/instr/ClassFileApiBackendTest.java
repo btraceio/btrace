@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceRuntime;
 import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Sampled;
 import io.btrace.core.annotations.Where;
 import io.btrace.core.extensions.Permission;
 import java.util.ArrayList;
@@ -4317,5 +4318,139 @@ class ClassFileApiBackendTest {
     assertEquals(2, countInvokeDynamic(readable, "monitor", "$btrace$"));
     assertEquals(
         "(Ljava/lang/Object;)V", getInvokeDynamicDescriptor(readable, "monitor", "$btrace$"));
+  }
+
+  // Phase 13: Sampled and Level Guard tests
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void sampledEntryProbeEmitsSamplingCheck() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "doWork");
+    OnMethod om = new OnMethod();
+    om.setClazz("com.example.Target");
+    om.setMethod("doWork");
+    Location loc = new Location();
+    loc.setValue(Kind.ENTRY);
+    om.setLocation(loc);
+    om.setTargetName("onProbe");
+    om.setTargetDescriptor("()V");
+    om.setSamplerKind(Sampled.Sampler.Const);
+    om.setSamplerMean(5);
+    BTraceProbe probe = buildStubProbe("com/example/MyTrace", "com.example.Target", om);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertTrue(
+        containsMethodTrackerHit(readable, "doWork"),
+        "Sampled ENTRY probe must emit MethodTracker.hit call");
+    assertTrue(
+        containsInvokeDynamic(readable, "doWork", "$btrace$"),
+        "Sampled ENTRY probe must still emit INVOKEDYNAMIC");
+  }
+
+  @Test
+  void sampledReturnProbeEmitsSamplingCheck() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "compute");
+    OnMethod om = new OnMethod();
+    om.setClazz("com.example.Target");
+    om.setMethod("compute");
+    Location loc = new Location();
+    loc.setValue(Kind.RETURN);
+    om.setLocation(loc);
+    om.setTargetName("onProbe");
+    om.setTargetDescriptor("()V");
+    om.setSamplerKind(Sampled.Sampler.Const);
+    om.setSamplerMean(3);
+    BTraceProbe probe = buildStubProbe("com/example/MyTrace", "com.example.Target", om);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertTrue(
+        containsMethodTrackerHit(readable, "compute"),
+        "Sampled RETURN probe must emit MethodTracker.hit call");
+    assertTrue(
+        containsInvokeDynamic(readable, "compute", "$btrace$"),
+        "Sampled RETURN probe must still emit INVOKEDYNAMIC");
+  }
+
+  @Test
+  void levelGuardedProbeStillEmitsInvokedynamic() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "doWork");
+    OnMethod om = new OnMethod();
+    om.setClazz("com.example.Target");
+    om.setMethod("doWork");
+    Location loc = new Location();
+    loc.setValue(Kind.ENTRY);
+    om.setLocation(loc);
+    om.setTargetName("onProbe");
+    om.setTargetDescriptor("()V");
+    om.setLevel(Level.fromString(">0"));
+    BTraceProbe probe = buildStubProbe("com/example/MyTrace", "com.example.Target", om);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertTrue(
+        containsInvokeDynamic(readable, "doWork", "$btrace$"),
+        "Level-guarded probe must still emit INVOKEDYNAMIC (guard runs at MethodHandle layer)");
+    assertFalse(
+        containsMethodTrackerHit(readable, "doWork"),
+        "Level-guarded probe must NOT emit MethodTracker.hit (no sampling requested)");
+  }
+
+  @Test
+  void unsampledProbeDoesNotEmitSamplingCheck() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "doWork");
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "doWork", Kind.ENTRY, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertTrue(containsInvokeDynamic(readable, "doWork", "$btrace$"));
+    assertFalse(
+        containsMethodTrackerHit(readable, "doWork"),
+        "Non-sampled probe must not emit MethodTracker.hit");
+  }
+
+  // Helper: check for INVOKESTATIC io/btrace/instr/MethodTracker.hit in the given method
+  private static boolean containsMethodTrackerHit(byte[] classBytes, String methodName) {
+    final boolean[] found = {false};
+    ClassReader cr = new ClassReader(classBytes);
+    cr.accept(
+        new org.objectweb.asm.ClassVisitor(org.objectweb.asm.Opcodes.ASM9) {
+          @Override
+          public org.objectweb.asm.MethodVisitor visitMethod(
+              int access, String name, String desc, String sig, String[] exs) {
+            if (!name.equals(methodName)) return null;
+            return new org.objectweb.asm.MethodVisitor(org.objectweb.asm.Opcodes.ASM9) {
+              @Override
+              public void visitMethodInsn(
+                  int opcode, String owner, String mName, String mDesc, boolean itf) {
+                if (opcode == Opcodes.INVOKESTATIC
+                    && owner.equals("io/btrace/instr/MethodTracker")
+                    && (mName.equals("hit") || mName.equals("hitAdaptive"))) {
+                  found[0] = true;
+                }
+              }
+            };
+          }
+        },
+        0);
+    return found[0];
   }
 }

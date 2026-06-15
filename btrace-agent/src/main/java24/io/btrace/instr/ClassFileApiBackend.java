@@ -61,7 +61,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import io.btrace.core.MethodID;
 import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Sampled;
 import io.btrace.core.annotations.Where;
 
 import org.objectweb.asm.Type;
@@ -87,6 +89,12 @@ import org.slf4j.LoggerFactory;
  * <p>Synchronization probe kinds ({@code SYNC_ENTRY}, {@code SYNC_EXIT}) instrument
  * {@code monitorenter} and {@code monitorexit} bytecodes. {@code @TargetInstance} receives the
  * lock object. {@code @Duration} is not supported for synchronization probes.
+ *
+ * <p>Level guards are enforced at the MethodHandle layer ({@code HandlerRepositoryImpl}); the
+ * INVOKEDYNAMIC instruction is always emitted and the guard fires at runtime. Const and Adaptive
+ * sampling for {@code ENTRY}, {@code RETURN}, and {@code ERROR} probes is implemented with
+ * {@link MethodTracker#hit} / {@link MethodTracker#hitAdaptive} checks emitted as bytecode
+ * immediately before the probe call.
  */
 public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final Logger log = LoggerFactory.getLogger(ClassFileApiBackend.class);
@@ -101,6 +109,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           ClassDesc.of("java.lang.String"));
 
   private static final ClassDesc INDY_DISPATCHER = ClassDesc.of("io.btrace.runtime.IndyDispatcher");
+  private static final ClassDesc CD_METHOD_TRACKER =
+      ClassDesc.ofInternalName("io/btrace/instr/MethodTracker");
+  private static final MethodTypeDesc HIT_DESC = MethodTypeDesc.ofDescriptor("(I)Z");
+  private static final MethodTypeDesc HIT_ADAPTIVE_DESC = MethodTypeDesc.ofDescriptor("(I)Z");
 
   @Override
   public boolean supports(int classFileMajorVersion) {
@@ -499,6 +511,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                   loader,
                   javaClassName,
                   methodName,
+                  methodDesc,
                   methodReturnType,
                   isStatic,
                   mEntry,
@@ -532,6 +545,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       ClassLoader loader,
       String javaClassName,
       String methodName,
+      String methodDesc,
       Type methodReturnType,
       boolean isStatic,
       List<ProbeHandler> entryHandlers,
@@ -572,6 +586,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 loader,
                 javaClassName,
                 methodName,
+                methodDesc,
                 methodReturnType,
                 isStatic,
                 entryHandlers,
@@ -603,6 +618,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       ClassLoader loader,
       String javaClassName,
       String methodName,
+      String methodDesc,
       Type methodReturnType,
       boolean isStatic,
       List<ProbeHandler> entryHandlers,
@@ -635,6 +651,35 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     boolean needsExceptionHandler = hasDuration || !errorHandlers.isEmpty();
     boolean hasReturnParam =
         returnHandlers.stream().anyMatch(ph -> ph.om.getReturnParameter() != -1);
+
+    // Sampling support: pre-register counters for sampled ENTRY/RETURN/ERROR handlers.
+    // MethodTracker.registerCounter is idempotent — safe to call multiple times with same id.
+    String internalClassName = javaClassName.replace('.', '/');
+    boolean hasSampledHandlers =
+        entryHandlers.stream().anyMatch(ph -> ph.om.getSamplerKind() != Sampled.Sampler.None)
+            || returnHandlers.stream().anyMatch(ph -> ph.om.getSamplerKind() != Sampled.Sampler.None)
+            || errorHandlers.stream().anyMatch(ph -> ph.om.getSamplerKind() != Sampled.Sampler.None);
+    final int samplingMethodId;
+    if (hasSampledHandlers) {
+      samplingMethodId = MethodID.getMethodId(internalClassName, methodName, methodDesc);
+      for (ProbeHandler ph : entryHandlers) {
+        if (ph.om.getSamplerKind() != Sampled.Sampler.None && ph.om.getSamplerMean() > 0) {
+          MethodTracker.registerCounter(samplingMethodId, ph.om.getSamplerMean());
+        }
+      }
+      for (ProbeHandler ph : returnHandlers) {
+        if (ph.om.getSamplerKind() != Sampled.Sampler.None && ph.om.getSamplerMean() > 0) {
+          MethodTracker.registerCounter(samplingMethodId, ph.om.getSamplerMean());
+        }
+      }
+      for (ProbeHandler ph : errorHandlers) {
+        if (ph.om.getSamplerKind() != Sampled.Sampler.None && ph.om.getSamplerMean() > 0) {
+          MethodTracker.registerCounter(samplingMethodId, ph.om.getSamplerMean());
+        }
+      }
+    } else {
+      samplingMethodId = -1;
+    }
 
     return new CodeTransform() {
       private final int[] entryTsSlot = {-1};
@@ -681,7 +726,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             cb.storeLocal(TypeKind.LONG, entryTsSlot[0]);
           }
           for (ProbeHandler ph : entryHandlers) {
-            emitProbeCall(cb, ph, javaClassName, methodName, isStatic, true, -1, TypeKind.VOID, -1);
+            emitWithSamplingGuard(
+                cb, ph, samplingMethodId,
+                () -> emitProbeCall(cb, ph, javaClassName, methodName, isStatic, true, -1, TypeKind.VOID, -1));
           }
         }
 
@@ -726,19 +773,15 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             cb.storeLocal(TypeKind.LONG, localDurationSlot);
           }
 
+          final int fLocalRetValSlot = localRetValSlot;
+          final TypeKind fReturnKind = returnKind;
+          final int fLocalDurationSlot = localDurationSlot;
           for (ProbeHandler ph : returnHandlers) {
-            emitProbeCall(
-                cb,
-                ph,
-                javaClassName,
-                methodName,
-                isStatic,
-                false,
-                localRetValSlot,
-                methodReturnType,
-                returnKind,
-                localDurationSlot,
-                null);
+            emitWithSamplingGuard(
+                cb, ph, samplingMethodId,
+                () -> emitProbeCall(
+                    cb, ph, javaClassName, methodName, isStatic, false,
+                    fLocalRetValSlot, methodReturnType, fReturnKind, fLocalDurationSlot, null));
           }
         }
 
@@ -1431,15 +1474,20 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         }
 
         // Fire RETURN @Duration handlers (retValSlot=-1: no return value on exception path)
+        final int fExDurationSlot = exDurationSlot;
         for (ProbeHandler ph : durationHandlers) {
-          emitProbeCall(
-              cb, ph, javaClassName, methodName, isStatic, false, -1, TypeKind.VOID, exDurationSlot);
+          emitWithSamplingGuard(
+              cb, ph, samplingMethodId,
+              () -> emitProbeCall(
+                  cb, ph, javaClassName, methodName, isStatic, false, -1, TypeKind.VOID, fExDurationSlot));
         }
 
         // Fire ERROR handlers
         boolean emitted = false;
+        final int fExSlot = exSlot;
         for (ProbeHandler ph : emittableError) {
-          emitted |= emitErrorProbe(cb, ph, javaClassName, methodName, isStatic, exSlot, exDurationSlot);
+          emitted |= emitErrorProbeWithSampling(
+              cb, ph, javaClassName, methodName, isStatic, fExSlot, fExDurationSlot, samplingMethodId);
         }
         if (emitted) anyMatch[0] = true;
 
@@ -2619,6 +2667,45 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         null,
         null,
         new ThrowContext(throwableSlot));
+  }
+
+  private static boolean emitErrorProbeWithSampling(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      int throwableSlot,
+      int durationSlot,
+      int methodId) {
+    if (ph.om.getSamplerKind() != Sampled.Sampler.None && methodId != -1) {
+      Label skipLabel = cb.newLabel();
+      cb.ldc(methodId);
+      String hitMethod =
+          ph.om.getSamplerKind() == Sampled.Sampler.Adaptive ? "hitAdaptive" : "hit";
+      cb.invokestatic(CD_METHOD_TRACKER, hitMethod, HIT_DESC);
+      cb.ifeq(skipLabel);
+      boolean result = emitErrorProbe(cb, ph, javaClassName, methodName, isStatic, throwableSlot, durationSlot);
+      cb.labelBinding(skipLabel);
+      return result;
+    }
+    return emitErrorProbe(cb, ph, javaClassName, methodName, isStatic, throwableSlot, durationSlot);
+  }
+
+  private static void emitWithSamplingGuard(
+      CodeBuilder cb, ProbeHandler ph, int methodId, Runnable probeEmitter) {
+    if (ph.om.getSamplerKind() != Sampled.Sampler.None && methodId != -1) {
+      Label skipLabel = cb.newLabel();
+      cb.ldc(methodId);
+      String hitMethod =
+          ph.om.getSamplerKind() == Sampled.Sampler.Adaptive ? "hitAdaptive" : "hit";
+      cb.invokestatic(CD_METHOD_TRACKER, hitMethod, HIT_DESC);
+      cb.ifeq(skipLabel);
+      probeEmitter.run();
+      cb.labelBinding(skipLabel);
+    } else {
+      probeEmitter.run();
+    }
   }
 
   private static boolean emitProbeCall(
