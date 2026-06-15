@@ -55,19 +55,19 @@ dependencyResolutionManagement {
     versionCatalogs {
         libs {
             // Families...
-            version('asm', '9.9.1')
+            version('asm', '9.10.1')
             version('jmh', '1.37')
             version('jmhGradlePlugin', '0.7.3')
             version('slf4j', '1.7.36')
-            version('junit', '5.11.4')
-            version('testcontainers', '2.0.4')
+            version('junit', '5.14.4')
+            version('testcontainers', '2.0.5')
 
             // *** Gradle plugins ***
-            plugin ('spotless', 'com.diffplug.spotless').version('8.5.1')
+            plugin ('spotless', 'com.diffplug.spotless').version('8.6.0')
             plugin ('versioning', 'net.nemerosa.versioning').version('2.15.1')
             plugin ('ospackage', 'com.netflix.nebula.ospackage').version('12.3.0')
             plugin ('publish', 'io.github.gradle-nexus.publish-plugin').version('2.0.0')
-            plugin ('shadow', 'com.gradleup.shadow').version('9.4.1')
+            plugin ('shadow', 'com.gradleup.shadow').version('9.4.2')
             plugin ('sdkman-vendors', 'io.sdkman.vendors').version('3.0.0')
             plugin ('foojay-resolver', 'org.gradle.toolchains.foojay-resolver-convention').version('1.0.0')
 

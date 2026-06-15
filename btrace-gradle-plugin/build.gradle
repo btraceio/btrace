@@ -22,13 +22,13 @@ dependencies {
     implementation gradleApi()
     implementation localGroovy()
     // Match versions commonly cached in this repository to avoid extra fetches
-    implementation 'org.ow2.asm:asm:9.9.1'
-    implementation 'org.ow2.asm:asm-tree:9.9.1'
+    implementation 'org.ow2.asm:asm:9.10.1'
+    implementation 'org.ow2.asm:asm-tree:9.10.1'
 
     // Testing — version pinned here to match the root project's version catalog (settings.gradle).
     // Note: this is an included build and cannot access the root project's 'libs' version catalog.
     testImplementation gradleTestKit()
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.14.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
