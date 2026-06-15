@@ -4013,4 +4013,141 @@ class ClassFileApiBackendTest {
 
     assertNull(result, "Handler with @Duration must be rejected for NEWARRAY probes");
   }
+
+  // Kind.NEW tests
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void newObjectProbeBeforeAllocation() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithObjectAllocation(70, "com/example/Target", "objects");
+    Location location = new Location();
+    location.setValue(Kind.NEW);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("java.lang.StringBuilder");
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "objects", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(1, countInvokeDynamic(readable, "objects", "$btrace$"));
+    assertBTracePrecedesOpcode(readable, "objects", Opcodes.NEW);
+  }
+
+  @Test
+  void newObjectAfterProbeFiresAfterInit() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithObjectAllocation(70, "com/example/Target", "objects");
+    Location location = new Location();
+    location.setValue(Kind.NEW);
+    location.setWhere(Where.AFTER);
+    location.setClazz("java.lang.StringBuilder");
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "objects", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(1, countInvokeDynamic(readable, "objects", "$btrace$"));
+    assertBTraceBetweenOpcodes(readable, "objects", Opcodes.INVOKESPECIAL, Opcodes.ARETURN);
+  }
+
+  @Test
+  void newObjectAfterProbeGetsInitializedRef() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithObjectAllocation(70, "com/example/Target", "objects");
+    Location location = new Location();
+    location.setValue(Kind.NEW);
+    location.setWhere(Where.AFTER);
+    location.setClazz("java.lang.StringBuilder");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "objects",
+            location,
+            "(Ljava/lang/Object;)V",
+            0,
+            -1,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(1, countInvokeDynamic(readable, "objects", "$btrace$"));
+    assertBTraceBetweenOpcodes(readable, "objects", Opcodes.INVOKESPECIAL, Opcodes.ARETURN);
+    assertEquals(
+        "(Ljava/lang/Object;)V", getInvokeDynamicDescriptor(readable, "objects", "$btrace$"));
+  }
+
+  @Test
+  void newObjectProbeEmptyClazzMatchesAll() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithObjectAllocation(70, "com/example/Target", "objects");
+    Location location = new Location();
+    location.setValue(Kind.NEW);
+    location.setWhere(Where.BEFORE);
+    // empty clazz matches all NEW instructions; fixture has one (StringBuilder)
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "objects", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(1, countInvokeDynamic(readable, "objects", "$btrace$"));
+  }
+
+  @Test
+  void newObjectProbeTypeMismatchSkips() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithObjectAllocation(70, "com/example/Target", "objects");
+    Location location = new Location();
+    location.setValue(Kind.NEW);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("java.lang.String"); // fixture only allocates StringBuilder
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "objects", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(
+        result, "Probe for java.lang.String must not match java.lang.StringBuilder allocation");
+  }
+
+  @Test
+  void newObjectProbeSkipsUnsupportedParameter() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithObjectAllocation(70, "com/example/Target", "objects");
+    Location location = new Location();
+    location.setValue(Kind.NEW);
+    location.setWhere(Where.BEFORE);
+    // Handler declares @Duration — not supported for NEW probes; canEmit must reject it
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "objects",
+            location,
+            "(J)V",
+            -1,
+            0,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "Handler with @Duration must be rejected for NEW probes");
+  }
 }
