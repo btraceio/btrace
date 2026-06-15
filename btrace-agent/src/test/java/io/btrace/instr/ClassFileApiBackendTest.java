@@ -3646,4 +3646,231 @@ class ClassFileApiBackendTest {
         storedSlots.size() >= 2,
         "Expected at least 2 distinct local slots (retVal + duration), got: " + storedSlots);
   }
+
+  // ---------------------------------------------------------------------------
+  // Kind.CATCH tests
+  // The following tests verify that CATCH probes are injected at exception handler entry points.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void catchProbeInjectedAtHandlerEntry() {
+    requireJdk26ForVersion70();
+    // Build class with try { throw RuntimeException } catch (RuntimeException e) { }
+    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "run");
+    // Simple CATCH probe with no special parameters: ()V
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "run", Kind.CATCH, "()V");
+
+    InstrumentationBackend backend = BackendSelector.select(70);
+    byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected instrumented bytes for CATCH probe");
+    byte[] readable = patchVersion(result, 65);
+    int count = countInvokeDynamic(readable, "run", "$btrace$");
+    assertEquals(1, count, "Expected exactly 1 INVOKEDYNAMIC at catch handler entry");
+  }
+
+  @Test
+  void catchProbeCapturesCaughtThrowable() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "run");
+    // CATCH probe with @TargetInstance at index 0 typed as RuntimeException
+    Location catchLoc = new Location();
+    catchLoc.setValue(Kind.CATCH);
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "run",
+            catchLoc,
+            "(Ljava/lang/RuntimeException;)V",
+            -1, // returnParameter
+            -1, // durationParameter
+            0, // targetInstanceParameter = 0
+            -1);
+
+    InstrumentationBackend backend = BackendSelector.select(70);
+    byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected instrumented bytes for CATCH+@TargetInstance probe");
+    byte[] readable = patchVersion(result, 65);
+    String desc = getInvokeDynamicDescriptor(readable, "run", "$btrace$");
+    assertNotNull(desc, "Expected INVOKEDYNAMIC in instrumented run method");
+    assertTrue(
+        desc.contains("Ljava/lang/RuntimeException;"),
+        "Expected RuntimeException in descriptor, got: " + desc);
+  }
+
+  @Test
+  void catchProbeSkippedForFinallyBlock() {
+    requireJdk26ForVersion70();
+    // Build class that has a catch-all (finally) block — CATCH probes must not fire for catch-all.
+    // We reuse buildClassWithMonitorBlock which has a null-type catch-all handler.
+    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "sync");
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "sync", Kind.CATCH, "()V");
+
+    InstrumentationBackend backend = BackendSelector.select(70);
+    byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
+
+    // Either no instrumentation or zero INVOKEDYNAMIC (catch-all must not trigger CATCH probes)
+    if (result != null) {
+      int count = countInvokeDynamic(patchVersion(result, 65), "sync", "$btrace$");
+      assertEquals(0, count, "CATCH probe must not fire for catch-all (finally) handlers");
+    }
+  }
+
+  @Test
+  void catchProbeTypeMismatchSkipsHandler() {
+    requireJdk26ForVersion70();
+    // Catch block catches RuntimeException; probe @TargetInstance is IOException — incompatible.
+    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "run");
+    Location catchLoc = new Location();
+    catchLoc.setValue(Kind.CATCH);
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "run",
+            catchLoc,
+            "(Ljava/io/IOException;)V",
+            -1,
+            -1,
+            0, // targetInstanceParameter
+            -1);
+
+    InstrumentationBackend backend = BackendSelector.select(70);
+    byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
+
+    if (result != null) {
+      int count = countInvokeDynamic(patchVersion(result, 65), "run", "$btrace$");
+      assertEquals(0, count, "CATCH probe with incompatible exception type must not be injected");
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Kind.ERROR tests
+  // The following tests verify that ERROR probes are injected in the synthetic exception-exit
+  // handler wrapping the entire method body.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void errorProbeInjectedOnUncaughtExit() {
+    requireJdk26ForVersion70();
+    // Simple void method; an ERROR probe adds a synthetic Throwable handler.
+    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "run");
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "run", Kind.ERROR, "()V");
+
+    InstrumentationBackend backend = BackendSelector.select(70);
+    byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected instrumented bytes for ERROR probe");
+    byte[] readable = patchVersion(result, 65);
+    int count = countInvokeDynamic(readable, "run", "$btrace$");
+    assertEquals(1, count, "Expected exactly 1 INVOKEDYNAMIC in the ERROR exception handler");
+  }
+
+  @Test
+  void errorProbeCapturesEscapingThrowable() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "run");
+    // ERROR probe with @TargetInstance at index 0 typed as Throwable
+    Location errorLoc = new Location();
+    errorLoc.setValue(Kind.ERROR);
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "run",
+            errorLoc,
+            "(Ljava/lang/Throwable;)V",
+            -1,
+            -1,
+            0, // targetInstanceParameter
+            -1);
+
+    InstrumentationBackend backend = BackendSelector.select(70);
+    byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected instrumented bytes for ERROR+@TargetInstance probe");
+    byte[] readable = patchVersion(result, 65);
+    String desc = getInvokeDynamicDescriptor(readable, "run", "$btrace$");
+    assertNotNull(desc, "Expected INVOKEDYNAMIC in instrumented run method");
+    assertTrue(
+        desc.contains("Ljava/lang/Throwable;"), "Expected Throwable in descriptor, got: " + desc);
+  }
+
+  @Test
+  void errorProbeWithDuration() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "timed");
+    // ERROR probe with @Duration at index 0 (long)
+    Location errorLoc = new Location();
+    errorLoc.setValue(Kind.ERROR);
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "timed",
+            errorLoc,
+            "(J)V",
+            -1, // returnParameter
+            0, // durationParameter at index 0
+            -1, // targetInstanceParameter
+            -1);
+
+    InstrumentationBackend backend = BackendSelector.select(70);
+    byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected instrumented bytes for ERROR+@Duration probe");
+    byte[] readable = patchVersion(result, 65);
+    String desc = getInvokeDynamicDescriptor(readable, "timed", "$btrace$");
+    assertNotNull(desc, "Expected INVOKEDYNAMIC in error handler");
+    assertTrue(desc.startsWith("(J"), "Expected long (duration) as first parameter, got: " + desc);
+    // Two nanoTime calls: one at method entry (capture start time) and one in the exception
+    // handler (compute elapsed = now - start). The RETURN path needs no nanoTime because this
+    // is an ERROR probe, not a RETURN probe.
+    assertEquals(
+        2,
+        countMethodCalls(readable, "timed", "java/lang/System", "nanoTime"),
+        "Expected 2 System.nanoTime calls: entry timestamp + exception-handler elapsed time");
+  }
+
+  @Test
+  void errorProbeDoesNotFireForCaughtExceptions() {
+    requireJdk26ForVersion70();
+    // A method with a try-catch: the exception is caught, so it does NOT exit the method as
+    // uncaught. The ERROR probe must NOT inject its INVOKEDYNAMIC inside the catch handler.
+    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "safe");
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "safe", Kind.ERROR, "()V");
+
+    InstrumentationBackend backend = BackendSelector.select(70);
+    byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
+
+    // The ERROR probe adds a synthetic handler, but the method already catches everything
+    // internally. We verify only that the bytecode is structurally valid (loads without error).
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    // There should be exactly 1 INVOKEDYNAMIC (in the synthetic ERROR handler, not in the catch)
+    int count = countInvokeDynamic(readable, "safe", "$btrace$");
+    assertEquals(1, count, "Expected 1 INVOKEDYNAMIC in synthetic ERROR handler, got: " + count);
+    // The class must load and verify cleanly
+    assertDoesNotThrow(
+        () -> {
+          ClassLoader cl =
+              new ClassLoader(null) {
+                @Override
+                protected Class<?> findClass(String name) throws ClassNotFoundException {
+                  if ("com.example.Target".equals(name)) {
+                    return defineClass(name, readable, 0, readable.length);
+                  }
+                  throw new ClassNotFoundException(name);
+                }
+              };
+          cl.loadClass("com.example.Target");
+        },
+        "Instrumented class with ERROR probe must load without VerifyError");
+  }
 }

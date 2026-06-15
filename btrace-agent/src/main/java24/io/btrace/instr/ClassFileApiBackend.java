@@ -32,8 +32,10 @@ import java.lang.classfile.PseudoInstruction;
 import java.lang.classfile.TypeKind;
 import java.lang.classfile.instruction.ArrayLoadInstruction;
 import java.lang.classfile.instruction.ArrayStoreInstruction;
+import java.lang.classfile.instruction.ExceptionCatch;
 import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.classfile.instruction.InvokeInstruction;
+import java.lang.classfile.instruction.LabelTarget;
 import java.lang.classfile.instruction.LineNumber;
 import java.lang.classfile.instruction.ReturnInstruction;
 import java.lang.classfile.instruction.ThrowInstruction;
@@ -47,7 +49,9 @@ import java.lang.reflect.AccessFlag;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import io.btrace.core.annotations.Kind;
@@ -61,14 +65,15 @@ import org.slf4j.LoggerFactory;
  * Instrumentation backend for class file versions that ASM cannot parse (&gt; 69, i.e. Java 26+).
  * Uses the JDK ClassFile API ({@code java.lang.classfile.*}), available since JDK 24.
  *
- * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}, and {@link Kind#CALL}. Method
- * entry/return handlers support {@code @Self}, {@code @Return}, and {@code @Duration} as
- * applicable. Method call handlers support called arguments, {@code @TargetInstance}, {@code
- * @TargetMethodOrField}, {@code @Return} for {@link Where#AFTER}, and {@code @Duration} for {@link
- * Where#AFTER}.
+ * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}, {@link Kind#CALL}, {@link
+ * Kind#LINE}, {@link Kind#FIELD_GET}, {@link Kind#FIELD_SET}, {@link Kind#ARRAY_GET}, {@link
+ * Kind#ARRAY_SET}, {@link Kind#CHECKCAST}, {@link Kind#INSTANCEOF}, {@link Kind#THROW}, {@link
+ * Kind#CATCH}, and {@link Kind#ERROR}. Exception entry ({@code CATCH}) and uncaught-exit ({@code
+ * ERROR}) handlers support {@code @TargetInstance} for the caught/escaping throwable and {@code
+ * @Duration} for {@code ERROR}.
  *
- * <p>Full ASM backend parity for line, field, array, allocation, exception, and synchronization
- * locations is still in progress.
+ * <p>Allocation ({@code NEWARRAY}, {@code NEW}) and synchronization ({@code SYNC_ENTRY}, {@code
+ * SYNC_EXIT}) parity is still in progress.
  */
 public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final Logger log = LoggerFactory.getLogger(ClassFileApiBackend.class);
@@ -122,6 +127,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     List<ProbeHandler> checkcastHandlers = new ArrayList<>();
     List<ProbeHandler> instanceofHandlers = new ArrayList<>();
     List<ProbeHandler> throwHandlers = new ArrayList<>();
+    List<ProbeHandler> catchHandlers = new ArrayList<>();
+    List<ProbeHandler> errorHandlers = new ArrayList<>();
     for (ProbeHandler ph : handlers) {
       Kind kind = ph.om.getLocation().getValue();
       if (kind == Kind.ENTRY) entryHandlers.add(ph);
@@ -135,6 +142,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       else if (kind == Kind.CHECKCAST) checkcastHandlers.add(ph);
       else if (kind == Kind.INSTANCEOF) instanceofHandlers.add(ph);
       else if (kind == Kind.THROW) throwHandlers.add(ph);
+      else if (kind == Kind.CATCH) catchHandlers.add(ph);
+      else if (kind == Kind.ERROR) errorHandlers.add(ph);
       else log.debug("Skipping unsupported probe kind {} for class {}", kind, javaClassName);
     }
     if (entryHandlers.isEmpty()
@@ -147,7 +156,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         && arraySetHandlers.isEmpty()
         && checkcastHandlers.isEmpty()
         && instanceofHandlers.isEmpty()
-        && throwHandlers.isEmpty()) {
+        && throwHandlers.isEmpty()
+        && catchHandlers.isEmpty()
+        && errorHandlers.isEmpty()) {
       return null;
     }
 
@@ -169,6 +180,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 checkcastHandlers,
                 instanceofHandlers,
                 throwHandlers,
+                catchHandlers,
+                errorHandlers,
                 anyMatch));
     return anyMatch[0] ? result : null;
   }
@@ -365,6 +378,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> checkcastHandlers,
       List<ProbeHandler> instanceofHandlers,
       List<ProbeHandler> throwHandlers,
+      List<ProbeHandler> catchHandlers,
+      List<ProbeHandler> errorHandlers,
       boolean[] anyMatch) {
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
@@ -389,6 +404,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         List<ProbeHandler> mInstanceof =
             filterForMethod(instanceofHandlers, methodName, methodDesc, loader);
         List<ProbeHandler> mThrow = filterForMethod(throwHandlers, methodName, methodDesc, loader);
+        List<ProbeHandler> mCatch = filterForMethod(catchHandlers, methodName, methodDesc, loader);
+        List<ProbeHandler> mError = filterForMethod(errorHandlers, methodName, methodDesc, loader);
         if (!mEntry.isEmpty()
             || !mReturn.isEmpty()
             || !mCall.isEmpty()
@@ -399,7 +416,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             || !mArraySet.isEmpty()
             || !mCheckcast.isEmpty()
             || !mInstanceof.isEmpty()
-            || !mThrow.isEmpty()) {
+            || !mThrow.isEmpty()
+            || !mCatch.isEmpty()
+            || !mError.isEmpty()) {
           if (!mEntry.isEmpty() || !mReturn.isEmpty()) {
             anyMatch[0] = true;
           }
@@ -422,6 +441,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                   mCheckcast,
                   mInstanceof,
                   mThrow,
+                  mCatch,
+                  mError,
                   anyMatch));
         } else {
           classBuilder.with(classElement);
@@ -449,9 +470,23 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> checkcastHandlers,
       List<ProbeHandler> instanceofHandlers,
       List<ProbeHandler> throwHandlers,
+      List<ProbeHandler> catchHandlers,
+      List<ProbeHandler> errorHandlers,
       boolean[] anyMatch) {
     return (methodBuilder, methodElement) -> {
       if (methodElement instanceof CodeModel cm) {
+        // Pre-scan to map handler labels to their catch types for CATCH probe injection.
+        // ExceptionCatch elements may appear after the corresponding LabelTarget in the element
+        // stream, so we scan the full CodeModel before transforming.
+        Map<Label, String> catchHandlerTypes = new HashMap<>();
+        if (!catchHandlers.isEmpty()) {
+          for (CodeElement ce : cm) {
+            if (ce instanceof ExceptionCatch ec) {
+              ec.catchType()
+                  .ifPresent(ct -> catchHandlerTypes.put(ec.handler(), ct.asInternalName()));
+            }
+          }
+        }
         methodBuilder.transformCode(
             cm,
             buildCodeTransform(
@@ -471,6 +506,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 checkcastHandlers,
                 instanceofHandlers,
                 throwHandlers,
+                catchHandlers,
+                errorHandlers,
+                catchHandlerTypes,
                 anyMatch));
       } else {
         methodBuilder.with(methodElement);
@@ -495,10 +533,19 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> checkcastHandlers,
       List<ProbeHandler> instanceofHandlers,
       List<ProbeHandler> throwHandlers,
+      List<ProbeHandler> catchHandlers,
+      List<ProbeHandler> errorHandlers,
+      Map<Label, String> catchHandlerTypes,
       boolean[] anyMatch) {
 
-    boolean hasDuration =
+    // hasDurationReturn: RETURN probes need duration → compute nanoTime on each RETURN path
+    boolean hasDurationReturn =
         returnHandlers.stream().anyMatch(ph -> ph.om.getDurationParameter() != -1);
+    // hasDuration: any probe needs an entry timestamp (RETURN @Duration or ERROR @Duration)
+    boolean hasDuration =
+        hasDurationReturn || errorHandlers.stream().anyMatch(ph -> ph.om.getDurationParameter() != -1);
+    // needsExceptionHandler: an exception-exit handler must be synthesized
+    boolean needsExceptionHandler = hasDuration || !errorHandlers.isEmpty();
     boolean hasReturnParam =
         returnHandlers.stream().anyMatch(ph -> ph.om.getReturnParameter() != -1);
 
@@ -513,9 +560,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
 
       @Override
       public void atStart(CodeBuilder cb) {
-        if (hasDuration) {
+        if (needsExceptionHandler) {
           startLabel = cb.newLabel();
-          // labelBinding deferred to accept() so it is only emitted when entryTsSlot is allocated
+          // labelBinding deferred to accept() so it is emitted at the first real instruction
         }
       }
 
@@ -533,9 +580,11 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
 
         if (!entryInjected[0] && !(ce instanceof PseudoInstruction)) {
           entryInjected[0] = true;
-          if (hasDuration) {
-            // Bind try-region start here, in sync with entryTsSlot allocation
+          if (needsExceptionHandler) {
+            // Bind try-region start at the first real instruction
             cb.labelBinding(startLabel);
+          }
+          if (hasDuration) {
             entryTsSlot[0] = cb.allocateLocal(TypeKind.LONG);
             cb.invokestatic(
                 ClassDesc.ofInternalName("java/lang/System"),
@@ -573,9 +622,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             cb.storeLocal(returnKind, localRetValSlot);
           }
 
-          // @Duration: compute nanoTime - entryTs
+          // @Duration: compute nanoTime - entryTs (only for RETURN probes that declare @Duration)
           int localDurationSlot = -1;
-          if (hasDuration && entryTsSlot[0] != -1) {
+          if (hasDurationReturn && entryTsSlot[0] != -1) {
             if (durationSlot[0] == -1) {
               durationSlot[0] = cb.allocateLocal(TypeKind.LONG);
             }
@@ -1040,6 +1089,39 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           }
         }
 
+        // CATCH probe: fire at exception handler entry, where the caught throwable is TOS.
+        // We bind the label first, then dup/store the throwable if @TargetInstance is needed.
+        if (!catchHandlers.isEmpty() && ce instanceof LabelTarget lt) {
+          String catchTypeInternalName = catchHandlerTypes.get(lt.label());
+          if (catchTypeInternalName != null) {
+            cb.with(ce); // bind the handler label; throwable is now TOS
+            Type catchType = Type.getObjectType(catchTypeInternalName);
+            List<ProbeHandler> emittableCatch = new ArrayList<>();
+            boolean needsThrowable = false;
+            for (ProbeHandler ph : catchHandlers) {
+              if (canEmitCatchProbe(ph, catchType, loader)) {
+                emittableCatch.add(ph);
+                if (ph.om.getTargetInstanceParameter() != -1) needsThrowable = true;
+              }
+            }
+            if (!emittableCatch.isEmpty()) {
+              int throwableSlot = -1;
+              if (needsThrowable) {
+                throwableSlot = cb.allocateLocal(TypeKind.REFERENCE);
+                cb.dup();
+                cb.astore(throwableSlot);
+              }
+              boolean emitted = false;
+              for (ProbeHandler ph : emittableCatch) {
+                emitted |=
+                    emitCatchProbe(cb, ph, javaClassName, methodName, isStatic, throwableSlot);
+              }
+              if (emitted) anyMatch[0] = true;
+            }
+            return;
+          }
+        }
+
         cb.with(ce);
       }
 
@@ -1061,21 +1143,25 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           emitLineHandlers(cb, Where.AFTER, lastLine);
         }
 
-        // Inject finally-block style exception handler for @Duration
-        if (!hasDuration || entryTsSlot[0] == -1 || startLabel == null) return;
+        // Inject an exception-exit handler for @Duration (on RETURN probes) and ERROR probes.
+        // startLabel is non-null iff needsExceptionHandler; entryInjected guards against
+        // methods that have no real instructions (impossible for valid class files).
+        if (startLabel == null || !entryInjected[0]) return;
 
         List<ProbeHandler> durationHandlers = new ArrayList<>();
         for (ProbeHandler ph : returnHandlers) {
           if (ph.om.getDurationParameter() != -1) durationHandlers.add(ph);
         }
-        if (durationHandlers.isEmpty()) return;
+        List<ProbeHandler> emittableError = new ArrayList<>();
+        for (ProbeHandler ph : errorHandlers) {
+          if (canEmitErrorProbe(ph, loader)) emittableError.add(ph);
+        }
+        if (durationHandlers.isEmpty() && emittableError.isEmpty()) return;
 
         Label endLabel = cb.newLabel();
         Label handlerLabel = cb.newLabel();
 
-        // Bind end-of-try and handler-start positions before registering the catch range.
-        // The ClassFile API resolves label byte offsets at method build time, so all three
-        // labels just need to be bound before the CodeBuilder is finalized.
+        // Bind end-of-try and handler-start before registering the catch range.
         cb.labelBinding(endLabel);
         cb.labelBinding(handlerLabel);
         cb.exceptionCatchAll(startLabel, endLabel, handlerLabel);
@@ -1084,22 +1170,31 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         int exSlot = cb.allocateLocal(TypeKind.REFERENCE);
         cb.astore(exSlot);
 
-        // Compute duration delta
-        int exDurationSlot =
-            durationSlot[0] != -1 ? durationSlot[0] : cb.allocateLocal(TypeKind.LONG);
-        cb.invokestatic(
-            ClassDesc.ofInternalName("java/lang/System"),
-            "nanoTime",
-            MethodTypeDesc.ofDescriptor("()J"));
-        cb.loadLocal(TypeKind.LONG, entryTsSlot[0]);
-        cb.lsub();
-        cb.storeLocal(TypeKind.LONG, exDurationSlot);
+        // Compute duration delta if any probe on this path needs it.
+        int exDurationSlot = -1;
+        if (hasDuration && entryTsSlot[0] != -1) {
+          exDurationSlot = durationSlot[0] != -1 ? durationSlot[0] : cb.allocateLocal(TypeKind.LONG);
+          cb.invokestatic(
+              ClassDesc.ofInternalName("java/lang/System"),
+              "nanoTime",
+              MethodTypeDesc.ofDescriptor("()J"));
+          cb.loadLocal(TypeKind.LONG, entryTsSlot[0]);
+          cb.lsub();
+          cb.storeLocal(TypeKind.LONG, exDurationSlot);
+        }
 
-        // Fire handlers (retValSlot=-1: no return value on exception path)
+        // Fire RETURN @Duration handlers (retValSlot=-1: no return value on exception path)
         for (ProbeHandler ph : durationHandlers) {
           emitProbeCall(
               cb, ph, javaClassName, methodName, isStatic, false, -1, TypeKind.VOID, exDurationSlot);
         }
+
+        // Fire ERROR handlers
+        boolean emitted = false;
+        for (ProbeHandler ph : emittableError) {
+          emitted |= emitErrorProbe(cb, ph, javaClassName, methodName, isStatic, exSlot, exDurationSlot);
+        }
+        if (emitted) anyMatch[0] = true;
 
         // Rethrow
         cb.aload(exSlot);
@@ -1635,6 +1730,70 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return true;
   }
 
+  private static boolean canEmitCatchProbe(ProbeHandler ph, Type catchType, ClassLoader loader) {
+    OnMethod om = ph.om;
+    String rawDesc =
+        om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+    Type[] handlerArgTypes = Type.getArgumentTypes(rawDesc);
+    for (int i = 0; i < handlerArgTypes.length; i++) {
+      if (i == om.getSelfParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        continue;
+      }
+      if (i == om.getClassNameParameter() || i == om.getMethodParameter()) {
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.STRING_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getTargetInstanceParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], catchType, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  private static boolean canEmitErrorProbe(ProbeHandler ph, ClassLoader loader) {
+    OnMethod om = ph.om;
+    String rawDesc =
+        om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+    Type[] handlerArgTypes = Type.getArgumentTypes(rawDesc);
+    for (int i = 0; i < handlerArgTypes.length; i++) {
+      if (i == om.getSelfParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        continue;
+      }
+      if (i == om.getClassNameParameter() || i == om.getMethodParameter()) {
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.STRING_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getTargetInstanceParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.THROWABLE_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getDurationParameter()) {
+        if (!Type.LONG_TYPE.equals(handlerArgTypes[i])) return false;
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
   private static boolean canEmitCallProbe(ProbeHandler ph, InvokeInstruction ii, ClassLoader loader) {
     OnMethod om = ph.om;
     String rawDesc =
@@ -1884,6 +2043,63 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         null,
         null,
         throwContext);
+  }
+
+  private static boolean emitCatchProbe(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      int throwableSlot) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        false,
+        -1,
+        null,
+        TypeKind.VOID,
+        -1,
+        null,
+        -1,
+        null,
+        null,
+        null,
+        null,
+        null,
+        new ThrowContext(throwableSlot));
+  }
+
+  private static boolean emitErrorProbe(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      int throwableSlot,
+      int durationSlot) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        false,
+        -1,
+        null,
+        TypeKind.VOID,
+        durationSlot,
+        null,
+        -1,
+        null,
+        null,
+        null,
+        null,
+        null,
+        new ThrowContext(throwableSlot));
   }
 
   private static boolean emitProbeCall(
