@@ -4150,4 +4150,172 @@ class ClassFileApiBackendTest {
 
     assertNull(result, "Handler with @Duration must be rejected for NEW probes");
   }
+
+  // Kind.SYNC_ENTRY tests
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void syncEntryProbeBeforeMonitorenter() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    Location location = new Location();
+    location.setValue(Kind.SYNC_ENTRY);
+    location.setWhere(Where.BEFORE);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "monitor", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(1, countInvokeDynamic(readable, "monitor", "$btrace$"));
+    assertBTracePrecedesOpcode(readable, "monitor", Opcodes.MONITORENTER);
+  }
+
+  @Test
+  void syncEntryProbeAfterMonitorenter() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    Location location = new Location();
+    location.setValue(Kind.SYNC_ENTRY);
+    location.setWhere(Where.AFTER);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "monitor", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(1, countInvokeDynamic(readable, "monitor", "$btrace$"));
+    assertBTraceAfterOpcode(readable, "monitor", Opcodes.MONITORENTER);
+  }
+
+  @Test
+  void syncEntryProbeReceivesLockObject() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    Location location = new Location();
+    location.setValue(Kind.SYNC_ENTRY);
+    location.setWhere(Where.BEFORE);
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "monitor",
+            location,
+            "(Ljava/lang/Object;)V",
+            -1,
+            -1,
+            0,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(1, countInvokeDynamic(readable, "monitor", "$btrace$"));
+    assertBTracePrecedesOpcode(readable, "monitor", Opcodes.MONITORENTER);
+    assertEquals(
+        "(Ljava/lang/Object;)V", getInvokeDynamicDescriptor(readable, "monitor", "$btrace$"));
+  }
+
+  @Test
+  void syncEntryProbeSkipsUnsupportedParameter() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    Location location = new Location();
+    location.setValue(Kind.SYNC_ENTRY);
+    location.setWhere(Where.BEFORE);
+    // @Duration is not supported for SYNC_ENTRY
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "monitor",
+            location,
+            "(J)V",
+            -1,
+            0,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "Handler with @Duration must be rejected for SYNC_ENTRY probes");
+  }
+
+  // Kind.SYNC_EXIT tests
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void syncExitProbeBeforeMonitorexit() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    Location location = new Location();
+    location.setValue(Kind.SYNC_EXIT);
+    location.setWhere(Where.BEFORE);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "monitor", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    // The fixture has two MONITOREXIT instructions (normal and exceptional path)
+    assertEquals(2, countInvokeDynamic(readable, "monitor", "$btrace$"));
+    assertBTracePrecedesOpcode(readable, "monitor", Opcodes.MONITOREXIT);
+  }
+
+  @Test
+  void syncExitProbeAfterMonitorexit() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    Location location = new Location();
+    location.setValue(Kind.SYNC_EXIT);
+    location.setWhere(Where.AFTER);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "monitor", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(2, countInvokeDynamic(readable, "monitor", "$btrace$"));
+    assertBTraceAfterOpcode(readable, "monitor", Opcodes.MONITOREXIT);
+  }
+
+  @Test
+  void syncExitProbeReceivesLockObject() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    Location location = new Location();
+    location.setValue(Kind.SYNC_EXIT);
+    location.setWhere(Where.BEFORE);
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "monitor",
+            location,
+            "(Ljava/lang/Object;)V",
+            -1,
+            -1,
+            0,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(2, countInvokeDynamic(readable, "monitor", "$btrace$"));
+    assertEquals(
+        "(Ljava/lang/Object;)V", getInvokeDynamicDescriptor(readable, "monitor", "$btrace$"));
+  }
 }

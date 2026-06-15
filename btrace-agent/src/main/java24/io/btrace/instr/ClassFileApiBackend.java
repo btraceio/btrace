@@ -37,6 +37,7 @@ import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.classfile.instruction.LabelTarget;
 import java.lang.classfile.instruction.LineNumber;
+import java.lang.classfile.instruction.MonitorInstruction;
 import java.lang.classfile.instruction.NewMultiArrayInstruction;
 import java.lang.classfile.instruction.NewObjectInstruction;
 import java.lang.classfile.instruction.NewPrimitiveArrayInstruction;
@@ -83,7 +84,9 @@ import org.slf4j.LoggerFactory;
  * {@code @Return} on {@code AFTER} probes; the {@code AFTER} probe fires after the constructor
  * call completes so the reference is fully initialized.
  *
- * <p>Synchronization ({@code SYNC_ENTRY}, {@code SYNC_EXIT}) parity is still in progress.
+ * <p>Synchronization probe kinds ({@code SYNC_ENTRY}, {@code SYNC_EXIT}) instrument
+ * {@code monitorenter} and {@code monitorexit} bytecodes. {@code @TargetInstance} receives the
+ * lock object. {@code @Duration} is not supported for synchronization probes.
  */
 public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final Logger log = LoggerFactory.getLogger(ClassFileApiBackend.class);
@@ -141,6 +144,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     List<ProbeHandler> errorHandlers = new ArrayList<>();
     List<ProbeHandler> newarrayHandlers = new ArrayList<>();
     List<ProbeHandler> newobjHandlers = new ArrayList<>();
+    List<ProbeHandler> syncEntryHandlers = new ArrayList<>();
+    List<ProbeHandler> syncExitHandlers = new ArrayList<>();
     for (ProbeHandler ph : handlers) {
       Kind kind = ph.om.getLocation().getValue();
       if (kind == Kind.ENTRY) entryHandlers.add(ph);
@@ -158,6 +163,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       else if (kind == Kind.ERROR) errorHandlers.add(ph);
       else if (kind == Kind.NEWARRAY) newarrayHandlers.add(ph);
       else if (kind == Kind.NEW) newobjHandlers.add(ph);
+      else if (kind == Kind.SYNC_ENTRY) syncEntryHandlers.add(ph);
+      else if (kind == Kind.SYNC_EXIT) syncExitHandlers.add(ph);
       else log.debug("Skipping unsupported probe kind {} for class {}", kind, javaClassName);
     }
     if (entryHandlers.isEmpty()
@@ -174,7 +181,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         && catchHandlers.isEmpty()
         && errorHandlers.isEmpty()
         && newarrayHandlers.isEmpty()
-        && newobjHandlers.isEmpty()) {
+        && newobjHandlers.isEmpty()
+        && syncEntryHandlers.isEmpty()
+        && syncExitHandlers.isEmpty()) {
       return null;
     }
 
@@ -200,6 +209,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 errorHandlers,
                 newarrayHandlers,
                 newobjHandlers,
+                syncEntryHandlers,
+                syncExitHandlers,
                 anyMatch));
     return anyMatch[0] ? result : null;
   }
@@ -426,6 +437,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> errorHandlers,
       List<ProbeHandler> newarrayHandlers,
       List<ProbeHandler> newobjHandlers,
+      List<ProbeHandler> syncEntryHandlers,
+      List<ProbeHandler> syncExitHandlers,
       boolean[] anyMatch) {
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
@@ -456,6 +469,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             filterForMethod(newarrayHandlers, methodName, methodDesc, loader);
         List<ProbeHandler> mNewobj =
             filterForMethod(newobjHandlers, methodName, methodDesc, loader);
+        List<ProbeHandler> mSyncEntry =
+            filterForMethod(syncEntryHandlers, methodName, methodDesc, loader);
+        List<ProbeHandler> mSyncExit =
+            filterForMethod(syncExitHandlers, methodName, methodDesc, loader);
         if (!mEntry.isEmpty()
             || !mReturn.isEmpty()
             || !mCall.isEmpty()
@@ -470,7 +487,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             || !mCatch.isEmpty()
             || !mError.isEmpty()
             || !mNewarray.isEmpty()
-            || !mNewobj.isEmpty()) {
+            || !mNewobj.isEmpty()
+            || !mSyncEntry.isEmpty()
+            || !mSyncExit.isEmpty()) {
           if (!mEntry.isEmpty() || !mReturn.isEmpty()) {
             anyMatch[0] = true;
           }
@@ -497,6 +516,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                   mError,
                   mNewarray,
                   mNewobj,
+                  mSyncEntry,
+                  mSyncExit,
                   anyMatch));
         } else {
           classBuilder.with(classElement);
@@ -528,6 +549,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> errorHandlers,
       List<ProbeHandler> newarrayHandlers,
       List<ProbeHandler> newobjHandlers,
+      List<ProbeHandler> syncEntryHandlers,
+      List<ProbeHandler> syncExitHandlers,
       boolean[] anyMatch) {
     return (methodBuilder, methodElement) -> {
       if (methodElement instanceof CodeModel cm) {
@@ -566,6 +589,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 errorHandlers,
                 newarrayHandlers,
                 newobjHandlers,
+                syncEntryHandlers,
+                syncExitHandlers,
                 catchHandlerTypes,
                 anyMatch));
       } else {
@@ -595,6 +620,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> errorHandlers,
       List<ProbeHandler> newarrayHandlers,
       List<ProbeHandler> newobjHandlers,
+      List<ProbeHandler> syncEntryHandlers,
+      List<ProbeHandler> syncExitHandlers,
       Map<Label, String> catchHandlerTypes,
       boolean[] anyMatch) {
 
@@ -1302,6 +1329,43 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
               if (emitted) anyMatch[0] = true;
               return;
             }
+          }
+        }
+
+        // SYNC_ENTRY / SYNC_EXIT: monitorenter and monitorexit probes
+        if ((!syncEntryHandlers.isEmpty() || !syncExitHandlers.isEmpty())
+            && ce instanceof MonitorInstruction mi) {
+          boolean isEnter = mi.opcode() == Opcode.MONITORENTER;
+          List<ProbeHandler> handlers = isEnter ? syncEntryHandlers : syncExitHandlers;
+          List<ProbeHandler> emittableBefore = new ArrayList<>();
+          List<ProbeHandler> emittableAfter = new ArrayList<>();
+          for (ProbeHandler ph : handlers) {
+            if (!canEmitSyncProbe(ph, loader)) continue;
+            Where where = ph.om.getLocation().getWhere();
+            if (where == Where.BEFORE) emittableBefore.add(ph);
+            else if (where == Where.AFTER) emittableAfter.add(ph);
+          }
+          if (!emittableBefore.isEmpty() || !emittableAfter.isEmpty()) {
+            boolean needsLock =
+                emittableBefore.stream().anyMatch(ph -> ph.om.getTargetInstanceParameter() != -1)
+                    || emittableAfter.stream()
+                        .anyMatch(ph -> ph.om.getTargetInstanceParameter() != -1);
+            int lockSlot = -1;
+            if (needsLock) {
+              lockSlot = cb.allocateLocal(TypeKind.REFERENCE);
+              cb.dup();
+              cb.astore(lockSlot);
+            }
+            boolean emitted = false;
+            for (ProbeHandler ph : emittableBefore) {
+              emitted |= emitSyncProbe(cb, ph, javaClassName, methodName, isStatic, lockSlot);
+            }
+            cb.with(ce); // emit monitorenter or monitorexit
+            for (ProbeHandler ph : emittableAfter) {
+              emitted |= emitSyncProbe(cb, ph, javaClassName, methodName, isStatic, lockSlot);
+            }
+            if (emitted) anyMatch[0] = true;
+            return;
           }
         }
 
@@ -2117,6 +2181,92 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         cb.aload(returnSlot);
       } else if (ordinaryArgumentIndex(om, i) == 0) {
         cb.ldc(extName);
+      }
+    }
+
+    String actionMethodName =
+        InstrumentUtils.getActionPrefix(ph.probe.getClassName(true)) + om.getTargetName();
+    DirectMethodHandleDesc bsmHandle =
+        MethodHandleDesc.ofMethod(
+            DirectMethodHandleDesc.Kind.STATIC, INDY_DISPATCHER, "bootstrap", BSM_TYPE);
+    cb.invokedynamic(
+        DynamicCallSiteDesc.of(
+            bsmHandle,
+            actionMethodName,
+            MethodTypeDesc.ofDescriptor(rawDesc),
+            ph.probe.getClassName(true)));
+    return true;
+  }
+
+  private static boolean canEmitSyncProbe(ProbeHandler ph, ClassLoader loader) {
+    OnMethod om = ph.om;
+    String rawDesc =
+        om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+    Type[] handlerArgTypes = Type.getArgumentTypes(rawDesc);
+    for (int i = 0; i < handlerArgTypes.length; i++) {
+      if (i == om.getSelfParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        continue;
+      }
+      if (i == om.getClassNameParameter() || i == om.getMethodParameter()) {
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.STRING_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      if (i == om.getTargetInstanceParameter()) {
+        if (typeKind(handlerArgTypes[i]) != TypeKind.REFERENCE) return false;
+        if (!InstrumentUtils.isAssignable(
+            handlerArgTypes[i], Constants.OBJECT_TYPE, loader, om.isExactTypeMatch())) {
+          return false;
+        }
+        continue;
+      }
+      // @Return, @Duration, @TargetMethodOrField, and ordinary args are not satisfiable
+      return false;
+    }
+    return true;
+  }
+
+  private static boolean emitSyncProbe(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      int lockSlot) {
+    OnMethod om = ph.om;
+    String rawDesc =
+        om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+    Type[] argTypes = Type.getArgumentTypes(rawDesc);
+
+    for (int i = 0; i < argTypes.length; i++) {
+      boolean satisfiable =
+          i == om.getSelfParameter()
+              || i == om.getClassNameParameter()
+              || i == om.getMethodParameter()
+              || (i == om.getTargetInstanceParameter() && lockSlot != -1);
+      if (!satisfiable) {
+        log.debug(
+            "ClassFileApiBackend: skipping handler {}.{} — arg {} cannot be satisfied",
+            ph.probe.getClassName(),
+            om.getTargetName(),
+            i);
+        return false;
+      }
+    }
+
+    for (int i = 0; i < argTypes.length; i++) {
+      if (i == om.getSelfParameter()) {
+        if (isStatic) cb.aconst_null();
+        else cb.aload(0);
+      } else if (i == om.getClassNameParameter()) {
+        cb.ldc(javaClassName);
+      } else if (i == om.getMethodParameter()) {
+        cb.ldc(methodName);
+      } else if (i == om.getTargetInstanceParameter()) {
+        cb.aload(lockSlot);
       }
     }
 
