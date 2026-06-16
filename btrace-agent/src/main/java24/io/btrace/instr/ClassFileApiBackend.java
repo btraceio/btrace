@@ -59,6 +59,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
 import io.btrace.core.MethodID;
@@ -112,7 +113,6 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final ClassDesc CD_METHOD_TRACKER =
       ClassDesc.ofInternalName("io/btrace/instr/MethodTracker");
   private static final MethodTypeDesc HIT_DESC = MethodTypeDesc.ofDescriptor("(I)Z");
-  private static final MethodTypeDesc HIT_ADAPTIVE_DESC = MethodTypeDesc.ofDescriptor("(I)Z");
 
   @Override
   public boolean supports(int classFileMajorVersion) {
@@ -662,21 +662,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     final int samplingMethodId;
     if (hasSampledHandlers) {
       samplingMethodId = MethodID.getMethodId(internalClassName, methodName, methodDesc);
-      for (ProbeHandler ph : entryHandlers) {
-        if (ph.om.getSamplerKind() != Sampled.Sampler.None && ph.om.getSamplerMean() > 0) {
-          MethodTracker.registerCounter(samplingMethodId, ph.om.getSamplerMean());
-        }
-      }
-      for (ProbeHandler ph : returnHandlers) {
-        if (ph.om.getSamplerKind() != Sampled.Sampler.None && ph.om.getSamplerMean() > 0) {
-          MethodTracker.registerCounter(samplingMethodId, ph.om.getSamplerMean());
-        }
-      }
-      for (ProbeHandler ph : errorHandlers) {
-        if (ph.om.getSamplerKind() != Sampled.Sampler.None && ph.om.getSamplerMean() > 0) {
-          MethodTracker.registerCounter(samplingMethodId, ph.om.getSamplerMean());
-        }
-      }
+      registerSampledCounters(entryHandlers, samplingMethodId);
+      registerSampledCounters(returnHandlers, samplingMethodId);
+      registerSampledCounters(errorHandlers, samplingMethodId);
     } else {
       samplingMethodId = -1;
     }
@@ -1348,7 +1336,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         if (!newobjHandlers.isEmpty() && ce instanceof NewObjectInstruction ni) {
           String newInternalName = ni.className().asInternalName();
           String newExtName = newInternalName.replace('/', '.');
-          List<ProbeHandler> matched = filterForNew(newobjHandlers, newExtName);
+          List<ProbeHandler> matched = filterForNewArray(newobjHandlers, newExtName);
           if (!matched.isEmpty()) {
             List<ProbeHandler> emittableBefore = new ArrayList<>();
             List<ProbeHandler> emittableAfter = new ArrayList<>();
@@ -1486,8 +1474,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         boolean emitted = false;
         final int fExSlot = exSlot;
         for (ProbeHandler ph : emittableError) {
-          emitted |= emitErrorProbeWithSampling(
-              cb, ph, javaClassName, methodName, isStatic, fExSlot, fExDurationSlot, samplingMethodId);
+          emitted |= emitWithSamplingGuard(
+              cb, ph, samplingMethodId,
+              () -> emitErrorProbe(cb, ph, javaClassName, methodName, isStatic, fExSlot, fExDurationSlot));
         }
         if (emitted) anyMatch[0] = true;
 
@@ -1500,7 +1489,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
 
   private static List<ProbeHandler> filterForMethod(
       List<ProbeHandler> handlers, String methodName, String methodDesc, ClassLoader loader) {
-    List<ProbeHandler> result = new ArrayList<>();
+    List<ProbeHandler> result = null;
     for (ProbeHandler ph : handlers) {
       String pattern = ph.om.getMethod();
       if (pattern == null || pattern.isEmpty()) continue;
@@ -1512,9 +1501,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       }
       if (!nameMatch) continue;
       if (!typeMatches(ph.om.getType(), methodDesc, loader, ph.om.isExactTypeMatch())) continue;
+      if (result == null) result = new ArrayList<>();
       result.add(ph);
     }
-    return result;
+    return result != null ? result : Collections.emptyList();
   }
 
   private static boolean typeMatches(
@@ -1535,7 +1525,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   }
 
   private static List<ProbeHandler> filterForCall(List<ProbeHandler> handlers, InvokeInstruction ii) {
-    List<ProbeHandler> result = new ArrayList<>();
+    List<ProbeHandler> result = null;
     String owner = ii.owner().asInternalName().replace('/', '.');
     String name = ii.name().stringValue();
     String desc = ii.type().stringValue();
@@ -1544,28 +1534,30 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       if (!matches(loc.getClazz(), owner)) continue;
       if (!matches(loc.getMethod(), name)) continue;
       if (!matches(loc.getType(), desc)) continue;
+      if (result == null) result = new ArrayList<>();
       result.add(ph);
     }
-    return result;
+    return result != null ? result : Collections.emptyList();
   }
 
   private static List<ProbeHandler> filterForField(
       List<ProbeHandler> handlers, FieldInstruction fi) {
-    List<ProbeHandler> result = new ArrayList<>();
+    List<ProbeHandler> result = null;
     String owner = fi.owner().asInternalName().replace('/', '.');
     String name = fi.name().stringValue();
     for (ProbeHandler ph : handlers) {
       Location loc = ph.om.getLocation();
       if (!matches(loc.getClazz(), owner)) continue;
       if (!matches(loc.getField(), name)) continue;
+      if (result == null) result = new ArrayList<>();
       result.add(ph);
     }
-    return result;
+    return result != null ? result : Collections.emptyList();
   }
 
   private static List<ProbeHandler> filterForArray(
       List<ProbeHandler> handlers, Type arrayType, Type elementType) {
-    List<ProbeHandler> result = new ArrayList<>();
+    List<ProbeHandler> result = null;
     for (ProbeHandler ph : handlers) {
       String type = ph.om.getLocation().getType();
       if (type != null
@@ -1574,39 +1566,34 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           && !type.equals(elementType.getClassName())) {
         continue;
       }
+      if (result == null) result = new ArrayList<>();
       result.add(ph);
     }
-    return result;
+    return result != null ? result : Collections.emptyList();
   }
 
   private static List<ProbeHandler> filterForTypeCheck(
       List<ProbeHandler> handlers, String targetTypeName) {
-    List<ProbeHandler> result = new ArrayList<>();
+    List<ProbeHandler> result = null;
     for (ProbeHandler ph : handlers) {
       if (!matches(ph.om.getLocation().getClazz(), targetTypeName)) continue;
+      if (result == null) result = new ArrayList<>();
       result.add(ph);
     }
-    return result;
+    return result != null ? result : Collections.emptyList();
   }
 
   private static List<ProbeHandler> filterForNewArray(
       List<ProbeHandler> handlers, String extName) {
-    List<ProbeHandler> result = new ArrayList<>();
+    List<ProbeHandler> result = null;
     for (ProbeHandler ph : handlers) {
       if (!matches(ph.om.getLocation().getClazz(), extName)) continue;
+      if (result == null) result = new ArrayList<>();
       result.add(ph);
     }
-    return result;
+    return result != null ? result : Collections.emptyList();
   }
 
-  private static List<ProbeHandler> filterForNew(List<ProbeHandler> handlers, String extName) {
-    List<ProbeHandler> result = new ArrayList<>();
-    for (ProbeHandler ph : handlers) {
-      if (!matches(ph.om.getLocation().getClazz(), extName)) continue;
-      result.add(ph);
-    }
-    return result;
-  }
 
   private static boolean matches(String pattern, String value) {
     if (pattern == null || pattern.isEmpty()) return true;
@@ -2669,15 +2656,16 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         new ThrowContext(throwableSlot));
   }
 
-  private static boolean emitErrorProbeWithSampling(
-      CodeBuilder cb,
-      ProbeHandler ph,
-      String javaClassName,
-      String methodName,
-      boolean isStatic,
-      int throwableSlot,
-      int durationSlot,
-      int methodId) {
+  private static void registerSampledCounters(List<ProbeHandler> handlers, int methodId) {
+    for (ProbeHandler ph : handlers) {
+      if (ph.om.getSamplerKind() != Sampled.Sampler.None && ph.om.getSamplerMean() > 0) {
+        MethodTracker.registerCounter(methodId, ph.om.getSamplerMean());
+      }
+    }
+  }
+
+  private static boolean emitWithSamplingGuard(
+      CodeBuilder cb, ProbeHandler ph, int methodId, BooleanSupplier probeEmitter) {
     if (ph.om.getSamplerKind() != Sampled.Sampler.None && methodId != -1) {
       Label skipLabel = cb.newLabel();
       cb.ldc(methodId);
@@ -2685,27 +2673,11 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           ph.om.getSamplerKind() == Sampled.Sampler.Adaptive ? "hitAdaptive" : "hit";
       cb.invokestatic(CD_METHOD_TRACKER, hitMethod, HIT_DESC);
       cb.ifeq(skipLabel);
-      boolean result = emitErrorProbe(cb, ph, javaClassName, methodName, isStatic, throwableSlot, durationSlot);
+      boolean result = probeEmitter.getAsBoolean();
       cb.labelBinding(skipLabel);
       return result;
     }
-    return emitErrorProbe(cb, ph, javaClassName, methodName, isStatic, throwableSlot, durationSlot);
-  }
-
-  private static void emitWithSamplingGuard(
-      CodeBuilder cb, ProbeHandler ph, int methodId, Runnable probeEmitter) {
-    if (ph.om.getSamplerKind() != Sampled.Sampler.None && methodId != -1) {
-      Label skipLabel = cb.newLabel();
-      cb.ldc(methodId);
-      String hitMethod =
-          ph.om.getSamplerKind() == Sampled.Sampler.Adaptive ? "hitAdaptive" : "hit";
-      cb.invokestatic(CD_METHOD_TRACKER, hitMethod, HIT_DESC);
-      cb.ifeq(skipLabel);
-      probeEmitter.run();
-      cb.labelBinding(skipLabel);
-    } else {
-      probeEmitter.run();
-    }
+    return probeEmitter.getAsBoolean();
   }
 
   private static boolean emitProbeCall(
