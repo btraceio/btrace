@@ -39,8 +39,29 @@ import org.slf4j.LoggerFactory;
 public final class LinkerInstrumentor {
   private static final Logger log = LoggerFactory.getLogger(LinkerInstrumentor.class);
 
-  // Reflectively-loaded ClassFileApiLinkerGuard.addGuard(byte[]) for JDK 26+ class files.
-  private static final Method CLASS_FILE_ADD_GUARD = loadClassFileAddGuard();
+  // Lazily-loaded ClassFileApiLinkerGuard.addGuard(byte[]) for JDK 26+ class files.
+  // Not initialized at static-init time: on JDK 8-25 this path is never reached (linkCallSite
+  // class-file major is always <= MAX_ASM_MAJOR_VERSION), so we avoid an unnecessary JAR read
+  // and defineClass() failure that would delay the first class transformation on slow CI machines.
+  private static volatile Method classFileAddGuard;
+  private static volatile boolean classFileAddGuardAttempted;
+
+  private static Method getClassFileAddGuard() {
+    Method m = classFileAddGuard;
+    if (m != null) {
+      return m;
+    }
+    if (classFileAddGuardAttempted) {
+      return null;
+    }
+    synchronized (LinkerInstrumentor.class) {
+      if (!classFileAddGuardAttempted) {
+        classFileAddGuardAttempted = true;
+        classFileAddGuard = loadClassFileAddGuard();
+      }
+    }
+    return classFileAddGuard;
+  }
 
   private static Method loadClassFileAddGuard() {
     try {
@@ -136,12 +157,13 @@ public final class LinkerInstrumentor {
   }
 
   private static byte[] addGuardClassFileApi(byte[] classData) {
-    if (CLASS_FILE_ADD_GUARD == null) {
+    Method guard = getClassFileAddGuard();
+    if (guard == null) {
       log.debug("ClassFile API linker guard not available; invokedynamic linking guard skipped");
       return null;
     }
     try {
-      return (byte[]) CLASS_FILE_ADD_GUARD.invoke(null, (Object) classData);
+      return (byte[]) guard.invoke(null, (Object) classData);
     } catch (Throwable t) {
       log.debug("ClassFile API linker guard failed", t);
       return null;

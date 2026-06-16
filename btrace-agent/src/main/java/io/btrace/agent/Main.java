@@ -119,10 +119,23 @@ public final class Main {
   private static final BTraceTransformer transformer =
       new BTraceTransformer(new DebugSupport(settings));
   // #BTRACE-42: Non-daemon thread prevents traced application from exiting
-  // 4 MB stack for the command processor thread: ClassFile API's StackMapGenerator processes
-  // JDK 27+ classes with large methods / deep exception-handler graphs that exceed the default
-  // stack depth during retransformation.
-  private static final long QUEUE_PROCESSOR_STACK_SIZE = 4L * 1024 * 1024;
+  // ClassFile API's StackMapGenerator can exhaust the default stack depth when processing
+  // complex methods in JDK 26+ (class-file major >= 70). Use 4 MB on those JVMs only; on
+  // older JVMs keep the default (0 = JVM-chosen) to avoid any OS-level stack-allocation
+  // overhead that was intermittently delaying test startup on JDK 8/11/21 CI machines.
+  private static final long QUEUE_PROCESSOR_STACK_SIZE = resolveQueueProcessorStackSize();
+
+  private static long resolveQueueProcessorStackSize() {
+    try {
+      String cv = System.getProperty("java.class.version", "52.0");
+      int dot = cv.indexOf('.');
+      int major = Integer.parseInt(dot >= 0 ? cv.substring(0, dot) : cv);
+      return major >= 70 ? 4L * 1024 * 1024 : 0L;
+    } catch (Exception ignored) {
+      return 0L;
+    }
+  }
+
   private static final ThreadFactory qProcessorThreadFactory =
       r -> {
         Thread result =
