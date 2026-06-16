@@ -148,6 +148,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         IN_INSTRUMENT.set(Boolean.FALSE);
       }
     } catch (StackOverflowError | Exception soe) {
+      log.warn("ClassFileApiBackend: instrument() failed", soe);
       return null;
     }
   }
@@ -3241,7 +3242,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           i == om.getSelfParameter()
               || i == om.getClassNameParameter()
               || i == om.getMethodParameter()
-              || (i == om.getReturnParameter() && retValSlot != -1)
+              || (i == om.getReturnParameter()
+                  && retValSlot != -1
+                  && (typeKind(argTypes[i]) == TypeKind.REFERENCE
+                      || typeKind(argTypes[i]) == returnKind))
               || (i == om.getDurationParameter() && durationSlot != -1)
               || (i == om.getTargetInstanceParameter()
                   && (callContext != null
