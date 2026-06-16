@@ -70,18 +70,16 @@ public class ClassFilter {
     SENSITIVE_CLASSES.add("java/lang/instrument/");
     SENSITIVE_CLASSES.add("java/lang/invoke/");
     SENSITIVE_CLASSES.add("java/lang/ref/");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/LockSupport");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractQueuedSynchronizer");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractQueuedSynchronizer$ExclusiveNode");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractQueuedSynchronizer$Node");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractOwnableSynchronizer");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/ReentrantLock");
-    SENSITIVE_CLASSES.add("java/util/concurrent/ConcurrentHashMap");
+    SENSITIVE_CLASSES.add("java/util/concurrent/");
 
     SENSITIVE_CLASSES.add("jdk/internal/");
     SENSITIVE_CLASSES.add("sun/invoke/");
     SENSITIVE_CLASSES.add("sun/reflect/");
     SENSITIVE_CLASSES.add("io/btrace/");
+    // ClassFile API classes (java.lang.classfile.*) must not be instrumented — they are used
+    // internally by ClassFileApiBackend to transform classes, and instrumenting them would
+    // trigger recursive ClassFile API calls leading to StackOverflowError.
+    SENSITIVE_CLASSES.add("java/lang/classfile/");
 
     // JDK 25+ added accessor methods for thread-local fields (previously direct field access).
     // ThreadLocal.get() calls Thread.threadLocals() which triggers infinite recursion if

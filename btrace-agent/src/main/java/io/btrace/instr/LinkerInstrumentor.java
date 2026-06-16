@@ -16,6 +16,7 @@
  */
 package io.btrace.instr;
 
+import java.lang.reflect.Method;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -23,12 +24,39 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is used to inject code to set/unset linking flag to make sure no BTrace code is executed
  * while invokedynamic is being linked.
+ *
+ * <p>For class-file versions above {@link AsmInstrumentationBackend#MAX_ASM_MAJOR_VERSION} (Java
+ * 26+) ASM cannot parse the bytes; the guard is applied instead via {@code
+ * ClassFileApiLinkerGuard}, loaded reflectively to avoid a compile-time dependency on the {@code
+ * java.lang.classfile} API in the Java-8-compiled main source set.
  */
 public final class LinkerInstrumentor {
+  private static final Logger log = LoggerFactory.getLogger(LinkerInstrumentor.class);
+
+  // Reflectively-loaded ClassFileApiLinkerGuard.addGuard(byte[]) for JDK 26+ class files.
+  private static final Method CLASS_FILE_ADD_GUARD = loadClassFileAddGuard();
+
+  private static Method loadClassFileAddGuard() {
+    try {
+      Class<?> cls =
+          Class.forName(
+              "io.btrace.instr.ClassFileApiLinkerGuard",
+              true,
+              LinkerInstrumentor.class.getClassLoader());
+      return cls.getMethod("addGuard", byte[].class);
+    } catch (Throwable t) {
+      log.debug(
+          "ClassFile API linker guard unavailable (expected on JDK < 24): {}", t.getMessage());
+      return null;
+    }
+  }
+
   private static class LinkerMethodVisitor extends MethodVisitor {
     private final Label tryStart = new Label();
     private final Label tryEnd = new Label();
@@ -97,9 +125,26 @@ public final class LinkerInstrumentor {
   }
 
   public static byte[] addGuard(byte[] classData) {
+    int major = InstrumentUtils.getMajor(classData);
+    if (major > AsmInstrumentationBackend.MAX_ASM_MAJOR_VERSION) {
+      return addGuardClassFileApi(classData);
+    }
     ClassReader cr = new ClassReader(classData);
     ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES);
     cr.accept(new LinkerClassVisitor(cw), ClassReader.EXPAND_FRAMES);
     return cw.toByteArray();
+  }
+
+  private static byte[] addGuardClassFileApi(byte[] classData) {
+    if (CLASS_FILE_ADD_GUARD == null) {
+      log.debug("ClassFile API linker guard not available; invokedynamic linking guard skipped");
+      return null;
+    }
+    try {
+      return (byte[]) CLASS_FILE_ADD_GUARD.invoke(null, (Object) classData);
+    } catch (Throwable t) {
+      log.debug("ClassFile API linker guard failed", t);
+      return null;
+    }
   }
 }

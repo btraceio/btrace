@@ -230,7 +230,12 @@ public final class BTraceTransformer implements ClassFileTransformer {
         return transformed;
       } catch (Throwable th) {
         log.warn("Failed to transform class {}", className, th);
-        throw th;
+        // Don't rethrow: a re-thrown Throwable propagates through the JVM's native
+        // retransform/transform machinery and can leave an "outstanding Java exception"
+        // in the JNI state that survives even after Java callers catch the exception,
+        // triggering native assertions (e.g. JPLIS "!errorOutstanding" on JDK 27+).
+        // Returning null here is equivalent to "skip instrumentation for this class".
+        return null;
       } finally {
         if (entered) {
           BTraceRuntime.leave();

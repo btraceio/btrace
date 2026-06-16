@@ -18,6 +18,7 @@ package io.btrace.instr;
 
 import java.lang.classfile.Attributes;
 import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassHierarchyResolver;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.ClassTransform;
 import java.lang.classfile.CodeBuilder;
@@ -116,17 +117,49 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final MethodTypeDesc HIT_DESC = MethodTypeDesc.ofDescriptor("(I)Z");
   private static final MethodTypeDesc UPDATE_END_TS_DESC = MethodTypeDesc.ofDescriptor("(I)V");
 
+  // LinkingFlag guard: mirrors the Instrumentor.openLinkerCheck() / closeLinkerCheck() pattern
+  // used by the ASM backend.  Without this check an invokedynamic probe dispatch emitted into a
+  // class that is reachable from MethodHandleNatives.linkCallSite() can re-enter linkCallSite()
+  // for its own not-yet-linked bootstrap, forming an infinite recursion → StackOverflowError.
+  private static final ClassDesc CD_LINKING_FLAG =
+      ClassDesc.ofInternalName("io/btrace/runtime/LinkingFlag");
+  private static final MethodTypeDesc LINKING_GET_MTD = MethodTypeDesc.ofDescriptor("()I");
+
   @Override
   public boolean supports(int classFileMajorVersion) {
     return classFileMajorVersion > AsmInstrumentationBackend.MAX_ASM_MAJOR_VERSION;
   }
 
+  // Re-entry guard: prevents recursive calls to instrument() on the same thread
+  // (e.g. when ClassFile API initialization triggers class loading which re-enters us).
+  private static final ThreadLocal<Boolean> IN_INSTRUMENT = ThreadLocal.withInitial(() -> Boolean.FALSE);
+
   @Override
   public byte[] instrument(
       ClassLoader loader, byte[] classfileBuffer, Collection<BTraceProbe> probes) {
     if (probes.isEmpty()) return null;
+    try {
+      // Prevent recursive re-entry (ClassFile API init may trigger class loading -> transform)
+      if (IN_INSTRUMENT.get()) return null;
+      IN_INSTRUMENT.set(Boolean.TRUE);
+      try {
+        return instrumentInternal(loader, classfileBuffer, probes);
+      } finally {
+        IN_INSTRUMENT.set(Boolean.FALSE);
+      }
+    } catch (StackOverflowError | Exception soe) {
+      return null;
+    }
+  }
 
-    ClassFile cf = ClassFile.of();
+  private byte[] instrumentInternal(
+      ClassLoader loader, byte[] classfileBuffer, Collection<BTraceProbe> probes) {
+
+    ClassLoader effectiveLoader = loader != null ? loader : ClassLoader.getSystemClassLoader();
+    ClassFile cf =
+        ClassFile.of(
+            ClassFile.ClassHierarchyResolverOption.of(
+                ClassHierarchyResolver.ofResourceParsing(effectiveLoader)));
     ClassModel classModel;
     try {
       classModel = cf.parse(classfileBuffer);
@@ -454,10 +487,16 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> syncEntryHandlers,
       List<ProbeHandler> syncExitHandlers,
       boolean[] anyMatch) {
+    String internalClassName = javaClassName.replace('.', '/');
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
         String methodName = mm.methodName().stringValue();
         String methodDesc = mm.methodType().stringValue();
+        // Skip sensitive methods to prevent infinite recursion (mirrors Instrumentor.visitMethod).
+        if (ClassFilter.isSensitiveMethod(internalClassName, methodName, methodDesc)) {
+          classBuilder.with(classElement);
+          return;
+        }
         Type methodReturnType = Type.getReturnType(methodDesc);
         boolean isStatic = mm.flags().has(AccessFlag.STATIC);
         List<ProbeHandler> mEntry = filterForMethod(entryHandlers, methodName, methodDesc, loader);
@@ -2349,6 +2388,14 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       }
     }
 
+    // Skip probe dispatch while an invokedynamic call-site is being linked (mirrors
+    // Instrumentor.openLinkerCheck).  Without this guard, classes reachable from
+    // MethodHandleNatives.linkCallSite() can re-enter linkCallSite() for their own
+    // probe's not-yet-linked bootstrap, causing unbounded recursion → StackOverflowError.
+    Label linkerSkip = cb.newLabel();
+    cb.invokestatic(CD_LINKING_FLAG, "get", LINKING_GET_MTD);
+    cb.ifne(linkerSkip);
+
     for (int i = 0; i < argTypes.length; i++) {
       if (i == om.getSelfParameter()) {
         if (isStatic) cb.aconst_null();
@@ -2375,6 +2422,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             actionMethodName,
             MethodTypeDesc.ofDescriptor(rawDesc),
             ph.probe.getClassName(true)));
+    cb.labelBinding(linkerSkip);
     return true;
   }
 
@@ -2437,6 +2485,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       }
     }
 
+    Label linkerSkip = cb.newLabel();
+    cb.invokestatic(CD_LINKING_FLAG, "get", LINKING_GET_MTD);
+    cb.ifne(linkerSkip);
+
     for (int i = 0; i < argTypes.length; i++) {
       if (i == om.getSelfParameter()) {
         if (isStatic) cb.aconst_null();
@@ -2461,6 +2513,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             actionMethodName,
             MethodTypeDesc.ofDescriptor(rawDesc),
             ph.probe.getClassName(true)));
+    cb.labelBinding(linkerSkip);
     return true;
   }
 
@@ -3204,6 +3257,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       }
     }
 
+    Label linkerSkip = cb.newLabel();
+    cb.invokestatic(CD_LINKING_FLAG, "get", LINKING_GET_MTD);
+    cb.ifne(linkerSkip);
+
     for (int i = 0; i < argTypes.length; i++) {
       if (i == om.getSelfParameter()) {
         if (isStatic || (isEntry && methodName.equals("<init>"))) {
@@ -3302,6 +3359,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             actionMethodName,
             MethodTypeDesc.ofDescriptor(rawDesc),
             ph.probe.getClassName(true)));
+    cb.labelBinding(linkerSkip);
     return true;
   }
 
