@@ -761,8 +761,10 @@ public abstract class RuntimeTest {
     outT.start();
     errT.start();
 
-    testAppLatch.await();
-    stdoutLatch.await();
+    // Startup tests need extra time: the target JVM must start, load the agent, instrument all
+    // matching classes, and then print output. Use 4× the dynamic-attach timeout.
+    testAppLatch.await(timeout * 4, TimeUnit.MILLISECONDS);
+    stdoutLatch.await(timeout * 4, TimeUnit.MILLISECONDS);
     // Allow some time for late BTrace output to flush in on-startup mode.
     try {
       Thread.sleep(1000L);
