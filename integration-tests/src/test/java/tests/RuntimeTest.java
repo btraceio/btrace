@@ -44,7 +44,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -65,7 +64,7 @@ public abstract class RuntimeTest {
   private static Path projectRoot = null;
   private static boolean forceDebug = false;
   private static String permissionsFile = null;
-  private static long defaultTimeoutMs = 10000L;
+  private static long defaultTimeoutMs = 20000L;
 
   /** Try starting JFR recording if available */
   private boolean startJfr = false;
@@ -185,18 +184,6 @@ public abstract class RuntimeTest {
       // best effort; if this fails, tests still run with defaults
     }
 
-    // Tune default timeout for newer JDKs which may exhibit slower attach/instrument timing
-    try {
-      Properties release = new Properties();
-      release.load(Files.newInputStream(Paths.get(javaHome, "release")));
-      String ver = release.getProperty("JAVA_VERSION", "\"0\"").replace("\"", "");
-      if (isVersionAtLeast(ver, 25)) {
-        defaultTimeoutMs = 20000L;
-      }
-    } catch (Exception ignore) {
-      // keep default
-    }
-
     // Prepare permissions policy to allow privileged extensions for tests
     try {
       Path permsDir = projectRoot.resolve("build");
@@ -223,22 +210,6 @@ public abstract class RuntimeTest {
     dumpVerifierErrors = false;
     btracePort = 0;
     timeout = defaultTimeoutMs;
-  }
-
-  private static boolean isVersionAtLeast(String version, int majorThreshold) {
-    try {
-      // Accept forms like "25", "25.0.1", or legacy "1.8.0_262"
-      String v = version;
-      if (v.startsWith("1.")) {
-        v = v.substring(2); // e.g., 8.0_262 -> 8.0_262
-      }
-      int dot = v.indexOf('.') == -1 ? v.length() : v.indexOf('.');
-      String majorStr = v.substring(0, dot);
-      int major = Integer.parseInt(majorStr.replaceAll("[^0-9]", ""));
-      return major >= majorThreshold;
-    } catch (Throwable t) {
-      return false;
-    }
   }
 
   public void testWithJfr(String testApp, String testScript, int checkLines, ResultValidator v)
