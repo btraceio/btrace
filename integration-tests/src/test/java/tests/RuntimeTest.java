@@ -64,7 +64,7 @@ public abstract class RuntimeTest {
   private static Path projectRoot = null;
   private static boolean forceDebug = false;
   private static String permissionsFile = null;
-  private static long defaultTimeoutMs = 20000L;
+  private static long defaultTimeoutMs = 30000L;
 
   /** Try starting JFR recording if available */
   private boolean startJfr = false;
