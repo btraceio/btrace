@@ -571,12 +571,18 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         // Pre-scan to map handler labels to their catch types for CATCH probe injection.
         // ExceptionCatch elements may appear after the corresponding LabelTarget in the element
         // stream, so we scan the full CodeModel before transforming.
-        Map<Label, String> catchHandlerTypes = new HashMap<>();
+        // A multi-catch block (catch (A | B e)) compiles to multiple ExceptionCatch entries
+        // sharing one handler label — store all types so canEmitCatchProbe checks each.
+        Map<Label, List<String>> catchHandlerTypes = new HashMap<>();
         if (!catchHandlers.isEmpty()) {
           for (CodeElement ce : cm) {
             if (ce instanceof ExceptionCatch ec) {
               ec.catchType()
-                  .ifPresent(ct -> catchHandlerTypes.put(ec.handler(), ct.asInternalName()));
+                  .ifPresent(
+                      ct ->
+                          catchHandlerTypes
+                              .computeIfAbsent(ec.handler(), k -> new ArrayList<>())
+                              .add(ct.asInternalName()));
             }
           }
         }
@@ -638,7 +644,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       List<ProbeHandler> newobjHandlers,
       List<ProbeHandler> syncEntryHandlers,
       List<ProbeHandler> syncExitHandlers,
-      Map<Label, String> catchHandlerTypes,
+      Map<Label, List<String>> catchHandlerTypes,
       boolean[] anyMatch) {
 
     // hasDurationReturn: RETURN probes need duration → compute nanoTime on each RETURN path
@@ -691,7 +697,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       public void accept(CodeBuilder cb, CodeElement ce) {
         if (ce instanceof LineNumber lineNumber) {
           if (lastLine != -1) {
-            emitLineHandlers(cb, Where.AFTER, lineNumber.line() - 1);
+            emitLineHandlers(cb, Where.AFTER, lastLine);
           }
           pendingLine = lineNumber.line();
           lastLine = lineNumber.line();
@@ -1237,17 +1243,22 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
 
         // CATCH probe: fire at exception handler entry, where the caught throwable is TOS.
         // We bind the label first, then dup/store the throwable if @TargetInstance is needed.
+        // A multi-catch block (catch (A | B e)) maps multiple types to the same handler label;
+        // we accept any probe whose type is assignable from any of the caught types.
         if (!catchHandlers.isEmpty() && ce instanceof LabelTarget lt) {
-          String catchTypeInternalName = catchHandlerTypes.get(lt.label());
-          if (catchTypeInternalName != null) {
+          List<String> catchTypeNames = catchHandlerTypes.get(lt.label());
+          if (catchTypeNames != null) {
             cb.with(ce); // bind the handler label; throwable is now TOS
-            Type catchType = Type.getObjectType(catchTypeInternalName);
             List<ProbeHandler> emittableCatch = new ArrayList<>();
             boolean needsThrowable = false;
             for (ProbeHandler ph : catchHandlers) {
-              if (canEmitCatchProbe(ph, catchType, loader)) {
-                emittableCatch.add(ph);
-                if (ph.om.getTargetInstanceParameter() != -1) needsThrowable = true;
+              for (String catchTypeInternalName : catchTypeNames) {
+                Type catchType = Type.getObjectType(catchTypeInternalName);
+                if (canEmitCatchProbe(ph, catchType, loader)) {
+                  emittableCatch.add(ph);
+                  if (ph.om.getTargetInstanceParameter() != -1) needsThrowable = true;
+                  break; // accepted by at least one type in the multi-catch
+                }
               }
             }
             if (!emittableCatch.isEmpty()) {
@@ -1492,10 +1503,17 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     List<ProbeHandler> result = null;
     for (ProbeHandler ph : handlers) {
       String pattern = ph.om.getMethod();
-      if (pattern == null || pattern.isEmpty()) continue;
       boolean nameMatch;
-      if (pattern.startsWith("/") && pattern.endsWith("/")) {
-        nameMatch = methodName.matches(pattern.substring(1, pattern.length() - 1));
+      if (pattern == null || pattern.isEmpty()) {
+        nameMatch = true; // empty pattern matches all methods
+      } else if (pattern.equals("#")) {
+        nameMatch = methodName.equals(ph.om.getTargetName());
+      } else if (ph.om.isMethodRegexMatcher()) {
+        try {
+          nameMatch = methodName.matches(pattern);
+        } catch (java.util.regex.PatternSyntaxException e) {
+          continue;
+        }
       } else {
         nameMatch = pattern.equals(methodName);
       }
