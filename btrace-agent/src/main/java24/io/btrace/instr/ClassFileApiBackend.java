@@ -492,8 +492,11 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       if (classElement instanceof MethodModel mm) {
         String methodName = mm.methodName().stringValue();
         String methodDesc = mm.methodType().stringValue();
-        // Skip sensitive methods to prevent infinite recursion (mirrors Instrumentor.visitMethod).
-        if (ClassFilter.isSensitiveMethod(internalClassName, methodName, methodDesc)) {
+        // Skip abstract/native methods (no code to instrument) and sensitive methods.
+        // Mirrors Instrumentor.visitMethod which checks ACC_ABSTRACT before doing any work.
+        if (mm.flags().has(AccessFlag.ABSTRACT)
+            || mm.flags().has(AccessFlag.NATIVE)
+            || ClassFilter.isSensitiveMethod(internalClassName, methodName, methodDesc)) {
           classBuilder.with(classElement);
           return;
         }
