@@ -156,10 +156,17 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       ClassLoader loader, byte[] classfileBuffer, Collection<BTraceProbe> probes) {
 
     ClassLoader effectiveLoader = loader != null ? loader : ClassLoader.getSystemClassLoader();
+    // GENERATE_STACK_MAPS forces a full data-flow recomputation of the StackMapTable for every
+    // transformed method.  The default STACK_MAPS_WHEN_REQUIRED can preserve original frames that
+    // were valid before transformation but become invalid after we insert new local variables (e.g.
+    // retValSlot, durationSlot) — the preserved frames miss the new TOP slots, causing a
+    // VerifyError on RETURN and DURATION probes.  Full recomputation is safe because we already
+    // supply a ClassHierarchyResolver for correct reference-type merging.
     ClassFile cf =
         ClassFile.of(
             ClassFile.ClassHierarchyResolverOption.of(
-                ClassHierarchyResolver.ofResourceParsing(effectiveLoader)));
+                ClassHierarchyResolver.ofResourceParsing(effectiveLoader)),
+            ClassFile.StackMapsOption.GENERATE_STACK_MAPS);
     ClassModel classModel;
     try {
       classModel = cf.parse(classfileBuffer);
@@ -769,10 +776,6 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
 
         if (!entryInjected[0] && !(ce instanceof PseudoInstruction)) {
           entryInjected[0] = true;
-          if (needsExceptionHandler) {
-            // Bind try-region start at the first real instruction
-            cb.labelBinding(startLabel);
-          }
           if (hasDuration) {
             entryTsSlot[0] = cb.allocateLocal(TypeKind.LONG);
             cb.invokestatic(
@@ -780,6 +783,15 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 "nanoTime",
                 MethodTypeDesc.ofDescriptor("()J"));
             cb.storeLocal(TypeKind.LONG, entryTsSlot[0]);
+          }
+          if (needsExceptionHandler) {
+            // Bind try-region start AFTER the entry-timestamp store so that entryTsSlot is
+            // always LONG (never TOP) at every throw-point within [startLabel, endLabel).
+            // The exception handler loads entryTsSlot to compute the duration; if startLabel
+            // were bound before the lstore, the verifier would see entryTsSlot as TOP at the
+            // handler entry (because the nanoTime invokestatic before the lstore can throw),
+            // and the subsequent lload would fail verification.
+            cb.labelBinding(startLabel);
           }
           // Adaptive sampling: call hitAdaptive once and store the decision.
           // This must happen before any probe calls, including those for ENTRY handlers that
