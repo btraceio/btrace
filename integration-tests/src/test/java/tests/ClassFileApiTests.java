@@ -19,6 +19,8 @@ package tests;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.net.ServerSocket;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,6 +44,12 @@ public class ClassFileApiTests extends RuntimeTest {
   @Override
   public void reset() {
     super.reset();
+    // Use an ephemeral port to avoid conflicts with other test classes running in parallel
+    try (ServerSocket ss = new ServerSocket(0)) {
+      btracePort = ss.getLocalPort();
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to find a free port", e);
+    }
   }
 
   @Test
