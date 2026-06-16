@@ -92,10 +92,11 @@ import org.slf4j.LoggerFactory;
  * lock object. {@code @Duration} is not supported for synchronization probes.
  *
  * <p>Level guards are enforced at the MethodHandle layer ({@code HandlerRepositoryImpl}); the
- * INVOKEDYNAMIC instruction is always emitted and the guard fires at runtime. Const and Adaptive
- * sampling for {@code ENTRY}, {@code RETURN}, and {@code ERROR} probes is implemented with
- * {@link MethodTracker#hit} / {@link MethodTracker#hitAdaptive} checks emitted as bytecode
- * immediately before the probe call.
+ * INVOKEDYNAMIC instruction is always emitted and the guard fires at runtime. Const sampling calls
+ * {@link MethodTracker#hit} independently at each probe site. Adaptive sampling calls
+ * {@link MethodTracker#hitAdaptive} once at method entry, stores the decision in a local slot,
+ * and gates all {@code RETURN}/{@code ERROR} Adaptive probes on that stored value; each exit site
+ * also calls {@link MethodTracker#updateEndTs} to close the sampling window.
  */
 public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final Logger log = LoggerFactory.getLogger(ClassFileApiBackend.class);
@@ -113,6 +114,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   private static final ClassDesc CD_METHOD_TRACKER =
       ClassDesc.ofInternalName("io/btrace/instr/MethodTracker");
   private static final MethodTypeDesc HIT_DESC = MethodTypeDesc.ofDescriptor("(I)Z");
+  private static final MethodTypeDesc UPDATE_END_TS_DESC = MethodTypeDesc.ofDescriptor("(I)V");
 
   @Override
   public boolean supports(int classFileMajorVersion) {
@@ -665,6 +667,15 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         entryHandlers.stream().anyMatch(ph -> ph.om.getSamplerKind() != Sampled.Sampler.None)
             || returnHandlers.stream().anyMatch(ph -> ph.om.getSamplerKind() != Sampled.Sampler.None)
             || errorHandlers.stream().anyMatch(ph -> ph.om.getSamplerKind() != Sampled.Sampler.None);
+    // Adaptive sampling requires a shared per-invocation decision slot: hitAdaptive() is called
+    // once at method entry and the result is stored; RETURN/ERROR sites load the slot rather
+    // than calling hitAdaptive() again, ensuring paired entry/exit sampling.
+    boolean hasAdaptiveHandlers =
+        entryHandlers.stream().anyMatch(ph -> ph.om.getSamplerKind() == Sampled.Sampler.Adaptive)
+            || returnHandlers.stream()
+                .anyMatch(ph -> ph.om.getSamplerKind() == Sampled.Sampler.Adaptive)
+            || errorHandlers.stream()
+                .anyMatch(ph -> ph.om.getSamplerKind() == Sampled.Sampler.Adaptive);
     final int samplingMethodId;
     if (hasSampledHandlers) {
       samplingMethodId = MethodID.getMethodId(internalClassName, methodName, methodDesc);
@@ -679,6 +690,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       private final int[] entryTsSlot = {-1};
       private final int[] retValSlot = {-1};
       private final int[] durationSlot = {-1};
+      private final int[] sHitSlot = {-1}; // shared Adaptive sampling decision (0=skip, 1=sample)
       private final boolean[] entryInjected = {false};
       private Label startLabel;
       private int pendingLine = -1;
@@ -690,6 +702,14 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         if (needsExceptionHandler) {
           startLabel = cb.newLabel();
           // labelBinding deferred to accept() so it is emitted at the first real instruction
+        }
+        if (hasAdaptiveHandlers) {
+          // Allocate and zero-initialize the shared sampling decision slot.
+          // Defaulting to 0 (not-sampled) ensures correctness if the method exits before the
+          // entry block runs (e.g., via an exception on the very first instruction).
+          sHitSlot[0] = cb.allocateLocal(TypeKind.INT);
+          cb.iconst_0();
+          cb.istore(sHitSlot[0]);
         }
       }
 
@@ -719,10 +739,28 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                 MethodTypeDesc.ofDescriptor("()J"));
             cb.storeLocal(TypeKind.LONG, entryTsSlot[0]);
           }
+          // Adaptive sampling: call hitAdaptive once and store the decision.
+          // This must happen before any probe calls, including those for ENTRY handlers that
+          // lack their own Adaptive annotation, so that RETURN/ERROR handlers always find a
+          // valid value in sHitSlot regardless of whether there are any ENTRY probes.
+          if (hasAdaptiveHandlers) {
+            cb.ldc(samplingMethodId);
+            cb.invokestatic(CD_METHOD_TRACKER, "hitAdaptive", HIT_DESC);
+            cb.istore(sHitSlot[0]);
+          }
           for (ProbeHandler ph : entryHandlers) {
-            emitWithSamplingGuard(
-                cb, ph, samplingMethodId,
-                () -> emitProbeCall(cb, ph, javaClassName, methodName, isStatic, true, -1, TypeKind.VOID, -1));
+            if (ph.om.getSamplerKind() == Sampled.Sampler.Adaptive) {
+              // Use pre-computed sHitSlot; do not call hitAdaptive again.
+              Label skipLabel = cb.newLabel();
+              cb.iload(sHitSlot[0]);
+              cb.ifeq(skipLabel);
+              emitProbeCall(cb, ph, javaClassName, methodName, isStatic, true, -1, TypeKind.VOID, -1);
+              cb.labelBinding(skipLabel);
+            } else {
+              emitWithSamplingGuard(
+                  cb, ph, samplingMethodId,
+                  () -> emitProbeCall(cb, ph, javaClassName, methodName, isStatic, true, -1, TypeKind.VOID, -1));
+            }
           }
         }
 
@@ -770,22 +808,61 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           final int fLocalRetValSlot = localRetValSlot;
           final TypeKind fReturnKind = returnKind;
           final int fLocalDurationSlot = localDurationSlot;
+          // Separate Adaptive from Const/None: Adaptive probes share one sHitSlot gate and
+          // a single updateEndTs call; Const probes each get an independent hit() gate.
+          List<ProbeHandler> adaptiveReturnHandlers = null;
           for (ProbeHandler ph : returnHandlers) {
-            emitWithSamplingGuard(
-                cb, ph, samplingMethodId,
-                () -> emitProbeCall(
-                    cb, ph, javaClassName, methodName, isStatic, false,
-                    fLocalRetValSlot, methodReturnType, fReturnKind, fLocalDurationSlot, null));
+            if (ph.om.getSamplerKind() == Sampled.Sampler.Adaptive) {
+              if (adaptiveReturnHandlers == null) adaptiveReturnHandlers = new ArrayList<>();
+              adaptiveReturnHandlers.add(ph);
+            } else {
+              emitWithSamplingGuard(
+                  cb, ph, samplingMethodId,
+                  () -> emitProbeCall(
+                      cb, ph, javaClassName, methodName, isStatic, false,
+                      fLocalRetValSlot, methodReturnType, fReturnKind, fLocalDurationSlot, null));
+            }
+          }
+          if (adaptiveReturnHandlers != null) {
+            Label skipAdaptive = cb.newLabel();
+            cb.iload(sHitSlot[0]);
+            cb.ifeq(skipAdaptive);
+            cb.ldc(samplingMethodId);
+            cb.invokestatic(CD_METHOD_TRACKER, "updateEndTs", UPDATE_END_TS_DESC);
+            for (ProbeHandler ph : adaptiveReturnHandlers) {
+              emitProbeCall(
+                  cb, ph, javaClassName, methodName, isStatic, false,
+                  fLocalRetValSlot, methodReturnType, fReturnKind, fLocalDurationSlot, null);
+            }
+            cb.labelBinding(skipAdaptive);
           }
         }
 
         // NEW AFTER: fire after the first <init> that completes a pending 'new' allocation.
         // Processed before call probes so the pending state is consumed on the first <init> match.
+        // If CALL AFTER probes also target this <init>, both are fired: the call stack is backed
+        // up before the invoke so constructor args are available for CALL AFTER handlers.
         if (!pendingNewStack.isEmpty() && ce instanceof InvokeInstruction nii && isConstructorCall(nii)) {
           PendingNew pending = pendingNewStack.peek();
           if (pending.internalName.equals(nii.owner().asInternalName())) {
             pendingNewStack.pop();
-            emitInvoke(cb, nii); // <init> returns; initialized object is now TOS
+
+            // Collect CALL AFTER probes for this <init> (BEFORE on constructors is always skipped).
+            List<ProbeHandler> callAfterHandlers = new ArrayList<>();
+            if (!callHandlers.isEmpty()) {
+              for (ProbeHandler ph : filterForCall(callHandlers, nii)) {
+                if (ph.om.getLocation().getWhere() == Where.AFTER
+                    && canEmitCallProbe(ph, nii, loader)) {
+                  callAfterHandlers.add(ph);
+                }
+              }
+            }
+
+            // Back up args before the invoke so CALL AFTER probes can reference constructor params.
+            CallContext callCtx = callAfterHandlers.isEmpty() ? null : backupCallStack(cb, nii);
+            if (callCtx != null) restoreCallStack(cb, callCtx);
+            emitInvoke(cb, nii); // <init> returns void; initialized object is now TOS
+
             boolean hasReturn =
                 pending.afterHandlers.stream().anyMatch(ph -> ph.om.getReturnParameter() != -1);
             int newObjReturnSlot = -1;
@@ -801,6 +878,18 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
                       cb, ph, javaClassName, methodName, isStatic,
                       pending.extName, newObjReturnSlot);
             }
+
+            // Fire CALL AFTER probes using saved arg slots; <init> is void so no return slot.
+            if (callCtx != null) {
+              final CallContext fCallCtx = callCtx;
+              for (ProbeHandler ph : callAfterHandlers) {
+                emitted |=
+                    emitProbeCall(
+                        cb, ph, javaClassName, methodName, isStatic,
+                        false, -1, null, TypeKind.VOID, -1, fCallCtx);
+              }
+            }
+
             if (emitted) anyMatch[0] = true;
             return;
           }
@@ -1472,23 +1561,61 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           cb.storeLocal(TypeKind.LONG, exDurationSlot);
         }
 
-        // Fire RETURN @Duration handlers (retValSlot=-1: no return value on exception path)
+        // Fire RETURN @Duration handlers (retValSlot=-1: no return value on exception path).
+        // Adaptive probes are grouped separately to call updateEndTs exactly once per exit.
         final int fExDurationSlot = exDurationSlot;
+        final int fExSlot = exSlot;
+        List<ProbeHandler> adaptiveDurationHandlers = null;
         for (ProbeHandler ph : durationHandlers) {
-          emitWithSamplingGuard(
-              cb, ph, samplingMethodId,
-              () -> emitProbeCall(
-                  cb, ph, javaClassName, methodName, isStatic, false, -1, TypeKind.VOID, fExDurationSlot));
+          if (ph.om.getSamplerKind() == Sampled.Sampler.Adaptive) {
+            if (adaptiveDurationHandlers == null) adaptiveDurationHandlers = new ArrayList<>();
+            adaptiveDurationHandlers.add(ph);
+          } else {
+            emitWithSamplingGuard(
+                cb, ph, samplingMethodId,
+                () -> emitProbeCall(
+                    cb, ph, javaClassName, methodName, isStatic, false, -1, TypeKind.VOID, fExDurationSlot));
+          }
         }
 
         // Fire ERROR handlers
         boolean emitted = false;
-        final int fExSlot = exSlot;
+        List<ProbeHandler> adaptiveErrorHandlers = null;
         for (ProbeHandler ph : emittableError) {
-          emitted |= emitWithSamplingGuard(
-              cb, ph, samplingMethodId,
-              () -> emitErrorProbe(cb, ph, javaClassName, methodName, isStatic, fExSlot, fExDurationSlot));
+          if (ph.om.getSamplerKind() == Sampled.Sampler.Adaptive) {
+            if (adaptiveErrorHandlers == null) adaptiveErrorHandlers = new ArrayList<>();
+            adaptiveErrorHandlers.add(ph);
+          } else {
+            emitted |= emitWithSamplingGuard(
+                cb, ph, samplingMethodId,
+                () -> emitErrorProbe(cb, ph, javaClassName, methodName, isStatic, fExSlot, fExDurationSlot));
+          }
         }
+
+        // Emit all Adaptive probes (duration + error) inside one shared gate with a single
+        // updateEndTs call so the sampling window is closed exactly once per exception exit.
+        boolean hasAdaptiveOnErrorPath =
+            (adaptiveDurationHandlers != null) || (adaptiveErrorHandlers != null);
+        if (hasAdaptiveOnErrorPath) {
+          Label skipAdaptiveEx = cb.newLabel();
+          cb.iload(sHitSlot[0]);
+          cb.ifeq(skipAdaptiveEx);
+          cb.ldc(samplingMethodId);
+          cb.invokestatic(CD_METHOD_TRACKER, "updateEndTs", UPDATE_END_TS_DESC);
+          if (adaptiveDurationHandlers != null) {
+            for (ProbeHandler ph : adaptiveDurationHandlers) {
+              emitProbeCall(
+                  cb, ph, javaClassName, methodName, isStatic, false, -1, TypeKind.VOID, fExDurationSlot);
+            }
+          }
+          if (adaptiveErrorHandlers != null) {
+            for (ProbeHandler ph : adaptiveErrorHandlers) {
+              emitted |= emitErrorProbe(cb, ph, javaClassName, methodName, isStatic, fExSlot, fExDurationSlot);
+            }
+          }
+          cb.labelBinding(skipAdaptiveEx);
+        }
+
         if (emitted) anyMatch[0] = true;
 
         // Rethrow
