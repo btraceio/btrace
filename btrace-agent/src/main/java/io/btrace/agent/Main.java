@@ -739,9 +739,9 @@ public final class Main {
     String libs = argMap.get(LIBS);
     if (libs != null && !libs.isEmpty()) {
       log.warn(
-          "The 'libs' profile feature is deprecated and will be removed in a future release. "
-              + "Prefer packaging integrations as BTrace extensions (API on bootstrap, impl isolated). "
-              + "See docs/architecture/agent-manifest-libs.md for migration guidance.");
+          "The 'libs' profile feature is deprecated and will be removed in a future release. Prefer"
+              + " packaging integrations as BTrace extensions (API on bootstrap, impl isolated)."
+              + " See docs/architecture/agent-manifest-libs.md for migration guidance.");
     }
     String config = argMap.get(CONFIG);
     processClasspaths(libs);
@@ -956,7 +956,8 @@ public final class Main {
     boolean hasManifestLibs = useManifestLibs;
     if (hasManifestLibs && hasLegacyLibs) {
       log.warn(
-          "Both libs= and manifest-attributes are present; libs= is deprecated and will be removed in N+2. Prefer manifest-based declaration.");
+          "Both libs= and manifest-attributes are present; libs= is deprecated and will be removed"
+              + " in N+2. Prefer manifest-based declaration.");
     }
     if (useManifestLibs) {
       if (log.isDebugEnabled()) log.debug("Using manifest-driven libs resolution");
@@ -1091,7 +1092,8 @@ public final class Main {
             } else {
               if (!allowExternal) {
                 log.warn(
-                    "Cannot determine BTRACE_HOME; proceeding to append system jar (btrace.system.appendJar): {}",
+                    "Cannot determine BTRACE_HOME; proceeding to append system jar"
+                        + " (btrace.system.appendJar): {}",
                     p);
               }
               appendSystemJar(p);
@@ -1404,7 +1406,13 @@ public final class Main {
         if (log.isDebugEnabled()) {
           log.debug("client accepted {}", sock);
         }
-        ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
+        // Give each remote client its own settings copy, seeded from the agent baseline. Using
+        // the shared GLOBAL instance here let one client's SET_PARAMS (debug, dumpDir, outputFile,
+        // and notably `trusted`) leak into every other client and into the global transformer.
+        // The premain/local path already isolates settings the same way.
+        SharedSettings clientSettings = new SharedSettings();
+        clientSettings.from(settings);
+        ClientContext ctx = new ClientContext(inst, transformer, argMap, clientSettings);
         Client client = RemoteClient.getClient(ctx, sock, Main::handleNewClient);
       } catch (RuntimeException | IOException re) {
         if (serverRunning) {

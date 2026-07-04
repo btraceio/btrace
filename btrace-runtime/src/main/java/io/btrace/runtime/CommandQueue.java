@@ -69,17 +69,23 @@ final class CommandQueue {
   public boolean enqueue(Command cmd) {
     int backoffCntr = 0;
     long tsCutOff = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(DROP_TIMEOUT_MS);
-    while (!Thread.interrupted() && !queue.relaxedOffer(cmd)) {
+    // The producer is an arbitrary instrumented application thread - its interrupt
+    // status must never be cleared here (Thread.interrupted() would swallow it and
+    // corrupt the application's own interruption handling). Always attempt the offer
+    // at least once; only refuse to back off when the thread is interrupted, since
+    // parkNanos returns immediately for an interrupted thread and the backoff would
+    // degenerate into a busy spin.
+    while (!queue.relaxedOffer(cmd)) {
+      if (Thread.currentThread().isInterrupted() || System.nanoTime() > tsCutOff) {
+        droppedCommands.incrementAndGet();
+        return false;
+      }
       if (backoffCntr < BACKOFF_YIELD_ITERS) {
         Thread.yield();
       } else if (backoffCntr < BACKOFF_YIELD_ITERS + BACKOFF_SLEEP_ITERS) {
         LockSupport.parkNanos(1_000_000);
       }
       backoffCntr++;
-      if (System.nanoTime() > tsCutOff) {
-        droppedCommands.incrementAndGet();
-        return false;
-      }
     }
     return true;
   }

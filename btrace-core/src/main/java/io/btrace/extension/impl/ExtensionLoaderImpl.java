@@ -27,8 +27,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -43,9 +46,19 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
   private final ExtensionConfig config;
   private final Instrumentation instrumentation;
   private final String btraceVersion;
+  // Written from concurrent load paths (indy bootstrap on app threads and per-client handler
+  // threads), so it must be a concurrent map - plain HashMap.put racing HashMap.put can corrupt
+  // the table.
   private final Map<String, ExtensionDescriptorDTO> loadedExtensions;
-  // Populated once by discoverExtensions() at startup; read-only after that.
+  // Populated by discoverExtensions() and read (and, on re-discovery, cleared) concurrently.
   private final Map<String, ExtensionDescriptorDTO> availableExtensions;
+
+  // Bootstrap-append bookkeeping, all guarded by bootstrapLock. appendedApiJars dedups the
+  // appendToBootstrapClassLoaderSearch calls so a hot path (one call per @Injected field per
+  // submitted script) does not reopen the same JAR and grow the bootstrap search path without
+  // bound; openApiJars keeps the JarFiles open for the loader's lifetime.
+  private final Object bootstrapLock = new Object();
+  private final Set<String> appendedApiJars = new HashSet<>();
   private final List<JarFile> openApiJars = new ArrayList<>();
 
   /**
@@ -67,8 +80,8 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
     this.config = config != null ? config : ExtensionConfig.createDefault();
     this.instrumentation = instrumentation;
     this.btraceVersion = btraceVersion != null ? btraceVersion : "unknown";
-    this.loadedExtensions = new HashMap<>();
-    this.availableExtensions = new HashMap<>();
+    this.loadedExtensions = new ConcurrentHashMap<>();
+    this.availableExtensions = new ConcurrentHashMap<>();
   }
 
   /**
@@ -218,12 +231,10 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
         throw new IllegalStateException("No implementation JAR found in " + extensionDir);
       }
 
-      // Add API JAR to bootstrap classpath
-      // Keep the JarFile open for the lifetime of the loader; HotSpot may need
-      // the file descriptor to read class bytes after appendToBootstrapClassLoaderSearch.
-      JarFile apiJarFile = new JarFile(apiJar.toFile());
-      instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
-      openApiJars.add(apiJarFile);
+      // Add API JAR to bootstrap classpath (deduplicated - see appendApiJarToBootstrap).
+      if (!appendApiJarToBootstrap(apiJar)) {
+        throw new IllegalStateException("Failed to add API JAR to bootstrap: " + apiJar);
+      }
       log.debug("Added {} to bootstrap classpath", apiJar.getFileName());
 
       // Create classloader for implementation JAR
@@ -310,20 +321,51 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
         log.warn("No API JAR found for extension {} in {}", descriptor.getId(), extensionDir);
         return false;
       }
-      // Keep the JarFile open for the lifetime of the loader; HotSpot may need
-      // the file descriptor to read class bytes after appendToBootstrapClassLoaderSearch.
-      JarFile apiJarFile = new JarFile(apiJar.toFile());
-      instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
-      openApiJars.add(apiJarFile);
-      log.debug(
-          "Ensured API on bootstrap for extension {} via {}",
-          descriptor.getId(),
-          apiJar.getFileName());
-      return true;
+      boolean ok = appendApiJarToBootstrap(apiJar);
+      if (ok) {
+        log.debug(
+            "Ensured API on bootstrap for extension {} via {}",
+            descriptor.getId(),
+            apiJar.getFileName());
+      }
+      return ok;
     } catch (Exception e) {
       log.warn(
           "Failed to ensure API on bootstrap for {}: {}", descriptor.getId(), e.getMessage(), e);
       return false;
+    }
+  }
+
+  /**
+   * Append an extension API JAR to the bootstrap classloader search exactly once. Repeated calls
+   * for the same JAR (a hot path: once per {@code @Injected} field per submitted script, plus from
+   * {@code doLoad}) are no-ops, preventing unbounded file-descriptor accumulation and duplicate
+   * bootstrap search entries. The opened {@link JarFile} is retained for the loader's lifetime
+   * because HotSpot may need the descriptor to read class bytes after the append.
+   *
+   * @return true if the JAR is on the bootstrap search (appended now or on an earlier call)
+   */
+  private boolean appendApiJarToBootstrap(Path apiJar) {
+    String key;
+    try {
+      key = apiJar.toAbsolutePath().normalize().toString();
+    } catch (RuntimeException e) {
+      key = apiJar.toString();
+    }
+    synchronized (bootstrapLock) {
+      if (appendedApiJars.contains(key)) {
+        return true;
+      }
+      try {
+        JarFile apiJarFile = new JarFile(apiJar.toFile());
+        instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
+        openApiJars.add(apiJarFile);
+        appendedApiJars.add(key);
+        return true;
+      } catch (java.io.IOException e) {
+        log.warn("Failed to append API jar {} to bootstrap: {}", apiJar, e.getMessage(), e);
+        return false;
+      }
     }
   }
 

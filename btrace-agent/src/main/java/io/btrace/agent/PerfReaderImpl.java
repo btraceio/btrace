@@ -27,8 +27,13 @@ import sun.jvmstat.monitor.MonitoredVm;
 import sun.jvmstat.monitor.StringMonitor;
 import sun.jvmstat.monitor.VmIdentifier;
 
-final class PerfReaderImpl implements PerfReader {
+// Public and with a public no-arg constructor: instantiated reflectively from
+// io.btrace.runtime.BTraceRuntimeImplBase (a different package), which fails on a
+// package-private type/constructor.
+public final class PerfReaderImpl implements PerfReader {
   private volatile MonitoredVm thisVm;
+
+  public PerfReaderImpl() {}
 
   private synchronized MonitoredVm getThisVm() {
     if (thisVm == null) {

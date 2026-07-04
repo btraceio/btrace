@@ -42,25 +42,28 @@ public final class SharedSettings {
 
   public static final SharedSettings GLOBAL = new SharedSettings();
 
-  private boolean debug = false;
-  private boolean trusted = false;
-  private boolean trackRetransforms = false;
-  private boolean retransformStartup = true;
-  private String dumpDir = null;
-  private String probeDescPath = ".";
-  private String bootClassPath = "";
+  // These fields are written on the server accept / client-command threads and read on the
+  // class-transformer and probe threads, so they must be volatile to guarantee visibility and
+  // avoid torn reads across threads.
+  private volatile boolean debug = false;
+  private volatile boolean trusted = false;
+  private volatile boolean trackRetransforms = false;
+  private volatile boolean retransformStartup = true;
+  private volatile String dumpDir = null;
+  private volatile String probeDescPath = ".";
+  private volatile String bootClassPath = "";
   private final String systemClassPath = "";
-  private String statsdHost = null;
-  private int statsdPort = 8125; // default statsd port
-  private int fileRollMilliseconds = Integer.MIN_VALUE;
-  private int fileRollMaxRolls = 5; // default hold max 100 logs
-  private String outputFile;
-  private String scriptDir;
-  private String scriptOutputDir;
-  private String clientName;
-  private PermissionSet grantedPermissions = PermissionSet.empty();
-  private PermissionSet deniedPermissions = PermissionSet.empty();
-  private boolean grantAll = false;
+  private volatile String statsdHost = null;
+  private volatile int statsdPort = 8125; // default statsd port
+  private volatile int fileRollMilliseconds = Integer.MIN_VALUE;
+  private volatile int fileRollMaxRolls = 5; // default hold max 100 logs
+  private volatile String outputFile;
+  private volatile String scriptDir;
+  private volatile String scriptOutputDir;
+  private volatile String clientName;
+  private volatile PermissionSet grantedPermissions = PermissionSet.empty();
+  private volatile PermissionSet deniedPermissions = PermissionSet.empty();
+  private volatile boolean grantAll = false;
 
   public void from(Map<String, Object> params) {
     Boolean b = (Boolean) params.get(DEBUG_KEY);
@@ -73,7 +76,10 @@ public final class SharedSettings {
     }
     b = (Boolean) params.get(UNSAFE_KEY);
     if (b != null) {
-      trusted = b;
+      // UNSAFE_KEY is the deprecated synonym of TRUSTED_KEY - it must have the same
+      // non-downgrading semantics. Using a plain assignment let a client sending
+      // `unsafe=false` clear a previously configured trusted flag.
+      trusted |= b;
     }
     b = (Boolean) params.get(TRUSTED_KEY);
     if (b != null) {

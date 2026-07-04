@@ -44,8 +44,20 @@ public final class LowMemoryHandler {
     return executable;
   }
 
-  public void invoke(Class<?> clz, Object... args)
+  /**
+   * Invoke the (static) low-memory handler method. When {@link #trackUsage} is set the resolved
+   * method takes a single {@link MemoryUsage} argument; otherwise it takes none. The previous
+   * implementation passed {@code invoke(clz, null, args)} — a non-null receiver for a static method
+   * plus a doubly-wrapped argument array — which always threw {@code IllegalArgumentException} and
+   * was swallowed at the call site, so no low-memory handler ever fired.
+   */
+  public void invoke(Class<?> clz, MemoryUsage usage)
       throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-    getMethod(clz).invoke(clz, null, args);
+    Method m = getMethod(clz);
+    if (trackUsage) {
+      m.invoke(null, usage);
+    } else {
+      m.invoke(null);
+    }
   }
 }

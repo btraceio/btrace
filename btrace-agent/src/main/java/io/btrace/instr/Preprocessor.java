@@ -1060,6 +1060,10 @@ final class Preprocessor {
                 }
             }
           }
+          // trackUsage is true when the handler declares a MemoryUsage parameter; it drives both
+          // reflective resolution and the invocation arity in LowMemoryHandler.
+          boolean trackUsage = Type.getArgumentTypes(mn.desc).length > 0;
+
           il.add(new InsnNode(Opcodes.DUP));
           il.add(new LdcInsnNode(cnt++));
           il.add(new TypeInsnNode(Opcodes.NEW, LOWMEMORYHANDLER_INTERNAL));
@@ -1067,13 +1071,19 @@ final class Preprocessor {
           il.add(new LdcInsnNode(mn.name));
           il.add(new LdcInsnNode(pool));
           il.add(new LdcInsnNode(threshold));
-          il.add(new LdcInsnNode(thresholdProp));
+          // thresholdProp is null unless a threshold property was declared; LDC of null is illegal.
+          if (thresholdProp != null) {
+            il.add(new LdcInsnNode(thresholdProp));
+          } else {
+            il.add(new InsnNode(Opcodes.ACONST_NULL));
+          }
+          il.add(new InsnNode(trackUsage ? Opcodes.ICONST_1 : Opcodes.ICONST_0));
           il.add(
               new MethodInsnNode(
                   Opcodes.INVOKESPECIAL,
                   LOWMEMORYHANDLER_INTERNAL,
                   "<init>",
-                  "(Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;)V",
+                  "(Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Z)V",
                   false));
           il.add(new InsnNode(Opcodes.AASTORE));
         }
@@ -1082,7 +1092,7 @@ final class Preprocessor {
     if (cnt > 0) {
       InsnList newArray = new InsnList();
       newArray.add(new LdcInsnNode(cnt));
-      newArray.add(new TypeInsnNode(Opcodes.ANEWARRAY, EXITHANDLER_INTERNAL));
+      newArray.add(new TypeInsnNode(Opcodes.ANEWARRAY, LOWMEMORYHANDLER_INTERNAL));
       il.insert(newArray);
     } else {
       il.insert(new InsnNode(Opcodes.ACONST_NULL));

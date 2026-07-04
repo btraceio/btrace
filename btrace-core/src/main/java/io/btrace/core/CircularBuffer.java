@@ -16,12 +16,20 @@
  */
 package io.btrace.core;
 
+/**
+ * A bounded ring buffer keeping the newest {@code size} elements; adding to a full buffer
+ * overwrites the oldest one. Consumption ({@link #forEach}, {@link #doNext}) removes elements.
+ *
+ * <p>Thread-safe: producers and consumers run on different threads (e.g. the runtime command
+ * dispatch vs. the per-client command handler in the agent), so all state transitions are
+ * synchronized. The functor is invoked while holding the buffer monitor, which also serializes
+ * consumption against concurrent adds.
+ */
 public final class CircularBuffer<T> {
   private final T[] elements;
   private final int size;
-  private long readIndex = 0;
-  private long writeIndex = -1;
-  private int length = 0;
+  private int head = 0; // index of the oldest live element
+  private int length = 0; // number of live elements
 
   @SuppressWarnings("unchecked")
   public CircularBuffer(int size) {
@@ -29,45 +37,43 @@ public final class CircularBuffer<T> {
     elements = (T[]) new Object[size];
   }
 
-  public void add(T element) {
-    int newIndex = (int) (++writeIndex) % size;
-    elements[newIndex] = element;
-    int nextIndex = (newIndex + 1) % size;
-    if (elements[nextIndex] != null) {
-      readIndex = nextIndex;
-    }
-    if (++length > size) {
-      length = size;
+  public synchronized void add(T element) {
+    int writePos = (head + length) % size;
+    elements[writePos] = element;
+    if (length == size) {
+      // buffer was full - the oldest element has just been overwritten
+      head = (head + 1) % size;
+    } else {
+      length++;
     }
   }
 
   public boolean forEach(Function<T, Boolean> functor) {
-    int cntr = 0;
-    while (cntr < size && writeIndex >= readIndex) {
-      if (functor.apply(elements[(int) readIndex % size])) {
-        readIndex++;
-        if (--length < 0) {
-          length = 0;
+    synchronized (this) {
+      while (length > 0) {
+        if (!functor.apply(elements[head])) {
+          return false;
         }
-      } else {
-        return false;
+        // consumed slots are released so they cannot be re-delivered after wrap-around
+        elements[head] = null;
+        head = (head + 1) % size;
+        length--;
       }
-      cntr++;
+      return true;
     }
-    return true;
   }
 
-  public boolean doNext(Function<T, Boolean> nextWork) {
-    if (writeIndex >= readIndex) {
-      if (nextWork.apply(elements[(int) readIndex % size])) {
-        readIndex++;
-        return true;
-      }
+  public synchronized boolean doNext(Function<T, Boolean> nextWork) {
+    if (length > 0 && nextWork.apply(elements[head])) {
+      elements[head] = null;
+      head = (head + 1) % size;
+      length--;
+      return true;
     }
     return false;
   }
 
-  public int getLength() {
+  public synchronized int getLength() {
     return length;
   }
 }

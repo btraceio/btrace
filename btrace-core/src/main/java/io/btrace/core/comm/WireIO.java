@@ -80,8 +80,13 @@ public class WireIO {
       case Command.RECONNECT:
         cmd = new ReconnectCommand();
         break;
+      case Command.LIST_FAILED_EXTENSIONS:
+        cmd = new ListFailedExtensionsCommand();
+        break;
       default:
-        throw new RuntimeException("invalid command: " + type);
+        // Must be an IOException so callers' stream-error handling (client commandLoop,
+        // agent handshake) can close the session cleanly instead of leaking the socket.
+        throw new IOException("invalid command: " + type);
     }
     try {
       cmd.read(in);
