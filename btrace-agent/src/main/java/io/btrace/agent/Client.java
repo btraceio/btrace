@@ -153,27 +153,33 @@ abstract class Client implements CommandListener {
       outputFile = templateOutputFileName(output);
       log.info("Redirecting output to {}", outputFile);
     }
-    out = WRITER_MAP.get(outputFile);
-    if (out == null) {
-      if (outputFile.equals("::stdout")) {
-        out = new PrintWriter(System.out);
-      } else {
-        if (settings.getFileRollMilliseconds() > 0) {
-          out =
-              new PrintWriter(
-                  new BufferedWriter(
-                      TraceOutputWriter.rollingFileWriter(new File(outputFile), settings)));
+    // WRITER_MAP is shared across concurrently-attaching/detaching clients (accept thread,
+    // command-handler threads, serialized executor). Guard the get-or-create check-then-act and
+    // the removal in closeAll() under the same monitor so the map is not corrupted and two clients
+    // resolving the same output file share a single writer atomically.
+    synchronized (WRITER_MAP) {
+      out = WRITER_MAP.get(outputFile);
+      if (out == null) {
+        if (outputFile.equals("::stdout")) {
+          out = new PrintWriter(System.out);
         } else {
-          out =
-              new PrintWriter(
-                  new BufferedWriter(TraceOutputWriter.fileWriter(new File(outputFile))));
+          if (settings.getFileRollMilliseconds() > 0) {
+            out =
+                new PrintWriter(
+                    new BufferedWriter(
+                        TraceOutputWriter.rollingFileWriter(new File(outputFile), settings)));
+          } else {
+            out =
+                new PrintWriter(
+                    new BufferedWriter(TraceOutputWriter.fileWriter(new File(outputFile))));
+          }
         }
+        WRITER_MAP.put(outputFile, out);
+        out.append("### BTrace Log: ")
+            .append(DateFormat.getInstance().format(new Date()))
+            .append("\n\n");
+        startFlusher();
       }
-      WRITER_MAP.put(outputFile, out);
-      out.append("### BTrace Log: ")
-          .append(DateFormat.getInstance().format(new Date()))
-          .append("\n\n");
-      startFlusher();
     }
     outputName = outputFile;
   }
@@ -489,7 +495,9 @@ abstract class Client implements CommandListener {
     if (out != null) {
       out.close();
     }
-    WRITER_MAP.remove(outputName);
+    synchronized (WRITER_MAP) {
+      WRITER_MAP.remove(outputName);
+    }
   }
 
   private void errorExit(Throwable th) throws IOException {

@@ -42,7 +42,7 @@ public class DTraceDropCommand extends MessageCommand implements DTraceCommand {
 
   public void write(ObjectOutput out) throws IOException {
     super.write(out);
-    out.writeObject(out);
+    out.writeObject(de);
   }
 
   public void read(ObjectInput in) throws ClassNotFoundException, IOException {

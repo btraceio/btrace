@@ -84,6 +84,12 @@ public final class DetachProbeHandler {
 
       client.sendDisconnect();
       ClientManager.removeClient(pid, port);
+      // sendDisconnect only sends the command; close the socket so it is not leaked.
+      try {
+        client.close();
+      } catch (Exception ignore) {
+        // best effort
+      }
       return toolResult("Detached from probe on PID " + pid + ". Probe continues running.", false);
     } catch (Exception e) {
       log.error("Failed to detach probe", e);

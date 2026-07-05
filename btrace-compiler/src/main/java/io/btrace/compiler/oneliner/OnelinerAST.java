@@ -77,7 +77,10 @@ public class OnelinerAST {
     public Filter(FilterType type, Comparator comparator, Object value) {
       this.type = Objects.requireNonNull(type, "type cannot be null");
       this.comparator = Objects.requireNonNull(comparator, "comparator cannot be null");
-      this.value = Objects.requireNonNull(value, "value cannot be null");
+      // value is intentionally nullable: an ARG_COMPARE filter comparing against the literal
+      // `null` (e.g. `args[0] == null`) carries a null value, which the parser produces and the
+      // code generator has a dedicated branch for.
+      this.value = value;
     }
   }
 

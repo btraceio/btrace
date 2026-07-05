@@ -29,15 +29,19 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class MethodTracker {
   private static final RandomIntProvider rndIntProvider = RandomIntProvider.getInstance();
 
-  private static AtomicLong[] counters = new AtomicLong[50];
+  // volatile: registerCounter reassigns these arrays (on growth) under a lock, but the hot-path
+  // readers (hit/hitTimed/hitAdaptive/getEndTs) index them without locking. Without volatile a
+  // reader thread could observe a stale, shorter array reference (→ AIOOBE) or a half-published
+  // slot for a freshly-registered method id.
+  private static volatile AtomicLong[] counters = new AtomicLong[50];
 
   @SuppressWarnings("unchecked")
-  private static ThreadLocal<Long>[] tsArray = new ThreadLocal[50];
+  private static volatile ThreadLocal<Long>[] tsArray = new ThreadLocal[50];
 
-  private static Object[] rLocks = new Object[50];
-  private static int[] means = new int[50];
-  private static int[] origMeans = new int[50];
-  private static int[] samplers = new int[50];
+  private static volatile Object[] rLocks = new Object[50];
+  private static volatile int[] means = new int[50];
+  private static volatile int[] origMeans = new int[50];
+  private static volatile int[] samplers = new int[50];
 
   /**
    * Creates a supporting structures for a new method id

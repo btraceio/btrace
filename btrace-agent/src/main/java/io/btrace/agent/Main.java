@@ -1400,9 +1400,10 @@ public final class Main {
     }
 
     while (serverRunning) {
+      Socket sock = null;
       try {
         log.debug("waiting for clients");
-        Socket sock = serverSocket.accept();
+        sock = serverSocket.accept();
         if (log.isDebugEnabled()) {
           log.debug("client accepted {}", sock);
         }
@@ -1414,10 +1415,28 @@ public final class Main {
         clientSettings.from(settings);
         ClientContext ctx = new ClientContext(inst, transformer, argMap, clientSettings);
         Client client = RemoteClient.getClient(ctx, sock, Main::handleNewClient);
+        if (client == null) {
+          // No live session was established (EXIT, a list/info command, or a malformed
+          // handshake). getClient does not own the socket in that case, so close it here to
+          // avoid leaking a file descriptor per such connection (e.g. every `btrace -lp`).
+          closeQuietly(sock);
+        }
       } catch (RuntimeException | IOException re) {
+        // getClient threw before handing off a live client - the socket is orphaned; close it.
+        closeQuietly(sock);
         if (serverRunning) {
           log.warn("BTrace server accept failed", re);
         }
+      }
+    }
+  }
+
+  private static void closeQuietly(Socket sock) {
+    if (sock != null) {
+      try {
+        sock.close();
+      } catch (IOException ignore) {
+        // best effort
       }
     }
   }

@@ -95,7 +95,12 @@ final class PolicyFile {
   }
 
   void save() throws IOException {
-    Files.createDirectories(target.getParent());
+    // A bare relative filename (e.g. --policy-file perms.properties) has a null parent; only
+    // create directories when there actually is a parent path.
+    Path parent = target.getParent();
+    if (parent != null) {
+      Files.createDirectories(parent);
+    }
     Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
     try (OutputStream os = Files.newOutputStream(tmp)) {
       props.store(os, "BTrace permissions policy");
