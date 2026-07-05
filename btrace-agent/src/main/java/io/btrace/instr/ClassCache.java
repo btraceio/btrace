@@ -79,7 +79,22 @@ public final class ClassCache {
   private final Timer cleanupTimer = new Timer(true);
 
   public static ClassCache getInstance() {
-    return Singleton.INSTANCE;
+    ClassCache instance = Singleton.INSTANCE;
+    if (instance == null) {
+      // Defensive: under unusual classloader-initialization races (e.g. when the
+      // MaskedClassLoader-loaded agent's BTraceProbeSupport.getApplicableHandlers() is
+      // called before this class's <clinit> has been forced by any other reference),
+      // Singleton.INSTANCE can be observed as null on the calling thread. Force
+      // initialization here and retry.
+      synchronized (ClassCache.class) {
+        instance = Singleton.INSTANCE;
+        if (instance == null) {
+          Singleton.class.getClass(); // any reflective access forces <clinit>
+          instance = Singleton.INSTANCE;
+        }
+      }
+    }
+    return instance;
   }
 
   ClassCache(long cleanupPeriod) {

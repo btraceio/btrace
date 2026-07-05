@@ -174,6 +174,12 @@ public class ClassFilter {
       return true;
     }
     ClassInfo ci = ClassCache.getInstance().get(loader, typeA);
+    if (ci == null) {
+      // ClassInfo not present in the cache (or cache temporarily unavailable due to a
+      // classloader-init race). Conservatively report "not a subtype" rather than NPE;
+      // the caller can fall back to a no-op transform or a different check.
+      return false;
+    }
     Collection<ClassInfo> sTypesInfo = ci.getSupertypes(false);
     if (sTypesInfo != null) {
       Collection<String> sTypes = new ArrayList<>(sTypesInfo.size());
