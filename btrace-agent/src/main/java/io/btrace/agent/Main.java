@@ -739,9 +739,9 @@ public final class Main {
     String libs = argMap.get(LIBS);
     if (libs != null && !libs.isEmpty()) {
       log.warn(
-          "The 'libs' profile feature is deprecated and will be removed in a future release. "
-              + "Prefer packaging integrations as BTrace extensions (API on bootstrap, impl isolated). "
-              + "See docs/architecture/agent-manifest-libs.md for migration guidance.");
+          "The 'libs' profile feature is deprecated and will be removed in a future release. Prefer"
+              + " packaging integrations as BTrace extensions (API on bootstrap, impl isolated)."
+              + " See docs/architecture/agent-manifest-libs.md for migration guidance.");
     }
     String config = argMap.get(CONFIG);
     processClasspaths(libs);
@@ -956,7 +956,8 @@ public final class Main {
     boolean hasManifestLibs = useManifestLibs;
     if (hasManifestLibs && hasLegacyLibs) {
       log.warn(
-          "Both libs= and manifest-attributes are present; libs= is deprecated and will be removed in N+2. Prefer manifest-based declaration.");
+          "Both libs= and manifest-attributes are present; libs= is deprecated and will be removed"
+              + " in N+2. Prefer manifest-based declaration.");
     }
     if (useManifestLibs) {
       if (log.isDebugEnabled()) log.debug("Using manifest-driven libs resolution");
@@ -1091,7 +1092,8 @@ public final class Main {
             } else {
               if (!allowExternal) {
                 log.warn(
-                    "Cannot determine BTRACE_HOME; proceeding to append system jar (btrace.system.appendJar): {}",
+                    "Cannot determine BTRACE_HOME; proceeding to append system jar"
+                        + " (btrace.system.appendJar): {}",
                     p);
               }
               appendSystemJar(p);
@@ -1398,18 +1400,43 @@ public final class Main {
     }
 
     while (serverRunning) {
+      Socket sock = null;
       try {
         log.debug("waiting for clients");
-        Socket sock = serverSocket.accept();
+        sock = serverSocket.accept();
         if (log.isDebugEnabled()) {
           log.debug("client accepted {}", sock);
         }
-        ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
+        // Give each remote client its own settings copy, seeded from the agent baseline. Using
+        // the shared GLOBAL instance here let one client's SET_PARAMS (debug, dumpDir, outputFile,
+        // and notably `trusted`) leak into every other client and into the global transformer.
+        // The premain/local path already isolates settings the same way.
+        SharedSettings clientSettings = new SharedSettings();
+        clientSettings.from(settings);
+        ClientContext ctx = new ClientContext(inst, transformer, argMap, clientSettings);
         Client client = RemoteClient.getClient(ctx, sock, Main::handleNewClient);
+        if (client == null) {
+          // No live session was established (EXIT, a list/info command, or a malformed
+          // handshake). getClient does not own the socket in that case, so close it here to
+          // avoid leaking a file descriptor per such connection (e.g. every `btrace -lp`).
+          closeQuietly(sock);
+        }
       } catch (RuntimeException | IOException re) {
+        // getClient threw before handing off a live client - the socket is orphaned; close it.
+        closeQuietly(sock);
         if (serverRunning) {
           log.warn("BTrace server accept failed", re);
         }
+      }
+    }
+  }
+
+  private static void closeQuietly(Socket sock) {
+    if (sock != null) {
+      try {
+        sock.close();
+      } catch (IOException ignore) {
+        // best effort
       }
     }
   }

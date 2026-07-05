@@ -44,7 +44,10 @@ public class LineNumberInstrumentor extends MethodInstrumentor {
   @Override
   public void visitLineNumber(int line, Label start) {
     if (lastLine != 0) {
-      onAfterLine(line - 1);
+      // The line that just finished is the previously-seen line, not line-1: line tables are not
+      // guaranteed to be consecutive (gaps, branches), so line-1 would report the wrong line (and
+      // miss a Kind.LINE/Where.AFTER probe on the actual previous line).
+      onAfterLine(lastLine);
     }
     if (!isConstructor() || isPrologueVisited()) {
       onBeforeLine(line);

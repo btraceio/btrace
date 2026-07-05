@@ -25,6 +25,11 @@
 
 package io.btrace.runtime;
 
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.comm.CommandListener;
+import io.btrace.core.jfr.JfrEvent;
+import io.btrace.runtime.auxiliary.Auxiliary;
 import java.lang.instrument.Instrumentation;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InaccessibleObjectException;
@@ -34,16 +39,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.util.Collections;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import jdk.internal.perf.Perf;
-import io.btrace.core.ArgsMap;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.comm.CommandListener;
-import io.btrace.core.jfr.JfrEvent;
-import io.btrace.runtime.auxiliary.Auxiliary;
 
 /**
  * Helper class used by BTrace built-in functions and also acts runtime "manager" for a specific
@@ -73,6 +72,7 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
       return version.version().get(0) >= 11;
     }
   }
+
   // perf counter variability - we always variable variability
   private static final int V_Variable = 3;
   // perf counter units
@@ -113,7 +113,8 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
     try {
       m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
       m.setAccessible(true);
-    } catch (NoSuchMethodException | InaccessibleObjectException ignored) {}
+    } catch (NoSuchMethodException | InaccessibleObjectException ignored) {
+    }
     findBootstrapOrNullMtd = m;
   }
 
@@ -125,7 +126,8 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
     try {
       m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
       m.setAccessible(true);
-    } catch (NoSuchMethodException | InaccessibleObjectException ignored) {}
+    } catch (NoSuchMethodException | InaccessibleObjectException ignored) {
+    }
     findBootstrapOrNullMtd = m;
   }
 
@@ -258,9 +260,10 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
         | SecurityException
         | InstantiationException
         | InvocationTargetException e) {
-      Throwable root = e instanceof InvocationTargetException
-          ? ((InvocationTargetException) e).getTargetException()
-          : e;
+      Throwable root =
+          e instanceof InvocationTargetException
+              ? ((InvocationTargetException) e).getTargetException()
+              : e;
       throw new IllegalStateException(
           "BTrace probe defineClass failed on JDK " + Runtime.version().feature(), root);
     }
@@ -349,7 +352,9 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
     if (!isJfrAvailable()) {
-      return null;
+      // Never return null - the generated probe code stores the factory in a static
+      // field and calls newEvent() on it unconditionally. Match the _8/_9 fallback.
+      return () -> JfrEvent.EMPTY;
     }
     JfrEventFactoryImpl factory = new JfrEventFactoryImpl(template);
     eventFactories.add(factory);
@@ -359,8 +364,10 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
   @Override
   public boolean isBootstrapClass(String className) {
     try {
-      return findBootstrapOrNullMtd != null && findBootstrapOrNullMtd.invoke(ClassLoader.getSystemClassLoader(), className) != null;
-    } catch (IllegalAccessException | InvocationTargetException ignored) {}
+      return findBootstrapOrNullMtd != null
+          && findBootstrapOrNullMtd.invoke(ClassLoader.getSystemClassLoader(), className) != null;
+    } catch (IllegalAccessException | InvocationTargetException ignored) {
+    }
     return false;
   }
 

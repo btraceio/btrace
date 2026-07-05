@@ -143,11 +143,12 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
         return super.visitMethodInvocation(node, v);
       }
 
-      TypeElement parent = null;
-      do {
-        parent = (TypeElement) e.getEnclosingElement();
-      } while (parent != null
-          && (parent.getKind() != ElementKind.CLASS && parent.getKind() != ElementKind.INTERFACE));
+      // The element enclosing a METHOD/CONSTRUCTOR is its declaring type, which is always a
+      // TypeElement (class, interface, enum, annotation, or record). The previous do-while never
+      // advanced `e`, so it spun forever whenever the declaring type was neither a CLASS nor an
+      // INTERFACE (e.g. an enum-declared method such as TimeUnit.NANOSECONDS.toMillis()).
+      Element enclosing = e.getEnclosingElement();
+      TypeElement parent = (enclosing instanceof TypeElement) ? (TypeElement) enclosing : null;
 
       if (parent != null) {
         TypeMirror tm = parent.asType();

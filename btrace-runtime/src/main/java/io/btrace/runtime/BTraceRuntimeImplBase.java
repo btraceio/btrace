@@ -668,10 +668,17 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
       } else {
         if (errorHandlers != null) {
           for (ErrorHandler eh : errorHandlers) {
-            try {
-              eh.getMethod(clazz).invoke(null, th);
-            } catch (Throwable ignored) {
-            }
+            // @OnError handlers are guarded: their woven prologue calls enter(runtime),
+            // which refuses while this thread is already entered (we are inside the probe's
+            // catch block). Dispatch through doWithCurrent so the thread-local runtime is
+            // escaped to null and the handler can enter itself. Without this the handler
+            // silently bails out and the error is lost.
+            BTraceRuntimeAccessImpl.doWithCurrent(
+                (Callable<Void>)
+                    () -> {
+                      eh.getMethod(clazz).invoke(null, th);
+                      return null;
+                    });
           }
         } else {
           // Do not call send(Command). Exception messages should not
@@ -1065,12 +1072,9 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
                       public void run() {
                         boolean entered = enter();
                         try {
-                          if (handler.trackUsage) {
-                            handler.invoke(clazz, null, info.getUsage());
-                          } else {
-                            handler.invoke(clazz, null, null);
-                          }
+                          handler.invoke(clazz, info.getUsage());
                         } catch (Throwable th) {
+                          log.debug("Low-memory handler {} failed", handler.method, th);
                         } finally {
                           if (entered) {
                             BTraceRuntime.leave();
@@ -1365,14 +1369,16 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
 
   @SuppressWarnings("LiteralClassName")
   private static PerfReader createPerfReaderImpl() {
-    // see if we can access any jvmstat class
+    // Probe for jvmstat availability by attempting to load a core jvmstat class. The previous
+    // check used String.class.getResource("sun/jvmstat/monitor/MonitoredHost.class"), a relative
+    // resource path resolved against java/lang/ (and module-confined on JDK 9+), which is null on
+    // every JDK - so the real reader was never used and every perf* built-in threw.
     try {
-      if (String.class.getResource("sun/jvmstat/monitor/MonitoredHost.class") != null) {
-        return (PerfReader)
-            Class.forName("io.btrace.agent.PerfReaderImpl").getDeclaredConstructor().newInstance();
-      }
-    } catch (Exception exp) {
-      // can happen if jvmstat is not available
+      Class.forName("sun.jvmstat.monitor.MonitoredHost");
+      Class<?> implClz = Class.forName("io.btrace.agent.PerfReaderImpl");
+      return (PerfReader) implClz.getDeclaredConstructor().newInstance();
+    } catch (Throwable exp) {
+      // jvmstat not available (e.g. a minimal jlink image) or the reader could not be created
     }
     // no luck, create null implementation
     return new NullPerfReaderImpl();

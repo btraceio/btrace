@@ -18,6 +18,8 @@ package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.NEW;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import org.objectweb.asm.MethodVisitor;
 
 /**
@@ -29,7 +31,13 @@ import org.objectweb.asm.MethodVisitor;
  */
 public class ObjectAllocInstrumentor extends MethodInstrumentor {
   private final boolean needsInitialization;
-  private boolean instanceCreated = false;
+  // Stack of types allocated by NEW but not yet initialized by their <init>. A single boolean is
+  // insufficient: for a nested allocation such as `new Outer(new Inner())` the inner constructor's
+  // <init> would clear the flag and the outer <init> would be missed. Constructor arguments (and
+  // thus nested news) are fully evaluated before the enclosing <init>, so pending NEWs are
+  // initialized in LIFO order; a stack matches that discipline. A constructor's own super()/this()
+  // delegation runs with an empty stack, so it correctly does not fire afterObjectNew.
+  private final Deque<String> pendingNews = new ArrayDeque<>();
 
   public ObjectAllocInstrumentor(
       ClassLoader cl,
@@ -65,7 +73,7 @@ public class ObjectAllocInstrumentor extends MethodInstrumentor {
     super.visitTypeInsn(opcode, desc);
     if (opcode == NEW) {
       if (needsInitialization) {
-        instanceCreated = true;
+        pendingNews.push(desc);
       } else {
         afterObjectNew(desc);
       }
@@ -75,11 +83,9 @@ public class ObjectAllocInstrumentor extends MethodInstrumentor {
   @Override
   public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean iface) {
     super.visitMethodInsn(opcode, owner, name, desc, iface);
-    if (instanceCreated) {
-      if (Constants.CONSTRUCTOR.equals(name)) {
-        instanceCreated = false;
-        afterObjectNew(owner);
-      }
+    if (Constants.CONSTRUCTOR.equals(name) && !pendingNews.isEmpty()) {
+      pendingNews.pop();
+      afterObjectNew(owner);
     }
   }
 

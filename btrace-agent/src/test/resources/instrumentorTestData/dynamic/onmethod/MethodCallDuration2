@@ -22,12 +22,18 @@ ASTORE 19
 ALOAD 19
 ALOAD 18
 LLOAD 16
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 14
+LSUB
+LSTORE 12
+L1
+FRAME FULL [resources/OnMethodTest java/lang/String J J J J java/lang/String resources/OnMethodTest J J J java/lang/String resources/OnMethodTest] [J]
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
-IFNE L1
+IFNE L2
 DUP2
 LSTORE 20
 LLOAD 20
-LCONST_0
+LLOAD 12
 ALOAD 18
 LLOAD 16
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallDuration2$args0(JJLjava/lang/String;J)V [
@@ -36,14 +42,20 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 // arguments:
 "io/btrace/runtime/auxiliary/MethodCallDuration2"
 ]
-L1
-FRAME FULL [resources/OnMethodTest java/lang/String J J J J java/lang/String resources/OnMethodTest J J J java/lang/String resources/OnMethodTest] [J]
+L2
+FRAME SAME1 J
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 6
+LSUB
+LSTORE 4
+L3
+FRAME FULL [resources/OnMethodTest java/lang/String J J J J java/lang/String resources/OnMethodTest J J J java/lang/String resources/OnMethodTest T T] [J]
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
-IFNE L2
+IFNE L4
 DUP2
 LSTORE 22
 LLOAD 22
-LCONST_0
+LLOAD 4
 ALOAD 10
 LLOAD 8
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallDuration2$args1(JJLjava/lang/String;J)V [
@@ -52,11 +64,11 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 // arguments:
 "io/btrace/runtime/auxiliary/MethodCallDuration2"
 ]
-L2
-FRAME FULL [resources/OnMethodTest java/lang/String J J J J java/lang/String resources/OnMethodTest J J J java/lang/String resources/OnMethodTest T T] [J]
-L3
-LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
-LOCALVARIABLE a Ljava/lang/String; L0 L3 1
-LOCALVARIABLE b J L0 L3 2
+L4
+FRAME SAME1 J
+L5
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+LOCALVARIABLE a Ljava/lang/String; L0 L5 1
+LOCALVARIABLE b J L0 L5 2
 MAXSTACK = 9
 MAXLOCALS = 24

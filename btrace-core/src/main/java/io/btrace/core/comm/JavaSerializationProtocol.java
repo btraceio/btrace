@@ -106,14 +106,21 @@ public class JavaSerializationProtocol implements WireProtocol {
     if (closed) {
       throw new IOException("Protocol is closed");
     }
-    oos.reset();
-    WireIO.write(oos, command);
+    // Must hold the same monitor WireIO.write uses for the actual command write:
+    // an unsynchronized reset() emits a TC_RESET marker and mutates the stream's
+    // block-data buffer, tearing the byte stream for a concurrent writer.
+    synchronized (oos) {
+      oos.reset();
+      WireIO.write(oos, command);
+    }
   }
 
   @Override
   public void flush() throws IOException {
     if (!closed) {
-      oos.flush();
+      synchronized (oos) {
+        oos.flush();
+      }
     }
   }
 
@@ -188,7 +195,9 @@ public class JavaSerializationProtocol implements WireProtocol {
    */
   public void reset() throws IOException {
     if (!closed) {
-      oos.reset();
+      synchronized (oos) {
+        oos.reset();
+      }
     }
   }
 }

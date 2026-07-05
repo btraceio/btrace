@@ -661,8 +661,15 @@ public class Instrumentor extends ClassVisitor {
               addExtraTypeInfo(om.getReturnParameter(), returnType);
               ValidationResult vr = validateArguments(om, actionArgTypes, calledMethodArgs);
               if (vr.isValid()) {
-                MethodTrackingContext trackingCtx =
-                    new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid);
+                // Reuse the context configured by onBeforeCallMethod: it holds the entry timing
+                // (entryTsVar) and sampler state (sHitVar). A fresh local here (as before) would be
+                // un-timed/un-sampled, so emitTestSample(true) becomes a no-op and emitDuration
+                // (read from this same field in injectBtrace) pushes 0 - the @Duration-on-CALL bug.
+                // Fall back to a new context only if the before phase did not run for this site.
+                if (trackingCtx == null) {
+                  trackingCtx =
+                      new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid);
+                }
                 if (om.getDurationParameter() == -1) {
                   trackingCtx.emitExit(mid);
                 }

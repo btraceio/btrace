@@ -17,7 +17,6 @@
 package io.btrace.runtime.profiling;
 
 import io.btrace.core.Profiler;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -150,8 +149,11 @@ class MethodInvocationRecorder {
     }
     r.wallTime = duration;
     r.selfTime += duration - carryOver;
-    for (int i = 0; i < stackPtr; i++) {
-      if (stackArr[i].blockName.equals(blockName)) {
+    // After pop() the remaining live frames occupy indices 0..stackPtr (inclusive);
+    // the immediate parent is at stackPtr. Scanning only 0..stackPtr-1 would miss a
+    // directly-recursive parent and fail to zero the (double-counted) wall time.
+    for (int i = 0; i <= stackPtr; i++) {
+      if (stackArr[i] != null && stackArr[i].blockName.equals(blockName)) {
         r.wallTime = 0;
         break;
       }
@@ -207,6 +209,14 @@ class MethodInvocationRecorder {
         }
       }
 
+      // Honor the atomic snapshot+reset contract: the snapshot above and the reset below
+      // happen under the same exclusive writer state, so no invocation can be recorded in
+      // between and lost. Previously the `reset` flag was ignored, so snapshotAndReset()
+      // silently behaved like a plain snapshot() and reported cumulative totals forever.
+      if (reset) {
+        resetState();
+      }
+
       return recs;
     } finally {
       while (!writerStatus.compareAndSet(2, 0)) {
@@ -247,26 +257,38 @@ class MethodInvocationRecorder {
   }
 
   void reset() {
-    Profiler.Record[] newMeasured = new Profiler.Record[defaultBufferSize + stackPtr + 1];
     try {
       while (!writerStatus.compareAndSet(0, 4)) {
         LockSupport.parkNanos(this, 600);
       }
-      // System.out.println("== 4->0");
-      if (stackPtr > -1) {
-        System.arraycopy(stackArr, 0, newMeasured, 0, stackPtr + 1);
-      }
-      Arrays.fill(stackArr, null);
-      indexMap.clear();
-      measuredPtr = stackPtr + 1;
-      measured = newMeasured;
-      measuredSize = measured.length;
-      lastIndex = measuredPtr;
-      carryOver = 0L;
+      resetState();
     } finally {
-      // System.out.println("== 4->0");
       writerStatus.compareAndSet(4, 0);
     }
+  }
+
+  /**
+   * Discards accumulated measurements while keeping the currently-executing frames intact so their
+   * pending exits are still handled. Must be called while holding an exclusive writer state (2 or
+   * 4).
+   *
+   * <p>The still-live frames (indices {@code 0..stackPtr} of {@link #stackArr}) are carried into
+   * the fresh {@code measured} buffer as live entries. Crucially the stack itself is NOT cleared:
+   * the same {@link Profiler.Record} instances remain referenced by {@code stackArr} so that a
+   * later {@code processExit} pops a real record instead of a null slot (which previously caused
+   * NPEs and permanently corrupted the recorder).
+   */
+  private void resetState() {
+    Profiler.Record[] newMeasured = new Profiler.Record[defaultBufferSize + stackPtr + 1];
+    if (stackPtr > -1) {
+      System.arraycopy(stackArr, 0, newMeasured, 0, stackPtr + 1);
+    }
+    indexMap.clear();
+    measuredPtr = stackPtr + 1;
+    measured = newMeasured;
+    measuredSize = measured.length;
+    lastIndex = measuredPtr;
+    carryOver = 0L;
   }
 
   @SuppressWarnings("ManualMinMaxCalculation")

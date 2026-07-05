@@ -67,7 +67,16 @@ public final class BTraceMcpServer {
   @SuppressWarnings("unchecked")
   void run() throws IOException {
     while (true) {
-      Map<String, Object> message = protocol.readMessage();
+      Map<String, Object> message;
+      try {
+        message = protocol.readMessage();
+      } catch (IllegalArgumentException parseError) {
+        // Malformed JSON on one line must not kill the server. Reply with a JSON-RPC parse error
+        // (id unknown for unparseable input, so null per spec) and keep serving.
+        log.warn("Failed to parse JSON-RPC message: {}", parseError.getMessage());
+        protocol.sendError(null, -32700, "Parse error: " + parseError.getMessage());
+        continue;
+      }
       if (message == null) {
         log.info("EOF on stdin, shutting down");
         break;

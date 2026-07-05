@@ -156,6 +156,11 @@ public final class Main {
 
     for (; ; ) {
       if (args[count].isEmpty()) {
+        // Skip the empty token; must advance count or the loop spins forever.
+        count++;
+        if (count >= args.length) {
+          break;
+        }
         continue;
       }
       if (args[count].charAt(0) == '-') {
@@ -438,7 +443,13 @@ public final class Main {
           try {
             con.printf("Please enter your option:\n");
             con.printf(
-                "\t1. exit\n\t2. send an event\n\t3. send a named event\n\t4. flush console output\n\t5. list probes\n\t6. detach client\n\t7. list failed extensions\n");
+                "\t1. exit\n"
+                    + "\t2. send an event\n"
+                    + "\t3. send a named event\n"
+                    + "\t4. flush console output\n"
+                    + "\t5. list probes\n"
+                    + "\t6. detach client\n"
+                    + "\t7. list failed extensions\n");
             con.flush();
             String option = con.readLine();
             if (option == null) {

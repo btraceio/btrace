@@ -54,6 +54,7 @@ public final class TypeUtils {
         case 'Z':
         case 'C':
         case 'B':
+        case 'S':
           {
             return true;
           }
