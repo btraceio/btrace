@@ -19,6 +19,7 @@ Get up and running in 5 minutes with installation, your first script, and common
 | **[Troubleshooting Guide](Troubleshooting.md)** | Common errors, debugging, performance, compatibility | Problem-solving, debugging |
 | **[FAQ](FAQ.md)** | Common questions, best practices, comparisons | All users, decision-making |
 | **[MCP Server](MCPServer.md)** | Using BTrace from AI clients via the Model Context Protocol | AI-assisted debugging, LLM integrations |
+| **[JDK Compatibility](JDKCompatibility.md)** | Tested JDK versions and distributions, external contribution guide | Contributors, ops teams, compatibility testers |
 | **[Extension Registry](ExtensionRegistry.md)** | JSON catalog and GitHub workflow for discovering published extensions | Extension authors, platform maintainers |
 
 ## Learning Paths
@@ -151,7 +152,7 @@ BTrace is an open-source project welcoming contributions. To contribute:
 ## Version Information
 
 - **Current Version**: Check [GitHub Releases](https://github.com/btraceio/btrace/releases/latest)
-- **Java Compatibility**: Java 8-25
+- **Java Compatibility**: Java 8–27 EA — see [JDK Compatibility](JDKCompatibility.md) for the full matrix
 - **License**: GPLv2 with Classpath Exception
 
 ## Documentation Feedback
