@@ -16,12 +16,21 @@ ASTORE 12
 ALOAD 12
 ALOAD 11
 LLOAD 9
+ILOAD 8
+IFEQ L1
+ICONST_2
+INVOKESTATIC io/btrace/instr/MethodTracker.getEndTs (I)J
+LLOAD 6
+LSUB
+LSTORE 4
+L2
+FRAME FULL [resources/OnMethodTest java/lang/String J J J I J java/lang/String resources/OnMethodTest] [J]
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 DUP2
 LSTORE 13
 LLOAD 13
-LCONST_0
+LLOAD 4
 ALOAD 11
 LLOAD 9
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallDurationSampledMulti$args(JJLjava/lang/String;J)V [
@@ -31,7 +40,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/MethodCallDurationSampledMulti"
 ]
 L1
-FRAME FULL [resources/OnMethodTest java/lang/String J J J I J java/lang/String resources/OnMethodTest] [J]
+FRAME SAME1 J
 LCONST_0
 LSTORE 15
 LCONST_0
@@ -48,12 +57,21 @@ LSTORE 20
 ASTORE 22
 ALOAD 22
 LLOAD 20
+ILOAD 19
+IFEQ L3
+ICONST_3
+INVOKESTATIC io/btrace/instr/MethodTracker.getEndTs (I)J
+LLOAD 17
+LSUB
+LSTORE 15
+L4
+FRAME FULL [resources/OnMethodTest java/lang/String J J J I J java/lang/String resources/OnMethodTest T T J J I J java/lang/String] [J J]
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
-IFNE L2
+IFNE L3
 DUP2
 LSTORE 23
 LLOAD 23
-LCONST_0
+LLOAD 15
 ALOAD 22
 LLOAD 20
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallDurationSampledMulti$args(JJLjava/lang/String;J)V [
@@ -62,16 +80,16 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 // arguments:
 "io/btrace/runtime/auxiliary/MethodCallDurationSampledMulti"
 ]
-L2
+L3
 FRAME FULL [resources/OnMethodTest java/lang/String J J J I J java/lang/String resources/OnMethodTest T T J J I J java/lang/String] [J J]
 LSTORE 25
-L3
-LINENUMBER 123 L3
+L5
+LINENUMBER 123 L5
 LLOAD 25
-L4
-LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0
-LOCALVARIABLE a Ljava/lang/String; L0 L4 1
-LOCALVARIABLE b J L0 L4 2
-LOCALVARIABLE i J L3 L4 25
+L6
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
+LOCALVARIABLE a Ljava/lang/String; L0 L6 1
+LOCALVARIABLE b J L0 L6 2
+LOCALVARIABLE i J L5 L6 25
 MAXSTACK = 11
 MAXLOCALS = 27
