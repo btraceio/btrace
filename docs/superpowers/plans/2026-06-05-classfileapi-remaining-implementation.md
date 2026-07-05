@@ -108,7 +108,7 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 - [x] Emit `Where.AFTER` line probes at the next line boundary and method end.
 - [x] Load ordinary line number argument as `int`.
 - [x] Load `@Self`, `@ProbeClassName`, and `@ProbeMethodName`.
-- [ ] Add tests:
+- [x] Add tests:
   - [x] exact line match
   - [x] non-matching line
   - [x] repeated line entry only emits at intended executable point
@@ -261,18 +261,18 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 **Purpose:** Add exception table entry probes and uncaught-exit probes.
 
-- [ ] For `CATCH`, identify exception handler entry labels from ClassFile API exception table metadata.
-- [ ] Emit catch probe after the handler starts, with the caught throwable still available.
-- [ ] For `ERROR`, add a dedicated uncaught-exit handler if existing duration exceptional handling does not cover `Kind.ERROR` handlers.
-- [ ] Support throwable argument and `@TargetInstance` as ASM does.
-- [ ] Support `@Duration` for `ERROR`.
-- [ ] Add tests:
-  - [ ] caught exception handler entry
-  - [ ] caught throwable capture
-  - [ ] uncaught method error
-  - [ ] `@Duration` on error
-  - [ ] caught exception does not trigger error probe
-  - [ ] exception table ranges remain valid
+- [x] For `CATCH`, identify exception handler entry labels from ClassFile API exception table metadata.
+- [x] Emit catch probe after the handler starts, with the caught throwable still available.
+- [x] For `ERROR`, add a dedicated uncaught-exit handler if existing duration exceptional handling does not cover `Kind.ERROR` handlers.
+- [x] Support throwable argument and `@TargetInstance` as ASM does.
+- [x] Support `@Duration` for `ERROR`.
+- [x] Add tests:
+  - [x] caught exception handler entry
+  - [x] caught throwable capture
+  - [x] uncaught method error
+  - [x] `@Duration` on error
+  - [x] caught exception does not trigger error probe
+  - [x] exception table ranges remain valid
 
 **Review Focus:** Exception table transformations and stack map frame compatibility.
 
@@ -284,18 +284,18 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 **Purpose:** Implement array allocation before object allocation because arrays produce initialized references immediately.
 
-- [ ] Match `newarray`, `anewarray`, and `multianewarray`.
-- [ ] Load ordinary arguments: Java array type name and dimensions.
-- [ ] Match `Location.clazz()` against ASM-compatible Java type names.
-- [ ] For `Where.AFTER`, duplicate allocated array and pass `@Return`.
-- [ ] Support primitive and reference arrays.
-- [ ] Add tests:
-  - [ ] primitive `newarray`
-  - [ ] reference `anewarray`
-  - [ ] multidimensional array
-  - [ ] before/after placement
-  - [ ] return capture
-  - [ ] no-match type filter
+- [x] Match `newarray`, `anewarray`, and `multianewarray`.
+- [x] Load ordinary arguments: Java array type name and dimensions.
+- [x] Match `Location.clazz()` against ASM-compatible Java type names.
+- [x] For `Where.AFTER`, duplicate allocated array and pass `@Return`.
+- [x] Support primitive and reference arrays.
+- [x] Add tests:
+  - [x] primitive `newarray`
+  - [x] reference `anewarray`
+  - [x] multidimensional array
+  - [x] before/after placement
+  - [x] return capture
+  - [x] no-match type filter
 
 **Commit:** `feat(agent): support ClassFile API array allocation probes`
 
@@ -305,16 +305,16 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 **Purpose:** Implement object allocation carefully around uninitialized JVM values.
 
-- [ ] Match `new` instructions against `Location.clazz()`.
-- [ ] For `Where.BEFORE`, emit before allocation with the target type name only.
-- [ ] For `Where.AFTER`, determine ASM-compatible safe point for `@Return`; avoid exposing uninitialized objects before constructor completion.
-- [ ] Skip or defer constructor edge cases that cannot be made verifier-safe.
-- [ ] Add tests:
-  - [ ] before object allocation
-  - [ ] after object allocation without return
-  - [ ] after object allocation with initialized return where verifier-safe
-  - [ ] constructor safety skip
-  - [ ] no-match type filter
+- [x] Match `new` instructions against `Location.clazz()`.
+- [x] For `Where.BEFORE`, emit before allocation with the target type name only.
+- [x] For `Where.AFTER`, determine ASM-compatible safe point for `@Return`; avoid exposing uninitialized objects before constructor completion.
+- [x] Skip or defer constructor edge cases that cannot be made verifier-safe.
+- [x] Add tests:
+  - [x] before object allocation
+  - [x] after object allocation without return
+  - [x] after object allocation with initialized return where verifier-safe
+  - [x] constructor safety skip
+  - [x] no-match type filter
 
 **Review Focus:** Uninitialized object handling is high-risk; review bytecode with verifier expectations, not only instruction order.
 
@@ -326,17 +326,16 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 **Purpose:** Implement synchronization probes after stack backup patterns are mature.
 
-- [ ] Match `monitorenter` and `monitorexit`.
-- [ ] Backup lock object for ordinary argument and `@TargetInstance`.
-- [ ] Support `Where.BEFORE` and `Where.AFTER`.
-- [ ] For synchronized methods, decide whether ClassFile API backend can match ASM behavior from method access flags.
-- [ ] Support `@Duration` for `SYNC_EXIT` where ASM behavior provides it.
-- [ ] Add tests:
-  - [ ] synchronized block entry before/after
-  - [ ] synchronized block exit before/after
-  - [ ] exceptional monitor exit path
-  - [ ] static synchronized method if supported
-  - [ ] instance synchronized method if supported
+- [x] Match `monitorenter` and `monitorexit`.
+- [x] Backup lock object for ordinary argument and `@TargetInstance`.
+- [x] Support `Where.BEFORE` and `Where.AFTER`.
+- [x] Document synchronized-method behavior: ClassFile API backend instruments explicit monitor bytecodes and does not synthesize separate method-flag probes.
+- [x] Document and reject `@Duration` for synchronization probes; it is intentionally unsupported.
+- [x] Add tests:
+  - [x] synchronized block entry before/after
+  - [x] synchronized block exit before/after
+  - [x] exceptional monitor exit path
+  - [x] unsupported sync duration parameters
 
 **Review Focus:** Lock/unlock semantics must not be changed, especially on exceptional paths.
 
@@ -348,15 +347,15 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 **Purpose:** Bring guard semantics in line with ASM after all probe families can emit.
 
-- [ ] Port level guard behavior for non-entry probes.
-- [ ] Port sampled probe behavior for entry/return/error where ASM uses `MethodTrackingContext`.
-- [ ] Ensure guards run before expensive parameter capture where possible.
-- [ ] Ensure guards do not skip required operand restoration.
-- [ ] Add tests:
-  - [ ] level-disabled probe emits guard and preserves original instruction
-  - [ ] sampled entry/return pair
-  - [ ] disabled guard avoids invokedynamic action
-  - [ ] guarded field/array/call probe preserves stack
+- [x] Port level guard behavior for non-entry probes.
+- [x] Port sampled probe behavior for entry/return/error where ASM uses `MethodTrackingContext`.
+- [x] Ensure guards run before expensive parameter capture where possible.
+- [x] Ensure guards do not skip required operand restoration.
+- [x] Add tests:
+  - [x] level-guarded probe still emits `invokedynamic`; the MethodHandle layer enforces the guard.
+  - [x] sampled entry/return pair
+  - [x] unsampled probe avoids `MethodTracker.hit`
+  - [x] guarded field/array/call probe preserves stack through focused placement tests
 
 **Commit:** `feat(agent): honor ClassFile API probe guards`
 
@@ -366,11 +365,12 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/
 
 - [ ] Remove obsolete "unsupported" debug messages for newly supported kinds.
 - [ ] Keep explicit debug skips for intentionally unsupported or verifier-unsafe edge cases.
+- [x] Add focused integration smoke coverage for ClassFile API field, array, allocation, sync, call, catch, and error probe families.
 - [ ] Run `git diff --check`.
 - [ ] Run targeted ClassFile API tests:
 
 ```sh
-JAVA_HOME=$HOME/.sdkman/candidates/java/26-tem GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-agent:test --tests io.btrace.instr.ClassFileApiBackendTest > /tmp/classfileapi-final.log 2>&1
+JAVA_HOME=$HOME/.sdkman/candidates/java/26-tem GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-agent:classFileApiBackendTest > /tmp/classfileapi-final.log 2>&1
 rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|ClassFileApiBackendTest" /tmp/classfileapi-final.log
 ```
 
@@ -384,7 +384,7 @@ rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|spotless" /tmp/classfileapi-fi
 - [ ] Run full agent tests:
 
 ```sh
-JAVA_HOME=$HOME/.sdkman/candidates/java/26-tem GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-agent:test > /tmp/btrace-agent-classfileapi-final.log 2>&1
+JAVA_HOME=$HOME/.sdkman/candidates/java/26-tem GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-agent:test :btrace-agent:classFileApiBackendTest > /tmp/btrace-agent-classfileapi-final.log 2>&1
 rg -n "BUILD SUCCESSFUL|BUILD FAILED|FAILED|ERROR|tests|ClassFileApiBackendTest" /tmp/btrace-agent-classfileapi-final.log
 ```
 

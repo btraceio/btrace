@@ -3030,13 +3030,38 @@ class ClassFileApiBackendTest {
     for (AbstractInsnNode instruction : method.instructions) {
       if (instruction.getOpcode() == targetOpcode) {
         AbstractInsnNode next = nextExecutable(instruction);
-        if (next instanceof InvokeDynamicInsnNode
-            && ((InvokeDynamicInsnNode) next).name.contains("$btrace$")) {
+        if (isBTraceInvokeDynamic(next)) {
           return;
+        }
+        if (isLinkingFlagGet(next)) {
+          AbstractInsnNode guardJump = nextExecutable(next);
+          AbstractInsnNode guardedCall = guardJump != null ? nextExecutable(guardJump) : null;
+          if (guardJump != null
+              && guardJump.getOpcode() == Opcodes.IFNE
+              && isBTraceInvokeDynamic(guardedCall)) {
+            return;
+          }
         }
       }
     }
-    fail("Expected BTrace invokedynamic immediately after opcode " + targetOpcode);
+    fail(
+        "Expected BTrace invokedynamic or guarded probe sequence immediately after opcode "
+            + targetOpcode);
+  }
+
+  private static boolean isBTraceInvokeDynamic(AbstractInsnNode instruction) {
+    return instruction instanceof InvokeDynamicInsnNode
+        && ((InvokeDynamicInsnNode) instruction).name.contains("$btrace$");
+  }
+
+  private static boolean isLinkingFlagGet(AbstractInsnNode instruction) {
+    if (!(instruction instanceof MethodInsnNode)) {
+      return false;
+    }
+    MethodInsnNode method = (MethodInsnNode) instruction;
+    return method.getOpcode() == Opcodes.INVOKESTATIC
+        && "io/btrace/runtime/LinkingFlag".equals(method.owner)
+        && "get".equals(method.name);
   }
 
   private static void assertBTraceBetweenOpcodes(
@@ -4318,6 +4343,31 @@ class ClassFileApiBackendTest {
     assertEquals(2, countInvokeDynamic(readable, "monitor", "$btrace$"));
     assertEquals(
         "(Ljava/lang/Object;)V", getInvokeDynamicDescriptor(readable, "monitor", "$btrace$"));
+  }
+
+  @Test
+  void syncExitProbeSkipsUnsupportedDurationParameter() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    Location location = new Location();
+    location.setValue(Kind.SYNC_EXIT);
+    location.setWhere(Where.BEFORE);
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "monitor",
+            location,
+            "(J)V",
+            -1,
+            0,
+            -1,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "Handler with @Duration must be rejected for SYNC_EXIT probes");
   }
 
   // Phase 13: Sampled and Level Guard tests

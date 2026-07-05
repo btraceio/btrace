@@ -30,6 +30,7 @@ import io.btrace.core.comm.StatusCommand;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Properties;
@@ -218,6 +219,16 @@ public class BTraceFunctionalTests extends RuntimeTest {
             assertTrue(stdout.contains("extension close: btrace-utils"));
           }
         });
+  }
+
+  @Test
+  public void locateTracePrefersCurrentBuildOutput() {
+    File trace = locateTrace("traces/TraceAllTest.class");
+    Path expectedRoot = Paths.get(System.getProperty("project.dir"), "build", "classes");
+
+    assertTrue(
+        trace.toPath().normalize().startsWith(expectedRoot.normalize()),
+        "Trace lookup must prefer freshly compiled integration test probes");
   }
 
   @Test

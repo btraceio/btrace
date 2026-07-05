@@ -1209,4 +1209,3 @@ git commit -m "test(agent): cover ClassFile API call probe edge cases"
 - Interface calls must preserve `InvokeInstruction.isInterface()` through the original `MemberRefEntry`; using `cb.invoke(ii.opcode(), ii.method())` avoids rebuilding the constant-pool reference.
 - Do not rebuild BTrace action descriptors. Keep using `om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC)`.
 - If ClassFile API stack-map generation rejects a transform, add a loadability assertion to the relevant test and fix the exact stack/local sequence before continuing.
-

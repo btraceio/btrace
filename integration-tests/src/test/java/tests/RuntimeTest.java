@@ -1221,8 +1221,8 @@ public abstract class RuntimeTest {
     if (trace.toLowerCase().endsWith(".java")) {
       roots.add(projectRoot.resolve("src"));
     } else {
-      roots.add(projectRoot.resolve("../btrace-instr/build/classes"));
       roots.add(projectRoot.resolve("build/classes"));
+      roots.add(projectRoot.resolve("../btrace-instr/build/classes"));
     }
     Path[] tracePath = new Path[1];
     for (Path start : roots) {
