@@ -37,6 +37,19 @@ public class Location {
   private Kind value = Kind.ENTRY;
   private Where where = Where.BEFORE;
 
+  public Location() {}
+
+  /** Copy constructor. Used to give each mapped {@code @OnProbe} its own Location instance. */
+  public Location(Location other) {
+    this.clazz = other.clazz;
+    this.method = other.method;
+    this.type = other.type;
+    this.field = other.field;
+    this.line = other.line;
+    this.value = other.value;
+    this.where = other.where;
+  }
+
   public String getClazz() {
     return clazz;
   }

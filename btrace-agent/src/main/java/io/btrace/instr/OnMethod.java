@@ -73,7 +73,11 @@ public final class OnMethod extends SpecialParameterHolder {
     setMethod(other.getMethod());
     setExactTypeMatch(other.isExactTypeMatch());
     setType(other.getType());
-    setLocation(other.getLocation());
+    // Deep-copy the Location: the source OnMethod is a template cached in a process-wide map, and
+    // applyArgs mutates the Location in place. Sharing the reference would let concurrent sessions
+    // corrupt each other's substituted @OnProbe location values.
+    Location otherLoc = other.getLocation();
+    setLocation(otherLoc != null ? new Location(otherLoc) : null);
     setLevel(other.getLevel());
   }
 

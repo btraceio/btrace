@@ -313,14 +313,17 @@ public final class BTraceTransformer implements ClassFileTransformer {
     }
 
     void remove(OnMethod om) {
-      String name = om.getClazz().replace('.', '/');
       if (!(om.isSubtypeMatcher() || om.isClassAnnotationMatcher())) {
         if (om.isClassRegexMatcher()) {
+          // Must compute the key exactly as add() does (replacing the escaped-dot sequence "\."),
+          // otherwise patternCache.get returns null and the regex entry is never removed.
+          String name = om.getClazz().replace("\\.", "/");
           Pattern pattern = patternCache.get(name);
           if (pattern != null) {
             removeFromMap(nameRegexMap, pattern);
           }
         } else {
+          String name = om.getClazz().replace('.', '/');
           removeFromMap(nameMap, name);
         }
       }

@@ -79,8 +79,10 @@ public final class ListProbesHandler {
       return toolResult("Error: 'pid' parameter is required", true);
     }
 
+    // Transient client used only for this one-shot query - must be closed so its socket is not
+    // leaked (one FD per list_probes call otherwise).
+    Client client = ClientManager.getClient(port);
     try {
-      Client client = ClientManager.getClient(port);
       client.attach(pid, null, ".");
 
       StringBuilder output = new StringBuilder();
@@ -109,6 +111,12 @@ public final class ListProbesHandler {
     } catch (Exception e) {
       log.error("Failed to list probes", e);
       return toolResult("Error listing probes on PID " + pid + ": " + e.getMessage(), true);
+    } finally {
+      try {
+        client.close();
+      } catch (Exception ignore) {
+        // best effort
+      }
     }
   }
 

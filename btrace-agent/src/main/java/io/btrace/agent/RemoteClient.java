@@ -88,86 +88,113 @@ class RemoteClient extends Client {
     OutputStream output = sock.getOutputStream();
     ProtocolNegotiator negotiator = new ProtocolNegotiator(config.getVersion());
     PushbackInputStream input = ProtocolNegotiator.createNegotiationStream(rawInput);
-    ProtocolVersion negotiated;
-    if (config.isAutoNegotiate()) {
-      negotiated = negotiator.negotiateAgent(input, output);
-    } else if (config.getVersion() == ProtocolVersion.V2) {
-      negotiated = negotiator.negotiateAgent(input, output);
-      if (negotiated != ProtocolVersion.V2) {
-        throw new IOException("Protocol negotiation failed: expected V2");
-      }
-    } else {
-      negotiated = ProtocolVersion.V1;
-    }
 
-    WireProtocol wireProtocol =
-        negotiated == ProtocolVersion.V2
-            ? new BinaryWireProtocol(input, output)
-            : new JavaSerializationProtocol(input, output);
-
-    while (true) {
-      Command cmd;
-      try {
-        cmd = wireProtocol.read();
-      } catch (ClassNotFoundException e) {
-        throw new IOException(e);
+    // getClient runs synchronously on the single server accept thread. Without a read timeout a
+    // client that connects but never completes the handshake (a crashed client, a port scanner,
+    // or plain `nc`) blocks the accept loop forever, permanently preventing any new client from
+    // attaching. Bound the negotiation + handshake reads; the timeout is restored to its previous
+    // value before a live client (with its own dedicated reader thread) is handed off.
+    int previousTimeout = sock.getSoTimeout();
+    boolean timeoutRestored = false;
+    try {
+      sock.setSoTimeout(ProtocolNegotiator.getNegotiationTimeoutMs());
+      ProtocolVersion negotiated;
+      if (config.isAutoNegotiate()) {
+        negotiated = negotiator.negotiateAgent(input, output);
+      } else if (config.getVersion() == ProtocolVersion.V2) {
+        negotiated = negotiator.negotiateAgent(input, output);
+        if (negotiated != ProtocolVersion.V2) {
+          throw new IOException("Protocol negotiation failed: expected V2");
+        }
+      } else {
+        negotiated = ProtocolVersion.V1;
       }
-      switch (cmd.getType()) {
-        case Command.SET_PARAMS:
-          {
-            settings.from(((SetSettingsCommand) cmd).getParams());
-            break;
-          }
-        case Command.INSTRUMENT:
-          {
-            log.debug("got instrument command");
-            try {
-              Client client = new RemoteClient(ctx, wireProtocol, sock, (InstrumentCommand) cmd);
-              initCallback.apply(client).get();
-              client.sendCommand(new StatusCommand(StatusCommand.STATUS_FLAG));
-              return client;
-            } catch (ExecutionException | InterruptedException e) {
-              wireProtocol.write(new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
-              throw new IOException(e);
+
+      WireProtocol wireProtocol =
+          negotiated == ProtocolVersion.V2
+              ? new BinaryWireProtocol(input, output)
+              : new JavaSerializationProtocol(input, output);
+
+      while (true) {
+        Command cmd;
+        try {
+          cmd = wireProtocol.read();
+        } catch (ClassNotFoundException e) {
+          throw new IOException(e);
+        }
+        switch (cmd.getType()) {
+          case Command.SET_PARAMS:
+            {
+              settings.from(((SetSettingsCommand) cmd).getParams());
+              break;
             }
-          }
-        case Command.RECONNECT:
-          {
-            String probeId = ((ReconnectCommand) cmd).getProbeId();
-            log.debug("Attempting to reconnect client for probe {}", probeId);
-            Client client = Client.findClient(probeId);
-            log.debug("Found client {}", client);
-            if (client instanceof RemoteClient) {
-              ((RemoteClient) client).reconnect(wireProtocol, sock);
-              client.sendCommand(new StatusCommand(ReconnectCommand.STATUS_FLAG));
-              return client;
+          case Command.INSTRUMENT:
+            {
+              log.debug("got instrument command");
+              try {
+                // Restore the blocking timeout before the client's dedicated reader thread starts.
+                sock.setSoTimeout(previousTimeout);
+                timeoutRestored = true;
+                Client client = new RemoteClient(ctx, wireProtocol, sock, (InstrumentCommand) cmd);
+                initCallback.apply(client).get();
+                client.sendCommand(new StatusCommand(StatusCommand.STATUS_FLAG));
+                return client;
+              } catch (ExecutionException | InterruptedException e) {
+                wireProtocol.write(new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
+                throw new IOException(e);
+              }
             }
-            wireProtocol.write(new StatusCommand(-1 * ReconnectCommand.STATUS_FLAG));
-            throw new IOException("Can not reconnect to non-remote session");
-          }
-        case Command.LIST_PROBES:
-          {
-            ListProbesCommand listProbesCommand = (ListProbesCommand) cmd;
-            listProbesCommand.setProbes(Client.listProbes());
-            wireProtocol.write(listProbesCommand);
-            break;
-          }
-        case Command.LIST_FAILED_EXTENSIONS:
-          {
-            ListFailedExtensionsCommand listFailedCmd = (ListFailedExtensionsCommand) cmd;
-            listFailedCmd.setFailedExtensions(ExtensionRegistry.getFailedExtensions());
-            wireProtocol.write(listFailedCmd);
-            break;
-          }
-        case Command.EXIT:
-          {
-            return null;
-          }
-        default:
-          {
-            throw new IOException(
-                "expecting instrument, reconnect or settings command! (" + cmd.getClass() + ")");
-          }
+          case Command.RECONNECT:
+            {
+              String probeId = ((ReconnectCommand) cmd).getProbeId();
+              log.debug("Attempting to reconnect client for probe {}", probeId);
+              Client client = Client.findClient(probeId);
+              log.debug("Found client {}", client);
+              if (client instanceof RemoteClient) {
+                sock.setSoTimeout(previousTimeout);
+                timeoutRestored = true;
+                ((RemoteClient) client).reconnect(wireProtocol, sock);
+                client.sendCommand(new StatusCommand(ReconnectCommand.STATUS_FLAG));
+                return client;
+              }
+              wireProtocol.write(new StatusCommand(-1 * ReconnectCommand.STATUS_FLAG));
+              throw new IOException("Can not reconnect to non-remote session");
+            }
+          case Command.LIST_PROBES:
+            {
+              ListProbesCommand listProbesCommand = (ListProbesCommand) cmd;
+              listProbesCommand.setProbes(Client.listProbes());
+              wireProtocol.write(listProbesCommand);
+              break;
+            }
+          case Command.LIST_FAILED_EXTENSIONS:
+            {
+              ListFailedExtensionsCommand listFailedCmd = (ListFailedExtensionsCommand) cmd;
+              listFailedCmd.setFailedExtensions(ExtensionRegistry.getFailedExtensions());
+              wireProtocol.write(listFailedCmd);
+              break;
+            }
+          case Command.EXIT:
+            {
+              return null;
+            }
+          default:
+            {
+              throw new IOException(
+                  "expecting instrument, reconnect or settings command! (" + cmd.getClass() + ")");
+            }
+        }
+      }
+    } finally {
+      // Restore the original timeout on any exit path that did not hand off a live client
+      // (negotiation failure, EXIT, or an unexpected command). The socket is typically closed
+      // by the caller on these paths, so this is best-effort.
+      if (!timeoutRestored) {
+        try {
+          sock.setSoTimeout(previousTimeout);
+        } catch (IOException ignore) {
+          // socket already closed - nothing to restore
+        }
       }
     }
   }

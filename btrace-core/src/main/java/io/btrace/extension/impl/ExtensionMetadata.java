@@ -289,7 +289,8 @@ final class ExtensionMetadata {
     return Arrays.asList(value.split("[,\\s]+"));
   }
 
-  private static PermissionSet parsePermissions(String value) {
+  /** Parses a comma/whitespace-separated permission list. Shared with the embedded repository. */
+  static PermissionSet parsePermissions(String value) {
     if (value == null || value.trim().isEmpty()) {
       return PermissionSet.empty();
     }

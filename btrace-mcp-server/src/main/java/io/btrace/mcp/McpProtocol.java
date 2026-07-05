@@ -43,18 +43,23 @@ final class McpProtocol {
     this.out = out;
   }
 
-  /** Reads a single JSON-RPC message from stdin. Returns null on EOF. */
+  /**
+   * Reads a single JSON-RPC message from stdin. Returns null only on genuine EOF. Blank lines are
+   * skipped (they are not message terminators in newline-delimited JSON-RPC), so a stray empty line
+   * no longer shuts the server down. May throw {@link IllegalArgumentException} on malformed JSON;
+   * callers must handle that and reply with a parse error rather than let it crash the loop.
+   */
   Map<String, Object> readMessage() throws IOException {
-    String line = reader.readLine();
-    if (line == null) {
-      return null;
+    String line;
+    while ((line = reader.readLine()) != null) {
+      line = line.trim();
+      if (line.isEmpty()) {
+        continue;
+      }
+      log.debug("Received: {}", line);
+      return parseJson(line);
     }
-    line = line.trim();
-    if (line.isEmpty()) {
-      return null;
-    }
-    log.debug("Received: {}", line);
-    return parseJson(line);
+    return null;
   }
 
   /** Writes a JSON-RPC response to stdout (one line, newline terminated). */

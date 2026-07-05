@@ -251,7 +251,11 @@ class CompilerHelper {
           byte[] classData = cw.toByteArray();
           dump(name + "_after", classData);
           if (generatePack) {
-            // temp hack; need turn off verifier
+            // Pack generation runs the probe through the runtime pipeline, which requires the
+            // "trusted" gate. Save and restore the previous value instead of permanently flipping
+            // the process-wide GLOBAL singleton (which would silently disable verification for the
+            // rest of the JVM's life and race across concurrent compilations).
+            boolean prevTrusted = SharedSettings.GLOBAL.isTrusted();
             SharedSettings.GLOBAL.setTrusted(true);
 
             String[] pathElements = classPath.split(File.pathSeparator);
@@ -261,16 +265,19 @@ class CompilerHelper {
               File f = new File(pathElement);
               urlElements.add(f.toURI().toURL());
             }
-            URLClassLoader generatorCL =
+            try (URLClassLoader generatorCL =
                 new URLClassLoader(
-                    urlElements.toArray(new URL[0]), Compiler.class.getClassLoader());
-            ServiceLoader<PackGenerator> generators =
-                ServiceLoader.load(PackGenerator.class, generatorCL);
-            Iterator<PackGenerator> iter = generators.iterator();
-            if (iter.hasNext()) {
-              PackGenerator generator = iter.next();
-              SharedSettings.GLOBAL.setBootClassPath(classPath);
-              classData = generator.generateProbePack(classData);
+                    urlElements.toArray(new URL[0]), Compiler.class.getClassLoader())) {
+              ServiceLoader<PackGenerator> generators =
+                  ServiceLoader.load(PackGenerator.class, generatorCL);
+              Iterator<PackGenerator> iter = generators.iterator();
+              if (iter.hasNext()) {
+                PackGenerator generator = iter.next();
+                SharedSettings.GLOBAL.setBootClassPath(classPath);
+                classData = generator.generateProbePack(classData);
+              }
+            } finally {
+              SharedSettings.GLOBAL.setTrusted(prevTrusted);
             }
           }
           result.put(name, classData);

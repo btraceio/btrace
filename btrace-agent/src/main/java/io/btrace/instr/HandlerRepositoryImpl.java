@@ -127,8 +127,10 @@ public final class HandlerRepositoryImpl {
     try {
       // Create a test MethodHandle that checks the level requirement.
       // It takes the same arguments as the handler but returns boolean.
+      // The guard must query the level of THIS probe's runtime (dotted name, as registered),
+      // not the thread-local runtime, which is not yet set when the guard runs.
       MethodType testType = handlerType.changeReturnType(boolean.class);
-      MethodHandle levelTest = createLevelCheckMH(level, testType);
+      MethodHandle levelTest = createLevelCheckMH(level, testType, probe.getClassName(false));
 
       // Create a noop handler that returns default value for the return type
       MethodHandle noop = createNoopMH(handlerType);
@@ -145,7 +147,7 @@ public final class HandlerRepositoryImpl {
    * Create a MethodHandle that tests if the current instrumentation level satisfies the given level
    * requirement. Returns true if level check passes, false otherwise.
    */
-  private static MethodHandle createLevelCheckMH(Level level, MethodType testType)
+  private static MethodHandle createLevelCheckMH(Level level, MethodType testType, String probeName)
       throws Throwable {
     // Get the Interval requirement (e.g., ">=100" → [100, MAX_VALUE])
     Interval interval = level.getValue();
@@ -156,17 +158,18 @@ public final class HandlerRepositoryImpl {
     // but we don't have it as a parameter. We must create a method that can access it.
 
     // Use a custom MethodHandle that invokes our level-checking logic
-    MethodHandle levelChecker = createLevelCheckerMH(interval);
+    MethodHandle levelChecker = createLevelCheckerMH(interval, probeName);
 
     // Drop arguments to match testType (accept same params as handler, return boolean)
     return MethodHandles.dropArguments(levelChecker, 0, testType.parameterArray());
   }
 
   /**
-   * Helper: create a MethodHandle that queries BTraceRuntime.getInstrumentationLevel() and checks
-   * if it falls within the given interval.
+   * Helper: create a MethodHandle that queries the level of the runtime owning {@code probeName}
+   * and checks if it falls within the given interval.
    */
-  private static MethodHandle createLevelCheckerMH(Interval interval) throws Throwable {
+  private static MethodHandle createLevelCheckerMH(Interval interval, String probeName)
+      throws Throwable {
     int minLevel = interval.getA();
     int maxLevel = interval.getB();
 
@@ -183,15 +186,19 @@ public final class HandlerRepositoryImpl {
     MethodHandle bound = MethodHandles.insertArguments(checkMH, 0, minLevel, maxLevel);
     // After binding: (currentLevel) -> boolean
 
-    // Compose with a getter that queries the current level
-    MethodHandle getCurrentLevelMH =
+    // Compose with a getter that queries the owning probe's level. Bind the probe name so the
+    // guard resolves the correct runtime regardless of the calling thread's (unset) state.
+    MethodHandle getLevelMH =
         lookup.findStatic(
-            BTraceRuntimes.class, "getCurrentLevel", MethodType.methodType(int.class));
-    // getCurrentLevel: () -> int
+            BTraceRuntimes.class,
+            "getLevelForProbe",
+            MethodType.methodType(int.class, String.class));
+    MethodHandle getProbeLevelMH = MethodHandles.insertArguments(getLevelMH, 0, probeName);
+    // getProbeLevelMH: () -> int
 
-    // Fold: getCurrentLevel() returns int, pass result as first arg to bound
+    // Fold: getLevelForProbe(probeName) returns int, pass result as first arg to bound
     // Result: () -> boolean
-    return MethodHandles.foldArguments(bound, getCurrentLevelMH);
+    return MethodHandles.foldArguments(bound, getProbeLevelMH);
   }
 
   /** Static helper invoked via MethodHandle: check if level is in [min, max] range. */

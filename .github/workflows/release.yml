@@ -760,15 +760,10 @@ jobs:
 
       - name: Announce to SDKMan
         env:
-          SDKMAN_API_KEY: ${{ secrets.SDKMAN_KEY }}
-          SDKMAN_API_TOKEN: ${{ secrets.SDKMAN_TOKEN }}
+          SDKMAN_KEY: ${{ secrets.SDKMAN_KEY }}
+          SDKMAN_TOKEN: ${{ secrets.SDKMAN_TOKEN }}
         run: |
-          # Use sdkMajorRelease for major releases, sdkMinorRelease otherwise
-          if [[ "${{ inputs.release_type }}" == "major" ]]; then
-            ./gradlew :btrace-dist:sdkMajorRelease --no-daemon
-          else
-            ./gradlew :btrace-dist:sdkMinorRelease --no-daemon
-          fi
+          ./gradlew :btrace-dist:sdkMajorRelease --no-daemon
 
   # ============================================================
   # Job 9: Update develop branch (major/minor only)

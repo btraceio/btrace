@@ -81,6 +81,12 @@ public final class ExitProbeHandler {
 
       client.sendExit(0);
       ClientManager.removeClient(pid, port);
+      // sendExit only sends the command; close the socket so it is not leaked.
+      try {
+        client.close();
+      } catch (Exception ignore) {
+        // best effort
+      }
       return toolResult("Probe stopped and removed from PID " + pid, false);
     } catch (Exception e) {
       log.error("Failed to exit probe", e);

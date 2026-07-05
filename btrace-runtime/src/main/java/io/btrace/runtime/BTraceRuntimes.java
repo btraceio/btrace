@@ -115,4 +115,21 @@ public final class BTraceRuntimes {
     }
     return 0;
   }
+
+  /**
+   * Get the instrumentation level of the probe registered under {@code probeName}. Used by
+   * MethodHandle-based level guards, which are evaluated at the invokedynamic call site
+   * <em>before</em> the handler body enters its {@code BTraceRuntime}. At that point the
+   * thread-local runtime is not yet set, so {@link #getCurrentLevel()} would resolve the shared
+   * no-op runtime (level 0) rather than the probe's own runtime — making every level-gated handler
+   * permanently disabled. Resolving by probe name reads the level that {@code
+   * setInstrumentationLevel}/the {@code level=} argument actually wrote on the owning runtime.
+   *
+   * @param probeName the probe class name (dotted form, as registered)
+   * @return the owning runtime's instrumentation level, or 0 if no runtime is registered yet
+   */
+  public static int getLevelForProbe(String probeName) {
+    BTraceRuntimeImplBase rt = BTraceRuntimeAccessImpl.getRuntime(probeName);
+    return rt != null ? rt.getLevel() : 0;
+  }
 }

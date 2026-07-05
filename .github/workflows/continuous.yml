@@ -90,7 +90,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ 8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem, 25.0.3-tem, 27.ea.20-open ]
+        java: [ 8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem, 25.0.3-tem, 27.ea.25-open ]
     env:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
     steps:
@@ -177,12 +177,12 @@ jobs:
       uses: actions/cache@v5
       with:
         path: ${{ runner.tool_cache }}/Java_*
-        key: java-${{ runner.os }}-temurin-11
+        key: java-${{ runner.os }}-temurin-24
     - name: Set up Java
       if: steps.cache-java.outputs.cache-hit != 'true'
       uses: actions/setup-java@v5
       with:
-        java-version: 11
+        java-version: 24
         distribution: temurin
     - name: Cache Gradle
       uses: actions/cache@v5
@@ -198,12 +198,17 @@ jobs:
       with:
         name: dist-build
     - name: Deploy Maven
-      run: ./gradlew -x test :btrace-dist:publish
+      run: |
+        if [ -z "${GPG_SIGNING_KEY}" ] || [ -z "${GPG_SIGNING_PWD}" ] || [ -z "${SONATYPE_USER}" ] || [ -z "${SONATYPE_PASSWORD}" ]; then
+          echo "::notice::Skipping Maven snapshot publish because signing or Sonatype credentials are not configured."
+          exit 0
+        fi
+        ./gradlew -x test :btrace-dist:publish
       env:
         GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
         GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
-        SONATYPE_USER: ${{ secrets.SONATYPE_USERNAME }}
-        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+        SONATYPE_USER: ${{ secrets.SONATYPE_USERNAME || secrets.BTRACE_SONATYPE_USER }}
+        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD || secrets.BTRACE_SONATYPE_PWD }}
 
   cleanup:
     runs-on: ubuntu-latest

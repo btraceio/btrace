@@ -228,6 +228,13 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
       // Discover bundled probes (declared via the 'probes' property)
       List<String> bundledProbes = discoverBundledProbes(extensionId, props);
 
+      // The embedded packaging pipeline copies the BTrace-Extension-Permissions manifest
+      // attribute into the 'permissions' property. It must be honored here - otherwise every
+      // embedded extension reports an empty required-permission set and silently bypasses
+      // the privileged-extension consent gate.
+      PermissionSet requiredPermissions =
+          ExtensionMetadata.parsePermissions(props.getProperty("permissions", ""));
+
       // For embedded extensions, jarPath points to a virtual path
       // The actual loading happens via ClassDataLoader
       return new ExtensionDescriptorDTO.Builder()
@@ -240,7 +247,7 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
           .javaVersion(javaVersion)
           .services(services)
           .repository(this)
-          .requiredPermissions(PermissionSet.empty())
+          .requiredPermissions(requiredPermissions)
           .embedded(true)
           .resourceBasePath(EXTENSIONS_BASE + extensionId)
           .configuratorClass(configurator)
