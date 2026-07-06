@@ -96,7 +96,13 @@ public class ClassFileApiFeatureSmokeTest {
   public static void onArraySet(@TargetInstance int[] array, int index, int value) {
     if (!arraySetPrinted) {
       arraySetPrinted = true;
-      println("cfapi ARRAY_SET index=" + index + ", value=" + value);
+      println(
+          "cfapi ARRAY_SET arrayLength="
+              + array.length
+              + ", index="
+              + index
+              + ", value="
+              + value);
     }
   }
 
