@@ -2487,6 +2487,37 @@ class ClassFileApiBackendTest {
     return patchVersion(cw.toByteArray(), majorVersion);
   }
 
+  private static byte[] buildClassWithSynchronizedMethod(
+      int majorVersion,
+      String internalClassName,
+      String methodName,
+      boolean isStatic,
+      boolean throwsException) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, internalClassName, null, "java/lang/Object", null);
+
+    int access = Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNCHRONIZED;
+    if (isStatic) {
+      access |= Opcodes.ACC_STATIC;
+    }
+    MethodVisitor mv = cw.visitMethod(access, methodName, "()V", null, null);
+    mv.visitCode();
+    if (throwsException) {
+      mv.visitTypeInsn(Opcodes.NEW, "java/lang/RuntimeException");
+      mv.visitInsn(Opcodes.DUP);
+      mv.visitMethodInsn(
+          Opcodes.INVOKESPECIAL, "java/lang/RuntimeException", "<init>", "()V", false);
+      mv.visitInsn(Opcodes.ATHROW);
+    } else {
+      mv.visitInsn(Opcodes.RETURN);
+    }
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+
+    cw.visitEnd();
+    return patchVersion(cw.toByteArray(), majorVersion);
+  }
+
   /** Patches bytes 6-7 of a class file to the given major version. */
   private static byte[] patchVersion(byte[] bytes, int majorVersion) {
     byte[] copy = Arrays.copyOf(bytes, bytes.length);
@@ -4219,6 +4250,44 @@ class ClassFileApiBackendTest {
   }
 
   @Test
+  void syncEntryAfterSynchronizedMethod() {
+    requireJdk26ForVersion70();
+    byte[] classBytes =
+        buildClassWithSynchronizedMethod(70, "com/example/Target", "syncMethod", false, false);
+    Location location = new Location();
+    location.setValue(Kind.SYNC_ENTRY);
+    location.setWhere(Where.AFTER);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "syncMethod", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(0, countOpcode(readable, "syncMethod", Opcodes.MONITORENTER));
+    assertEquals(1, countInvokeDynamic(readable, "syncMethod", "$btrace$"));
+    assertBTracePrecedesOpcode(readable, "syncMethod", Opcodes.RETURN);
+  }
+
+  @Test
+  void syncEntryBeforeSynchronizedMethodIsNotEmitted() {
+    requireJdk26ForVersion70();
+    byte[] classBytes =
+        buildClassWithSynchronizedMethod(70, "com/example/Target", "syncMethod", false, false);
+    Location location = new Location();
+    location.setValue(Kind.SYNC_ENTRY);
+    location.setWhere(Where.BEFORE);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "syncMethod", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "BEFORE cannot be emitted for synchronized-method entry");
+  }
+
+  @Test
   void syncEntryProbeReceivesLockObject() {
     requireJdk26ForVersion70();
     byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
@@ -4295,6 +4364,97 @@ class ClassFileApiBackendTest {
     // The fixture has two MONITOREXIT instructions (normal and exceptional path)
     assertEquals(2, countInvokeDynamic(readable, "monitor", "$btrace$"));
     assertBTracePrecedesOpcode(readable, "monitor", Opcodes.MONITOREXIT);
+  }
+
+  @Test
+  void syncExitBeforeSynchronizedMethodReturn() {
+    requireJdk26ForVersion70();
+    byte[] classBytes =
+        buildClassWithSynchronizedMethod(70, "com/example/Target", "syncMethod", false, false);
+    Location location = new Location();
+    location.setValue(Kind.SYNC_EXIT);
+    location.setWhere(Where.BEFORE);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "syncMethod", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(0, countOpcode(readable, "syncMethod", Opcodes.MONITOREXIT));
+    assertEquals(2, countInvokeDynamic(readable, "syncMethod", "$btrace$"));
+    assertTrue(countTryCatchBlocks(readable, "syncMethod") >= 1);
+    assertBTracePrecedesOpcode(readable, "syncMethod", Opcodes.RETURN);
+  }
+
+  @Test
+  void syncExitBeforeSynchronizedMethodException() {
+    requireJdk26ForVersion70();
+    byte[] classBytes =
+        buildClassWithSynchronizedMethod(70, "com/example/Target", "syncThrow", false, true);
+    Location location = new Location();
+    location.setValue(Kind.SYNC_EXIT);
+    location.setWhere(Where.BEFORE);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "syncThrow", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(0, countOpcode(readable, "syncThrow", Opcodes.MONITOREXIT));
+    assertEquals(1, countInvokeDynamic(readable, "syncThrow", "$btrace$"));
+    assertTrue(countTryCatchBlocks(readable, "syncThrow") >= 1);
+  }
+
+  @Test
+  void syncExitAfterSynchronizedMethodIsNotEmitted() {
+    requireJdk26ForVersion70();
+    byte[] classBytes =
+        buildClassWithSynchronizedMethod(70, "com/example/Target", "syncMethod", false, false);
+    Location location = new Location();
+    location.setValue(Kind.SYNC_EXIT);
+    location.setWhere(Where.AFTER);
+    BTraceProbe probe =
+        buildStubProbe("com/example/MyTrace", "com.example.Target", "syncMethod", location, "()V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNull(result, "AFTER cannot be emitted for synchronized-method exit");
+  }
+
+  @Test
+  void syncExitStaticSynchronizedMethodReceivesClassLock() {
+    requireJdk26ForVersion70();
+    byte[] classBytes =
+        buildClassWithSynchronizedMethod(70, "com/example/Target", "syncStatic", true, false);
+    Location location = new Location();
+    location.setValue(Kind.SYNC_EXIT);
+    location.setWhere(Where.BEFORE);
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "syncStatic",
+            location,
+            "(Ljava/lang/Object;)V",
+            -1,
+            -1,
+            0,
+            -1);
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result);
+    byte[] readable = patchVersion(result, 65);
+    assertEquals(2, countInvokeDynamic(readable, "syncStatic", "$btrace$"));
+    assertTrue(countTryCatchBlocks(readable, "syncStatic") >= 1);
+    assertEquals(
+        "(Ljava/lang/Object;)V", getInvokeDynamicDescriptor(readable, "syncStatic", "$btrace$"));
   }
 
   @Test
