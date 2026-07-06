@@ -58,7 +58,7 @@ dependencyResolutionManagement {
             version('asm', '9.10.1')
             version('jmh', '1.37')
             version('jmhGradlePlugin', '0.7.3')
-            version('slf4j', '1.7.36')
+            version('slf4j', '2.0.18')
             version('junit', '6.1.1')
             version('testcontainers', '2.0.5')
 
