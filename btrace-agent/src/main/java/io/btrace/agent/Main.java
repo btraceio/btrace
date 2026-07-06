@@ -119,9 +119,27 @@ public final class Main {
   private static final BTraceTransformer transformer =
       new BTraceTransformer(new DebugSupport(settings));
   // #BTRACE-42: Non-daemon thread prevents traced application from exiting
+  // ClassFile API's StackMapGenerator can exhaust the default stack depth when processing
+  // complex methods in JDK 26+ (class-file major >= 70). Use 4 MB on those JVMs only; on
+  // older JVMs keep the default (0 = JVM-chosen) to avoid any OS-level stack-allocation
+  // overhead that was intermittently delaying test startup on JDK 8/11/21 CI machines.
+  private static final long QUEUE_PROCESSOR_STACK_SIZE = resolveQueueProcessorStackSize();
+
+  private static long resolveQueueProcessorStackSize() {
+    try {
+      String cv = System.getProperty("java.class.version", "52.0");
+      int dot = cv.indexOf('.');
+      int major = Integer.parseInt(dot >= 0 ? cv.substring(0, dot) : cv);
+      return major >= 70 ? 4L * 1024 * 1024 : 0L;
+    } catch (Exception ignored) {
+      return 0L;
+    }
+  }
+
   private static final ThreadFactory qProcessorThreadFactory =
       r -> {
-        Thread result = new Thread(r, "BTrace Command Queue Processor");
+        Thread result =
+            new Thread(null, r, "BTrace Command Queue Processor", QUEUE_PROCESSOR_STACK_SIZE);
         result.setDaemon(true);
         return result;
       };
@@ -286,13 +304,6 @@ public final class Main {
         System.err.println(
             "[BTrace Agent] Initialization complete, " + startedScripts + " scripts started");
     } catch (Throwable t) {
-      // FATAL errors should always be printed
-      System.err.println(
-          "[BTrace Agent] FATAL: Initialization failed: "
-              + t.getClass().getName()
-              + ": "
-              + t.getMessage());
-      t.printStackTrace(System.err);
       log.error("Failed to initialize BTrace agent", t);
       throw new RuntimeException("BTrace agent initialization failed", t);
     } finally {

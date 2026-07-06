@@ -132,22 +132,50 @@ task compileTestProbes {
     }
 }
 
-test {
-    dependsOn cleanTest
-    inputs.files compileTestProbes.outputs
-    testLogging.showStandardStreams = true
+def configureAgentTestTask = { Test testTask ->
+    testTask.inputs.files compileTestProbes.outputs
+    testTask.testLogging.showStandardStreams = true
 
     def props = new Properties()
-    props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))
+    def javaHome = System.getenv("JAVA_HOME") ?: System.getProperty("java.home")
+    def releaseFile = Paths.get(javaHome.replace("/jre", ""), "release")
+    if (Files.exists(releaseFile)) {
+        props.load(Files.newInputStream(releaseFile))
+    }
     if (!props.getProperty("JAVA_VERSION")?.contains("1.8")) {
-        jvmArgs '-XX:+IgnoreUnrecognizedVMOptions',
+        testTask.jvmArgs '-XX:+IgnoreUnrecognizedVMOptions',
                 '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
                 '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED',
                 '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED'
     }
     if (project.hasProperty("updateTestData")) {
-        jvmArgs '-Dupdate.test.data=true'
+        testTask.jvmArgs '-Dupdate.test.data=true'
     }
-    jvmArgs "-Dtest.resources=${projectDir}/src/test/resources"
-    jvmArgs "-Dproject.version=${project.version}"
+    testTask.jvmArgs "-Dtest.resources=${projectDir}/src/test/resources"
+    testTask.jvmArgs "-Dproject.version=${project.version}"
 }
+
+test {
+    dependsOn cleanTest
+    configureAgentTestTask(delegate)
+}
+
+tasks.register('classFileApiBackendTest', Test) {
+    group = 'verification'
+    description = 'Runs ClassFileApiBackendTest on JDK 26 so version-70 fixtures execute.'
+    dependsOn testClasses, compileTestProbes
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    shouldRunAfter test
+    outputs.upToDateWhen { false }
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(26))
+    }
+    filter {
+        includeTestsMatching 'io.btrace.instr.ClassFileApiBackendTest'
+    }
+    configureAgentTestTask(delegate)
+}
+
+check.dependsOn tasks.named('classFileApiBackendTest')

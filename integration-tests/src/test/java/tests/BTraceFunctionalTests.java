@@ -30,6 +30,7 @@ import io.btrace.core.comm.StatusCommand;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Properties;
@@ -158,6 +159,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnMethod() throws Exception {
+    attachDelayMs = 500;
     testDynamic(
         "resources.Main",
         "btrace/OnMethodTest.java",
@@ -221,6 +223,16 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   @Test
+  public void locateTracePrefersCurrentBuildOutput() {
+    File trace = locateTrace("traces/TraceAllTest.class");
+    Path expectedRoot = Paths.get(System.getProperty("project.dir"), "build", "classes");
+
+    assertTrue(
+        trace.toPath().normalize().startsWith(expectedRoot.normalize()),
+        "Trace lookup must prefer freshly compiled integration test probes");
+  }
+
+  @Test
   public void testTraceAll() throws Exception {
     String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
     if (testJavaHome == null) testJavaHome = System.getenv().get("JAVA_TEST_HOME");
@@ -241,6 +253,10 @@ public class BTraceFunctionalTests extends RuntimeTest {
       System.err.println("Skipping test for JDK " + rtVersion);
       return;
     }
+    // The Java 26+ path is the branch's target: keep the full startup retransformation stress
+    // there. Older target JDKs still validate startup trace-all instrumentation for newly loaded
+    // application classes, but avoid retransformation of every class already loaded by the VM.
+    startupRetransform = isVersionAtLeast(rtVersion, 26);
     testStartup(
         "resources.Main",
         "traces/TraceAllTest.class",
@@ -312,6 +328,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnMethodSubclass() throws Exception {
+    attachDelayMs = 500;
     testDynamic(
         "resources.Main",
         "btrace/OnMethodSubclassTest.java",
@@ -614,20 +631,34 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   private static boolean isVersionSafeForTraceAll(String rtVersion) {
     System.out.println("===> version: " + rtVersion);
-    String[] versionParts = rtVersion.split("\\+")[0].split("\\.");
-    int major = Integer.parseInt(versionParts[0]);
-    String updateStr = versionParts.length == 3 ? versionParts[2].replace("0_", "") : "0";
-    int idx = updateStr.indexOf('-');
-    if (idx > -1) {
-      updateStr = updateStr.substring(0, idx);
-    }
-    int update = Integer.parseInt(updateStr);
+    int major = parseJavaMajor(rtVersion);
     // currently, an attempt to instrument all classes and methods will result in crash in jplis
     // agent for JDK 17
     if (major == 17) {
       return false;
     }
     return true;
+  }
+
+  private static boolean isVersionAtLeast(String rtVersion, int expectedMajor) {
+    return parseJavaMajor(rtVersion) >= expectedMajor;
+  }
+
+  private static int parseJavaMajor(String rtVersion) {
+    String normalized = rtVersion.replace("\"", "");
+    if (normalized.startsWith("1.")) {
+      normalized = normalized.substring(2);
+    }
+
+    StringBuilder major = new StringBuilder();
+    for (int i = 0; i < normalized.length(); i++) {
+      char ch = normalized.charAt(i);
+      if (!Character.isDigit(ch)) {
+        break;
+      }
+      major.append(ch);
+    }
+    return major.length() == 0 ? 0 : Integer.parseInt(major.toString());
   }
 
   @Test

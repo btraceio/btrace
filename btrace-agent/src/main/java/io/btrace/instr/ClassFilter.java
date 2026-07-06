@@ -70,18 +70,16 @@ public class ClassFilter {
     SENSITIVE_CLASSES.add("java/lang/instrument/");
     SENSITIVE_CLASSES.add("java/lang/invoke/");
     SENSITIVE_CLASSES.add("java/lang/ref/");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/LockSupport");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractQueuedSynchronizer");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractQueuedSynchronizer$ExclusiveNode");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractQueuedSynchronizer$Node");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractOwnableSynchronizer");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/ReentrantLock");
-    SENSITIVE_CLASSES.add("java/util/concurrent/ConcurrentHashMap");
+    SENSITIVE_CLASSES.add("java/util/concurrent/");
 
     SENSITIVE_CLASSES.add("jdk/internal/");
     SENSITIVE_CLASSES.add("sun/invoke/");
     SENSITIVE_CLASSES.add("sun/reflect/");
     SENSITIVE_CLASSES.add("io/btrace/");
+    // ClassFile API classes (java.lang.classfile.*) must not be instrumented — they are used
+    // internally by ClassFileApiBackend to transform classes, and instrumenting them would
+    // trigger recursive ClassFile API calls leading to StackOverflowError.
+    SENSITIVE_CLASSES.add("java/lang/classfile/");
 
     // JDK 25+ added accessor methods for thread-local fields (previously direct field access).
     // ThreadLocal.get() calls Thread.threadLocals() which triggers infinite recursion if
@@ -175,7 +173,18 @@ public class ClassFilter {
     if (typeSet.contains(typeA)) {
       return true;
     }
-    ClassInfo ci = ClassCache.getInstance().get(loader, typeA);
+    ClassCache cache = ClassCache.getInstance();
+    if (cache == null) {
+      // Reentrant class loading can observe the holder before INSTANCE assignment completes.
+      return false;
+    }
+    ClassInfo ci = cache.get(loader, typeA);
+    if (ci == null) {
+      // ClassInfo not present in the cache (or cache temporarily unavailable due to a
+      // classloader-init race). Conservatively report "not a subtype" rather than NPE;
+      // the caller can fall back to a no-op transform or a different check.
+      return false;
+    }
     Collection<ClassInfo> sTypesInfo = ci.getSupertypes(false);
     if (sTypesInfo != null) {
       Collection<String> sTypes = new ArrayList<>(sTypesInfo.size());

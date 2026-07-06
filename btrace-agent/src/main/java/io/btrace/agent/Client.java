@@ -83,6 +83,8 @@ import org.slf4j.LoggerFactory;
 abstract class Client implements CommandListener {
   private static final Logger log = LoggerFactory.getLogger(Client.class);
 
+  private static final int RETRANSFORM_BATCH_SIZE =
+      Math.max(1, Integer.getInteger("btrace.retransform.batchSize", 1));
   private static final Map<UUID, Client> CLIENTS = new ConcurrentHashMap<>();
   private static final Map<String, PrintWriter> WRITER_MAP = new HashMap<>();
   private static final Pattern SYSPROP_PTN = Pattern.compile("\\$\\{(.+?)}");
@@ -95,7 +97,7 @@ abstract class Client implements CommandListener {
     ClassWriter.class.getClassLoader();
     Annotation.class.getClassLoader();
     MethodTrackingContext.class.getClassLoader();
-    ClassCache.class.getClassLoader();
+    ClassCache.getInstance();
     ClassInfo.class.getClassLoader();
   }
 
@@ -587,7 +589,6 @@ abstract class Client implements CommandListener {
       ArrayList<Class<?>> list = new ArrayList<>();
       log.debug("retransforming loaded classes");
       log.debug("filtering loaded classes");
-      ClassCache cc = ClassCache.getInstance();
       for (Class<?> c : inst.getAllLoadedClasses()) {
         if (c != null) {
           if (inst.isModifiableClass(c) && isCandidate(c)) {
@@ -605,51 +606,53 @@ abstract class Client implements CommandListener {
         list.toArray(classes);
         startRetransformClasses(size);
         if (log.isDebugEnabled()) {
-          for (Class<?> c : classes) {
-            try {
-              log.debug("Attempting to retransform class: {}", c.getName());
-              inst.retransformClasses(c);
-            } catch (ClassFormatError | VerifyError e) {
-              // Avoid printing full stack traces in debug to keep target stderr clean
-              log.debug("Class '{}' verification failed: {}", c.getName(), e.toString());
-              sendCommand(
-                  new MessageCommand(
-                      "[BTRACE WARN] Class verification failed: "
-                          + c.getName()
-                          + " ("
-                          + e.getMessage()
-                          + ")"));
-            }
-          }
+          retransformIndividually(classes);
         } else {
-          try {
-            inst.retransformClasses(classes);
-          } catch (ClassFormatError | VerifyError e) {
-            /*
-             * If the en-block retransformation fails because of verification retry classes one-by-one.
-             * Otherwise all classes are rolled back to the original state and no instrumentation
-             * is applied.
-             */
-            for (Class<?> c : classes) {
-              try {
-                inst.retransformClasses(c);
-              } catch (ClassFormatError | VerifyError e1) {
-                // Avoid printing full stack traces in debug to keep target stderr clean
-                log.debug("Class '{}' verification failed: {}", c.getName(), e1.toString());
-                sendCommand(
-                    new MessageCommand(
-                        "[BTRACE WARN] Class verification failed: "
-                            + c.getName()
-                            + " ("
-                            + e1.getMessage()
-                            + ")"));
-              }
-            }
-          }
+          retransformBatches(classes);
         }
       }
     }
     return true;
+  }
+
+  private void retransformBatches(Class<?>[] classes) throws UnmodifiableClassException {
+    for (int start = 0; start < classes.length; start += RETRANSFORM_BATCH_SIZE) {
+      int end = Math.min(start + RETRANSFORM_BATCH_SIZE, classes.length);
+      int batchSize = end - start;
+      Class<?>[] batch = new Class<?>[batchSize];
+      System.arraycopy(classes, start, batch, 0, batchSize);
+      try {
+        inst.retransformClasses(batch);
+      } catch (ClassFormatError | VerifyError e) {
+        /*
+         * If a batch retransformation fails because of verification, retry that batch
+         * class-by-class. Otherwise the whole batch is rolled back and no instrumentation
+         * is applied to classes that could have been transformed successfully.
+         */
+        retransformIndividually(batch);
+      }
+    }
+  }
+
+  private void retransformIndividually(Class<?>[] classes) throws UnmodifiableClassException {
+    for (Class<?> c : classes) {
+      try {
+        if (log.isDebugEnabled()) {
+          log.debug("Attempting to retransform class: {}", c.getName());
+        }
+        inst.retransformClasses(c);
+      } catch (ClassFormatError | VerifyError e) {
+        // Avoid printing full stack traces in debug to keep target stderr clean
+        log.debug("Class '{}' verification failed: {}", c.getName(), e.toString());
+        sendCommand(
+            new MessageCommand(
+                "[BTRACE WARN] Class verification failed: "
+                    + c.getName()
+                    + " ("
+                    + e.getMessage()
+                    + ")"));
+      }
+    }
   }
 
   protected void sendCommand(Command command) {

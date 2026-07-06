@@ -834,7 +834,9 @@ class BTraceExtensionPlugin implements Plugin<Project> {
 
         def generateServiceShims = project.tasks.register('generateServiceShims') {
             dependsOn(authoredCompileTask)
+            outputs.dir(shimsSrcDir)
             doLast {
+                project.delete(shimsSrcDir)
                 shimsSrcDir.mkdirs()
                 // Build ClassLoader over API outputs to reflect methods
                 def cp = new LinkedHashSet<File>()
@@ -1046,6 +1048,9 @@ class BTraceExtensionPlugin implements Plugin<Project> {
             destinationDirectory.set(shimsClsDir)
             classpath = project.files(authoredClassesDirs(), authoredCompileClasspath())
             options.release = 8
+            doFirst {
+                project.delete(shimsClsDir)
+            }
         }
 
         def generateShimIndex = project.tasks.register('generateShimIndex') {

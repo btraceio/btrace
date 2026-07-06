@@ -192,8 +192,11 @@ public final class BTraceTransformer implements ClassFileTransformer {
             log.debug("transformed class {}", className.replace('/', '.'));
           }
           // Optional: verify transformed class via ASM in tests.
+          // ASM cannot parse class-file major versions above MAX_ASM_MAJOR_VERSION (JDK 26+);
+          // skip ASM verification for those to avoid a spurious warn on every ClassFile API class.
           if (Boolean.getBoolean("btrace.verify.transformed")
-              && !Boolean.TRUE.equals(VerifyGuard.IN_PROGRESS.get())) {
+              && !Boolean.TRUE.equals(VerifyGuard.IN_PROGRESS.get())
+              && major <= AsmInstrumentationBackend.MAX_ASM_MAJOR_VERSION) {
             boolean allow;
             String filter = System.getProperty("btrace.verify.filter");
             if (filter != null && !filter.isEmpty()) {
@@ -230,7 +233,12 @@ public final class BTraceTransformer implements ClassFileTransformer {
         return transformed;
       } catch (Throwable th) {
         log.warn("Failed to transform class {}", className, th);
-        throw th;
+        // Don't rethrow: a re-thrown Throwable propagates through the JVM's native
+        // retransform/transform machinery and can leave an "outstanding Java exception"
+        // in the JNI state that survives even after Java callers catch the exception,
+        // triggering native assertions (e.g. JPLIS "!errorOutstanding" on JDK 27+).
+        // Returning null here is equivalent to "skip instrumentation for this class".
+        return null;
       } finally {
         if (entered) {
           BTraceRuntime.leave();

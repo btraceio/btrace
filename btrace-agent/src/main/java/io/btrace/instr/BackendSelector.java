@@ -29,7 +29,13 @@ final class BackendSelector {
   private static final Logger log = LoggerFactory.getLogger(BackendSelector.class);
 
   private static final InstrumentationBackend ASM = new AsmInstrumentationBackend();
-  private static final InstrumentationBackend CLASSFILE_API = loadClassFileApiBackend();
+
+  // Lazily initialized: only loaded the first time a class-file version > MAX_ASM_MAJOR_VERSION is
+  // seen. On JDK 8-25 that version never appears, so this never causes a disk read or a
+  // defineClass() failure — avoiding a startup-path JAR-read that was delaying first-transform
+  // on slow CI machines and intermittently pushing tests over their 10-second timeout.
+  private static volatile InstrumentationBackend classFileApiBackend;
+  private static volatile boolean classFileApiAttempted;
 
   private BackendSelector() {}
 
@@ -52,9 +58,22 @@ final class BackendSelector {
    * API backend when available, otherwise falls back to ASM.
    */
   static InstrumentationBackend select(int classFileMajorVersion) {
-    if (!ASM.supports(classFileMajorVersion) && CLASSFILE_API != null) {
-      return CLASSFILE_API;
+    if (ASM.supports(classFileMajorVersion)) {
+      return ASM;
     }
-    return ASM;
+    InstrumentationBackend cfApi = classFileApiBackend;
+    if (cfApi != null) {
+      return cfApi;
+    }
+    if (!classFileApiAttempted) {
+      synchronized (BackendSelector.class) {
+        if (!classFileApiAttempted) {
+          classFileApiAttempted = true;
+          classFileApiBackend = loadClassFileApiBackend();
+        }
+      }
+      cfApi = classFileApiBackend;
+    }
+    return cfApi != null ? cfApi : ASM;
   }
 }

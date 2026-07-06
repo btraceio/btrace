@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
@@ -44,7 +45,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -65,7 +65,7 @@ public abstract class RuntimeTest {
   private static Path projectRoot = null;
   private static boolean forceDebug = false;
   private static String permissionsFile = null;
-  private static long defaultTimeoutMs = 10000L;
+  private static long defaultTimeoutMs = Long.getLong("btrace.test.timeoutMs", 60000L);
 
   /** Try starting JFR recording if available */
   private boolean startJfr = false;
@@ -99,6 +99,9 @@ public abstract class RuntimeTest {
 
   /** Override the BTrace agent/client port (0 = use default 2020) */
   protected int btracePort = 0;
+
+  /** Retransform already-loaded classes for startup-agent tests */
+  protected boolean startupRetransform = true;
 
   /** Provide extra JVM args */
   private static final List<String> extraJvmArgs = new ArrayList<>();
@@ -185,18 +188,6 @@ public abstract class RuntimeTest {
       // best effort; if this fails, tests still run with defaults
     }
 
-    // Tune default timeout for newer JDKs which may exhibit slower attach/instrument timing
-    try {
-      Properties release = new Properties();
-      release.load(Files.newInputStream(Paths.get(javaHome, "release")));
-      String ver = release.getProperty("JAVA_VERSION", "\"0\"").replace("\"", "");
-      if (isVersionAtLeast(ver, 25)) {
-        defaultTimeoutMs = 20000L;
-      }
-    } catch (Exception ignore) {
-      // keep default
-    }
-
     // Prepare permissions policy to allow privileged extensions for tests
     try {
       Path permsDir = projectRoot.resolve("build");
@@ -222,23 +213,8 @@ public abstract class RuntimeTest {
     dumpOneliner = false;
     dumpVerifierErrors = false;
     btracePort = 0;
+    startupRetransform = true;
     timeout = defaultTimeoutMs;
-  }
-
-  private static boolean isVersionAtLeast(String version, int majorThreshold) {
-    try {
-      // Accept forms like "25", "25.0.1", or legacy "1.8.0_262"
-      String v = version;
-      if (v.startsWith("1.")) {
-        v = v.substring(2); // e.g., 8.0_262 -> 8.0_262
-      }
-      int dot = v.indexOf('.') == -1 ? v.length() : v.indexOf('.');
-      String majorStr = v.substring(0, dot);
-      int major = Integer.parseInt(majorStr.replaceAll("[^0-9]", ""));
-      return major >= majorThreshold;
-    } catch (Throwable t) {
-      return false;
-    }
   }
 
   public void testWithJfr(String testApp, String testScript, int checkLines, ResultValidator v)
@@ -373,6 +349,8 @@ public abstract class RuntimeTest {
                       || l.contains("XML libraries not available")
                       || l.contains("terminally deprecated method in sun.misc.Unsafe")
                       || l.contains("sun.misc.Unsafe::objectFieldOffset")
+                      || l.contains("sun.misc.Unsafe::arrayBaseOffset")
+                      || l.contains("Please consider reporting this to the maintainers of class")
                       || l.contains("org.jctools.util.UnsafeAccess")
                       || l.contains("ASM verification requested for ")
                       || l.contains("ASM verification OK for ")) {
@@ -397,6 +375,7 @@ public abstract class RuntimeTest {
     String pid = pidStringRef.get();
     if (pid != null) {
       System.out.println("Target process ready: " + pid);
+      ensureBTracePort();
       if (attachDelayMs > 0) {
         try {
           Thread.sleep(attachDelayMs);
@@ -558,6 +537,8 @@ public abstract class RuntimeTest {
                       || l.contains("XML libraries not available")
                       || l.contains("terminally deprecated method in sun.misc.Unsafe")
                       || l.contains("sun.misc.Unsafe::objectFieldOffset")
+                      || l.contains("sun.misc.Unsafe::arrayBaseOffset")
+                      || l.contains("Please consider reporting this to the maintainers of class")
                       || l.contains("org.jctools.util.UnsafeAccess")
                       || l.contains("ASM verification requested for ")
                       || l.contains("ASM verification OK for ")) {
@@ -582,6 +563,7 @@ public abstract class RuntimeTest {
     String pid = pidStringRef.get();
     if (pid != null) {
       System.out.println("Target process ready: " + pid);
+      ensureBTracePort();
       if (attachDelayMs > 0) {
         try {
           Thread.sleep(attachDelayMs);
@@ -696,7 +678,8 @@ public abstract class RuntimeTest {
             + agentPath
             + "=script="
             + locateTrace(testScript)
-            + ",scriptOutputFile=::stdout";
+            + ",scriptOutputFile=::stdout,startupRetransform="
+            + startupRetransform;
     if (debugBTrace) {
       agentSetup += ",debug=true,dumpClasses=true,dumpDir=/tmp/btrace";
     }
@@ -758,6 +741,8 @@ public abstract class RuntimeTest {
                       || l.contains("Successfully started BTrace probe")
                       || l.contains("terminally deprecated method in sun.misc.Unsafe")
                       || l.contains("sun.misc.Unsafe::objectFieldOffset")
+                      || l.contains("sun.misc.Unsafe::arrayBaseOffset")
+                      || l.contains("Please consider reporting this to the maintainers of class")
                       || l.contains("org.jctools.util.UnsafeAccess")
                       || l.contains("ASM verification requested for ")
                       || l.contains("ASM verification OK for ")
@@ -790,8 +775,10 @@ public abstract class RuntimeTest {
     outT.start();
     errT.start();
 
-    testAppLatch.await();
-    stdoutLatch.await();
+    // Startup tests need extra time: the target JVM must start, load the agent, instrument all
+    // matching classes, and then print output. Use 4× the dynamic-attach timeout.
+    testAppLatch.await(timeout * 4, TimeUnit.MILLISECONDS);
+    stdoutLatch.await(timeout * 4, TimeUnit.MILLISECONDS);
     // Allow some time for late BTrace output to flush in on-startup mode.
     try {
       Thread.sleep(1000L);
@@ -820,13 +807,18 @@ public abstract class RuntimeTest {
       jcmdPb.start().waitFor();
     }
 
-    v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
-
-    // Clean up the target process
-    pw.println("done");
-    pw.flush();
-    if (!p.waitFor(10, TimeUnit.SECONDS)) {
-      p.destroyForcibly();
+    try {
+      v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
+    } finally {
+      // Clean up the target process even when validation fails, otherwise later tests can inherit
+      // a still-running startup target and fail for the wrong reason.
+      pw.println("done");
+      pw.flush();
+      if (!p.waitFor(10, TimeUnit.SECONDS)) {
+        p.destroyForcibly();
+      }
+      outT.join(5000);
+      errT.join(5000);
     }
   }
 
@@ -1248,8 +1240,8 @@ public abstract class RuntimeTest {
     if (trace.toLowerCase().endsWith(".java")) {
       roots.add(projectRoot.resolve("src"));
     } else {
-      roots.add(projectRoot.resolve("../btrace-instr/build/classes"));
       roots.add(projectRoot.resolve("build/classes"));
+      roots.add(projectRoot.resolve("../btrace-instr/build/classes"));
     }
     Path[] tracePath = new Path[1];
     for (Path start : roots) {
@@ -1494,6 +1486,8 @@ public abstract class RuntimeTest {
                       || line.contains("Connection reset")
                       || line.contains("terminally deprecated method in sun.misc.Unsafe")
                       || line.contains("sun.misc.Unsafe::objectFieldOffset")
+                      || line.contains("sun.misc.Unsafe::arrayBaseOffset")
+                      || line.contains("Please consider reporting this to the maintainers of class")
                       || line.contains("org.jctools.util.UnsafeAccess")
                       || line.contains("A restricted method")) {
                     // skip JVM generated warnings
@@ -1547,6 +1541,17 @@ public abstract class RuntimeTest {
     l.await(timeout, TimeUnit.MILLISECONDS);
 
     return p;
+  }
+
+  protected void ensureBTracePort() {
+    if (btracePort > 0) {
+      return;
+    }
+    try (ServerSocket ss = new ServerSocket(0)) {
+      btracePort = ss.getLocalPort();
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to find a free port", e);
+    }
   }
 
   protected int getBTracePort() {
