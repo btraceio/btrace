@@ -28,7 +28,7 @@ dependencies {
     // Testing — version pinned here to match the root project's version catalog (settings.gradle).
     // Note: this is an included build and cannot access the root project's 'libs' version catalog.
     testImplementation gradleTestKit()
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.14.4'
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
