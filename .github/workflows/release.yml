@@ -160,7 +160,7 @@ jobs:
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11
@@ -185,7 +185,7 @@ jobs:
           echo "key=${key}" >> $GITHUB_OUTPUT
 
       - name: Cache Gradle
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -262,7 +262,7 @@ jobs:
           echo 'y' | sdk install java 11.0.31-tem
 
       - name: Cache Gradle
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -385,7 +385,7 @@ jobs:
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11
@@ -404,7 +404,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Cache Gradle
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -612,7 +612,7 @@ jobs:
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11
@@ -740,7 +740,7 @@ jobs:
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11

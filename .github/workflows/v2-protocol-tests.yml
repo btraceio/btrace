@@ -36,7 +36,7 @@ jobs:
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-${{ matrix.java }}
@@ -52,7 +52,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Cache Gradle packages
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.gradle/caches
@@ -91,7 +91,7 @@ jobs:
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11
@@ -143,7 +143,7 @@ jobs:
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11
@@ -194,7 +194,7 @@ jobs:
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11
@@ -255,7 +255,7 @@ jobs:
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11
@@ -346,7 +346,7 @@ jobs:
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11
