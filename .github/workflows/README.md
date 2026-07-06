@@ -101,13 +101,27 @@ This directory contains GitHub Actions workflows for continuous integration and 
 
 **Triggers:** Push/PR to default branch
 
-### 4. `stale.yml` - Issue Management
+### 4. `dependency-auto-merge.yml` - Dependency Bot Auto-Merge
+
+**Purpose:** Automatically approves and merges clean dependency update PRs from Dependabot and Renovate.
+
+**Triggers:**
+- Pull request target events for dependency bot PR approval
+- Successful `BTrace CI/CD` or `CodeQL` workflow completion for merge checks
+
+**Behavior:**
+- Only acts on PRs authored by `dependabot[bot]` or `renovate[bot]`
+- Does not check out PR code
+- Requires both `BTrace CI/CD` and `CodeQL` to pass for the exact PR head commit
+- Verifies all latest commit checks/statuses, excluding this automation itself, are successful, skipped, or neutral before merging
+
+### 5. `stale.yml` - Issue Management
 
 **Purpose:** Automatically marks stale issues and PRs.
 
 **Schedule:** Daily at midnight
 
-### 5. `release.yml` - Release Management
+### 6. `release.yml` - Release Management
 
 **Purpose:** Handles the complete release process with a manual checkpoint for Maven Central.
 

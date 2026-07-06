@@ -1,0 +1,188 @@
+name: Dependency Bot Auto-Merge
+
+on:
+  pull_request_target:
+    types: [ opened, reopened, synchronize, ready_for_review ]
+  workflow_run:
+    workflows:
+      - BTrace CI/CD
+      - CodeQL
+    types: [ completed ]
+
+permissions:
+  actions: read
+  checks: read
+  contents: write
+  pull-requests: write
+  statuses: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  REQUIRED_CI_WORKFLOWS: |
+    BTrace CI/CD
+    CodeQL
+
+jobs:
+  approve:
+    name: Approve dependency bot PR
+    if: >
+      github.event_name == 'pull_request_target' &&
+      !github.event.pull_request.draft &&
+      contains(fromJSON('["dependabot[bot]","renovate[bot]"]'), github.event.pull_request.user.login)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approve PR
+        env:
+          GH_TOKEN: ${{ secrets.DEPENDENCY_AUTOMERGE_TOKEN || github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          set -euo pipefail
+          gh pr review "${PR_URL}" \
+            --approve \
+            --body "Auto-approved dependency bot PR." || \
+            echo "::notice::Approval was skipped; it may already be approved."
+
+  merge:
+    name: Merge dependency bot PR
+    if: >
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge clean dependency bot PRs
+        env:
+          GH_TOKEN: ${{ secrets.DEPENDENCY_AUTOMERGE_TOKEN || github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          PULL_REQUESTS: ${{ toJson(github.event.workflow_run.pull_requests) }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          is_dependency_bot() {
+            case "$1" in
+              dependabot\[bot\]|renovate\[bot\]) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          required_workflows_passed() {
+            local sha="$1"
+            local runs_json workflow status conclusion
+
+            runs_json="$(gh api "repos/${REPOSITORY}/actions/runs" \
+              --method GET \
+              -f event=pull_request \
+              -f head_sha="${sha}" \
+              -F per_page=100)"
+
+            while IFS= read -r workflow; do
+              [[ -z "${workflow}" ]] && continue
+
+              status="$(jq -r --arg workflow "${workflow}" '
+                [.workflow_runs[] | select(.name == $workflow)]
+                | sort_by(.created_at)
+                | last
+                | .status // ""
+              ' <<< "${runs_json}")"
+
+              conclusion="$(jq -r --arg workflow "${workflow}" '
+                [.workflow_runs[] | select(.name == $workflow)]
+                | sort_by(.created_at)
+                | last
+                | .conclusion // ""
+              ' <<< "${runs_json}")"
+
+              if [[ "${status}" != "completed" || "${conclusion}" != "success" ]]; then
+                echo "::notice::Waiting for ${workflow} on ${sha} (status=${status:-missing}, conclusion=${conclusion:-missing})."
+                return 1
+              fi
+            done <<< "${REQUIRED_CI_WORKFLOWS}"
+          }
+
+          clean_commit_checks() {
+            local sha="$1"
+            local checks_json statuses_json bad_checks bad_statuses
+
+            checks_json="$(gh api "repos/${REPOSITORY}/commits/${sha}/check-runs" \
+              --method GET \
+              -f filter=latest \
+              -F per_page=100)"
+
+            bad_checks="$(jq -r '
+              .check_runs[]
+              | select(
+                  (.name == "Approve dependency bot PR" or .name == "Merge dependency bot PR") | not
+                )
+              | select(
+                  .status != "completed" or
+                  ((.conclusion == "success" or .conclusion == "skipped" or .conclusion == "neutral") | not)
+                )
+              | "- \(.name): \(.status)/\(.conclusion // "none")"
+            ' <<< "${checks_json}")"
+
+            statuses_json="$(gh api "repos/${REPOSITORY}/commits/${sha}/status")"
+
+            bad_statuses="$(jq -r '
+              .statuses[]
+              | select((.context | contains("Dependency Bot Auto-Merge")) | not)
+              | select(.state != "success")
+              | "- \(.context): \(.state)"
+            ' <<< "${statuses_json}")"
+
+            if [[ -n "${bad_checks}" || -n "${bad_statuses}" ]]; then
+              echo "::notice::CI is not clean for ${sha}."
+              [[ -n "${bad_checks}" ]] && printf '%s\n' "${bad_checks}"
+              [[ -n "${bad_statuses}" ]] && printf '%s\n' "${bad_statuses}"
+              return 1
+            fi
+          }
+
+          mapfile -t pr_numbers < <(jq -r '.[].number' <<< "${PULL_REQUESTS}")
+
+          if [[ "${#pr_numbers[@]}" -eq 0 ]]; then
+            echo "::notice::No pull requests were attached to this workflow run."
+            exit 0
+          fi
+
+          for pr_number in "${pr_numbers[@]}"; do
+            pr_json="$(gh api "repos/${REPOSITORY}/pulls/${pr_number}")"
+            author="$(jq -r '.user.login' <<< "${pr_json}")"
+            draft="$(jq -r '.draft' <<< "${pr_json}")"
+            head_sha="$(jq -r '.head.sha' <<< "${pr_json}")"
+            pr_state="$(jq -r '.state' <<< "${pr_json}")"
+            pr_url="$(jq -r '.html_url' <<< "${pr_json}")"
+
+            if ! is_dependency_bot "${author}"; then
+              echo "::notice::Skipping PR #${pr_number}: author ${author} is not a dependency bot."
+              continue
+            fi
+
+            if [[ "${pr_state}" != "open" || "${draft}" == "true" ]]; then
+              echo "::notice::Skipping PR #${pr_number}: state=${pr_state}, draft=${draft}."
+              continue
+            fi
+
+            if [[ "${head_sha}" != "${HEAD_SHA}" ]]; then
+              echo "::notice::Skipping PR #${pr_number}: workflow ran on ${HEAD_SHA}, current head is ${head_sha}."
+              continue
+            fi
+
+            if ! required_workflows_passed "${head_sha}"; then
+              continue
+            fi
+
+            if ! clean_commit_checks "${head_sha}"; then
+              continue
+            fi
+
+            gh pr review "${pr_url}" \
+              --approve \
+              --body "Auto-approved dependency bot PR after CI passed." || \
+              echo "::notice::Approval for PR #${pr_number} was skipped; it may already be approved."
+
+            gh pr merge "${pr_url}" --squash --delete-branch
+          done

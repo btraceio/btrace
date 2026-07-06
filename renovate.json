@@ -7,14 +7,12 @@
   ],
   "schedule": ["before 9am on monday"],
   "labels": ["dependencies"],
+  "automerge": true,
+  "automergeType": "pr",
   "packageRules": [
     {
       "matchManagers": ["github-actions"],
       "addLabels": ["github-actions"]
-    },
-    {
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true
     }
   ]
 }
