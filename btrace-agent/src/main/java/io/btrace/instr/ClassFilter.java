@@ -173,7 +173,12 @@ public class ClassFilter {
     if (typeSet.contains(typeA)) {
       return true;
     }
-    ClassInfo ci = ClassCache.getInstance().get(loader, typeA);
+    ClassCache cache = ClassCache.getInstance();
+    if (cache == null) {
+      // Reentrant class loading can observe the holder before INSTANCE assignment completes.
+      return false;
+    }
+    ClassInfo ci = cache.get(loader, typeA);
     if (ci == null) {
       // ClassInfo not present in the cache (or cache temporarily unavailable due to a
       // classloader-init race). Conservatively report "not a subtype" rather than NPE;

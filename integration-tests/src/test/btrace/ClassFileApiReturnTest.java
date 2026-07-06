@@ -24,10 +24,7 @@ import io.btrace.core.annotations.Location;
 import io.btrace.core.annotations.OnMethod;
 import io.btrace.core.annotations.Return;
 
-/**
- * RETURN probe on {@code Math.abs(int)} capturing the return value. The caller passes {@code -7},
- * so the expected return value is {@code 7}.
- */
+/** RETURN probe on {@code Math.abs(int)} capturing the return value. */
 @BTrace
 public class ClassFileApiReturnTest {
   @OnMethod(clazz = "java.lang.Math", method = "abs", location = @Location(Kind.RETURN))
