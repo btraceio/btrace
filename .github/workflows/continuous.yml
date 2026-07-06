@@ -34,7 +34,7 @@ jobs:
           java-version: 21
           distribution: temurin
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Setup Gradle
@@ -100,7 +100,7 @@ jobs:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Setup Gradle
@@ -172,7 +172,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Setup Gradle
