@@ -58,8 +58,8 @@ public final class JavaVersionCheck {
   /**
    * Parses the Java feature version from a version string.
    *
-   * <p>Accepts both legacy ({@code 1.8}, {@code 1.8.0_392}) and modern ({@code 9}, {@code
-   * 11.0.21}, {@code 17-ea}, {@code 21+35}) version formats.
+   * <p>Accepts both legacy ({@code 1.8}, {@code 1.8.0_392}) and modern ({@code 9}, {@code 11.0.21},
+   * {@code 17-ea}, {@code 21+35}) version formats.
    *
    * @param versionString value of {@code java.specification.version} or {@code java.version}
    * @return the feature version, or {@code -1} if the string can not be parsed

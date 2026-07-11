@@ -10,7 +10,7 @@ spotless {
 
         formatAnnotations()  // fixes formatting of type annotations, see below
 
-        licenseHeaderFile rootProject.file('license.header')
+        licenseHeaderFile(rootProject.file('license.header')).yearSeparator(', ')
     }
 }
 
