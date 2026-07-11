@@ -153,6 +153,9 @@ task allClassesShadow(type: ShadowJar) {
     relocate 'org.jctools', 'io.btrace.libs.org.jctools'
     relocate 'org.objectweb.asm', 'io.btrace.libs.org.objectweb.asm'
     relocate 'org.slf4j', 'io.btrace.libs.org.slf4j'
+    // Rewrite META-INF/services/* names+content to match the relocated classes above,
+    // otherwise ServiceLoader (e.g. SLF4J provider lookup) can't find them.
+    mergeServiceFiles()
 
     // Don't create a manifest for this intermediate jar
     manifest {
@@ -357,6 +360,9 @@ task bootstrapJar(type: ShadowJar) {
     relocate 'org.jctools', 'io.btrace.libs.boot.org.jctools'
     relocate 'org.objectweb.asm', 'io.btrace.libs.org.objectweb.asm'
     relocate 'org.slf4j', 'io.btrace.libs.org.slf4j'
+    // Rewrite META-INF/services/* names+content to match the relocated classes above,
+    // otherwise ServiceLoader (e.g. SLF4J provider lookup) can't find them.
+    mergeServiceFiles()
 }
 
 // Single JAR with .classdata masking for bootstrap isolation
