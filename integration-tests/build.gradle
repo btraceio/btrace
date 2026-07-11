@@ -17,6 +17,17 @@ compileTestJava {
     targetCompatibility = 8
 }
 
+// Test classes target Java 8 bytecode so they stay loadable when the "test" task runs
+// under an actual JDK 8 launcher. junit-jupiter 6.x requires JDK 17+ to compile against,
+// so pin this module's test dependency to the last JDK 8-compatible release instead of
+// the repo-wide catalog version.
+configurations.testCompileClasspath {
+    resolutionStrategy.force 'org.junit.jupiter:junit-jupiter:5.14.4'
+}
+configurations.testRuntimeClasspath {
+    resolutionStrategy.force 'org.junit.jupiter:junit-jupiter:5.14.4'
+}
+
 task buildEventsJar(type: Jar) {
     inputs.files compileJava
     from files("${project.buildDir}/classes/java/main")

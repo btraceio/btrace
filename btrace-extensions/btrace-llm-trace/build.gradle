@@ -3,12 +3,9 @@ plugins {
     alias(libs.plugins.shadow)
 }
 
-java {
+compileJava {
     sourceCompatibility = 8
     targetCompatibility = 8
-}
-
-compileJava {
     javaCompiler = javaToolchains.compilerFor {
         languageVersion.set(JavaLanguageVersion.of(11))
     }

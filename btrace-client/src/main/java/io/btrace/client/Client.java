@@ -199,8 +199,8 @@ public class Client {
   }
 
   /**
-   * Warns on the client console when the target JVM falls under the Java version deprecation
-   * policy (Java &lt; 17, deprecated as of BTrace 3.0). The warning can be suppressed with {@code
+   * Warns on the client console when the target JVM falls under the Java version deprecation policy
+   * (Java &lt; 17, deprecated as of BTrace 3.0). The warning can be suppressed with {@code
    * -Dbtrace.suppressJavaDeprecationWarning=true} on the client JVM.
    */
   private static void warnIfDeprecatedTargetJvm(String pid, String targetJavaVersion) {

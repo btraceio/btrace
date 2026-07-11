@@ -6,7 +6,7 @@ plugins {
 group = 'io.btrace'
 version = rootProject.version
 
-java {
+compileJava {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
 }

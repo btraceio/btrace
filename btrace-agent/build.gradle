@@ -12,6 +12,17 @@ compileTestJava {
     options.forkOptions.executable = "${getJavac(8)}"
 }
 
+// Test sources use sun.misc.Unsafe#defineClass, an overload only present up to JDK 8,
+// so compileTestJava above is forked against a JDK 8 javac. junit-jupiter 6.x requires
+// JDK 17+ to compile against, so pin this module's test dependency to the last JDK
+// 8-compatible release instead of the repo-wide catalog version.
+configurations.testCompileClasspath {
+    resolutionStrategy.force 'org.junit.jupiter:junit-jupiter:5.14.4'
+}
+configurations.testRuntimeClasspath {
+    resolutionStrategy.force 'org.junit.jupiter:junit-jupiter:5.14.4'
+}
+
 sourceSets {
     java24 {
         java {

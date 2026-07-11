@@ -2,8 +2,10 @@ plugins {
     id 'java-library'
 }
 
-java {
-    toolchain {
+compileJava {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+    javaCompiler = javaToolchains.compilerFor {
         languageVersion.set(JavaLanguageVersion.of(8))
     }
 }
