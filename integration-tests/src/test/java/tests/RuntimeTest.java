@@ -667,6 +667,7 @@ public abstract class RuntimeTest {
     //    args.add("-Xlog:exceptions");
     // uncomment the following line to get extra JFR logs
     //    args.add("-Xlog:jfr*=trace");
+    args.add("-Dbtrace.suppressJavaDeprecationWarning=true");
     args.addAll(extraJvmArgs);
     if (startJfr) {
       jfrFile = Files.createTempFile("btrace-", ".jfr").toString();
@@ -991,6 +992,7 @@ public abstract class RuntimeTest {
         new ArrayList<>(
             Arrays.asList(
                 javaHome + "/bin/java",
+                "-Dbtrace.suppressJavaDeprecationWarning=true",
                 "-cp",
                 cp,
                 "io.btrace.boot.Loader",
@@ -1142,6 +1144,7 @@ public abstract class RuntimeTest {
         new ArrayList<>(
             Arrays.asList(
                 javaHome + "/bin/java",
+                "-Dbtrace.suppressJavaDeprecationWarning=true",
                 "-cp",
                 cp,
                 "io.btrace.boot.Loader",
@@ -1308,6 +1311,7 @@ public abstract class RuntimeTest {
                 "-Dbtrace.comm.forceVersion=true",
                 "-Dbtrace.port=" + getBTracePort(),
                 "-Dbtrace.libs=" + System.getProperty("btrace.libs"),
+                "-Dbtrace.suppressJavaDeprecationWarning=true",
                 "-cp",
                 cp,
                 "io.btrace.boot.Loader",
@@ -1433,6 +1437,7 @@ public abstract class RuntimeTest {
                 "-Dbtrace.comm.protocol=2",
                 "-Dbtrace.comm.autoNegotiate=false",
                 "-Dbtrace.comm.forceVersion=true",
+                "-Dbtrace.suppressJavaDeprecationWarning=true",
                 "-cp",
                 cp,
                 "io.btrace.boot.Loader",
