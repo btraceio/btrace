@@ -1,0 +1,10 @@
+// Minimal settings file for Tutorial 08 (fat agent). Copy this next to
+// fat-agent-build.gradle in a scratch directory and rename it to settings.gradle.
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'fat-agent-demo'

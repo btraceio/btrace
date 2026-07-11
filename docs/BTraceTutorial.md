@@ -96,7 +96,7 @@ You will repeat these steps while gradually enhancing the used BTrace script
 
 ### Lessons
 
-#### Lesson 1 - Launching BTrace
+## Lesson 1 - Launching BTrace
 
 ##### Using `btrace` client to attach to a running JVM
 
@@ -169,7 +169,7 @@ The syntax is straightforward - `./btracep <binary trace file>`. The tool will p
 * all probe handlers (all `@OnProbe`, `@OnTimer` etc. definitions)
 * ASM-ified version of the associated "data holder" class - the class contains the information that needs to be globally accessible from instrumented code
 
-#### Lesson 2 - Tracing methods
+## Lesson 2 - Tracing methods
 
 This is the main purpose of BTrace - inject a custom code to custom locations to give the insights about the internal state and dynamics of the application.
 
@@ -483,7 +483,7 @@ public class HelloWorldTrace {
 }
 ```
 
-#### Lesson 3 - Global callbacks
+## Lesson 3 - Global callbacks
 
 Global callbacks are not directly related to the tracing code injection but they allow us to observe the global state and act correspondingly.
 
@@ -579,7 +579,7 @@ public class HelloWorldTrace {
 }
 ```
 
-#### Lesson 4 - Sampling
+## Lesson 4 - Sampling
 
 Tracing many methods being executed frequently can bring a significant overhead to the traced application. And often we are not really interested in the high detail data - an aggregated view would do just fine.
 
@@ -629,7 +629,7 @@ public class HelloWorldTrace {
 }
 ```
 
-#### Lesson 5 - JFR events
+## Lesson 5 - JFR events
 
 Since BTrace 2.1.0 it is possible to define and use JFR dynamic events directly from the BTrace scripts. This gives immediate access to the high-performance
 event recording engine built directly in JVM. Being able to observe the script defined events in the bigger context of full application/JVM is an additional
@@ -714,7 +714,9 @@ specific methods.
 }
 ```
 
-#### Lesson 6 - Extensions and Permissions
+## Lesson 6 - Extensions and Permissions
+
+**Hands-on lab →** [Extensions and Permissions Without Tears](tutorials/04-extensions-and-permissions.md) walks through granting, denying, and inspecting extension permissions against a live JVM, with every error message and CLI output verified against source.
 
 BTrace supports extensions that provide additional functionality beyond the core tracing capabilities. Extensions can send metrics to external systems, integrate with DTrace, and more. To ensure safety, extensions require explicit permissions.
 
@@ -1077,7 +1079,9 @@ This is useful for diagnosing issues when probes that rely on specific extension
 
 ##### Writing Your Own Extension (Quick Start)
 
-Extensions are standalone Gradle projects that expose a typed service interface to BTrace scripts. The full workflow is covered in the [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md); the steps below are the minimum to get started.
+**Hands-on lab →** [Write Your Own Extension in 30 Minutes](tutorials/06-write-your-own-extension.md) builds, installs, permission-grants, and injects a real extension end to end against a live JVM — including a couple of source-verified gotchas in the plugin worth knowing before you rely on it.
+
+Extensions are standalone Gradle projects that expose a typed service interface to BTrace scripts. Unlike some plugin ecosystems, the API and implementation classes live in the **same package** — the bundled `btrace-metrics` extension (`btrace-extensions/btrace-metrics/src/main/java/io/btrace/metrics/`) is the canonical example: `MetricsService` (the interface) and `MetricsServiceImpl` (the implementation) sit side by side, and the Gradle plugin partitions API from implementation itself when it builds the API/impl jars. The full workflow is covered in the [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md); the steps below are the minimum to get started.
 
 **1. Apply the BTrace extension Gradle plugin**
 
@@ -1088,15 +1092,15 @@ plugins {
 
 btraceExtension {
     id = "com.example.myext"
-    services = ["com.example.myext.api.MyService"]
+    services = ["com.example.myext.MyService"]
 }
 ```
 
 **2. Define the service API (what scripts see)**
 
 ```java
-// src/main/java/com/example/myext/api/MyService.java
-package com.example.myext.api;
+// src/main/java/com/example/myext/MyService.java
+package com.example.myext;
 
 public interface MyService {
     void record(String key, long value);
@@ -1106,11 +1110,10 @@ public interface MyService {
 **3. Implement the service (stays isolated from scripts)**
 
 ```java
-// src/main/java/com/example/myext/impl/MyServiceImpl.java
-package com.example.myext.impl;
+// src/main/java/com/example/myext/MyServiceImpl.java
+package com.example.myext;
 
-import com.example.myext.api.MyService;
-import io.btrace.ext.spi.Extension;
+import io.btrace.core.extensions.Extension;
 
 public class MyServiceImpl extends Extension implements MyService {
     @Override
@@ -1124,7 +1127,7 @@ public class MyServiceImpl extends Extension implements MyService {
 
 ```java
 import io.btrace.core.annotations.*;
-import com.example.myext.api.MyService;
+import com.example.myext.MyService;
 
 @BTrace
 public class MyProbe {
@@ -1139,11 +1142,13 @@ public class MyProbe {
 }
 ```
 
-The plugin generates the service descriptor manifest, computes the required permission set, and produces a distributable ZIP that installs under `$BTRACE_HOME/extensions/`. See the [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for detailed coverage of: classloader isolation, permission declarations, `@ExternalType` adapters, fat-agent embedding, and the full API design rules documented in [ExtensionInterfaceRules.md](ExtensionInterfaceRules.md).
+The plugin generates the service descriptor manifest, computes the required permission set, and produces a distributable ZIP that installs under `$BTRACE_HOME/extensions/`. Always list your service interface(s) explicitly in `services = [...]` as shown above — the plugin's own auto-detection fallback (for projects that omit `services`) still scans for the pre-3.0 `org.openjdk.btrace.core.extensions.ServiceDescriptor` annotation, not the current `io.btrace.core.extensions` package, so it never fires against a 3.0-style extension in this checkout. See the [hands-on lab](tutorials/06-write-your-own-extension.md) for the full, verified story on that and other plugin gotchas, and the [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for detailed coverage of: classloader isolation, permission declarations, `@ExternalType` adapters, fat-agent embedding, and the full API design rules documented in [ExtensionInterfaceRules.md](ExtensionInterfaceRules.md).
 
 ---
 
-#### Lesson 7 - Flat DSL
+## Lesson 7 - Flat DSL
+
+**Hands-on lab →** [From Oneliner to Script: The Flat DSL](tutorials/02-oneliner-to-script.md) builds this up step by step against a live JVM, from watching a oneliner's generated source to a full `@TLS`-based script.
 
 BTrace 3.0+ ships a flat DSL class `io.btrace.BTrace` that exposes the most common helper operations as plain static methods. The compiler **automatically injects two imports** into every script:
 
@@ -1233,7 +1238,7 @@ At compile time, every `INVOKESTATIC` targeting `io.btrace.BTrace.*` is rewritte
 
 ---
 
-#### Lesson 8 - Thread-Local Storage
+## Lesson 8 - Thread-Local Storage
 
 When a probe spans two separate handler methods — for example, recording a start time at method entry and computing duration at method return — you need per-thread state. BTrace provides the `@TLS` annotation for exactly this purpose: a field marked `@TLS` behaves like a `ThreadLocal`, with each thread seeing its own independent copy.
 
@@ -1268,7 +1273,7 @@ __Note:__ `@TLS` is reset to its zero/null value when the thread exits, so it is
 
 ---
 
-#### Lesson 9 - Instrumentation Levels
+## Lesson 9 - Instrumentation Levels
 
 Tracing everything at once can be overwhelming and expensive. The `@Level` annotation lets you define multiple probe handlers that are enabled at different _instrumentation levels_. At runtime you switch the active level through `@OnEvent` handlers, dialing the detail up or down without stopping and restarting the probe.
 
@@ -1343,7 +1348,9 @@ The `setVerbose()` handler fires immediately and BTrace retransforms the target 
 
 ---
 
-#### Lesson 10 - Oneliners
+## Lesson 10 - Oneliners
+
+**Hands-on lab →** [Your First Trace in 2 Minutes](tutorials/01-first-trace-in-2-minutes.md) finds a real latency bug and a swallowed exception in a live JVM using nothing but oneliners.
 
 For quick, ad-hoc investigations you do not need a `.java` file at all. BTrace supports **oneliners** via the `-n` flag: a compact, DTrace-inspired syntax that compiles to a full BTrace script internally.
 
@@ -1411,6 +1418,10 @@ For complex scenarios — multiple probe points, state across probes, aggregatio
 ---
 
 ## Lesson 11 — Runtime Contracts (`btrace-contracts`)
+
+**Hands-on lab →** [Watch Your LLM App Think](tutorials/07-llm-observability.md) puts a
+`checkLatency` budget on a live call and reads it off a combined dashboard alongside
+`btrace-llm-trace`'s token/cost accounting.
 
 **Extension ID:** `btrace-contracts`  
 **Service class:** `io.btrace.contracts.ContractService`
@@ -1485,6 +1496,11 @@ btrace <PID> ContractCheck.java
 ---
 
 ## Lesson 12 — AI/LLM Application Observability
+
+**Hands-on lab →** [Watch Your LLM App Think](tutorials/07-llm-observability.md) wires
+`btrace-llm-trace` and `btrace-contracts` into a mocked OpenAI-shaped call and reads
+token/latency/cost and budget violations off a live JVM, including a build-time detail worth
+knowing before you grant either extension a permission.
 
 Modern Java applications increasingly embed LLM inference, RAG pipelines, and on-device model execution. BTrace ships three optional extension JARs that add purpose-built services for observing these workloads without modifying application code.
 
@@ -1855,6 +1871,8 @@ Use `@OnEvent` for on-demand reporting triggered by `btrace send event <PID>` an
 
 ## Lesson 13 — BTrace MCP Server: AI Agents as Diagnosticians
 
+**Hands-on lab →** [Let an AI Assistant Debug Your JVM in 10 Minutes](tutorials/05-mcp-server.md) wires the server into Claude Code and walks a real diagnostic conversation end to end, including the gaps in the current tool set worth knowing about before you rely on it.
+
 #### What is MCP?
 
 MCP (Model Context Protocol) is a protocol that lets AI assistants call external tools during a conversation. Instead of the AI only producing text, it can invoke structured operations — search, read a file, query a database — and incorporate the results into its response. The BTrace MCP server exposes BTrace operations as MCP tools, so an LLM client such as Claude Desktop or Claude Code can attach to running JVMs, deploy probes, read output, and clean up — all through natural language conversation.
@@ -1865,19 +1883,19 @@ The BTrace MCP server runs as a local subprocess on the same machine as the targ
 
 #### Starting the server manually
 
-For testing or scripting, you can start the MCP server directly:
+For testing or scripting, you can start the MCP server directly. The server jar is not
+self-contained — it depends on `btrace-core`, `btrace-client`, `btrace-compiler`, and `btrace-boot`
+at runtime — so put it on a classpath together with those jars and their dependencies:
 
 ```bash
-java -jar btrace-mcp-server.jar
+java -cp "/path/to/btrace-mcp-libs/*" io.btrace.mcp.BTraceMcpServer
 ```
 
-By default the server listens on `stdio` (the MCP transport used by most clients) and connects to the BTrace agent on port 2020. Override the port with:
-
-```bash
-java -Dbtrace.port=2021 -jar btrace-mcp-server.jar
-```
-
-Or via the environment variable `BTRACE_PORT=2021`.
+The server listens on `stdio` (the MCP transport used by most clients). There is no global port
+override at server startup: `port` is a per-tool-call argument on each deploy/interact tool
+(`deploy_oneliner`, `deploy_script`, `list_probes`, `send_event`, `detach_probe`, `exit_probe`),
+defaulting to `2020` if omitted — pass a different value on the call itself if the target agent
+listens elsewhere.
 
 If no BTrace agent is attached to the target JVM, the `deploy_oneliner` and `deploy_script` tools auto-attach one using the JVM's attach API — no extra step required.
 
@@ -1892,10 +1910,10 @@ See [MCPServer.md](MCPServer.md) for per-client configuration instructions cover
 | `list_jvms` | List all local JVMs with their PIDs, main class, and BTrace attachment status |
 | `deploy_oneliner` | Deploy a single-expression probe using oneliner syntax (auto-attaches agent) |
 | `deploy_script` | Deploy a full BTrace script file to a target JVM |
-| `list_probes` | List active probes on a target JVM |
+| `list_probes` | List probes that have been detached from and are available to reconnect to (via the plain CLI's `-r` flag) |
 | `send_event` | Send a named event to trigger `@OnEvent` handlers |
-| `detach_probe` | Detach a single probe without stopping BTrace |
-| `exit_probe` | Stop all BTrace probes and detach the agent from the JVM |
+| `detach_probe` | Disconnect the client from a probe; the probe keeps running |
+| `exit_probe` | Stop and remove the probe this client session is tracking |
 
 #### Available prompts
 
@@ -1920,46 +1938,64 @@ The following exchange shows how an AI assistant uses BTrace MCP tools to diagno
 `[tool: list_jvms]`
 
 ```
-PID    MAIN CLASS                          BTRACE
-12345  com.example.app.ApplicationMain     not attached
+Discovered Java VMs:
+
+  PID: 12345  |  Main Class: com.example.app.ApplicationMain  |  BTrace: not attached
 ```
 
 I found your application at PID 12345. Let me deploy a timing probe to the HTTP handler layer.
 
 `[tool: deploy_oneliner]`
 ```
-pid: 12345
-probe: /com\.example\..*/::/.*recommendations.*/i @return { time }
+pid: "12345"
+oneliner: /com\.example\..*/::/.*recommendations.*/i @return { print method, time }
 ```
 
 ```
-Probe deployed. Waiting for output…
-[12345] com.example.recommendation.RecommendationController.handle: 2341 ms
-[12345] com.example.recommendation.RecommendationController.handle: 2289 ms
+Probe deployed successfully to PID 12345.
+Oneliner: /com\.example\..*/::/.*recommendations.*/i @return { print method, time }
+Port: 2020
+
+Initial output:
+RecommendationController.handle
+execution time: 2341 ms
+RecommendationController.handle
+execution time: 2289 ms
+
+Use send_event, detach_probe, or exit_probe to interact with the running probe.
 ```
 
-The controller itself is taking over two seconds. Let me look inside it — I will check whether the delay is in the database call or the LLM call.
+The controller itself is taking over two seconds. Let me look inside it — I will check whether the delay is in the database call or the LLM call. Since this server tracks one active session per PID, deploying the next probe to the same PID replaces my handle to this one, so I don't need to detach first.
 
 `[tool: deploy_oneliner]`
 ```
-pid: 12345
-probe: /com\.example\.recommendation\..*/::/.+/ @return { time }
+pid: "12345"
+oneliner: /com\.example\.recommendation\..*/::/.+/ @return { print method, time }
 ```
 
 ```
-[12345] RecommendationRepository.findCandidates:  1987 ms
-[12345] LlmRankingService.rank:                    312 ms
+Probe deployed successfully to PID 12345.
+Oneliner: /com\.example\.recommendation\..*/::/.+/ @return { print method, time }
+Port: 2020
+
+Initial output:
+RecommendationRepository.findCandidates
+execution time: 1987 ms
+LlmRankingService.rank
+execution time: 312 ms
+
+Use send_event, detach_probe, or exit_probe to interact with the running probe.
 ```
 
-The database retrieval accounts for most of the latency. The LLM ranking step is fast. Let me clean up the probes.
+The database retrieval accounts for most of the latency. The LLM ranking step is fast. Let me clean up the probe.
 
 `[tool: exit_probe]`
 ```
-pid: 12345
+pid: "12345"
 ```
 
 ```
-BTrace agent detached from PID 12345.
+Probe stopped and removed from PID 12345.
 ```
 
 **AI:** The bottleneck is `RecommendationRepository.findCandidates`, which takes roughly 2 seconds out of the total 2.3 seconds. The LLM ranking step adds only about 300 ms. I recommend investigating the query or index used by `findCandidates` — adding an index on the candidate-selection columns would likely resolve most of the latency.
@@ -1969,3 +2005,25 @@ BTrace agent detached from PID 12345.
 #### Security note
 
 The BTrace MCP server only attaches to JVMs on the local machine; it cannot connect to remote processes. Every probe the AI deploys goes through BTrace's standard verifier, which enforces the same restrictions as any other BTrace script: no loops, no object allocation, no exceptions, no field writes. The AI can observe your application in detail but cannot alter its behavior or cause it to crash.
+
+## Lesson 14 - Packaging: Fat Agents and Containers
+
+**Hands-on labs →** [One JAR to Rule Them All](tutorials/08-fat-agent.md) (fat agents) and [BTrace in Kubernetes, the Sidecar Way](tutorials/09-kubernetes-sidecar.md) (containers) walk both of these end to end against a live JVM, including a few real gaps between what's documented and what the current build actually does.
+
+Two packaging paths exist beyond a plain `$BTRACE_HOME` install, for when you need to ship BTrace as part of someone else's deployment rather than run it interactively yourself.
+
+**Fat agents** bundle BTrace plus one or more extensions into a single `-javaagent` JAR, with no separate extensions directory to copy alongside it. Both the `io.btrace.fat-agent` Gradle plugin and the Maven `fat-agent` goal produce this JAR by embedding an extension's API classes as plain `.class` files and its implementation as `.classdata`, matching the same masked-classdata scheme the main distribution uses (see [Masked JAR Architecture](architecture/MaskedJarArchitecture.md)). Worth knowing before you rely on this: extensions embedded this way are parsed with an empty permission set, so the privileged-permission gate that governs filesystem-installed extensions (Lesson 6) never applies to anything you bundle into a fat agent — embedding a privileged extension *is* the grant, with no separate opt-in.
+
+**Containers** ship as three official image variants — a full toolchain image, a smaller Alpine-based image for sidecars, and a distroless image with just the runtime JARs (no shell, so no interactive attach — the probe has to be baked in via `-javaagent` at build time). The common patterns are copying the distribution out of the official image with a multi-stage `COPY --from` build, or running BTrace as a separate sidecar container sharing the target pod's process namespace (`shareProcessNamespace: true` plus the `SYS_PTRACE` capability). See [docker/README.md](../docker/README.md) for the full pattern catalog and [GettingStarted.md](GettingStarted.md#btrace-in-containers-and-kubernetes) for the conceptual overview.
+
+## Lesson 15 - Java Versions and Instrumentation Backends
+
+BTrace 3.0 fully supports Java 8 through the latest release, but running it against a JVM **older than Java 17 is now deprecated**. Nothing breaks: the agent emits a one-time warning to the target JVM's stderr, and the client prints a matching notice when it attaches. The exact text, produced by `io.btrace.core.JavaVersionCheck`:
+
+```
+[BTrace] WARNING: This JVM is Java <N>. Running BTrace on Java versions older than 17 is deprecated and support will be removed in the next major release. Please upgrade to Java 17 or newer. Suppress this warning with -Dbtrace.suppressJavaDeprecationWarning=true.
+```
+
+The warning fires at most once per JVM and never throws, so it cannot interfere with agent or client startup. If you're deliberately running a fleet on older JDKs during a gradual migration, set `-Dbtrace.suppressJavaDeprecationWarning=true` on the target JVM to silence it. Java 8–16 support itself is not going away in 3.0 — only in BTrace's *next* major release. See [Migrating from 2.x to 3.0](Migration-2.x-to-3.0.md) for the full support policy and timeline.
+
+Separately, and unrelated to the deprecation floor, BTrace 3.0 also gained a second instrumentation backend to handle newer bytecode. BTrace's primary pipeline is built on ASM, which can only parse class files up to major version 69 (Java 25) — an application compiled for Java 26+ would be unparseable by ASM alone. When the agent itself runs on JDK 24 or newer, a second backend built on the JDK's own ClassFile API (`java.lang.classfile.*`, standardized in JDK 24) steps in for any class file version ASM can't handle; on older agent JDKs, such classes are simply skipped rather than crashing the target. The two backends are not equivalent in capability — the ClassFile API backend currently only supports `Kind.ENTRY`/`Kind.RETURN` probes and a narrower set of handler parameters — so this is a forward-compatibility safety net, not a full replacement. See [Instrumentation Backends](architecture/InstrumentationBackends.md) for the complete picture, including the backend-selection logic and current limitations.

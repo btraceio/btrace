@@ -136,17 +136,18 @@ Minimal image with BTrace agent:
 
 ```dockerfile
 FROM btrace/btrace:3.0.0-distroless AS btrace
-FROM gcr.io/distroless/java11
+FROM gcr.io/distroless/java11-debian11
 WORKDIR /app
 
 COPY --from=build /app/target/myapp.jar /app/
 COPY --from=btrace /opt/btrace/libs /opt/btrace/libs
 
 ENTRYPOINT ["java", \
-  "-javaagent:/opt/btrace/libs/btrace-agent.jar=script=/scripts/trace.btrace", \
-  "-Xbootclasspath/a:/opt/btrace/libs/btrace-boot.jar", \
+  "-javaagent:/opt/btrace/libs/btrace.jar=script=/scripts/trace.btrace", \
   "-jar", "/app/myapp.jar"]
 ```
+
+BTrace 3.0 ships as a single self-contained, masked JAR (`btrace.jar`, task `btraceJar` in `btrace-dist/build.gradle`; it declares itself as its own `Boot-Class-Path`), so there is no separate `btrace-boot.jar` and no `-Xbootclasspath/a:` flag needed — see [Masked JAR Architecture](../docs/architecture/MaskedJarArchitecture.md).
 
 ### Pattern 5: Docker Compose
 

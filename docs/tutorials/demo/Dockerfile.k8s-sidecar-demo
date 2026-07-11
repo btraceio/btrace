@@ -1,0 +1,24 @@
+# Demo asset for docs/tutorials/09-kubernetes-sidecar.md
+#
+# Layers BTrace onto the tutorial's DemoApp using the exact multi-stage pattern documented
+# in docker/README.md ("Pattern 1: Multi-Stage Build" / "Quick Start"): copy the whole
+# /opt/btrace tree out of the official image, add it to a JDK base, put it on PATH.
+#
+# Build from the docs/tutorials/demo/ directory:
+#   docker build -f Dockerfile.k8s-sidecar-demo -t demo-app-with-btrace:local .
+
+FROM btrace/btrace:3.0.0 AS btrace
+
+# Same base image family/tag the official (non-Alpine, non-distroless) BTrace image itself
+# uses (see docker/Dockerfile) - it already ships a full JDK, which DemoApp.java needs for
+# single-file source launch (`java DemoApp.java`).
+FROM bellsoft/liberica-openjdk-debian:11.0.30-cds
+
+WORKDIR /app
+COPY DemoApp.java /app/
+
+COPY --from=btrace /opt/btrace /opt/btrace
+ENV BTRACE_HOME=/opt/btrace
+ENV PATH="${PATH}:${BTRACE_HOME}/bin"
+
+ENTRYPOINT ["java", "DemoApp.java"]

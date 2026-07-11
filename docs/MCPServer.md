@@ -237,7 +237,7 @@ These are the tools the MCP server exposes. Your AI client can call any of them.
 | `list_jvms` | Lists all attachable JVMs on the local machine | — | — |
 | `deploy_oneliner` | Deploys a DTrace-style oneliner probe | `pid`, `oneliner` | `port` |
 | `deploy_script` | Deploys a full BTrace Java source script | `pid`, `script` | `args`, `port` |
-| `list_probes` | Lists active BTrace probes on a JVM | `pid` | `port` |
+| `list_probes` | Lists probes detached from and available to reconnect to on a JVM | `pid` | `port` |
 | `send_event` | Fires an event to trigger `@OnEvent` handlers | `pid` | `event_name`, `port` |
 | `detach_probe` | Disconnects the client; probe keeps running | `pid` | `port` |
 | `exit_probe` | Stops and removes the probe, de-instruments the JVM | `pid` | `port` |
@@ -273,10 +273,10 @@ The following illustrates what a conversation looks like when using the BTrace M
 *[calls `list_jvms`]*
 
 ```
-PID    Main Class                         BTrace Attached
------  ---------------------------------  ---------------
-18340  com.example.order.OrderApplication  no
-21904  org.gradle.launcher.GradleWrapperMain  no
+Discovered Java VMs:
+
+  PID: 18340  |  Main Class: com.example.order.OrderApplication  |  BTrace: not attached
+  PID: 21904  |  Main Class: org.gradle.launcher.GradleWrapperMain  |  BTrace: not attached
 ```
 
 I can see your order service at PID 18340. I'll deploy a oneliner to measure the duration of `processOrder`.
@@ -284,21 +284,39 @@ I can see your order service at PID 18340. I'll deploy a oneliner to measure the
 *[calls `deploy_oneliner` with pid=18340, oneliner="com.example.order.OrderService::processOrder @return { print method, duration }"]*
 
 ```
-Probe deployed. Output:
-processOrder: 342ms
-processOrder: 289ms
-processOrder: 1204ms
-processOrder: 301ms
+Probe deployed successfully to PID 18340.
+Oneliner: com.example.order.OrderService::processOrder @return { print method, duration }
+Port: 2020
+
+Initial output:
+processOrder
+execution time: 342 ms
+processOrder
+execution time: 289 ms
+processOrder
+execution time: 1204 ms
+processOrder
+execution time: 301 ms
+
+Use send_event, detach_probe, or exit_probe to interact with the running probe.
 ```
 
-The method is occasionally taking over a second. Let me drill into all methods inside `OrderService` to find the bottleneck.
+The method is occasionally taking over a second. Let me drill into all methods inside `OrderService` to find the bottleneck. Since this server tracks one active session per PID, I'll deploy the wider probe straight to the same PID — that replaces my handle to the first one, so I don't need it anymore.
 
 *[calls `deploy_oneliner` with pid=18340, oneliner="com.example.order.OrderService::/.*/ @return if duration>50ms { print method, duration }"]*
 
 ```
-Probe deployed. Output:
-fetchInventory: 1150ms
-validatePayment: 12ms
+Probe deployed successfully to PID 18340.
+Oneliner: com.example.order.OrderService::/.*/ @return if duration>50ms { print method, duration }
+Port: 2020
+
+Initial output:
+fetchInventory
+execution time: 1150 ms
+validatePayment
+execution time: 12 ms
+
+Use send_event, detach_probe, or exit_probe to interact with the running probe.
 ```
 
 `fetchInventory` is the culprit — it accounts for almost all of the slow calls. That looks like a database or external service call worth investigating. I'll remove the probe now.
@@ -306,7 +324,7 @@ validatePayment: 12ms
 *[calls `exit_probe` with pid=18340]*
 
 ```
-Probe removed.
+Probe stopped and removed from PID 18340.
 ```
 
 ---
@@ -322,10 +340,10 @@ For most diagnostic tasks, the sequence is:
 3. Read the output that streams back through the conversation.
 4. **`deploy_script`** — if you need more detail, deploy a full BTrace script with state, aggregation, or `@OnEvent` triggers.
 5. **`send_event`** (optional) — trigger `@OnEvent` handlers in your script to dump summaries or flush aggregated state.
-6. **`list_probes`** (optional) — verify what probes are active if you lose track.
+6. **`list_probes`** (optional) — check which detached probes are still out there and reconnectable via the plain CLI.
 7. **`exit_probe`** — remove the probe and restore the JVM to its original state.
 
-Use `detach_probe` instead of `exit_probe` if you want the probe to keep collecting data after the client disconnects. You can reattach to a running probe later.
+Use `detach_probe` instead of `exit_probe` if you want the probe to keep collecting data after the client disconnects. Note this server has no `reconnect` tool: once detached, `list_probes` can confirm the probe is still running, but nothing in this tool set can send it an event or exit it afterward — reconnecting takes the plain `btrace -r` CLI flag, outside the assistant's reach. Prefer `exit_probe` for anything you want the assistant itself to clean up later.
 
 ## Writing Scripts for the MCP Server
 
@@ -471,7 +489,7 @@ See [JVM Attachment Issues](Troubleshooting.md#jvm-attachment-issues) in the mai
 
 **Steps:**
 
-1. Use `list_probes` to confirm the probe is active.
+1. Confirm the `deploy_oneliner`/`deploy_script` response itself said "deployed successfully" rather than timing out or erroring — that's the only success signal for a probe that's still connected (`list_probes` won't show it; it only lists probes you've since detached from).
 2. Trigger the target code path in the application (send a request, run the workflow, etc.).
 3. Verify the class and method names are correct — BTrace matching is case-sensitive and requires fully qualified class names.
 4. Narrow the pattern: if you used a wildcard, try an exact class name first.

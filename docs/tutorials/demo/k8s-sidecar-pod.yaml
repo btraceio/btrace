@@ -1,0 +1,35 @@
+# Demo asset for docs/tutorials/09-kubernetes-sidecar.md
+#
+# Illustrative example, not copied from a shipped BTrace repo file. It combines:
+#   - the shareProcessNamespace + sidecar shape from docker/README.md's
+#     "Pattern 2: Kubernetes Sidecar" (verified against docker/README.md), and
+#   - the SYS_PTRACE capability call-out from that same README's "Best Practices" section.
+# Everything else (apiVersion, securityContext shape, volume wiring) is standard,
+# idiomatic Kubernetes syntax and isn't BTrace-specific.
+#
+# Replace `image: demo-app-with-btrace:local` with your own registry/tag before applying.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-app-with-btrace
+spec:
+  shareProcessNamespace: true # required - lets the sidecar see the app container's PIDs
+  containers:
+    - name: demo-app
+      image: demo-app-with-btrace:local # <-- replace with your registry/tag
+      imagePullPolicy: IfNotPresent
+
+    - name: btrace-sidecar
+      image: btrace/btrace:3.0.0-alpine
+      command: ["/bin/sh", "-c", "while true; do sleep 30; done"]
+      securityContext:
+        capabilities:
+          add: ["SYS_PTRACE"] # required for the sidecar to attach across containers
+      volumeMounts:
+        - name: btrace-scripts
+          mountPath: /scripts
+
+  volumes:
+    - name: btrace-scripts
+      configMap:
+        name: btrace-scripts

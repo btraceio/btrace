@@ -1,0 +1,20 @@
+// Demo build file for Tutorial 08 (fat agent). Copy this into a scratch directory as
+// build.gradle, alongside fat-agent-settings.gradle (renamed to settings.gradle) and
+// the extension zip referenced below.
+//
+// DSL verified against:
+//   btrace-gradle-plugin/src/main/groovy/io/btrace/gradle/BTraceFatAgentPlugin.groovy
+//   btrace-gradle-plugin/src/main/groovy/io/btrace/gradle/BTraceFatAgentExtension.groovy
+plugins {
+    id 'io.btrace.fat-agent' version '3.0.0'
+}
+
+btraceFatAgent {
+    baseName = 'demo-btrace-agent'
+
+    embedExtensions {
+        // Points at the btrace-metrics extension zip you built in Step 1.
+        // Name the file after the real extension id (see the tutorial's callout on why).
+        file('btrace-metrics.zip')
+    }
+}

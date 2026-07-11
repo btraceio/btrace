@@ -44,8 +44,10 @@ public final class ListProbesHandler {
     tool.put("name", "list_probes");
     tool.put(
         "description",
-        "List active BTrace probes on a running JVM. "
-            + "Shows which probes are currently deployed and their IDs.");
+        "List BTrace probes on a running JVM that have been detached from and are available to "
+            + "reconnect to (via the plain CLI's -r flag). Probes still connected to their "
+            + "original client are not listed here, since their output is already streaming to "
+            + "that client.");
 
     Map<String, Object> properties = new LinkedHashMap<>();
 
@@ -79,10 +81,8 @@ public final class ListProbesHandler {
       return toolResult("Error: 'pid' parameter is required", true);
     }
 
-    // Transient client used only for this one-shot query - must be closed so its socket is not
-    // leaked (one FD per list_probes call otherwise).
-    Client client = ClientManager.getClient(port);
     try {
+      Client client = ClientManager.getClient(port);
       client.attach(pid, null, ".");
 
       StringBuilder output = new StringBuilder();
@@ -111,12 +111,6 @@ public final class ListProbesHandler {
     } catch (Exception e) {
       log.error("Failed to list probes", e);
       return toolResult("Error listing probes on PID " + pid + ": " + e.getMessage(), true);
-    } finally {
-      try {
-        client.close();
-      } catch (Exception ignore) {
-        // best effort
-      }
     }
   }
 
