@@ -29,7 +29,13 @@ jobs:
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'test:v2-protocol'))
     strategy:
       matrix:
-        java: [ 11, 17, 21 ]
+        include:
+          - java: 11
+            sdk: 11.0.31-tem
+          - java: 17
+            sdk: 17.0.19-tem
+          - java: 21
+            sdk: 21.0.11-tem
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -39,13 +45,17 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
-          key: java-${{ runner.os }}-temurin-${{ matrix.java }}
+          key: java-${{ runner.os }}-temurin-21
 
-      - name: Set up JDK ${{ matrix.java }}
+      # Gradle 9.x requires JVM 17+ to run the build itself. This JDK only hosts
+      # the Gradle daemon; the JDK under test (matrix.java) is installed below via
+      # SDKMAN and selected through the testJavaVersion toolchain property
+      # (see btrace-core/build.gradle).
+      - name: Set up JDK 21 (Gradle runner)
         if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
-          java-version: ${{ matrix.java }}
+          java-version: 21
           distribution: temurin
 
       - name: Setup Gradle
@@ -61,11 +71,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      - name: Prepare OS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl zip unzip
+
+      - name: Install JDK ${{ matrix.java }} under test
+        run: |
+          curl -s "https://get.sdkman.io" | bash
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          echo 'n' | sdk install java ${{ matrix.sdk }}
+
       - name: Run V2 Protocol Tests
         run: |
           ./gradlew :btrace-core:test --tests "io.btrace.core.comm.v2.*" \
                                        --tests "io.btrace.core.comm.Protocol*" \
                                        --tests "io.btrace.core.comm.WireProtocol*" \
+                                       -PtestJavaVersion=${{ matrix.java }} \
                                        --rerun-tasks
 
       - name: Upload Test Reports
@@ -94,13 +116,14 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
-          key: java-${{ runner.os }}-temurin-11
+          key: java-${{ runner.os }}-temurin-21
 
-      - name: Set up JDK 11
+      # Gradle 9.x requires JVM 17+ to run.
+      - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
-          java-version: 11
+          java-version: 21
           distribution: temurin
 
       - name: Setup Gradle
@@ -146,13 +169,14 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
-          key: java-${{ runner.os }}-temurin-11
+          key: java-${{ runner.os }}-temurin-21
 
-      - name: Set up JDK 11
+      # Gradle 9.x requires JVM 17+ to run.
+      - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
-          java-version: 11
+          java-version: 21
           distribution: temurin
 
       - name: Setup Gradle
@@ -197,13 +221,14 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
-          key: java-${{ runner.os }}-temurin-11
+          key: java-${{ runner.os }}-temurin-21
 
-      - name: Set up JDK 11
+      # Gradle 9.x requires JVM 17+ to run.
+      - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
-          java-version: 11
+          java-version: 21
           distribution: temurin
 
       - name: Setup Gradle
@@ -258,13 +283,14 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
-          key: java-${{ runner.os }}-temurin-11
+          key: java-${{ runner.os }}-temurin-21
 
-      - name: Set up JDK 11
+      # Gradle 9.x requires JVM 17+ to run.
+      - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
-          java-version: 11
+          java-version: 21
           distribution: temurin
 
       - name: Setup Gradle
@@ -349,13 +375,14 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
-          key: java-${{ runner.os }}-temurin-11
+          key: java-${{ runner.os }}-temurin-21
 
-      - name: Set up JDK 11
+      # Gradle 9.x requires JVM 17+ to run.
+      - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
-          java-version: 11
+          java-version: 21
           distribution: temurin
 
       - name: Setup Gradle

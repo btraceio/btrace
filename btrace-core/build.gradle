@@ -63,7 +63,25 @@ jacocoTestReport {
     }
 }
 
+def testJavaVersion = project.findProperty('testJavaVersion')
+if (testJavaVersion) {
+    // Gradle itself requires JVM 17+ to run, but this project still wants to verify
+    // wire protocol compatibility against older JDKs. Compile and run the test sources
+    // with the requested toolchain instead of the JVM hosting the Gradle daemon.
+    compileTestJava {
+        javaCompiler = javaToolchains.compilerFor {
+            languageVersion = JavaLanguageVersion.of(testJavaVersion as int)
+        }
+    }
+}
+
 test {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
+
+    if (testJavaVersion) {
+        javaLauncher = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(testJavaVersion as int)
+        }
+    }
 }
