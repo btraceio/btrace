@@ -17,30 +17,31 @@
 
 
 import io.btrace.core.annotations.BTrace;
-import io.btrace.core.annotations.Injected;
 import io.btrace.core.annotations.OnMethod;
 import io.btrace.core.annotations.ProbeClassName;
 import io.btrace.core.annotations.ProbeMethodName;
 import io.btrace.core.annotations.Self;
-import io.btrace.services.impl.Printer;
+
+import static io.btrace.BTrace.*;
 
 /**
  * This script traces method entry into every method of
  * every class in javax.swing package! Think before using
  * this script -- this will slow down your app significantly!!
+ *
+ * The method name is templated - pass it as a script argument
+ * named 'm' (eg. 'm=paintComponent', or a regex to match many
+ * methods; see AllMethods1.java for a non-templated variant).
  */
 @BTrace
 public class AllMethods {
-    @Injected
-    private static Printer printer;
-
     @OnMethod(
             clazz = "/javax\\.swing\\..*/",
             method = "${m}"
     )
     public static void m(@Self Object o, @ProbeClassName String probeClass, @ProbeMethodName String probeMethod) {
-        printer.println("this = " + o);
-        printer.print("entered " + probeClass);
-        printer.println("." + probeMethod);
+        println("this = " + o);
+        print("entered " + probeClass);
+        println("." + probeMethod);
     }
 }

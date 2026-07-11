@@ -40,7 +40,7 @@ com.sun.tools.attach.AttachNotSupportedException: Unable to attach to target VM
 
 2. **Attach mechanism disabled or restricted**
 
-   **For JDK 8-20:**
+   **For JDK 20 and older:**
    - **Cause**: Target JVM started with `-XX:+DisableAttachMechanism`
    - **Solution**: Remove this flag and restart the application
 
@@ -576,7 +576,7 @@ UnsupportedClassVersionError
 ```
 
 **Solutions:**
-- Ensure BTrace supports your Java version (BTrace supports Java 8+)
+- Ensure BTrace supports your Java version. BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
 - Compile scripts with target version matching JVM
 - Check `JAVA_HOME` points to correct version
 
@@ -601,19 +601,25 @@ java --add-opens java.base/java.lang=ALL-UNNAMED \
 ### Old Script Syntax
 
 **Error:**
-Scripts written for BTrace 1.x fail with 2.x
+Scripts written for older BTrace versions fail to compile
 
 **Solution:**
-Update imports:
+Update imports to the current package namespace:
 ```java
-// Old (1.x)
+// BTrace 1.x
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
 
-// New (2.x)
+// BTrace 2.x
+import org.openjdk.btrace.core.annotations.*;
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
+// BTrace 3.0+
 import io.btrace.core.annotations.*;
 import static io.btrace.core.BTraceUtils.*;
 ```
+
+Note that in BTrace 3.0 most imports are unnecessary: the compiler auto-imports the annotations and the flat DSL (`import static io.btrace.BTrace.*`) into every script. Also, compiled 2.x probe `.class` files that reference `org.openjdk.btrace` are automatically migrated to the `io.btrace` namespace by the agent at load time — no recompilation needed.
 
 ## Debugging BTrace Scripts
 

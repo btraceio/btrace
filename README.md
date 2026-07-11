@@ -19,6 +19,10 @@ BTrace dynamically instruments running Java applications to inject tracing code 
 - **Flexible probes** - Method entry/exit, timings, field access, allocations
 - **Low overhead** - Bytecode injection with minimal performance impact
 
+### Supported Java Versions
+
+BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). See the [migration guide](docs/Migration-2.x-to-3.0.md) for details on upgrading from BTrace 2.x.
+
 ---
 
 ## Get Started in 30 Seconds
@@ -53,7 +57,7 @@ btrace -n 'java.lang.Exception::<init> @return { print self, stack(5) }' <PID>
 @BTrace public class Trace {
     @OnMethod(clazz = "com.example.OrderService", method = "checkout")
     public static void onCheckout(@Self Object self, @Duration long ns) {
-        println(strcat("checkout: ", str(ns/1_000_000) + "ms"));
+        println("checkout: " + str(ns / 1_000_000) + "ms");
     }
 }
 ```
@@ -137,30 +141,20 @@ Use [JBang](https://www.jbang.dev/) to run BTrace without manual installation:
 # Install JBang (one time)
 curl -Ls https://sh.jbang.dev | bash -s - app setup
 
-# Use BTrace immediately (replace <version> with desired version, e.g., 2.3.0)
+# Use BTrace immediately (replace <version> with desired version, e.g., 3.0.0)
 jbang io.btrace:btrace-client:<version> <PID> <script.java>
 
 # After first run, use shorter alias
 jbang btrace <PID> <script.java>
 ```
 
-**Note:** Replace `<version>` with the desired BTrace version (e.g., `2.3.0`). See [releases](https://github.com/btraceio/btrace/releases) for available versions.
+**Note:** Replace `<version>` with the desired BTrace version (e.g., `3.0.0`). See [releases](https://github.com/btraceio/btrace/releases) for available versions.
 
 **Benefits:** Zero installation, automatic version management, works everywhere (Windows/macOS/Linux/containers), perfect for CI/CD.
 
-**Extract agent JARs** (if needed for `--agent-jar`/`--boot-jar` flags):
+**Agent JAR:** The client automatically discovers the masked agent JAR (`btrace.jar`) on its classpath — no extraction step is needed. If you want to use the agent JAR directly (e.g., with `-javaagent`), find it in the Maven local repository after the first jbang run:
 ```sh
-# Extract embedded JARs
-jbang btrace --extract-agent ~/.btrace
-
-# This creates ~/.btrace/btrace.jar (single masked JAR)
-# Then use them:
-jbang btrace --agent-jar ~/.btrace/btrace.jar <PID> <script.java>
-
-# Or find in Maven local repository (after first jbang run):
-# ~/.m2/repository/org/openjdk/btrace/btrace/<version>/btrace-<version>.jar
-#
-# Legacy jar names (btrace-agent.jar, btrace-boot.jar) are still extracted for backward compatibility.
+# ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar
 ```
 
 See [Getting Started Guide](docs/GettingStarted.md#jbang-installation-recommended-for-quick-start) for complete JBang documentation and examples.
@@ -215,9 +209,6 @@ See [docker/README.md](docker/README.md) for complete Docker documentation.
 ```sh
 # Attach to running application
 jbang btrace <PID> <trace_script.java>
-
-# Extract agent JARs
-jbang btrace --extract-agent ~/.btrace
 ```
 
 **With installed BTrace:**
@@ -272,7 +263,7 @@ plugins {
 
 btraceFatAgent {
     embedExtensions {
-        maven('io.btrace:btrace-metrics:2.3.0')
+        maven('io.btrace:btrace-metrics:3.0.0')
         project(':my-custom-extension')
     }
 }
@@ -321,10 +312,11 @@ BTrace supports extensions (like StatsdExtension) that provide additional functi
 
 Permissions are enforced based on extension/service descriptors and agent grants specified at attach-time.
 
-Grant permissions at runtime:
+Privileged permissions are granted via agent options (there is no client-side flag), e.g. when starting the target with the agent:
 ```sh
-btrace --grant=NETWORK,THREADS <PID> MyProbe.class
+java -javaagent:btrace.jar=grant=NETWORK,THREADS ... MainClass
 ```
+or persistently via a policy file (see [PermissionPolicy](docs/PermissionPolicy.md)).
 
 If extensions fail to load, use `-le` to troubleshoot:
 ```sh
@@ -356,13 +348,7 @@ See docs/PermissionPolicy.md for details and examples.
 - Details: selection updates automatically; shows the full-word state: `default` / `allowed` / `denied` and the full path.
 - Legend: a short legend under the table maps the state symbols.
 
-Screenshot / demo (optional):
-
-![btracex TUI](docs/images/btracex-tui.png)
-
-![btracex TUI demo](docs/images/btracex-tui.gif)
-
-See also: docs/TUI.md for recording tips and an ASCII preview.
+The TUI provides a keyboard-driven, terminal-based view for browsing installed extensions and toggling their allow/deny state without editing the policy file by hand.
 
 Keys
 - Navigate: Arrow keys, PageUp/PageDown, Home/End
@@ -410,7 +396,7 @@ See [CLAUDE.md](CLAUDE.md) for detailed development guidelines and project archi
 
 ## License
 
-GPLv2 with Classpath Exception. See [LICENSE](LICENSE).
+Apache License 2.0. See [LICENSE](LICENSE).
 
 ---
 

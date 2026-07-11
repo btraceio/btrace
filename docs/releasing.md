@@ -104,15 +104,15 @@ The workflow does **not** auto-release - you must manually publish from the Cent
 ```xml
 <dependency>
     <groupId>io.btrace</groupId>
-    <artifactId>btrace-client</artifactId>
+    <artifactId>btrace</artifactId>
     <version>VERSION</version>
 </dependency>
 ```
 
 Available artifacts:
-- `io.btrace:btrace-agent`
-- `io.btrace:btrace-client`
-- `io.btrace:btrace-boot`
+- `io.btrace:btrace` — the single masked JAR (agent + client + boot merged; see [Masked JAR Architecture](architecture/MaskedJarArchitecture.md))
+
+The release workflow publishes only the `:btrace-dist` publications (`./gradlew :btrace-dist:publishAllPublicationsToSonatypeRepository`); the legacy `btrace-agent`/`btrace-client`/`btrace-boot` artifacts are no longer published.
 
 ### Credentials
 

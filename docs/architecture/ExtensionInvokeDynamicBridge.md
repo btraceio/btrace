@@ -90,7 +90,7 @@ The BTrace extension system uses invokedynamic to bridge between script classloa
 
 ### 1. ExtensionIndy (btrace-runtime)
 
-**Location:** `btrace-runtime/src/main/java/org/openjdk/btrace/runtime/ExtensionIndy.java`
+**Location:** `btrace-runtime/src/main/java/io/btrace/runtime/ExtensionIndy.java`
 
 **Purpose:** Bootstrap methods for invokedynamic extension access
 
@@ -118,9 +118,9 @@ public static CallSite bootstrapFieldGet(
 - Logs errors but doesn't throw exceptions
 - Matches behavior of failed service instantiation
 
-### 2. ExtensionBridge (btrace-runtime)
+### 2. ExtensionBridge (btrace-core)
 
-**Location:** `btrace-runtime/src/main/java/org/openjdk/btrace/runtime/ExtensionBridge.java`
+**Location:** `btrace-core/src/main/java/io/btrace/extension/ExtensionBridge.java`
 
 **Purpose:** Interface for agent-to-runtime classloader bridging
 
@@ -136,9 +136,9 @@ public interface ExtensionBridge {
 - Breaks circular dependency (runtime can't depend on agent)
 - Clean separation of concerns
 
-### 3. ExtensionBridgeImpl (btrace-agent)
+### 3. ExtensionBridgeImpl (btrace-core)
 
-**Location:** `btrace-agent/src/main/java/org/openjdk/btrace/agent/extension/ExtensionBridgeImpl.java`
+**Location:** `btrace-core/src/main/java/io/btrace/extension/impl/ExtensionBridgeImpl.java`
 
 **Purpose:** Agent-side implementation of ExtensionBridge
 
@@ -161,9 +161,9 @@ static {
 - Loads extension classes from extension classloaders
 - Ensures extensions are loaded before returning class
 
-### 4. Preprocessor (btrace-instr)
+### 4. Preprocessor (btrace-agent)
 
-**Location:** `btrace-instr/src/main/java/org/openjdk/btrace/instr/Preprocessor.java`
+**Location:** `btrace-agent/src/main/java/io/btrace/instr/Preprocessor.java`
 
 **Purpose:** Transforms @Injected field references to invokedynamic
 
@@ -175,7 +175,7 @@ GETSTATIC ScriptClass.metrics : MetricsService
 // After:
 INVOKEDYNAMIC bootstrapFieldGet(
   "metrics",                           // field name (debug)
-  "()Lorg/openjdk/btrace/metrics/MetricsService;",  // method descriptor
+  "()Lio/btrace/metrics/MetricsService;",  // method descriptor
   ExtensionIndy.bootstrapFieldGet,     // bootstrap method
   "io.btrace.metrics.MetricsService",  // service class name
   "RUNTIME",                           // optional type hint (deprecated)
@@ -195,9 +195,9 @@ private AbstractInsnNode updateInjectedUsage(
 - Emits InvokeDynamicInsnNode instead
 - Passes service metadata as bootstrap arguments
 
-### 5. ExtensionLoader (btrace-agent)
+### 5. ExtensionLoader (btrace-core)
 
-**Location:** `btrace-agent/src/main/java/org/openjdk/btrace/agent/extension/ExtensionLoader.java`
+**Location:** `btrace-core/src/main/java/io/btrace/extension/ExtensionLoader.java`
 
 **Key Changes:**
 - Avoids `instrumentation.appendToBootstrapClassLoaderSearch(jarFile)`

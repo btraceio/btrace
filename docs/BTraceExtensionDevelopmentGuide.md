@@ -104,7 +104,7 @@ btraceExtension {
 
 Alternative to the DSL:
 - You can document extension details via the `@ExtensionDescriptor` annotation in your API package’s `package-info.java`.
-- Annotation source: `btrace-core/src/main/java/org/openjdk/btrace/core/extensions/ExtensionDescriptor.java`.
+- Annotation source: `btrace-core/src/main/java/io/btrace/core/extensions/ExtensionDescriptor.java`.
 - Fields: `name`, `version`, `description`, `minBTraceVersion`, `dependencies`, `permissions`.
 - The `btraceExtension` block remains the canonical source for manifest values; `@ExtensionDescriptor` mainly assists tooling and validates that declared `permissions` are covered by scanning or `requiredPermissions`.
 
@@ -260,7 +260,7 @@ At runtime, the agent consults this metadata to validate and enforce permissions
 
 If you want users to discover your extension through the public catalog, publish the extension artifacts to Maven Central first and then add the extension to the BTrace registry.
 
-The registry bootstrap currently lives in this repository at [extension-registry/](/Users/jbachorik/src/btrace/extension-registry/README.md:1) and is intended to move to a dedicated GitHub repository with GitHub Pages hosting. The canonical entry shape is documented in [ExtensionRegistry.md](ExtensionRegistry.md).
+The extension registry is planned to live in a dedicated GitHub repository with GitHub Pages hosting; until it is published, treat the entry shape shown below as the working draft.
 
 Registry entries store a single recommended base coordinate:
 
@@ -337,7 +337,7 @@ btraceFatAgent {
         project(':my-extension')
 
         // Published extensions from Maven
-        maven('io.btrace:btrace-metrics:2.3.0')
+        maven('io.btrace:btrace-metrics:3.0.0')
 
         // Local extension ZIPs
         file('libs/other-extension.zip')

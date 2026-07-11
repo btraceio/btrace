@@ -36,9 +36,9 @@ A single JAR containing:
 ├─────────────────────────────────────────────────────────────┤
 │  Bootstrap Classpath (via Boot-Class-Path manifest)         │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │  org/openjdk/btrace/agent/...     (agent classes)     │  │
-│  │  org/openjdk/btrace/core/...      (core classes)      │  │
-│  │  org/openjdk/btrace/instr/...     (instr classes)     │  │
+│  │  io/btrace/agent/...              (agent classes)     │  │
+│  │  io/btrace/core/...               (core classes)      │  │
+│  │  io/btrace/instr/...              (instr classes)     │  │
 │  │  org/example/ext/api/...          (extension API)     │  │
 │  └───────────────────────────────────────────────────────┘  │
 ├─────────────────────────────────────────────────────────────┤

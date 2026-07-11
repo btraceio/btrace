@@ -126,8 +126,8 @@ btraceFatAgent {
         projects(':btrace-metrics', ':btrace-utils')
 
         // Maven coordinates
-        maven('io.btrace:btrace-kafka-extension:2.3.0')
-        maven(group: 'io.btrace', name: 'btrace-flink-extension', version: '2.3.0')
+        maven('io.btrace:btrace-kafka-extension:3.0.0')
+        maven(group: 'io.btrace', name: 'btrace-flink-extension', version: '3.0.0')
 
         // Local extension ZIPs or directories
         file('/path/to/extension.zip')
@@ -226,7 +226,7 @@ For projects outside the BTrace monorepo:
 
 ```groovy
 plugins {
-    id 'io.btrace.fat-agent' version '2.3.0'
+    id 'io.btrace.fat-agent' version '3.0.0'
 }
 
 btraceFatAgent {
@@ -236,8 +236,8 @@ btraceFatAgent {
     agentJarTask = 'btraceJar'  // or provide path
 
     embedExtensions {
-        maven('io.btrace:btrace-metrics:2.3.0')
-        maven('io.btrace:btrace-statsd:2.3.0')
+        maven('io.btrace:btrace-metrics:3.0.0')
+        maven('io.btrace:btrace-statsd:3.0.0')
         file('libs/my-custom-extension.zip')
     }
 }
@@ -267,7 +267,7 @@ btrace-agent-fat.jar
 │       │   └── extension.properties
 │       └── ext3/
 │           └── extension.properties
-├── org/openjdk/btrace/...          # Agent + boot classes
+├── io/btrace/...                   # Agent + boot classes
 ├── org/example/ext/api/...         # Extension API classes (.class)
 └── org/example/ext/impl/...        # Extension impl classes (.classdata)
 ```

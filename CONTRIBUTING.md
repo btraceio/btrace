@@ -19,9 +19,10 @@ Thanks for your interest in contributing! This guide covers local development, r
 
 - Per-module tests:
   - Runtime: `./gradlew :btrace-runtime:test`
-  - Extension: `./gradlew :btrace-extension:test`
+  - Core (incl. extension framework): `./gradlew :btrace-core:test`
+  - Extensions: `./gradlew :btrace-extensions:btrace-metrics:test` (similarly for the other `:btrace-extensions:*` modules)
   - Compiler: `./gradlew :btrace-compiler:test`
-  - Instr: `./gradlew :btrace-instr:test`
+  - Instrumentation (lives in the agent module): `./gradlew :btrace-agent:test`
 
 - Update instrumentor goldens when bytecode output changes:
   ```sh
@@ -50,7 +51,7 @@ Thanks for your interest in contributing! This guide covers local development, r
 - Enable Gradle debug output for flakiness: add `--info` or `--debug`.
 - Run a single test class/method:
   ```sh
-  ./gradlew :btrace-extension:test --tests io.btrace.extension.ExtensionBridgeImplPolicyTest
+  ./gradlew :btrace-core:test --tests io.btrace.extension.ExtensionBridgeImplPolicyTest
   ./gradlew :btrace-runtime:test --tests "*ExtensionIndyShimIndexTest.resolvesNoopShimFromIndex"
   ```
 

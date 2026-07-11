@@ -6,7 +6,7 @@ Official Docker images for [BTrace](https://github.com/btraceio/btrace) - a safe
 
 ```dockerfile
 # Copy BTrace into your application image
-FROM btrace/btrace:2.3.0 AS btrace
+FROM btrace/btrace:3.0.0 AS btrace
 FROM bellsoft/liberica-openjdk-debian:11-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
@@ -26,7 +26,7 @@ ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:/opt/btrace/bin"
 - **Best for:** Development environments, interactive troubleshooting
 
 ```dockerfile
-FROM btrace/btrace:2.3.0
+FROM btrace/btrace:3.0.0
 ```
 
 ### `btrace/btrace:latest-alpine` (~15MB)
@@ -38,7 +38,7 @@ FROM btrace/btrace:2.3.0
 - **Best for:** Production sidecars, cloud deployments
 
 ```dockerfile
-FROM btrace/btrace:2.3.0-alpine
+FROM btrace/btrace:3.0.0-alpine
 ```
 
 ### `btrace/btrace:latest-distroless` (~10MB)
@@ -50,7 +50,7 @@ FROM btrace/btrace:2.3.0-alpine
 - **Best for:** Production applications using `-javaagent`
 
 ```dockerfile
-FROM btrace/btrace:2.3.0-distroless AS btrace
+FROM btrace/btrace:3.0.0-distroless AS btrace
 FROM gcr.io/distroless/java11
 COPY --from=btrace /opt/btrace/libs /opt/btrace/libs
 ```
@@ -62,7 +62,7 @@ COPY --from=btrace /opt/btrace/libs /opt/btrace/libs
 Most common - copy BTrace into your application image:
 
 ```dockerfile
-FROM btrace/btrace:2.3.0 AS btrace
+FROM btrace/btrace:3.0.0 AS btrace
 FROM bellsoft/liberica-openjdk-debian:11-cds
 WORKDIR /app
 
@@ -98,7 +98,7 @@ spec:
     image: myapp:latest
 
   - name: btrace-sidecar
-    image: btrace/btrace:2.3.0-alpine
+    image: btrace/btrace:3.0.0-alpine
     command: ["/bin/sh", "-c", "while true; do sleep 30; done"]
     volumeMounts:
     - name: btrace-scripts
@@ -121,7 +121,7 @@ kubectl exec myapp-with-btrace -c btrace-sidecar -- \
 Extend BTrace image for development:
 
 ```dockerfile
-FROM btrace/btrace:2.3.0-alpine
+FROM btrace/btrace:3.0.0-alpine
 
 COPY target/myapp.jar /app/myapp.jar
 COPY scripts/*.btrace /scripts/
@@ -135,7 +135,7 @@ CMD ["-v", "-o", "/tmp/btrace-output.txt", "/app/myapp.jar"]
 Minimal image with BTrace agent:
 
 ```dockerfile
-FROM btrace/btrace:2.3.0-distroless AS btrace
+FROM btrace/btrace:3.0.0-distroless AS btrace
 FROM gcr.io/distroless/java11
 WORKDIR /app
 
@@ -161,7 +161,7 @@ services:
       - "8080:8080"
 
   btrace:
-    image: btrace/btrace:2.3.0-alpine
+    image: btrace/btrace:3.0.0-alpine
     network_mode: "service:myapp"
     pid: "service:myapp"
     volumes:
@@ -233,7 +233,7 @@ kubectl create configmap btrace-scripts \
 ### Performance Profiling
 
 ```dockerfile
-FROM btrace/btrace:2.3.0 AS btrace
+FROM btrace/btrace:3.0.0 AS btrace
 FROM bellsoft/liberica-openjdk-debian:11-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
@@ -252,13 +252,13 @@ ENTRYPOINT ["btracer", \
 
 1. **Use specific version tags in production:**
    ```dockerfile
-   FROM btrace/btrace:2.3.0  # Good
+   FROM btrace/btrace:3.0.0  # Good
    FROM btrace/btrace:latest  # Avoid in production
    ```
 
 2. **Multi-stage builds minimize size:**
    ```dockerfile
-   FROM btrace/btrace:2.3.0 AS btrace
+   FROM btrace/btrace:3.0.0 AS btrace
    FROM your-app-image
    COPY --from=btrace /opt/btrace /opt/btrace
    ```
@@ -327,7 +327,7 @@ ENV JAVA_OPTS="--add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAME
 ./gradlew :btrace-dist:buildDockerImages
 
 # Or build manually
-VERSION=2.3.0-SNAPSHOT  # Set this to your BTrace version
+VERSION=3.0.0-SNAPSHOT  # Set this to your BTrace version
 cd docker
 docker build -t btrace/btrace:local -f Dockerfile ../btrace-dist/build/resources/main/v${VERSION}
 docker build -t btrace/btrace:local-alpine -f Dockerfile.alpine ../btrace-dist/build/resources/main/v${VERSION}
@@ -343,7 +343,7 @@ Note: Native DTrace library (`libbtrace.so`) is x86-only. DTrace features are no
 
 ## License
 
-BTrace is licensed under GPL-2.0-only WITH Classpath-exception-2.0.
+BTrace is licensed under the Apache License, Version 2.0.
 
 ## Links
 

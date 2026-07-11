@@ -14,7 +14,7 @@ BTrace is a safe, dynamic tracing tool for the Java platform. It allows you to d
 
 ## Prerequisites
 
-- Java 8 or higher (BTrace supports Java 8-20)
+- Java 8 or higher. BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
 - Basic knowledge of Java programming
 - Target Java application running with appropriate permissions
 
@@ -70,7 +70,7 @@ sdk install jbang                   # SDKMAN
 
 **Use BTrace with JBang** (no separate BTrace installation needed):
 ```bash
-# Attach to running application (replace <version> with desired version, e.g., 2.3.0)
+# Attach to running application (replace <version> with desired version, e.g., 3.0.0)
 jbang io.btrace:btrace-client:<version> <PID> <script.java>
 
 # Add the BTrace JBang catalog (one time), then use the shorter alias
@@ -78,33 +78,13 @@ jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jba
 jbang btrace@btraceio <PID> <script.java>
 ```
 
-**Extract agent JARs** (if needed for `--agent-jar`/`--boot-jar` flags):
+**Agent JAR:** The client automatically discovers the masked agent JAR (`btrace.jar`) on its classpath — no extraction step is needed. If you want to use the agent JAR directly (e.g., with `-javaagent`), find it in the Maven local repository (default `~/.m2`) after jbang downloads BTrace:
 ```bash
-# Extract to a directory of your choice
-jbang io.btrace:btrace-client:<version> --extract-agent ~/.btrace
-
-# This creates:
-#   ~/.btrace/btrace.jar (single masked JAR — primary)
-#   ~/.btrace/btrace-agent.jar and ~/.btrace/btrace-boot.jar (legacy, backward compat)
-
-# Then use it explicitly:
-jbang btrace@btraceio --agent-jar ~/.btrace/btrace.jar \
-             <PID> <script.java>
-```
-
-**Alternative: Use JARs from Maven local repository:**
-After jbang downloads BTrace, find the JARs in your local Maven repository (default `~/.m2`):
-```bash
-# JARs are cached at:
+# The masked agent JAR is cached at:
 ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar
 
-# Use it directly:
-jbang btrace@btraceio --agent-jar ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar \
-             <PID> <script.java>
-
-# Legacy coordinates (backward compat):
-# ~/.m2/repository/io/btrace/btrace-agent/<version>/btrace-agent-<version>.jar
-# ~/.m2/repository/io/btrace/btrace-boot/<version>/btrace-boot-<version>.jar
+# Use it directly with -javaagent:
+java -javaagent:~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar=script=MyTrace.class MyApp
 ```
 
 **Benefits:**
@@ -214,7 +194,8 @@ public class TraceMethods {
 ```
 
 > **Note:** `println` and `str` are part of BTrace's built-in flat DSL — they are auto-imported by
-> the compiler so you don't need any explicit import. See [BTrace DSL](#btrace-dsl) below for all
+> the compiler so you don't need any explicit import. See the
+> [Flat DSL lesson in the BTrace Tutorial](BTraceTutorial.md#lesson-7---flat-dsl) for all
 > available methods.
 
 ### Step 3: Attach BTrace to the Running Application
@@ -334,16 +315,9 @@ jbang btrace@btraceio 12345 MyTrace.java
 
 # With verbose output
 jbang btrace@btraceio -v 12345 MyTrace.java arg1 arg2
-
-# Extract agent JARs, then use them explicitly
-jbang btrace@btraceio --extract-agent ~/.btrace
-jbang btrace@btraceio --agent-jar ~/.btrace/btrace.jar \
-             12345 MyTrace.java
-
-# Or use JARs from Maven local repository (after jbang downloads them)
-jbang btrace@btraceio --agent-jar ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar \
-             12345 MyTrace.java
 ```
+
+The masked agent JAR (`btrace.jar`) is discovered automatically from the client's classpath. After jbang downloads BTrace, the JAR is also available in the Maven local repository at `~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar` for direct `-javaagent` use.
 
 **Benefits:**
 - Zero installation required
@@ -373,8 +347,6 @@ btrace -v 12345 MyTrace.java arg1 arg2
 - `-v` - Verbose output
 - `-p <port>` - Specify port for communication
 - `-o <file>` - Redirect output to file
-- `--agent-jar <path>` - Override agent JAR auto-discovery
-- `--boot-jar <path>` - Override boot JAR auto-discovery
 
 ### 3. Java Agent Mode (Pre-compiled Scripts)
 
@@ -597,9 +569,9 @@ ENTRYPOINT ["java", "-jar", "/app/myapp.jar"]
 **Alternative: Manual installation (if not using official images):**
 ```dockerfile
 FROM bellsoft/liberica-openjdk-debian:11-cds
-RUN curl -L https://github.com/btraceio/btrace/releases/download/v2.2.2/btrace-2.2.2.tar.gz \
+RUN curl -L https://github.com/btraceio/btrace/releases/download/v3.0.0/btrace-3.0.0.tar.gz \
     | tar -xz -C /opt/
-ENV BTRACE_HOME=/opt/btrace-2.2.2
+ENV BTRACE_HOME=/opt/btrace-3.0.0
 ENV PATH=$PATH:$BTRACE_HOME/bin
 ```
 
@@ -764,8 +736,8 @@ btraceFatAgent {
 
     embedExtensions {
         // From Maven Central
-        maven('io.btrace:btrace-metrics:2.3.0')
-        maven('io.btrace:btrace-statsd:2.3.0')
+        maven('io.btrace:btrace-metrics:3.0.0')
+        maven('io.btrace:btrace-statsd:3.0.0')
 
         // Local extension
         file('libs/my-custom-extension.zip')
@@ -830,7 +802,7 @@ See [Fat Agent Plugin Architecture](architecture/fat-agent-plugin.md) and [Gradl
 
 **Solutions:**
 - Ensure BTrace and target app run as the same user
-- **JDK 8-20**: Check if target JVM has `-XX:+DisableAttachMechanism` (remove it)
+- **JDK 20 and older**: Check if target JVM has `-XX:+DisableAttachMechanism` (remove it)
 - **JDK 21+**: Add `-XX:+EnableDynamicAgentLoading` to target JVM to suppress warnings and ensure compatibility
 - Verify JDK (not JRE) is installed
 

@@ -1,14 +1,15 @@
-# BTrace Tutorial (BTrace 2.3.0)
+# BTrace Tutorial (BTrace 3.0)
 
 > **Note:** Examples use `btrace.jar` -- the single masked JAR (BTrace 2.2+). If using a legacy multi-JAR distribution, replace `btrace.jar` with `btrace-agent.jar` (and add `-Xbootclasspath/a:btrace-boot.jar` where needed).
 
-> **Package namespace:** BTrace 2.3+ uses the `io.btrace` package (previously `org.openjdk.btrace`). The compiler auto-injects `import static io.btrace.BTrace.*` into every script, so common helpers like `println`, `str`, `monotonic`, etc. are available without any import. Legacy probes compiled against `org.openjdk.btrace` are transparently migrated at load time.
+> **Package namespace:** BTrace 3.0+ uses the `io.btrace` package (previously `org.openjdk.btrace`). The compiler auto-injects `import static io.btrace.BTrace.*` into every script, so common helpers like `println`, `str`, `monotonic`, etc. are available without any import. Legacy probes compiled against `org.openjdk.btrace` are transparently migrated at load time. See the [Migration Guide 2.x → 3.0](Migration-2.x-to-3.0.md) for full upgrade details.
 
 **Related documentation**
 
 | Document | What's in it |
 |----------|-------------|
 | [Getting Started](GettingStarted.md) | Installation, first run |
+| [Migration Guide 2.x → 3.0](Migration-2.x-to-3.0.md) | Upgrading from BTrace 2.x |
 | [Quick Reference](QuickReference.md) | All annotations, parameters, built-in functions |
 | [Oneliner Guide](OnelinerGuide.md) | DTrace-style one-liners (`btrace -n '...'`) |
 | [Extension Development Guide](BTraceExtensionDevelopmentGuide.md) | Writing and shipping extensions |
@@ -1144,7 +1145,7 @@ The plugin generates the service descriptor manifest, computes the required perm
 
 #### Lesson 7 - Flat DSL
 
-BTrace 2.3+ ships a flat DSL class `io.btrace.BTrace` that exposes the most common helper operations as plain static methods. The compiler **automatically injects two imports** into every script:
+BTrace 3.0+ ships a flat DSL class `io.btrace.BTrace` that exposes the most common helper operations as plain static methods. The compiler **automatically injects two imports** into every script:
 
 * `import static io.btrace.BTrace.*;` — all flat DSL helpers (`println`, `str`, `monotonic`, …)
 * `import io.btrace.core.annotations.*;` — all BTrace annotations (`@BTrace`, `@OnMethod`, `@TLS`, `@Level`, …)

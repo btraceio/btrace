@@ -3,7 +3,7 @@
 # Runtime JARs only, no shell or unnecessary tools
 FROM gcr.io/distroless/java11-debian11
 
-ARG BTRACE_VERSION=2.3.0-SNAPSHOT
+ARG BTRACE_VERSION=3.0.0-SNAPSHOT
 
 LABEL maintainer="BTrace Project <https://github.com/btraceio/btrace>" \
       org.opencontainers.image.title="BTrace Distroless" \
@@ -11,7 +11,7 @@ LABEL maintainer="BTrace Project <https://github.com/btraceio/btrace>" \
       org.opencontainers.image.url="https://github.com/btraceio/btrace" \
       org.opencontainers.image.source="https://github.com/btraceio/btrace" \
       org.opencontainers.image.version="${BTRACE_VERSION}" \
-      org.opencontainers.image.licenses="GPL-2.0-only WITH Classpath-exception-2.0"
+      org.opencontainers.image.licenses="Apache-2.0"
 
 # Copy only BTrace runtime libraries (no shell scripts since distroless has no shell)
 COPY btrace/libs /opt/btrace/libs

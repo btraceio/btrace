@@ -13,6 +13,8 @@ A cheat sheet for experienced users. For step-by-step instructions, see [Getting
 | Docker | `docker pull btrace/btrace` |
 | Manual | [Download latest release](https://github.com/btraceio/btrace/releases/latest) |
 
+**Java support:** BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
+
 ---
 
 ## Table of Contents
@@ -421,6 +423,7 @@ btrace [options] <PID> <script.java> [script-args]
 - `-v` - Run in verbose mode
 - `-l` - List all locally attachable JVMs
 - `-lp` - List active probes in the given JVM (expects PID or app name)
+- `-le` - List failed extensions in the given JVM (expects PID or app name)
 - `-r <probe-id>` - Reconnect to an active disconnected probe
 - `-r help` - Show help on remote commands
 - `-o <file>` - Output to file (disables console output)
@@ -493,6 +496,40 @@ btracer MyTrace.class java -jar myapp.jar
 btracer MyTrace.class java -Xmx2g -jar myapp.jar
 ```
 
+### btracex
+Extension management CLI: inspect, list, and install extensions and edit the permission policy.
+```bash
+btracex inspect [<path|dir|zip|id>] [--json]   # no args opens the interactive repo browser (TUI)
+btracex list [--json]
+btracex policy print [--policy-file <path>|--home|--classpath <outDir>] [--json]
+btracex policy set [--allowExtensions <ids>] [--denyExtensions <ids>] [--allowPrivileged <bool>] [--policy-file <path>|--home|--classpath <outDir>]
+btracex install <groupId:artifactId:version> [--repo <url> ...] [--id <extId>] [--dry-run]
+```
+
+**Examples:**
+```bash
+# Inspect an extension archive (id, version, services, privileged status)
+btracex inspect my-extension.zip
+
+# List installed extensions
+btracex list
+
+# Install an extension from Maven coordinates
+btracex install io.btrace:btrace-statsd:3.0.0
+```
+
+### btracep
+Probe inspector: prints details of a compiled BTrace probe (handlers, required permissions, bytecode).
+```bash
+btracep <probe_file>
+```
+
+**Example:**
+```bash
+btracec MyTrace.java
+btracep MyTrace.class
+```
+
 ### Java Agent Mode
 Start app with BTrace agent directly.
 ```bash
@@ -514,6 +551,16 @@ java -javaagent:btrace.jar=script=MyTrace.class MyApp
 # With custom port
 java -javaagent:btrace.jar=script=MyTrace.class,port=2020 MyApp
 ```
+
+### Wire Protocol
+Client and agent communicate over a pluggable wire protocol: V1 (Java serialization, backward compatible) and V2 (binary, faster). The version is auto-negotiated by default. System properties:
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `btrace.comm.protocol` | `v2` | Protocol version (`1`/`v1` or `2`/`v2`) |
+| `btrace.comm.autoNegotiate` | `true` | Enable automatic protocol negotiation |
+| `btrace.comm.forceVersion` | `false` | Force the configured version without negotiation (mutually exclusive with auto-negotiation) |
+| `btrace.protocol.negotiation.timeout` | `5000` | Negotiation timeout in milliseconds |
 
 ## Built-in Functions
 

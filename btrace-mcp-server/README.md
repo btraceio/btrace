@@ -28,6 +28,14 @@ An MCP (Model Context Protocol) server that exposes BTrace operations as tools, 
 ./gradlew :btrace-mcp-server:build
 ```
 
+This produces `btrace-mcp-server/build/libs/btrace-mcp-server-<version>.jar`. The jar declares `Main-Class: io.btrace.mcp.BTraceMcpServer`, but it is **not** self-contained — it needs the other BTrace module jars (btrace-core, btrace-client, btrace-compiler, btrace-boot and their dependencies) on the classpath, and it is not included in the binary BTrace distribution.
+
+Collect the server jar together with its runtime dependencies into a single directory (referred to as `/path/to/btrace-mcp-libs` below) and launch the server with:
+
+```bash
+java -cp "/path/to/btrace-mcp-libs/*" io.btrace.mcp.BTraceMcpServer
+```
+
 ## Configuration
 
 ### Claude Desktop
@@ -40,7 +48,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
     "btrace": {
       "command": "java",
       "args": [
-        "-cp", "/path/to/btrace/lib/*",
+        "-cp", "/path/to/btrace-mcp-libs/*",
         "io.btrace.mcp.BTraceMcpServer"
       ]
     }
@@ -50,7 +58,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 
 ### Claude Code
 
-Add to your project's `.mcp.json`:
+Add to your project's `.mcp.json` (project-scope MCP configuration):
 
 ```json
 {
@@ -58,7 +66,7 @@ Add to your project's `.mcp.json`:
     "btrace": {
       "command": "java",
       "args": [
-        "-cp", "/path/to/btrace/lib/*",
+        "-cp", "/path/to/btrace-mcp-libs/*",
         "io.btrace.mcp.BTraceMcpServer"
       ]
     }
@@ -66,39 +74,13 @@ Add to your project's `.mcp.json`:
 }
 ```
 
-Or configure globally in `~/.claude/settings.json`:
+Or register the server at user scope with the CLI:
 
-```json
-{
-  "mcpServers": {
-    "btrace": {
-      "command": "java",
-      "args": [
-        "-cp", "/path/to/btrace/lib/*",
-        "io.btrace.mcp.BTraceMcpServer"
-      ]
-    }
-  }
-}
+```bash
+claude mcp add --scope user btrace -- java -cp "/path/to/btrace-mcp-libs/*" io.btrace.mcp.BTraceMcpServer
 ```
 
-### Using the BTrace distribution
-
-If you have BTrace installed (e.g. via SDKMAN), you can reference the distribution directly:
-
-```json
-{
-  "mcpServers": {
-    "btrace": {
-      "command": "java",
-      "args": [
-        "-cp", "$BTRACE_HOME/lib/*:$BTRACE_HOME/build/btrace-mcp-server.jar",
-        "io.btrace.mcp.BTraceMcpServer"
-      ]
-    }
-  }
-}
-```
+See [docs/MCPServer.md](../docs/MCPServer.md) for configuration examples covering other MCP hosts (Cursor, VS Code, Windsurf, Continue, Zed, ...).
 
 ## Usage Examples
 

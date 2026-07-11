@@ -1,8 +1,8 @@
 # BTrace Docker Image - Alpine variant
 # Smaller footprint for Kubernetes sidecars and resource-constrained environments
-FROM alpine:3.24
+FROM alpine:3.23
 
-ARG BTRACE_VERSION=2.3.0-SNAPSHOT
+ARG BTRACE_VERSION=3.0.0-SNAPSHOT
 
 LABEL maintainer="BTrace Project <https://github.com/btraceio/btrace>" \
       org.opencontainers.image.title="BTrace Alpine" \
@@ -10,7 +10,7 @@ LABEL maintainer="BTrace Project <https://github.com/btraceio/btrace>" \
       org.opencontainers.image.url="https://github.com/btraceio/btrace" \
       org.opencontainers.image.source="https://github.com/btraceio/btrace" \
       org.opencontainers.image.version="${BTRACE_VERSION}" \
-      org.opencontainers.image.licenses="GPL-2.0-only WITH Classpath-exception-2.0"
+      org.opencontainers.image.licenses="Apache-2.0"
 
 # Install OpenJDK 11 and required tools
 RUN apk add --no-cache \

@@ -22,13 +22,15 @@ The previous multi-JAR approach (`btrace-agent.jar`, `btrace-boot.jar`, `btrace-
 
 ```
 btrace.jar (~2.9 MB)
-├── org/openjdk/btrace/boot/*.class             # Entry point (Loader, MaskedClassLoader, MaskedJarUtils)
-├── org/openjdk/btrace/core/*.class             # Bootstrap: core API (~42 classes)
-├── org/openjdk/btrace/core/extensions/*.class  # Bootstrap: extension API
-├── org/openjdk/btrace/core/types/*.class       # Bootstrap: type definitions
-├── org/openjdk/btrace/core/jfr/*.class         # Bootstrap: JFR integration
-├── org/openjdk/btrace/runtime/*.class          # Bootstrap: runtime support
-├── org/openjdk/btrace/libs/org/slf4j/**        # Bootstrap: relocated SLF4J
+├── io/btrace/boot/*.class                      # Entry point (Loader, MaskedClassLoader, MaskedJarUtils)
+├── io/btrace/core/*.class                      # Bootstrap: core API (excl. Messages, comm, extensions)
+├── io/btrace/core/annotations/*.class          # Bootstrap: annotations
+├── io/btrace/core/handlers/*.class             # Bootstrap: handler interfaces
+├── io/btrace/core/types/*.class                # Bootstrap: type definitions
+├── io/btrace/core/jfr/*.class                  # Bootstrap: JFR integration
+├── io/btrace/runtime/*.class                   # Bootstrap: selected runtime support classes
+├── io/btrace/extension/ExtensionBridge.class   # Bootstrap: extension bridge interface
+├── io/btrace/libs/org/slf4j/**                 # Bootstrap: relocated SLF4J
 ├── META-INF/btrace/agent/*.classdata           # Masked: agent classes
 ├── META-INF/btrace/client/*.classdata          # Masked: client classes
 ├── META-INF/btrace/shared/*.classdata          # Masked: shared classes (ASM, protocol, etc.)
@@ -107,23 +109,24 @@ Resource loading (`findResource`, `getResourceAsStream`) follows the same patter
 
 Utility class for detecting masked JARs. A JAR is identified as masked by the presence of a `META-INF/btrace/shared/` entry. Used by `Client.java` and integration tests to detect whether they are running from a masked JAR or the legacy multi-JAR layout.
 
-### btrace-bootstrap Module
+### Bootstrap Class Selection
 
-**Location:** `btrace-bootstrap/`
+**Location:** `btrace-dist/build.gradle` (the `bootIncludes` filter closure)
 
-A build-only module that defines which classes belong in the bootstrap section via a `bootIncludes` filter closure. This filter is used by the `btraceJar` task in `btrace-dist/build.gradle` to separate classes into `.class` (bootstrap) vs `.classdata` (masked) during JAR assembly.
+The `bootIncludes` filter closure defined in `btrace-dist/build.gradle` determines which classes belong in the bootstrap section. It is used by the `bootstrapJar` and `btraceJar` tasks to separate classes into `.class` (bootstrap) vs `.classdata` (masked) during JAR assembly.
 
 **Bootstrap inclusion criteria:**
-- `org/openjdk/btrace/core/` — core API (excluding Messages)
-- `org/openjdk/btrace/runtime/` — runtime support
-- `org/openjdk/btrace/core/extensions/` — extension API
-- `org/openjdk/btrace/libs/org/slf4j/` — relocated SLF4J (logging from bootstrap code)
+- `io/btrace/core/` — core API, including annotations and handlers (excluding `Messages`, `messages.properties`, `comm/`, and `extensions/`)
+- `io/btrace/runtime/` — selected runtime support classes only (`BTraceRuntimeAccess`, `LinkingFlag`, `Indy*`, `ExtensionIndy`, `BTraceBootstrap`, `auxiliary/Auxiliary`)
+- `io/btrace/BTrace.class` — flat DSL entry class (needed by javac when compiling scripts)
+- `io/btrace/extension/ExtensionBridge.class` — extension bridge interface (referenced by `ExtensionIndy`)
+- `io/btrace/libs/org/slf4j/` — relocated SLF4J (logging from bootstrap code)
 
 **Explicitly excluded from bootstrap:**
 - ASM classes (loaded via shared section)
 - JCTools queues (loaded via shared section)
-- Communication protocol classes
-- Annotation and handler classes
+- Communication protocol classes (`io/btrace/core/comm/`)
+- Extension API classes (`io/btrace/core/extensions/`)
 
 ## Build Process
 

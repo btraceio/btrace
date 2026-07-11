@@ -895,8 +895,8 @@ def addPomDetails(node, name) {
     scmNode.appendNode('developerConnection', 'scm:git:https://github.com/btraceio/btrace.git')
 
     def licenseNode = node.appendNode('licenses').appendNode('license')
-    licenseNode.appendNode('name', 'GNU General Public License, version 2, with the Classpath Exception')
-    licenseNode.appendNode('url', 'http://openjdk.java.net/legal/gplv2+ce.html')
+    licenseNode.appendNode('name', 'The Apache License, Version 2.0')
+    licenseNode.appendNode('url', 'https://www.apache.org/licenses/LICENSE-2.0.txt')
 
     def developerNode = node.appendNode('developers').appendNode('developer')
     developerNode.appendNode('id', 'jbachorik')

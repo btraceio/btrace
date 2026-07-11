@@ -22,13 +22,13 @@ dependencies {
     implementation gradleApi()
     implementation localGroovy()
     // Match versions commonly cached in this repository to avoid extra fetches
-    implementation 'org.ow2.asm:asm:9.10.1'
-    implementation 'org.ow2.asm:asm-tree:9.10.1'
+    implementation 'org.ow2.asm:asm:9.9.1'
+    implementation 'org.ow2.asm:asm-tree:9.9.1'
 
     // Testing — version pinned here to match the root project's version catalog (settings.gradle).
     // Note: this is an included build and cannot access the root project's 'libs' version catalog.
     testImplementation gradleTestKit()
-    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
@@ -64,8 +64,8 @@ publishing {
                 url = 'https://github.com/btraceio/btrace'
                 licenses {
                     license {
-                        name = 'GPL-2.0 with Classpath Exception'
-                        url = 'https://openjdk.org/legal/gplv2+ce.html'
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
                     }
                 }
                 developers {

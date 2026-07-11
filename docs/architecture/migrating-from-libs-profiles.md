@@ -66,7 +66,7 @@ btraceFatAgent {
     baseName = 'my-btrace-agent'
     embedExtensions {
         project(':my-spark-extension')
-        maven('io.btrace:btrace-metrics:2.3.0')
+        maven('io.btrace:btrace-metrics:3.0.0')
     }
 }
 ```

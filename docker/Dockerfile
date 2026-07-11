@@ -1,8 +1,8 @@
 # BTrace Docker Image - Debian-based variant
 # Full distribution with all tools and shell access
-FROM bellsoft/liberica-openjdk-debian:11.0.31-cds
+FROM bellsoft/liberica-openjdk-debian:11.0.30-cds
 
-ARG BTRACE_VERSION=2.3.0-SNAPSHOT
+ARG BTRACE_VERSION=3.0.0-SNAPSHOT
 
 LABEL maintainer="BTrace Project <https://github.com/btraceio/btrace>" \
       org.opencontainers.image.title="BTrace" \
@@ -10,7 +10,7 @@ LABEL maintainer="BTrace Project <https://github.com/btraceio/btrace>" \
       org.opencontainers.image.url="https://github.com/btraceio/btrace" \
       org.opencontainers.image.source="https://github.com/btraceio/btrace" \
       org.opencontainers.image.version="${BTRACE_VERSION}" \
-      org.opencontainers.image.licenses="GPL-2.0-only WITH Classpath-exception-2.0"
+      org.opencontainers.image.licenses="Apache-2.0"
 
 # Install required tools
 RUN apt-get update && \

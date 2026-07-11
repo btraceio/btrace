@@ -2,7 +2,7 @@
 
 **Document Version:** 1.1
 **Last Updated:** February 2026
-**Status:** Implemented (v2.3.0+)
+**Status:** Implemented (first released in 3.0.0)
 
 ---
 
@@ -155,7 +155,7 @@ CPU overhead: ~3% for serialization (80% reduction)
 #### 1. WireProtocol Interface
 **Purpose:** Abstract wire format from business logic
 
-**Location:** `btrace-core/src/main/java/org/openjdk/btrace/core/comm/WireProtocol.java`
+**Location:** `btrace-core/src/main/java/io/btrace/core/comm/WireProtocol.java`
 
 **Responsibilities:**
 - Define contract for reading/writing Command objects
@@ -175,7 +175,7 @@ public interface WireProtocol {
 #### 2. Protocol Negotiator
 **Purpose:** Auto-detect and negotiate protocol version
 
-**Location:** `btrace-core/src/main/java/org/openjdk/btrace/core/comm/ProtocolNegotiator.java`
+**Location:** `btrace-core/src/main/java/io/btrace/core/comm/ProtocolNegotiator.java`
 
 **Responsibilities:**
 - Perform handshake at connection establishment
@@ -186,7 +186,7 @@ public interface WireProtocol {
 #### 3. Command Adapter
 **Purpose:** Convert between v1 and v2 command representations
 
-**Location:** `btrace-core/src/main/java/org/openjdk/btrace/core/comm/v2/CommandAdapter.java`
+**Location:** `btrace-core/src/main/java/io/btrace/core/comm/v2/CommandAdapter.java`
 
 **Responsibilities:**
 - Bidirectional conversion: Command ↔ BinaryCommand
@@ -196,7 +196,7 @@ public interface WireProtocol {
 #### 4. Binary Protocol Layer
 **Purpose:** Efficient binary serialization
 
-**Location:** `btrace-core/src/main/java/org/openjdk/btrace/core/comm/v2/`
+**Location:** `btrace-core/src/main/java/io/btrace/core/comm/v2/`
 
 **Components:**
 - **BinaryProtocol:** Low-level primitives (readInt, writeString, etc.)
@@ -750,17 +750,20 @@ public class WireIOV2Adapter implements WireProtocol {
 
 **No action required:** Protocol negotiation is automatic
 
-**Optional configuration:**
+**Optional configuration** (see `ProtocolConfig` in `btrace-core/src/main/java/io/btrace/core/comm/ProtocolConfig.java`):
 ```bash
-# Force v2 (fail if agent doesn't support it)
--Dbtrace.protocol.version=2
+# Preferred protocol version (accepts 1, 2, v1, v2). Default: v2
+-Dbtrace.comm.protocol=v2
 
-# Force v1 (for testing or compatibility)
--Dbtrace.protocol.version=1
+# Enable/disable automatic protocol negotiation. Default: true
+-Dbtrace.comm.autoNegotiate=true
 
-# Auto-detect (default)
--Dbtrace.protocol.version=auto
+# Force the configured version without negotiation. Default: false
+# (cannot be combined with autoNegotiate=true)
+-Dbtrace.comm.forceVersion=true
 ```
+
+The default behavior (v2 preferred, auto-negotiation enabled) requires no configuration.
 
 ### For Developers
 
@@ -778,7 +781,7 @@ public class WireIOV2Adapter implements WireProtocol {
 ### Rollback Plan
 
 **If issues arise:**
-1. Disable v2 by default: `-Dbtrace.protocol.version=1`
+1. Fall back to v1: `-Dbtrace.comm.protocol=1 -Dbtrace.comm.autoNegotiate=false -Dbtrace.comm.forceVersion=true`
 2. Roll back agent/client to previous version
 3. Fix issues, re-test
 4. Re-enable v2
@@ -863,6 +866,6 @@ The BTrace v2 binary protocol delivers significant performance improvements (3-6
 
 ## References
 
-- Implementation: `btrace-core/src/main/java/org/openjdk/btrace/core/comm/v2/`
-- Tests: `btrace-core/src/test/java/org/openjdk/btrace/core/comm/v2/`
-- README: `btrace-core/src/main/java/org/openjdk/btrace/core/comm/v2/Readme.md`
+- Implementation: `btrace-core/src/main/java/io/btrace/core/comm/v2/`
+- Tests: `btrace-core/src/test/java/io/btrace/core/comm/v2/`
+- README: `btrace-core/src/main/java/io/btrace/core/comm/v2/README.md`

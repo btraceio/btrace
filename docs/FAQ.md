@@ -30,7 +30,7 @@ Yes, with proper precautions:
 
 ### Does BTrace work with all Java applications?
 BTrace works with:
-- Java 8 through Java 20
+- Java 8 through Java 25+ (running against a JVM older than Java 17 is deprecated, see below)
 - Standard JVMs (HotSpot, OpenJDK)
 - Most application frameworks (Spring, Java EE, etc.)
 - Containerized applications (Docker, Kubernetes)
@@ -440,7 +440,7 @@ public static void heartbeat() {
 ```
 
 ### Can I use BTrace with Java 17+?
-Yes, BTrace supports Java 8-20. For Java 9+ you may need to add module opens:
+Yes. BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). For Java 9+ you may need to add module opens:
 
 ```bash
 btrace --add-opens java.base/java.lang=ALL-UNNAMED \
@@ -449,6 +449,19 @@ btrace --add-opens java.base/java.lang=ALL-UNNAMED \
 ```
 
 Or add to target JVM startup options.
+
+### Why am I seeing a Java deprecation warning?
+If the target JVM runs a Java version older than 17, the BTrace agent prints a warning like this once to stderr (the client prints a similar warning when attaching):
+
+```
+[BTrace] WARNING: This JVM is Java <N>. Running BTrace on Java versions older than 17 is deprecated and support will be removed in the next major release. Please upgrade to Java 17 or newer. Suppress this warning with -Dbtrace.suppressJavaDeprecationWarning=true.
+```
+
+This reflects the BTrace 3.0 Java support policy: BTrace 3.0 runs on Java 8–25+, but running against a JVM older than Java 17 is deprecated. It continues to work throughout 3.x, and support for Java < 17 will be removed in the next major release (4.0).
+
+The warning is informational only — nothing is disabled. To suppress it, set the system property `btrace.suppressJavaDeprecationWarning=true` (e.g., `-Dbtrace.suppressJavaDeprecationWarning=true`).
+
+See the [migration guide](Migration-2.x-to-3.0.md) for details on upgrading from BTrace 2.x.
 
 ## Advanced Topics
 
@@ -846,4 +859,4 @@ See [Contributing Guide](../README.md#contributing) for details.
 - **VisualVM BTrace Plugin**: [visualvm.github.io](https://visualvm.github.io)
 
 ## License
-BTrace is licensed under GPLv2 with the Classpath Exception. See [LICENSE](../LICENSE) for details.
+BTrace is licensed under the Apache License 2.0. See [LICENSE](../LICENSE) for details.

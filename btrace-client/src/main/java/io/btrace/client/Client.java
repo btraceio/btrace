@@ -198,6 +198,35 @@ public class Client {
     this.agentJarOverride = agentJarOverride;
   }
 
+  /**
+   * Warns on the client console when the target JVM falls under the Java version deprecation
+   * policy (Java &lt; 17, deprecated as of BTrace 3.0). The warning can be suppressed with {@code
+   * -Dbtrace.suppressJavaDeprecationWarning=true} on the client JVM.
+   */
+  private static void warnIfDeprecatedTargetJvm(String pid, String targetJavaVersion) {
+    try {
+      int featureVersion = io.btrace.core.JavaVersionCheck.parseFeatureVersion(targetJavaVersion);
+      if (io.btrace.core.JavaVersionCheck.isDeprecated(featureVersion)
+          && !Boolean.getBoolean(io.btrace.core.JavaVersionCheck.SUPPRESS_PROP)) {
+        System.err.println(
+            "[BTrace] WARNING: The target JVM (PID "
+                + pid
+                + ") is Java "
+                + featureVersion
+                + ". Running BTrace on Java versions older than "
+                + io.btrace.core.JavaVersionCheck.DEPRECATION_FLOOR
+                + " is deprecated and support will be removed in the next major release. "
+                + "Please upgrade the target JVM to Java "
+                + io.btrace.core.JavaVersionCheck.DEPRECATION_FLOOR
+                + " or newer. Suppress this warning with -D"
+                + io.btrace.core.JavaVersionCheck.SUPPRESS_PROP
+                + "=true.");
+      }
+    } catch (Throwable ignored) {
+      // the deprecation warning must never interfere with attach
+    }
+  }
+
   private static boolean isPortAvailable(int port) {
     Socket clSocket = null;
     try {
@@ -640,6 +669,7 @@ public class Client {
         log.debug("checking port availability: {}", port);
       }
       Properties serverVmProps = vm.getSystemProperties();
+      warnIfDeprecatedTargetJvm(pid, serverVmProps.getProperty("java.version", ""));
       int serverPort = Integer.parseInt(serverVmProps.getProperty("btrace.port", "-1"));
       boolean agentAlreadyRunning = false;
       if (serverPort != -1) {
@@ -705,7 +735,7 @@ public class Client {
       agentArgs += "," + Args.SYSTEM_CLASS_PATH + "=" + sysCp;
       String cmdQueueLimit = System.getProperty(BTraceRuntime.CMD_QUEUE_LIMIT_KEY, null);
       if (cmdQueueLimit != null) {
-        agentArgs += "," + Args.CMD_QUEUE_LIMIT + "=" + cmdQueueLimit;
+        agentArgs += ",=" + Args.CMD_QUEUE_LIMIT + cmdQueueLimit;
       }
       agentArgs += "," + Args.PROBE_DESC_PATH + "=" + probeDescPath;
 

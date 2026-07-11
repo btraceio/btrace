@@ -3,11 +3,11 @@ spec_id: REQ-btraceio-btrace-824
 source: github
 source_ref: "btraceio/btrace#824"
 title: "Action Required: Fix Renovate Configuration"
-status: draft
+status: implemented
 clarity_score: null
 created: 2026-05-17
-implementing_session: null
-implemented_pr: null
+implementing_session: impl-20260517-172335
+implemented_pr: https://github.com/btraceio/btrace/pull/838
 ---
 
 # Action Required: Fix Renovate Configuration

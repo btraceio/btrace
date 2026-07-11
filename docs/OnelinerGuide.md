@@ -534,11 +534,11 @@ public class MyTrace {
 
 ## See Also
 
-- [Getting Started Guide](gettingStarted.md) - Installation and basics
-- [BTrace Tutorial](btraceTutorial.md) - Comprehensive BTrace features
-- [Quick Reference](quickReference.md) - Full annotation reference
-- [FAQ](faq.md) - Common questions
-- [Troubleshooting Guide](troubleshooting.md) - Problem solving
+- [Getting Started Guide](GettingStarted.md) - Installation and basics
+- [BTrace Tutorial](BTraceTutorial.md) - Comprehensive BTrace features
+- [Quick Reference](QuickReference.md) - Full annotation reference
+- [FAQ](FAQ.md) - Common questions
+- [Troubleshooting Guide](Troubleshooting.md) - Problem solving
 
 ## Feedback
 

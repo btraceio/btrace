@@ -18,7 +18,7 @@ Using MANIFEST.MF for extension metadata provides:
 
 ```properties
 extension.id=btrace-metrics
-extension.version=2.3.0
+extension.version=3.0.0
 extension.name=BTrace Metrics
 extension.description=High-performance metrics...
 btrace.api.version=2.3+
@@ -32,7 +32,7 @@ shaded.packages=org.HdrHistogram->io.btrace.metrics.shaded.hdrhistogram
 
 ```
 BTrace-Extension-Id: btrace-metrics
-BTrace-Extension-Version: 2.3.0
+BTrace-Extension-Version: 3.0.0
 BTrace-Extension-Name: BTrace Metrics
 BTrace-Extension-Description: High-performance metrics with HdrHistogram
  for percentiles and lock-free statistics
@@ -57,7 +57,7 @@ BTrace-Extension-Permissions: NETWORK,THREADS
 
 **BTrace-Extension-Version**
 - Format: semantic version (major.minor.patch[-qualifier])
-- Example: `2.3.0`, `2.3.0-SNAPSHOT`
+- Example: `3.0.0`, `3.0.0-SNAPSHOT`
 - Description: Extension version for conflict resolution
 
 ### Optional Attributes

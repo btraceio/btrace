@@ -119,27 +119,9 @@ public final class Main {
   private static final BTraceTransformer transformer =
       new BTraceTransformer(new DebugSupport(settings));
   // #BTRACE-42: Non-daemon thread prevents traced application from exiting
-  // ClassFile API's StackMapGenerator can exhaust the default stack depth when processing
-  // complex methods in JDK 26+ (class-file major >= 70). Use 4 MB on those JVMs only; on
-  // older JVMs keep the default (0 = JVM-chosen) to avoid any OS-level stack-allocation
-  // overhead that was intermittently delaying test startup on JDK 8/11/21 CI machines.
-  private static final long QUEUE_PROCESSOR_STACK_SIZE = resolveQueueProcessorStackSize();
-
-  private static long resolveQueueProcessorStackSize() {
-    try {
-      String cv = System.getProperty("java.class.version", "52.0");
-      int dot = cv.indexOf('.');
-      int major = Integer.parseInt(dot >= 0 ? cv.substring(0, dot) : cv);
-      return major >= 70 ? 4L * 1024 * 1024 : 0L;
-    } catch (Exception ignored) {
-      return 0L;
-    }
-  }
-
   private static final ThreadFactory qProcessorThreadFactory =
       r -> {
-        Thread result =
-            new Thread(null, r, "BTrace Command Queue Processor", QUEUE_PROCESSOR_STACK_SIZE);
+        Thread result = new Thread(r, "BTrace Command Queue Processor");
         result.setDaemon(true);
         return result;
       };
@@ -191,6 +173,9 @@ public final class Main {
     } else {
       Main.inst = inst;
     }
+
+    // Running BTrace on Java < 17 is deprecated as of 3.0; warn exactly once per target JVM
+    io.btrace.core.JavaVersionCheck.warnIfDeprecatedJvm();
 
     try {
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Loading arguments");
@@ -304,6 +289,13 @@ public final class Main {
         System.err.println(
             "[BTrace Agent] Initialization complete, " + startedScripts + " scripts started");
     } catch (Throwable t) {
+      // FATAL errors should always be printed
+      System.err.println(
+          "[BTrace Agent] FATAL: Initialization failed: "
+              + t.getClass().getName()
+              + ": "
+              + t.getMessage());
+      t.printStackTrace(System.err);
       log.error("Failed to initialize BTrace agent", t);
       throw new RuntimeException("BTrace agent initialization failed", t);
     } finally {
@@ -750,9 +742,9 @@ public final class Main {
     String libs = argMap.get(LIBS);
     if (libs != null && !libs.isEmpty()) {
       log.warn(
-          "The 'libs' profile feature is deprecated and will be removed in a future release. Prefer"
-              + " packaging integrations as BTrace extensions (API on bootstrap, impl isolated)."
-              + " See docs/architecture/agent-manifest-libs.md for migration guidance.");
+          "The 'libs' profile feature is deprecated and will be removed in a future release. "
+              + "Prefer packaging integrations as BTrace extensions (API on bootstrap, impl isolated). "
+              + "See docs/architecture/agent-manifest-libs.md for migration guidance.");
     }
     String config = argMap.get(CONFIG);
     processClasspaths(libs);
@@ -967,8 +959,7 @@ public final class Main {
     boolean hasManifestLibs = useManifestLibs;
     if (hasManifestLibs && hasLegacyLibs) {
       log.warn(
-          "Both libs= and manifest-attributes are present; libs= is deprecated and will be removed"
-              + " in N+2. Prefer manifest-based declaration.");
+          "Both libs= and manifest-attributes are present; libs= is deprecated and will be removed in N+2. Prefer manifest-based declaration.");
     }
     if (useManifestLibs) {
       if (log.isDebugEnabled()) log.debug("Using manifest-driven libs resolution");
@@ -1103,8 +1094,7 @@ public final class Main {
             } else {
               if (!allowExternal) {
                 log.warn(
-                    "Cannot determine BTRACE_HOME; proceeding to append system jar"
-                        + " (btrace.system.appendJar): {}",
+                    "Cannot determine BTRACE_HOME; proceeding to append system jar (btrace.system.appendJar): {}",
                     p);
               }
               appendSystemJar(p);
@@ -1411,43 +1401,18 @@ public final class Main {
     }
 
     while (serverRunning) {
-      Socket sock = null;
       try {
         log.debug("waiting for clients");
-        sock = serverSocket.accept();
+        Socket sock = serverSocket.accept();
         if (log.isDebugEnabled()) {
           log.debug("client accepted {}", sock);
         }
-        // Give each remote client its own settings copy, seeded from the agent baseline. Using
-        // the shared GLOBAL instance here let one client's SET_PARAMS (debug, dumpDir, outputFile,
-        // and notably `trusted`) leak into every other client and into the global transformer.
-        // The premain/local path already isolates settings the same way.
-        SharedSettings clientSettings = new SharedSettings();
-        clientSettings.from(settings);
-        ClientContext ctx = new ClientContext(inst, transformer, argMap, clientSettings);
+        ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
         Client client = RemoteClient.getClient(ctx, sock, Main::handleNewClient);
-        if (client == null) {
-          // No live session was established (EXIT, a list/info command, or a malformed
-          // handshake). getClient does not own the socket in that case, so close it here to
-          // avoid leaking a file descriptor per such connection (e.g. every `btrace -lp`).
-          closeQuietly(sock);
-        }
       } catch (RuntimeException | IOException re) {
-        // getClient threw before handing off a live client - the socket is orphaned; close it.
-        closeQuietly(sock);
         if (serverRunning) {
           log.warn("BTrace server accept failed", re);
         }
-      }
-    }
-  }
-
-  private static void closeQuietly(Socket sock) {
-    if (sock != null) {
-      try {
-        sock.close();
-      } catch (IOException ignore) {
-        // best effort
       }
     }
   }

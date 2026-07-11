@@ -10,10 +10,28 @@ When you ask the AI to "show me which methods in my service are taking more than
 
 ## Prerequisites
 
-- JDK 11 or higher to run the MCP server JAR
+- JDK 11 or higher to run the MCP server
 - The target JVM must be attachable (see [Troubleshooting](#troubleshooting))
-- `btrace-mcp-server.jar` (the fat JAR containing all dependencies)
+- The BTrace MCP server jar plus its runtime dependencies (see [Getting the server](#getting-the-server))
 - On JDK 8 targets: `tools.jar` from the JDK must be accessible at runtime (see [tools.jar note](#toolsjar-not-found))
+
+## Getting the server
+
+The MCP server is built from the BTrace sources:
+
+```bash
+./gradlew :btrace-mcp-server:build
+```
+
+This produces `btrace-mcp-server/build/libs/btrace-mcp-server-<version>.jar`. The jar declares `Main-Class: io.btrace.mcp.BTraceMcpServer`, but it is **not** self-contained — it needs the other BTrace module jars (btrace-core, btrace-client, btrace-compiler, btrace-boot and their dependencies) on the classpath, and it is not included in the binary BTrace distribution.
+
+Collect the server jar together with its runtime dependencies into a single directory (referred to as `/path/to/btrace-mcp-libs` below) and launch the server with:
+
+```bash
+java -cp "/path/to/btrace-mcp-libs/*" io.btrace.mcp.BTraceMcpServer
+```
+
+All the host configuration examples below use this same command line.
 
 ## Quick Setup
 
@@ -29,20 +47,20 @@ Add the following to your Claude Desktop configuration file.
   "mcpServers": {
     "btrace": {
       "command": "java",
-      "args": ["-jar", "/path/to/btrace-mcp-server.jar"]
+      "args": ["-cp", "/path/to/btrace-mcp-libs/*", "io.btrace.mcp.BTraceMcpServer"]
     }
   }
 }
 ```
 
-Replace `/path/to/btrace-mcp-server.jar` with the actual path to the JAR. After saving the file, restart Claude Desktop. You should see a tools indicator in the chat input area when BTrace tools are active.
+Replace `/path/to/btrace-mcp-libs` with the actual path to the directory holding the server jar and its dependencies. After saving the file, restart Claude Desktop. You should see a tools indicator in the chat input area when BTrace tools are active.
 
 ### Claude Code
 
-Run the following command in your terminal (or add it to your project's `.claude/settings.json`):
+Run the following command in your terminal to register the server at user scope:
 
 ```bash
-claude mcp add btrace java -jar /path/to/btrace-mcp-server.jar
+claude mcp add --scope user btrace -- java -cp "/path/to/btrace-mcp-libs/*" io.btrace.mcp.BTraceMcpServer
 ```
 
 To verify the server registered correctly:
@@ -58,13 +76,13 @@ You can also add the server project-locally so that everyone working on the repo
   "mcpServers": {
     "btrace": {
       "command": "java",
-      "args": ["-jar", "/path/to/btrace-mcp-server.jar"]
+      "args": ["-cp", "/path/to/btrace-mcp-libs/*", "io.btrace.mcp.BTraceMcpServer"]
     }
   }
 }
 ```
 
-Save this to `.claude/settings.json` at the root of the repository.
+Save this to `.mcp.json` at the root of the repository — project-scope MCP configuration for Claude Code lives in `.mcp.json`, not in `.claude/settings.json`.
 
 ### Cursor
 
@@ -78,7 +96,7 @@ Cursor reads MCP server definitions from a `mcp.json` file. Use the project-loca
   "mcpServers": {
     "btrace": {
       "command": "java",
-      "args": ["-jar", "/path/to/btrace-mcp-server.jar"]
+      "args": ["-cp", "/path/to/btrace-mcp-libs/*", "io.btrace.mcp.BTraceMcpServer"]
     }
   }
 }
@@ -93,7 +111,7 @@ The Codex CLI (`@openai/codex`) reads MCP server configuration from `~/.codex/co
 ```toml
 [mcp_servers.btrace]
 command = "java"
-args   = ["-jar", "/path/to/btrace-mcp-server.jar"]
+args   = ["-cp", "/path/to/btrace-mcp-libs/*", "io.btrace.mcp.BTraceMcpServer"]
 ```
 
 The key under `[mcp_servers]` becomes the server name visible in the session. Restart any active Codex session after editing the file for the change to take effect.
@@ -110,7 +128,7 @@ VS Code exposes MCP server support through GitHub Copilot Chat's agent mode. The
     "btrace": {
       "type": "stdio",
       "command": "java",
-      "args": ["-jar", "/path/to/btrace-mcp-server.jar"]
+      "args": ["-cp", "/path/to/btrace-mcp-libs/*", "io.btrace.mcp.BTraceMcpServer"]
     }
   }
 }
@@ -125,7 +143,7 @@ To add the server globally (not tied to a workspace), open VS Code settings (`se
   "btrace": {
     "type": "stdio",
     "command": "java",
-    "args": ["-jar", "/path/to/btrace-mcp-server.jar"]
+    "args": ["-cp", "/path/to/btrace-mcp-libs/*", "io.btrace.mcp.BTraceMcpServer"]
   }
 }
 ```
@@ -139,7 +157,7 @@ Windsurf stores MCP configuration in `~/.codeium/windsurf/mcp_config.json`. Crea
   "mcpServers": {
     "btrace": {
       "command": "java",
-      "args": ["-jar", "/path/to/btrace-mcp-server.jar"]
+      "args": ["-cp", "/path/to/btrace-mcp-libs/*", "io.btrace.mcp.BTraceMcpServer"]
     }
   }
 }
@@ -156,8 +174,9 @@ mcpServers:
   - name: btrace
     command: java
     args:
-      - -jar
-      - /path/to/btrace-mcp-server.jar
+      - -cp
+      - /path/to/btrace-mcp-libs/*
+      - io.btrace.mcp.BTraceMcpServer
 ```
 
 For the legacy JSON format (`~/.continue/config.json`):
@@ -168,7 +187,7 @@ For the legacy JSON format (`~/.continue/config.json`):
     {
       "name": "btrace",
       "command": "java",
-      "args": ["-jar", "/path/to/btrace-mcp-server.jar"]
+      "args": ["-cp", "/path/to/btrace-mcp-libs/*", "io.btrace.mcp.BTraceMcpServer"]
     }
   ]
 }
@@ -186,7 +205,7 @@ Zed exposes MCP tools through its context server interface. Add the server to `~
     "btrace": {
       "command": {
         "path": "java",
-        "args": ["-jar", "/path/to/btrace-mcp-server.jar"]
+        "args": ["-cp", "/path/to/btrace-mcp-libs/*", "io.btrace.mcp.BTraceMcpServer"]
       }
     }
   }
@@ -202,7 +221,7 @@ Any host that implements the MCP specification will work. The canonical configur
 ```json
 {
   "command": "java",
-  "args": ["-jar", "/path/to/btrace-mcp-server.jar"],
+  "args": ["-cp", "/path/to/btrace-mcp-libs/*", "io.btrace.mcp.BTraceMcpServer"],
   "transport": "stdio"
 }
 ```
@@ -400,13 +419,13 @@ These restrictions prevent BTrace scripts from destabilizing the target JVM. A p
 
 ```bash
 java -version   # should report 11 or above, from a JDK distribution
-java -jar btrace-mcp-server.jar
+java -cp "/path/to/btrace-mcp-libs/*" io.btrace.mcp.BTraceMcpServer
 ```
 
 If you must use JDK 8, add `tools.jar` to the classpath explicitly:
 
 ```bash
-java -cp "$JAVA_HOME/lib/tools.jar:btrace-mcp-server.jar" io.btrace.mcp.BTraceMcpServer
+java -cp "$JAVA_HOME/lib/tools.jar:/path/to/btrace-mcp-libs/*" io.btrace.mcp.BTraceMcpServer
 ```
 
 ### Port already in use
@@ -438,8 +457,8 @@ See [JVM Attachment Issues](Troubleshooting.md#jvm-attachment-issues) in the mai
 
 **Steps:**
 
-1. Verify the JAR path is correct and the file exists.
-2. Test the server manually: `java -jar btrace-mcp-server.jar` should start without error and wait on stdin.
+1. Verify the classpath directory is correct and contains the server jar and its dependencies.
+2. Test the server manually: `java -cp "/path/to/btrace-mcp-libs/*" io.btrace.mcp.BTraceMcpServer` should start without error and wait on stdin.
 3. Check that you are using JDK 11+.
 4. Restart the MCP host (Claude Desktop, Cursor, etc.) after changing the config file.
 5. Check the MCP host's logs for subprocess errors (Claude Desktop logs to `~/Library/Logs/Claude/` on macOS).

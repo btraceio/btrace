@@ -167,7 +167,7 @@ jobs:
 
       - name: Set up Java
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
         with:
           java-version: 11
           distribution: temurin
@@ -176,7 +176,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Generate cache key
         id: cache-key
@@ -198,7 +198,7 @@ jobs:
         run: ./gradlew --no-daemon --parallel --build-cache build
 
       - name: Upload dist build data
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: dist-build
           retention-days: 1
@@ -207,7 +207,7 @@ jobs:
             btrace-agent/build/classes/traces
 
       - name: Upload test trace data
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-trace
           retention-days: 1
@@ -216,7 +216,7 @@ jobs:
 
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: unit-test-reports
           path: |
@@ -246,7 +246,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Prepare OS
         run: |
@@ -272,13 +272,13 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Download build data
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: dist-build
           path: btrace-dist/build
 
       - name: Download test trace data
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: test-trace
           path: btrace-agent/build/classes/traces
@@ -293,7 +293,7 @@ jobs:
 
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: integration-test-reports-${{ matrix.java }}
           path: |
@@ -392,7 +392,7 @@ jobs:
 
       - name: Set up Java
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
         with:
           java-version: 11
           distribution: temurin
@@ -401,7 +401,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Cache Gradle
         uses: actions/cache@v6
@@ -432,9 +432,7 @@ jobs:
           echo "=============================================="
           echo ""
           echo "Staged artifacts:"
-          echo "  - io.btrace:btrace-agent:${{ inputs.release_version }}"
-          echo "  - io.btrace:btrace-client:${{ inputs.release_version }}"
-          echo "  - io.btrace:btrace-boot:${{ inputs.release_version }}"
+          echo "  - io.btrace:btrace:${{ inputs.release_version }}"
           echo ""
           echo "Next steps:"
           echo "  1. Go to https://central.sonatype.com/publishing/deployments"
@@ -456,7 +454,7 @@ jobs:
       - name: Wait for artifacts on Maven Central
         run: |
           VERSION="${{ inputs.release_version }}"
-          ARTIFACT_URL="https://repo1.maven.org/maven2/io/btrace/btrace-client/${VERSION}/btrace-client-${VERSION}.pom"
+          ARTIFACT_URL="https://repo1.maven.org/maven2/io/btrace/btrace/${VERSION}/btrace-${VERSION}.pom"
 
           echo "Waiting for Maven Central to have: ${ARTIFACT_URL}"
           echo "This requires manual release from Central Portal."
@@ -525,10 +523,10 @@ jobs:
           cd catalog
 
           # Update btrace.java dependency
-          sed -i.bak "s|//DEPS io.btrace:btrace-client:.*|//DEPS io.btrace:btrace-client:${VERSION}|g" btrace.java
+          sed -i.bak -E "s|//DEPS io.btrace:btrace(-client)?:.*|//DEPS io.btrace:btrace:${VERSION}|g" btrace.java
 
           # Update btrace-latest.java dependency
-          sed -i.bak "s|//DEPS io.btrace:btrace-client:.*|//DEPS io.btrace:btrace-client:${VERSION}|g" btrace-latest.java
+          sed -i.bak -E "s|//DEPS io.btrace:btrace(-client)?:.*|//DEPS io.btrace:btrace:${VERSION}|g" btrace-latest.java
 
           # Clean up backup files
           rm -f *.bak
@@ -619,7 +617,7 @@ jobs:
 
       - name: Set up Java
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
         with:
           java-version: 11
           distribution: temurin
@@ -628,7 +626,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Update version for dry run
         if: ${{ inputs.dry_run == true }}
@@ -646,7 +644,7 @@ jobs:
           ls -la btrace-dist/build/distributions/
 
       - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: release-distributions
           retention-days: 7
@@ -673,7 +671,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download distribution artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: release-distributions
           path: distributions
@@ -747,7 +745,7 @@ jobs:
 
       - name: Set up Java
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
         with:
           java-version: 11
           distribution: temurin
@@ -756,7 +754,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Announce to SDKMan
         env:
@@ -959,7 +957,7 @@ jobs:
             echo '```xml' >> $GITHUB_STEP_SUMMARY
             echo '<dependency>' >> $GITHUB_STEP_SUMMARY
             echo '    <groupId>io.btrace</groupId>' >> $GITHUB_STEP_SUMMARY
-            echo '    <artifactId>btrace-client</artifactId>' >> $GITHUB_STEP_SUMMARY
+            echo '    <artifactId>btrace</artifactId>' >> $GITHUB_STEP_SUMMARY
             echo "    <version>${{ inputs.release_version }}</version>" >> $GITHUB_STEP_SUMMARY
             echo '</dependency>' >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
@@ -996,7 +994,7 @@ jobs:
     if: always()
     steps:
       - name: Cleanup temporary artifacts
-        uses: geekyeggo/delete-artifact@v6
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6
         with:
           name: |
             dist-build

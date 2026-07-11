@@ -37,8 +37,8 @@ BTRACE_HOME/
 │   ├── btrace-boot.jar       # Core runtime only, no extensions
 │   ├── btrace-client.jar
 │   └── extensions/            # Built-in extensions directory
-│       ├── btrace-metrics-2.3.0.jar
-│       ├── btrace-statsd-2.3.0.jar
+│       ├── btrace-metrics-3.0.0.jar
+│       ├── btrace-statsd-3.0.0.jar
 │       └── Readme.md
 └── docs/
     └── ...
@@ -60,13 +60,13 @@ Extensions are discovered in the following order (later locations override earli
 ### Extension JAR Layout
 
 ```
-btrace-metrics-2.3.0.jar
+btrace-metrics-3.0.0.jar
 ├── META-INF/
 │   ├── MANIFEST.MF
 │   ├── btrace-extension.properties      # Extension metadata
 │   └── services/
 │       └── io.btrace.core.extensions.Extension
-├── org/openjdk/btrace/metrics/
+├── io/btrace/metrics/
 │   ├── MetricsService.class
 │   ├── histogram/
 │   └── stats/
@@ -78,7 +78,7 @@ btrace-metrics-2.3.0.jar
 ```properties
 # Extension identity
 extension.id=btrace-metrics
-extension.version=2.3.0
+extension.version=3.0.0
 extension.name=BTrace Metrics
 extension.description=High-performance metrics with HdrHistogram
 

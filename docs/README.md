@@ -19,8 +19,8 @@ Get up and running in 5 minutes with installation, your first script, and common
 | **[Troubleshooting Guide](Troubleshooting.md)** | Common errors, debugging, performance, compatibility | Problem-solving, debugging |
 | **[FAQ](FAQ.md)** | Common questions, best practices, comparisons | All users, decision-making |
 | **[MCP Server](MCPServer.md)** | Using BTrace from AI clients via the Model Context Protocol | AI-assisted debugging, LLM integrations |
-| **[JDK Compatibility](JDKCompatibility.md)** | Tested JDK versions and distributions, external contribution guide | Contributors, ops teams, compatibility testers |
-| **[Extension Registry](ExtensionRegistry.md)** | JSON catalog and GitHub workflow for discovering published extensions | Extension authors, platform maintainers |
+| **[Migration Guide 2.x → 3.0](Migration-2.x-to-3.0.md)** | Upgrading from BTrace 2.x: package rename, Java version policy, breaking changes | Existing 2.x users |
+| **[Extension Development Guide](BTraceExtensionDevelopmentGuide.md)** | Writing, packaging, and publishing BTrace extensions | Extension authors, platform maintainers |
 
 ## Learning Paths
 
@@ -105,14 +105,15 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 - **JMX Export** → [Quick Reference: @Export](QuickReference.md#export), [FAQ: Monitoring Integration](FAQ.md#can-i-integrate-btrace-with-monitoring-systems)
 - **Service Mesh** → [FAQ: Service Mesh](FAQ.md#does-btrace-work-with-service-meshes-istiolinkerd)
 - **AI / LLM Clients (MCP)** → [MCP Server](MCPServer.md) for Claude Desktop, Claude Code, Cursor
-- **Published Extensions** → [Extension Registry](ExtensionRegistry.md) for the catalog format and PR flow
+- **Published Extensions** → [Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for writing and publishing extensions
 
 ### Architecture
 - **Masked JAR** → [Masked JAR Architecture](architecture/MaskedJarArchitecture.md) — single-JAR distribution with classdata masking
 - **v2 Binary Protocol** → [Version 2 Protocol Architecture](architecture/Version2ProtocolArchitecture.md) — custom binary serialization
 - **Extension Framework** → [Extension invokedynamic Bridge](architecture/ExtensionInvokeDynamicBridge.md), [Extension Configuration](architecture/ExtensionConfiguration.md), [Extension Manifest](architecture/ExtensionManifestFormat.md), [Extension Storage](architecture/ExtensionStorageDesign.md)
-- **Extension Catalog** → [Extension Registry](ExtensionRegistry.md) for the public registry contract
+- **Extension Catalog** → [Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for packaging and distribution
 - **Instrumentation** → [BTrace Instrumentation Analysis](architecture/BTraceInstrAnalysis.md)
+- **Instrumentation Backends (ASM / ClassFile API)** → [Instrumentation Backends](architecture/InstrumentationBackends.md) — automatic backend selection for future JDK class files
 
 ## Sample Scripts
 
@@ -152,8 +153,8 @@ BTrace is an open-source project welcoming contributions. To contribute:
 ## Version Information
 
 - **Current Version**: Check [GitHub Releases](https://github.com/btraceio/btrace/releases/latest)
-- **Java Compatibility**: Java 8–27 EA — see [JDK Compatibility](JDKCompatibility.md) for the full matrix
-- **License**: GPLv2 with Classpath Exception
+- **Java Compatibility**: BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). See the [migration guide](Migration-2.x-to-3.0.md).
+- **License**: Apache License 2.0
 
 ## Documentation Feedback
 
