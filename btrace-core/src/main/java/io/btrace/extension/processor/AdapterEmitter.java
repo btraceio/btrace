@@ -73,7 +73,9 @@ final class AdapterEmitter {
     }
     w.println("          } catch (NoSuchMethodException | IllegalAccessException e) {");
     w.println(
-        "            throw new IllegalStateException(\"Unable to resolve \" + OWNER + \"#" + m.name + "\", e);");
+        "            throw new IllegalStateException(\"Unable to resolve \" + OWNER + \"#"
+            + m.name
+            + "\", e);");
     w.println("          }");
     w.println("        }");
     w.println("      };");
