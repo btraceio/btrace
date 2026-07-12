@@ -85,7 +85,7 @@ class ExternalTypeProcessorTest {
     CompileTestHarness.Result r = CompileTestHarness.compile(sources);
     assertTrue(r.success, r.errors());
     String adapter = r.generatedSources.get("com.example.JobStart$Ext");
-    assertTrue(adapter.contains("private static volatile java.lang.invoke.MethodHandle"), adapter);
+    assertTrue(adapter.contains("ClassValue<MethodHandle>"), adapter);
     assertTrue(adapter.contains("findVirtual"), adapter);
     assertTrue(adapter.contains("self.getClass().getClassLoader()"), adapter);
     assertTrue(adapter.contains("(int)"), adapter);
@@ -217,6 +217,75 @@ class ExternalTypeProcessorTest {
     } finally {
       Thread.currentThread().setContextClassLoader(saved);
     }
+  }
+
+  @Test
+  void generatedAdaptersCacheHandlesPerApplicationClassLoader() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Counter",
+        ""
+            + "package com.example.target;\n"
+            + "public class Counter {\n"
+            + "  private final int value;\n"
+            + "  public Counter(int value) { this.value = value; }\n"
+            + "  public int value() { return value; }\n"
+            + "  public static String loaderId() { return String.valueOf(Counter.class.getClassLoader()); }\n"
+            + "}\n");
+    sources.put(
+        "com.example.adapter.CounterApi",
+        ""
+            + "package com.example.adapter;\n"
+            + "import io.btrace.core.extensions.ExternalType;\n"
+            + "@ExternalType(\"com.example.target.Counter\")\n"
+            + "public interface CounterApi {\n"
+            + "  int value();\n"
+            + "  @ExternalType.Static String loaderId();\n"
+            + "}\n");
+
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+
+    ClassLoader first = isolatedExternalLoader(r);
+    ClassLoader second = isolatedExternalLoader(r);
+    Class<?> firstCounter = first.loadClass("com.example.target.Counter");
+    Class<?> secondCounter = second.loadClass("com.example.target.Counter");
+    Object firstInstance = firstCounter.getConstructor(int.class).newInstance(1);
+    Object secondInstance = secondCounter.getConstructor(int.class).newInstance(2);
+    Class<?> adapter = r.loader.loadClass("com.example.adapter.CounterApi$Ext");
+
+    java.lang.reflect.Method value = adapter.getMethod("value", Object.class);
+    assertEquals(1, value.invoke(null, firstInstance));
+    assertEquals(2, value.invoke(null, secondInstance));
+
+    java.lang.reflect.Method loaderId = adapter.getMethod("loaderId");
+    ClassLoader saved = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(first);
+      String firstId = (String) loaderId.invoke(null);
+      Thread.currentThread().setContextClassLoader(second);
+      String secondId = (String) loaderId.invoke(null);
+      assertNotEquals(firstId, secondId);
+    } finally {
+      Thread.currentThread().setContextClassLoader(saved);
+    }
+  }
+
+  private static ClassLoader isolatedExternalLoader(CompileTestHarness.RunnableResult result) {
+    return new ClassLoader(result.loader) {
+      @Override
+      protected synchronized Class<?> loadClass(String name, boolean resolve)
+          throws ClassNotFoundException {
+        if (!"com.example.target.Counter".equals(name)) return super.loadClass(name, resolve);
+        Class<?> loaded = findLoadedClass(name);
+        if (loaded == null) {
+          byte[] bytes = result.classBytes.get(name);
+          loaded = defineClass(name, bytes, 0, bytes.length);
+        }
+        if (resolve) resolveClass(loaded);
+        return loaded;
+      }
+    };
   }
 
   @Test

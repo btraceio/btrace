@@ -97,7 +97,7 @@ long ts = JobStart$Ext.time(event);
 
 ### What the generated code does
 
-Each dispatcher uses a per-method `volatile MethodHandle` field with lazy resolution: on first call the method looks up the target class via `self.getClass().getClassLoader()` (virtual methods) or `Thread.currentThread().getContextClassLoader()` (static methods, see below), then calls `MethodHandles.publicLookup().findVirtual` / `findStatic`. Subsequent calls reuse the cached handle — once warm, the `volatile` read + `MethodHandle.invoke` is JIT-inlineable.
+Each dispatcher resolves the target class lazily via `self.getClass().getClassLoader()` (virtual methods) or `Thread.currentThread().getContextClassLoader()` (static methods, see below), then calls `MethodHandles.publicLookup().findVirtual` / `findStatic`. Handles are cached in a per-method `ClassValue`, keyed by the resolved application class, so one extension can safely serve applications with isolated classloaders. Subsequent calls reuse the handle without retaining unloaded application classloaders.
 
 If the external class isn't yet loaded when the dispatcher is first called, the resolver throws; the `volatile` field stays `null`, so the next call retries. No eager init, no `ExceptionInInitializerError` at extension load.
 
