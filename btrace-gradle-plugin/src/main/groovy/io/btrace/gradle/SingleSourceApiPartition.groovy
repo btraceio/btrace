@@ -33,9 +33,9 @@ import org.objectweb.asm.tree.MethodNode
 @CompileStatic
 final class SingleSourceApiPartition {
     private static final String SERVICE_DESCRIPTOR_DESC =
-        'Lorg/openjdk/btrace/core/extensions/ServiceDescriptor;'
+        'Lio/btrace/core/extensions/ServiceDescriptor;'
     private static final String EXTERNAL_TYPE_DESC =
-        'Lorg/openjdk/btrace/core/extensions/ExternalType;'
+        'Lio/btrace/core/extensions/ExternalType;'
     private static final Pattern EXCLUDED_GENERATED =
         Pattern.compile('.*(\\$Ext|\\.btrace\\.shim\\.).*')
 
