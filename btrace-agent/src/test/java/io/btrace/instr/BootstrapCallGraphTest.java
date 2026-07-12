@@ -63,6 +63,22 @@ class BootstrapCallGraphTest {
     }
   }
 
+  static final class CallOnlyReachableThroughLambdaBody {
+    static void root() {
+      Runnable r =
+          () -> {
+            // This call is only reachable via the invokedynamic-created Runnable's body -- there
+            // is no direct MethodInsnNode from root() to innerOnlyCalledFromLambda(). A walker
+            // that doesn't follow into lambda implementation methods misses this entirely.
+            CallOnlyReachableThroughLambdaBody.innerOnlyCalledFromLambda();
+          };
+    }
+
+    static void innerOnlyCalledFromLambda() {
+      Supplier<String> s = () -> "found me";
+    }
+  }
+
   static final class OutOfScopeCall {
     static void root() {
       // Calls a JDK method (out of the "io/btrace/..." scope predicate below) -- the walker
@@ -110,6 +126,24 @@ class BootstrapCallGraphTest {
         BootstrapCallGraph.scan(internalName(Cyclic.class), "root", "()V", IN_SCOPE, LOADER);
     assertEquals(
         1, r.indySites.size(), "expected b()'s indy site found exactly once: " + r.indySites);
+  }
+
+  @Test
+  void followsCallsMadeOnlyFromInsideALambdaBody() {
+    BootstrapCallGraph.Result r =
+        BootstrapCallGraph.scan(
+            internalName(CallOnlyReachableThroughLambdaBody.class),
+            "root",
+            "()V",
+            IN_SCOPE,
+            LOADER);
+    // root()'s own Runnable-creation site, plus innerOnlyCalledFromLambda()'s Supplier site --
+    // the second is only reachable by following the first indy's implementation-method handle.
+    assertEquals(
+        2, r.indySites.size(), "expected both the outer and nested indy sites: " + r.indySites);
+    assertTrue(
+        r.indySites.stream().anyMatch(s -> s.methodName.equals("innerOnlyCalledFromLambda")),
+        "expected the call made only from inside the lambda body to be reached: " + r.indySites);
   }
 
   @Test

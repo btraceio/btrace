@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
@@ -47,7 +48,10 @@ import org.objectweb.asm.tree.MethodNode;
  * interface to a method with no body at the declared owner yields nothing to scan at that call
  * site), traded for tractability. Recursion is scoped by the caller-supplied {@code inScope}
  * predicate (typically {@code owner -> owner.startsWith("io/btrace/")}), so JDK and third-party
- * classes are never loaded or descended into.
+ * classes are never loaded or descended into. It does, however, follow every {@code invokedynamic}
+ * site's bootstrap-method {@link Handle} arguments into the synthetic implementation method a
+ * lambda/method-reference compiles to, so calls made only from inside a lambda's own body (not
+ * visible as a direct {@code MethodInsnNode} edge) are still reached.
  */
 public final class BootstrapCallGraph {
 
@@ -149,6 +153,19 @@ public final class BootstrapCallGraph {
         if (insn instanceof InvokeDynamicInsnNode) {
           InvokeDynamicInsnNode indy = (InvokeDynamicInsnNode) insn;
           indySites.add(new IndyScanner.IndySite(cn.name, method.name, method.desc, indy.bsm));
+          // A lambda/method-ref's own body compiles to a synthetic implementation method
+          // (e.g. lambda$main$0) that is only invoked indirectly through the CallSite's
+          // MethodHandle at runtime -- there is no MethodInsnNode edge to it from this method.
+          // The bootstrap args of a LambdaMetafactory indy site carry a Handle pointing at that
+          // implementation method; follow it so calls made only from inside a lambda body (e.g.
+          // Main#startServer(), reachable only via the agentThread Runnable's body) are not
+          // silently missed.
+          for (Object bsmArg : indy.bsmArgs) {
+            if (bsmArg instanceof Handle) {
+              Handle h = (Handle) bsmArg;
+              worklist.push(new MethodKey(h.getOwner(), h.getName(), h.getDesc()));
+            }
+          }
         } else if (insn instanceof MethodInsnNode) {
           MethodInsnNode call = (MethodInsnNode) insn;
           worklist.push(new MethodKey(call.owner, call.name, call.desc));
