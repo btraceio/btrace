@@ -1156,6 +1156,12 @@ public abstract class RuntimeTest {
 
   public Process runBTrace(
       String[] args, int checkLines, StringBuilder stdout, StringBuilder stderr) throws Exception {
+    return runBTrace(args, Completion.lines(checkLines), stdout, stderr);
+  }
+
+  public Process runBTrace(
+      String[] args, Completion completion, StringBuilder stdout, StringBuilder stderr)
+      throws Exception {
     List<String> argVals =
         new ArrayList<>(
             Arrays.asList(
@@ -1183,72 +1189,15 @@ public abstract class RuntimeTest {
     pb.environment().remove("JAVA_TOOL_OPTIONS");
     Process p = pb.start();
 
-    CountDownLatch l = new CountDownLatch(checkLines);
-
-    new Thread(
-            () -> {
-              try {
-                BufferedReader br =
-                    new BufferedReader(
-                        new InputStreamReader(p.getErrorStream(), StandardCharsets.UTF_8));
-
-                String line = null;
-                while ((line = br.readLine()) != null) {
-                  System.out.println("[btrace err] " + line);
-                  if (line.contains("Server VM warning")
-                      || line.contains("XML libraries not available")
-                      || line.contains("Connection reset")) {
-                    // skip JVM generated warnings
-                    continue;
-                  }
-                  if (line.startsWith("[traced app]") || line.startsWith("[btrace out]")) {
-                    // skip test debug lines
-                    continue;
-                  }
-                  stderr.append(line).append('\n');
-                  if (line.contains("Exception") || line.contains("Error")) {
-                    for (int i = 0; i < checkLines; i++) {
-                      l.countDown();
-                    }
-                  }
-                }
-              } catch (Exception e) {
-                for (int i = 0; i < checkLines; i++) {
-                  l.countDown();
-                }
-                throw new Error(e);
-              }
-            },
-            "Stderr Reader")
-        .start();
-
-    new Thread(
-            () -> {
-              try {
-                BufferedReader br =
-                    new BufferedReader(
-                        new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
-                String line = null;
-                while ((line = br.readLine()) != null) {
-                  stdout.append(line).append('\n');
-                  System.out.println("[btrace out] " + line);
-                  if (!(debugBTrace && line.contains("DEBUG:"))) {
-                    l.countDown();
-                  }
-                }
-              } catch (Exception e) {
-                for (int i = 0; i < checkLines; i++) {
-                  l.countDown();
-                }
-                throw new Error(e);
-              }
-            },
-            "Stdout Reader")
-        .start();
-
-    l.await(timeout, TimeUnit.MILLISECONDS);
-
-    // Thread.sleep(100_000_000L);
+    OutputPump.run(
+        p,
+        completion,
+        timeout,
+        debugBTrace,
+        Arrays.asList("Server VM warning", "XML libraries not available", "Connection reset"),
+        Arrays.asList("[traced app]", "[btrace out]"),
+        stdout,
+        stderr);
 
     return p;
   }
@@ -1407,6 +1356,17 @@ public abstract class RuntimeTest {
       StringBuilder stdout,
       StringBuilder stderr)
       throws Exception {
+    return attachOneliner(pid, oneliner, cmdArgs, Completion.lines(checkLines), stdout, stderr);
+  }
+
+  private Process attachOneliner(
+      String pid,
+      String oneliner,
+      String[] cmdArgs,
+      Completion completion,
+      StringBuilder stdout,
+      StringBuilder stderr)
+      throws Exception {
     List<String> argVals =
         new ArrayList<>(
             Arrays.asList(
@@ -1453,77 +1413,35 @@ public abstract class RuntimeTest {
     pb.environment().remove("JAVA_TOOL_OPTIONS");
     Process p = pb.start();
 
-    CountDownLatch l = new CountDownLatch(checkLines);
-
-    new Thread(
-            () -> {
-              try {
-                BufferedReader br =
-                    new BufferedReader(
-                        new InputStreamReader(p.getErrorStream(), StandardCharsets.UTF_8));
-
-                String line = null;
-                while ((line = br.readLine()) != null) {
-                  System.out.println("[btrace err] " + line);
-                  if (line.contains("Server VM warning")
-                      || line.contains("XML libraries not available")
-                      || line.contains("Successfully started BTrace probe")
-                      || line.contains("Connection reset")
-                      || line.contains("terminally deprecated method in sun.misc.Unsafe")
-                      || line.contains("sun.misc.Unsafe::objectFieldOffset")
-                      || line.contains("sun.misc.Unsafe::arrayBaseOffset")
-                      || line.contains("Please consider reporting this to the maintainers of class")
-                      || line.contains("org.jctools.util.UnsafeAccess")
-                      || line.contains("A restricted method")) {
-                    // skip JVM generated warnings
-                    continue;
-                  }
-                  if (line.startsWith("[traced app]") || line.startsWith("[btrace out]")) {
-                    // skip test debug lines
-                    continue;
-                  }
-                  stderr.append(line).append('\n');
-                  if (line.contains("Exception") || line.contains("Error")) {
-                    for (int i = 0; i < checkLines; i++) {
-                      l.countDown();
-                    }
-                  }
-                }
-              } catch (Exception e) {
-                for (int i = 0; i < checkLines; i++) {
-                  l.countDown();
-                }
-                throw new Error(e);
-              }
-            },
-            "Stderr Reader")
-        .start();
-
-    new Thread(
-            () -> {
-              try {
-                BufferedReader br =
-                    new BufferedReader(
-                        new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
-                String line = null;
-                while ((line = br.readLine()) != null) {
-                  stdout.append(line).append('\n');
-                  System.out.println("[btrace out] " + line);
-                  if (!(debugBTrace && line.contains("DEBUG"))) {
-                    l.countDown();
-                  }
-                }
-              } catch (Exception e) {
-                for (int i = 0; i < checkLines; i++) {
-                  l.countDown();
-                }
-                throw new Error(e);
-              }
-            },
-            "Stdout Reader")
-        .start();
-
-    l.await(timeout, TimeUnit.MILLISECONDS);
+    boolean completed =
+        OutputPump.run(
+            p,
+            completion,
+            timeout,
+            debugBTrace,
+            Arrays.asList(
+                "Server VM warning",
+                "XML libraries not available",
+                "Successfully started BTrace probe",
+                "Connection reset",
+                "terminally deprecated method in sun.misc.Unsafe",
+                "sun.misc.Unsafe::objectFieldOffset",
+                "sun.misc.Unsafe::arrayBaseOffset",
+                "Please consider reporting this to the maintainers of class",
+                "org.jctools.util.UnsafeAccess",
+                "A restricted method"),
+            Arrays.asList("[traced app]", "[btrace out]"),
+            stdout,
+            stderr);
+    if (!completed) {
+      System.out.println(
+          "[harness] timed out after "
+              + timeout
+              + "ms waiting for "
+              + completion.describe()
+              + "; stdout so far:\n"
+              + stdout);
+    }
 
     return p;
   }
