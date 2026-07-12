@@ -99,7 +99,7 @@ long ts = JobStart$Ext.time(event);
 
 Each dispatcher resolves the target class lazily via `self.getClass().getClassLoader()` (virtual methods) or `Thread.currentThread().getContextClassLoader()` (static methods, see below), then calls `MethodHandles.publicLookup().findVirtual` / `findStatic`. Handles are cached in a per-method `ClassValue`, keyed by the resolved application class, so one extension can safely serve applications with isolated classloaders. Subsequent calls reuse the handle without retaining unloaded application classloaders.
 
-If the external class isn't yet loaded when the dispatcher is first called, the resolver throws; the `volatile` field stays `null`, so the next call retries. No eager init, no `ExceptionInInitializerError` at extension load.
+If the external class isn't yet loaded when the dispatcher is first called, resolution throws; since the `ClassValue` does not record a value, the next call retries. No eager init, no `ExceptionInInitializerError` at extension load.
 
 ### Rules
 
