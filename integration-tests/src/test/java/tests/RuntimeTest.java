@@ -1163,11 +1163,6 @@ public abstract class RuntimeTest {
   }
 
   public Process runBTrace(
-      String[] args, int checkLines, StringBuilder stdout, StringBuilder stderr) throws Exception {
-    return runBTrace(args, Completion.lines(checkLines), stdout, stderr);
-  }
-
-  public Process runBTrace(
       String[] args, Completion completion, StringBuilder stdout, StringBuilder stderr)
       throws Exception {
     List<String> argVals =
