@@ -44,7 +44,7 @@ class BootstrapCallGraphTest {
     }
 
     static void helper() {
-      Supplier<String> s = () -> "hi";
+      ((Supplier<String>) () -> "hi").get();
     }
   }
 
