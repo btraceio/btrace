@@ -16,21 +16,16 @@
  */
 package io.btrace.compiler;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FilterOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
-import java.io.StringWriter;
 import java.net.URI;
 import java.nio.CharBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import javax.tools.FileObject;
 import javax.tools.ForwardingJavaFileManager;
@@ -48,42 +43,15 @@ import javax.tools.SimpleJavaFileObject;
 @SuppressWarnings("RedundantThrows")
 public final class MemoryJavaFileManager extends ForwardingJavaFileManager<JavaFileManager> {
 
-  private final List<String> includeDirs;
   private Map<String, byte[]> classBytes;
 
-  public MemoryJavaFileManager(JavaFileManager fileManager, List<String> includeDirs) {
+  public MemoryJavaFileManager(JavaFileManager fileManager) {
     super(fileManager);
-    this.includeDirs = includeDirs;
     classBytes = new HashMap<>();
   }
 
-  static JavaFileObject preprocessedFileObject(JavaFileObject fo, List<String> includeDirs)
-      throws IOException {
-    if (includeDirs != null) {
-      StringWriter out = new StringWriter();
-      PCPP pcpp = new PCPP(includeDirs, out);
-      BufferedReader reader =
-          new BufferedReader(new InputStreamReader(fo.openInputStream(), StandardCharsets.UTF_8));
-      pcpp.run(reader, fo.getName());
-      return new StringInputBuffer(fo.getName(), out.toString());
-    } else {
-      return fo;
-    }
-  }
-
-  static JavaFileObject makeStringSource(String name, String code, List<String> includeDirs) {
-    if (includeDirs != null) {
-      StringWriter out = new StringWriter();
-      PCPP pcpp = new PCPP(includeDirs, out);
-      try {
-        pcpp.run(new StringReader(code), name);
-      } catch (IOException exp) {
-        throw new RuntimeException(exp);
-      }
-      return new StringInputBuffer(name, out.toString());
-    } else {
-      return new StringInputBuffer(name, code);
-    }
+  static JavaFileObject makeStringSource(String name, String code) {
+    return new StringInputBuffer(name, code);
   }
 
   static URI toURI(String name) {
@@ -119,17 +87,6 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager<JavaF
       return new ClassOutputBuffer(className);
     } else {
       return super.getJavaFileForOutput(location, className, kind, sibling);
-    }
-  }
-
-  @Override
-  public JavaFileObject getJavaFileForInput(
-      JavaFileManager.Location location, String className, Kind kind) throws IOException {
-    JavaFileObject result = super.getJavaFileForInput(location, className, kind);
-    if (kind == Kind.SOURCE) {
-      return preprocessedFileObject(result, includeDirs);
-    } else {
-      return result;
     }
   }
 

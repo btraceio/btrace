@@ -109,13 +109,11 @@ public final class Main {
     int port = BTRACE_DEFAULT_PORT;
     String host = BTRACE_DEFAULT_HOST;
     String classPath = ".";
-    String includePath = null;
 
     int count = 0;
     boolean hostDefined = false;
     boolean portDefined = false;
     boolean classpathDefined = false;
-    boolean includePathDefined = false;
     String statsdDef = "";
     String resumeProbe = null;
     String probeCommand = null;
@@ -193,10 +191,6 @@ public final class Main {
           classPath = args[++count];
           if (log.isDebugEnabled()) log.debug("accepting classpath {}", classPath);
           classpathDefined = true;
-        } else if (args[count].equals("-I") && !includePathDefined) {
-          includePath = args[++count];
-          if (log.isDebugEnabled()) log.debug("accepting include path {}", includePath);
-          includePathDefined = true;
         } else if (args[count].equals("-statsd")) {
           statsdDef = args[++count];
         } else if (args[count].equals("-v")) {
@@ -325,8 +319,7 @@ public final class Main {
               System.err.println(javaSource);
             }
             code =
-                client.compileSource(
-                    fileName, javaSource, classPath, new PrintWriter(System.err), includePath);
+                client.compileSource(fileName, javaSource, classPath, new PrintWriter(System.err));
             if (code == null) {
               errorExit("Oneliner compilation failed", 1);
             }
@@ -344,7 +337,7 @@ public final class Main {
           if (!new File(fileName).exists()) {
             errorExit("File not found: " + fileName, 1);
           }
-          code = client.compile(fileName, classPath, includePath);
+          code = client.compile(fileName, classPath);
           if (code == null) {
             errorExit("BTrace compilation failed", 1);
           }
