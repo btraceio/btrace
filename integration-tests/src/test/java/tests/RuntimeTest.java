@@ -417,8 +417,7 @@ public abstract class RuntimeTest {
         }
         try {
           ProcessBuilder jcmdPb;
-          String jcmdExe =
-              testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
+          String jcmdExe = Paths.get(testJavaHome, "bin", "jcmd").toString();
           if (jfrFile != null) {
             jcmdPb =
                 new ProcessBuilder(
