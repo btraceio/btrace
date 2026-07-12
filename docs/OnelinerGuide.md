@@ -172,7 +172,7 @@ btrace -n 'MyClass::calculate @return { print method, return }' <PID>
 { count }
 ```
 
-Prints total count when BTrace exits (Ctrl+C).
+The count is kept in an atomic counter and printed by an `@OnEvent` handler: press `Ctrl+C` in the BTrace client and choose option `2. send an event` to print the current count (you can do this repeatedly; choose `1. exit` to quit).
 
 **Examples:**
 ```bash
