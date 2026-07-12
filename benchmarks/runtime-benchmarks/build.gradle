@@ -47,11 +47,11 @@ jmhJar {
   include 'org/jctools/**/*'
   include 'org/objectweb/asm/**'
   include 'org/openjdk/jmh/**'
-  include 'org/openjdk/btrace/bench/**/*.class'
-  include "org/openjdk/btrace/core/**"
-  include "org/openjdk/btrace/instr/**"
-  include 'org/openjdk/btrace/generated/**/*'
-  include 'org/openjdk/btrace/runtime/**'
+  include 'io/btrace/bench/**/*.class'
+  include "io/btrace/core/**"
+  include "io/btrace/instr/**"
+  include 'io/btrace/generated/**/*'
+  include 'io/btrace/runtime/**'
   // no legacy services classes to package
   include "joptsimple/**"
   include "org/apache/**"

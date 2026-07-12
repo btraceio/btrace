@@ -234,7 +234,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                     }
                 }
                 // Enforce: at most one package-level @ExtensionDescriptor across the project
-                def extDescDesc = 'Lorg/openjdk/btrace/core/extensions/ExtensionDescriptor;'
+                def extDescDesc = 'Lio/btrace/core/extensions/ExtensionDescriptor;'
                 int extDescCount = 0
                 def scanForPkgDescriptors = { File classesDir ->
                     if (classesDir == null || !classesDir.exists()) return
@@ -277,8 +277,8 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                             cr.accept(cn, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG)
                             def isInterface = (cn.access & Opcodes.ACC_INTERFACE) != 0
                             def hasMarker = false
-                            (cn.visibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lorg/openjdk/btrace/core/extensions/ServiceDescriptor;') }
-                            (cn.invisibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lorg/openjdk/btrace/core/extensions/ServiceDescriptor;') }
+                            (cn.visibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') }
+                            (cn.invisibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') }
                             if (hasMarker && isInterface) detected.add(fq)
                         }
                     }
@@ -354,7 +354,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                         // Collect ServiceDescriptor.permissions
                         def collectServicePerms = { AnnotationNode an ->
                             if (an == null) return
-                            if (an.desc == 'Lorg/openjdk/btrace/core/extensions/ServiceDescriptor;') {
+                            if (an.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') {
                                 def vals = an.values ?: []
                                 for (int i = 0; i < vals.size(); i += 2) {
                                     if (vals[i] == 'permissions') {
@@ -701,7 +701,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                                 def cn = new ClassNode()
                                 cr.accept(cn, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG)
                                 (cn.visibleAnnotations ?: []).each { an ->
-                                    if (an.desc == 'Lorg/openjdk/btrace/core/extensions/ServiceDescriptor;') {
+                                    if (an.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') {
                                         def vals = an.values ?: []
                                         for (int i = 0; i < vals.size(); i += 2) {
                                             if (vals[i] == 'permissions') {
@@ -715,7 +715,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                                     }
                                 }
                                 (cn.invisibleAnnotations ?: []).each { an ->
-                                    if (an.desc == 'Lorg/openjdk/btrace/core/extensions/ServiceDescriptor;') {
+                                    if (an.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') {
                                         def vals = an.values ?: []
                                         for (int i = 0; i < vals.size(); i += 2) {
                                             if (vals[i] == 'permissions') {
@@ -741,7 +741,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                                 def cr2 = new ClassReader(bytes2)
                                 def cn2 = new ClassNode(); cr2.accept(cn2, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG)
                                 (cn2.visibleAnnotations ?: []).each { an ->
-                                    if (an.desc == 'Lorg/openjdk/btrace/core/extensions/ExtensionDescriptor;') {
+                                    if (an.desc == 'Lio/btrace/core/extensions/ExtensionDescriptor;') {
                                         def vals = an.values ?: []
                                         for (int i = 0; i < vals.size(); i += 2) {
                                             if (vals[i] == 'permissions') {
@@ -755,7 +755,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                                     }
                                 }
                                 (cn2.invisibleAnnotations ?: []).each { an ->
-                                    if (an.desc == 'Lorg/openjdk/btrace/core/extensions/ExtensionDescriptor;') {
+                                    if (an.desc == 'Lio/btrace/core/extensions/ExtensionDescriptor;') {
                                         def vals = an.values ?: []
                                         for (int i = 0; i < vals.size(); i += 2) {
                                             if (vals[i] == 'permissions') {
@@ -1094,8 +1094,8 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                                 def cn = new ClassNode(); cr.accept(cn, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG)
                                 boolean isInterface = (cn.access & Opcodes.ACC_INTERFACE) != 0
                                 boolean hasMarker = false
-                                (cn.visibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lorg/openjdk/btrace/core/extensions/ServiceDescriptor;') }
-                                (cn.invisibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lorg/openjdk/btrace/core/extensions/ServiceDescriptor;') }
+                                (cn.visibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') }
+                                (cn.invisibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') }
                                 if (hasMarker && isInterface) services.add(fq)
                             }
                         }

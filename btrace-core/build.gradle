@@ -57,7 +57,7 @@ jacocoTestReport {
     afterEvaluate {
         classDirectories.setFrom(files(classDirectories.files.collect {
             fileTree(dir: it, include: [
-                '**/org/openjdk/btrace/core/comm/**/*.class'
+                '**/io/btrace/core/comm/**/*.class'
             ])
         }))
     }

@@ -289,9 +289,9 @@ class ProjectExtensionSource extends ExtensionSource {
         def extProject = project.project(projectPath)
 
         // Check if the project has the BTrace extension plugin
-        if (!extProject.plugins.hasPlugin('org.openjdk.btrace.extension')) {
+        if (!extProject.plugins.hasPlugin('io.btrace.extension')) {
             throw new IllegalStateException(
-                "Project '${projectPath}' does not have the 'org.openjdk.btrace.extension' plugin applied")
+                "Project '${projectPath}' does not have the 'io.btrace.extension' plugin applied")
         }
 
         def buildApiJar = extProject.tasks.findByName('buildApiJar')
