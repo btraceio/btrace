@@ -115,6 +115,10 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 - **Instrumentation** → [BTrace Instrumentation Analysis](architecture/BTraceInstrAnalysis.md)
 - **Instrumentation Backends (ASM / ClassFile API)** → [Instrumentation Backends](architecture/InstrumentationBackends.md) — automatic backend selection for future JDK class files
 
+### Hands-On Tutorials
+
+- **[Hands-on tutorial series](tutorials/README.md)** — scenario-driven labs with a runnable demo app; start with [Your First Trace in 2 Minutes](tutorials/01-first-trace-in-2-minutes.md)
+
 ## Sample Scripts
 
 BTrace includes 50+ sample scripts demonstrating real-world use cases:

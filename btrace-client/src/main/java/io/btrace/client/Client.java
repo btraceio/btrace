@@ -260,17 +260,7 @@ public class Client {
 
   @SuppressWarnings("DefaultCharset")
   public byte[] compile(String fileName, String classPath) {
-    return compile(fileName, classPath, new PrintWriter(System.err), null);
-  }
-
-  /** Compiles given BTrace program using given classpath. */
-  @SuppressWarnings("DefaultCharset")
-  public byte[] compile(String fileName, String classPath, String includePath) {
-    return compile(fileName, classPath, new PrintWriter(System.err), includePath);
-  }
-
-  public byte[] compile(String fileName, String classPath, PrintWriter err) {
-    return compile(fileName, classPath, err, null);
+    return compile(fileName, classPath, new PrintWriter(System.err));
   }
 
   /**
@@ -405,10 +395,10 @@ public class Client {
    * Compiles given BTrace program using given classpath. Errors and warning are written to given
    * PrintWriter.
    */
-  public byte[] compile(String fileName, String classPath, PrintWriter err, String includePath) {
+  public byte[] compile(String fileName, String classPath, PrintWriter err) {
     File file = new File(fileName);
     if (fileName.endsWith(".java")) {
-      Compiler compiler = new Compiler(includePath);
+      Compiler compiler = new Compiler();
       classPath += File.pathSeparator + System.getProperty("java.class.path");
       // Add extension API JARs to classpath
       String extApiCp = getExtensionApiClasspath();
@@ -510,16 +500,14 @@ public class Client {
   }
 
   public byte[] compileSource(String fileName, String source, String classPath) {
-    return compileSource(fileName, source, classPath, new PrintWriter(System.err), null);
+    return compileSource(fileName, source, classPath, new PrintWriter(System.err));
   }
 
-  public byte[] compileSource(
-      String fileName, String source, String classPath, PrintWriter err, String includePath) {
+  public byte[] compileSource(String fileName, String source, String classPath, PrintWriter err) {
     return compileInternal(
         fileName,
         classPath,
         err,
-        includePath,
         (compiler, resolvedCp) -> compiler.compile(fileName, source, err, ".", resolvedCp));
   }
 
@@ -529,12 +517,8 @@ public class Client {
   }
 
   private byte[] compileInternal(
-      String scriptName,
-      String classPath,
-      PrintWriter err,
-      String includePath,
-      CompilerInvoker invoker) {
-    Compiler compiler = new Compiler(includePath);
+      String scriptName, String classPath, PrintWriter err, CompilerInvoker invoker) {
+    Compiler compiler = new Compiler();
     classPath += File.pathSeparator + System.getProperty("java.class.path");
     // Add extension API JARs to classpath
     String extApiCp = getExtensionApiClasspath();
