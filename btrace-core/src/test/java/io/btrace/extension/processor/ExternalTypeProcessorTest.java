@@ -279,7 +279,9 @@ class ExternalTypeProcessorTest {
         if (!"com.example.target.Counter".equals(name)) return super.loadClass(name, resolve);
         Class<?> loaded = findLoadedClass(name);
         if (loaded == null) {
-          byte[] bytes = result.classBytes.get(name);
+          byte[] bytes =
+              java.util.Objects.requireNonNull(
+                  result.classBytes.get(name), "Missing class bytes for " + name);
           loaded = defineClass(name, bytes, 0, bytes.length);
         }
         if (resolve) resolveClass(loaded);
