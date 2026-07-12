@@ -404,6 +404,34 @@ public abstract class RuntimeTest {
 
       System.out.println("Detached.");
 
+      // If JFR was enabled, dump the recording while the target is still guaranteed alive.
+      // This MUST happen before the process is signaled to shut down and potentially
+      // force-killed below -- destroyForcibly() bypasses JVM shutdown hooks entirely, so
+      // dumponexit=true never fires, and dumping against an already-dead PID silently does
+      // nothing, leaving a 0-byte JFR file (see the investigation doc for the observed failure).
+      if (startJfr && pidStringRef.get() != null) {
+        try {
+          Thread.sleep(1500L);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
+        try {
+          ProcessBuilder jcmdPb;
+          String jcmdExe =
+              testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
+          if (jfrFile != null) {
+            jcmdPb =
+                new ProcessBuilder(
+                    jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
+          } else {
+            jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
+          }
+          jcmdPb.start().waitFor();
+        } catch (Exception e) {
+          e.printStackTrace(System.err);
+        }
+      }
+
       // Signal the target app to shut down
       pw.println("done");
       pw.flush();
@@ -431,29 +459,6 @@ public abstract class RuntimeTest {
       Thread.sleep(500L);
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
-    }
-    // If JFR was enabled for dynamic attach, give it a moment and dump the recording
-    if (startJfr && pidStringRef.get() != null) {
-      try {
-        Thread.sleep(1500L);
-      } catch (InterruptedException ie) {
-        Thread.currentThread().interrupt();
-      }
-      try {
-        ProcessBuilder jcmdPb;
-        String jcmdExe =
-            testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
-        if (jfrFile != null) {
-          jcmdPb =
-              new ProcessBuilder(
-                  jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
-        } else {
-          jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
-        }
-        jcmdPb.start().waitFor();
-      } catch (Exception e) {
-        e.printStackTrace(System.err);
-      }
     }
 
     v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
@@ -592,6 +597,34 @@ public abstract class RuntimeTest {
 
       System.out.println("Detached.");
 
+      // If JFR was enabled, dump the recording while the target is still guaranteed alive.
+      // This MUST happen before the process is signaled to shut down and potentially
+      // force-killed below -- destroyForcibly() bypasses JVM shutdown hooks entirely, so
+      // dumponexit=true never fires, and dumping against an already-dead PID silently does
+      // nothing, leaving a 0-byte JFR file (see the investigation doc for the observed failure).
+      if (startJfr && pidStringRef.get() != null) {
+        try {
+          Thread.sleep(1500L);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
+        try {
+          ProcessBuilder jcmdPb;
+          String jcmdExe =
+              testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
+          if (jfrFile != null) {
+            jcmdPb =
+                new ProcessBuilder(
+                    jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
+          } else {
+            jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
+          }
+          jcmdPb.start().waitFor();
+        } catch (Exception ignore) {
+          // best effort
+        }
+      }
+
       // Signal the target app to shut down
       pw.println("done");
       pw.flush();
@@ -619,29 +652,6 @@ public abstract class RuntimeTest {
       Thread.sleep(500L);
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
-    }
-    // If JFR was enabled for dynamic attach, give it a moment and dump the recording
-    if (startJfr && pidStringRef.get() != null) {
-      try {
-        Thread.sleep(1500L);
-      } catch (InterruptedException ie) {
-        Thread.currentThread().interrupt();
-      }
-      try {
-        ProcessBuilder jcmdPb;
-        String jcmdExe =
-            testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
-        if (jfrFile != null) {
-          jcmdPb =
-              new ProcessBuilder(
-                  jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
-        } else {
-          jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
-        }
-        jcmdPb.start().waitFor();
-      } catch (Exception ignore) {
-        // best effort
-      }
     }
 
     v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
