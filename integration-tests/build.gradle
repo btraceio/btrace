@@ -107,6 +107,16 @@ test {
 
     testLogging.showStandardStreams = true
 
+    // Each test class spawns real JVM subprocesses (target app + BTrace client) with dedicated
+    // reader threads draining their stdout/stderr. With Gradle's default forkEvery=0, every test
+    // class in this module runs inside one single, long-lived test-executor JVM for the whole
+    // ~10 minute suite -- thread/GC/file-descriptor pressure from every prior class's subprocess
+    // launches persists into later classes, and a runner-load slowdown late in the run can cascade
+    // (reader threads scheduled late -> a spawned process's own stdout/stderr pipe fills -> the
+    // process blocks on write() -> the harness's own output-wait times out). Forking a fresh JVM
+    // per test class bounds that accumulation to a single class instead of the whole suite.
+    forkEvery = 1
+
     def dockerAvailable = false
     if (project.hasProperty("integration")) {
         String dockerHost = System.getenv("DOCKER_HOST")
