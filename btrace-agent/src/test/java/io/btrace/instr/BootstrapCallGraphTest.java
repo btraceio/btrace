@@ -65,13 +65,13 @@ class BootstrapCallGraphTest {
 
   static final class CallOnlyReachableThroughLambdaBody {
     static void root() {
-      Runnable r =
+      ((Runnable)
           () -> {
             // This call is only reachable via the invokedynamic-created Runnable's body -- there
             // is no direct MethodInsnNode from root() to innerOnlyCalledFromLambda(). A walker
             // that doesn't follow into lambda implementation methods misses this entirely.
             CallOnlyReachableThroughLambdaBody.innerOnlyCalledFromLambda();
-          };
+          });
     }
 
     static void innerOnlyCalledFromLambda() {
