@@ -16,13 +16,12 @@
  */
 package io.btrace.instr;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Enforces that BTrace's {@code -javaagent premain()} bootstrap path never reaches a
