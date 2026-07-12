@@ -93,12 +93,17 @@ public final class CompileTestHarness {
     public final boolean success;
     public final List<Diagnostic<? extends JavaFileObject>> diagnostics;
     public final ClassLoader loader;
+    public final Map<String, byte[]> classBytes;
 
     RunnableResult(
-        boolean success, List<Diagnostic<? extends JavaFileObject>> diags, ClassLoader loader) {
+        boolean success,
+        List<Diagnostic<? extends JavaFileObject>> diags,
+        ClassLoader loader,
+        Map<String, byte[]> classBytes) {
       this.success = success;
       this.diagnostics = diags;
       this.loader = loader;
+      this.classBytes = classBytes;
     }
 
     public String errors() {
@@ -134,7 +139,7 @@ public final class CompileTestHarness {
 
     JavaCompiler.CompilationTask task = compiler.getTask(null, mgr, diags, options, null, units);
     boolean ok = task.call();
-    if (!ok) return new RunnableResult(false, diags.getDiagnostics(), null);
+    if (!ok) return new RunnableResult(false, diags.getDiagnostics(), null, new LinkedHashMap<>());
 
     ClassLoader loader =
         new ClassLoader(CompileTestHarness.class.getClassLoader()) {
@@ -146,7 +151,7 @@ public final class CompileTestHarness {
             return defineClass(name, b, 0, b.length);
           }
         };
-    return new RunnableResult(true, diags.getDiagnostics(), loader);
+    return new RunnableResult(true, diags.getDiagnostics(), loader, mgr.classBytes());
   }
 
   static final class StringSource extends SimpleJavaFileObject {
@@ -218,6 +223,12 @@ public final class CompileTestHarness {
 
     Map<String, String> generatedSources() {
       return sources;
+    }
+
+    Map<String, byte[]> classBytes() {
+      Map<String, byte[]> result = new LinkedHashMap<>();
+      bytes.forEach((name, content) -> result.put(name, content.toByteArray()));
+      return result;
     }
   }
 

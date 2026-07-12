@@ -24,6 +24,7 @@ import java.net.ServerSocket;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tests.harness.Completion;
 
 /**
  * End-to-end integration test for the @ExternalType annotation processor.
@@ -57,8 +58,10 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/ExternalTypeAdapterTest.java",
-        null,
-        10,
+        // Wait for the probe's actual output — the same signals the validator asserts on — so the
+        // harness never tears the target down before the async retransform of the already-loaded
+        // resources.Main class has fired the probe.
+        Completion.untilContains("tag=ext-data-ok", "value=42"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {

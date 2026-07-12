@@ -41,7 +41,7 @@ final class AdapterEmitter {
   }
 
   private void renderMethod(PrintWriter w, MethodSpec m) {
-    String mhField = "$" + m.name + "$mh";
+    String mhCache = "$" + m.name + "$handles";
     String[] lists = paramAndArgLists(m);
     String paramList = lists[0];
     String argList = lists[1];
@@ -51,42 +51,51 @@ final class AdapterEmitter {
             : "self.getClass().getClassLoader()";
 
     w.println();
-    w.println("  private static volatile java.lang.invoke.MethodHandle " + mhField + ";");
+    w.println("  private static final ClassValue<MethodHandle> " + mhCache + " =");
+    w.println("      new ClassValue<MethodHandle>() {");
+    w.println("        @Override");
+    w.println("        protected MethodHandle computeValue(Class<?> owner) {");
+    w.println("          try {");
+    if (m.isStatic) {
+      w.println(
+          "            return MethodHandles.publicLookup().findStatic(owner, \""
+              + m.name
+              + "\", "
+              + methodTypeLiteral(m)
+              + ");");
+    } else {
+      w.println(
+          "            return MethodHandles.publicLookup().findVirtual(owner, \""
+              + m.name
+              + "\", "
+              + methodTypeLiteral(m)
+              + ");");
+    }
+    w.println("          } catch (NoSuchMethodException | IllegalAccessException e) {");
+    w.println(
+        "            throw new IllegalStateException(\"Unable to resolve \" + OWNER + \"#"
+            + m.name
+            + "\", e);");
+    w.println("          }");
+    w.println("        }");
+    w.println("      };");
     w.println();
     w.println("  public static " + m.returnType + " " + m.name + "(" + paramList + ") {");
     w.println("    try {");
-    w.println("      MethodHandle h = " + mhField + ";");
-    w.println("      if (h == null) h = $" + m.name + "$resolve(" + loaderExpr + ");");
+    w.println("      Class<?> owner = Class.forName(OWNER, false, " + loaderExpr + ");");
+    w.println("      MethodHandle h = " + mhCache + ".get(owner);");
     w.print("      ");
     if (!"void".equals(m.returnType)) w.print("return (" + m.returnType + ") ");
     w.println("h.invoke(" + argList + ");");
     w.println("    } catch (Throwable t) { throw sneak(t); }");
     w.println("  }");
-    renderResolver(w, m, mhField);
   }
 
-  private void renderResolver(PrintWriter w, MethodSpec m, String field) {
-    w.println();
-    w.println(
-        "  private static MethodHandle $" + m.name + "$resolve(ClassLoader cl) throws Exception {");
-    w.println("    MethodHandle local = " + field + ";");
-    w.println("    if (local == null) {");
-    w.println("      Class<?> c = Class.forName(OWNER, false, cl);");
-    w.print("      MethodType mt = MethodType.methodType(");
-    w.print(m.returnType + ".class");
-    for (String p : m.paramTypes) w.print(", " + p + ".class");
-    w.println(");");
-    if (m.isStatic) {
-      w.println(
-          "      local = MethodHandles.publicLookup().findStatic(c, \"" + m.name + "\", mt);");
-    } else {
-      w.println(
-          "      local = MethodHandles.publicLookup().findVirtual(c, \"" + m.name + "\", mt);");
-    }
-    w.println("      " + field + " = local;");
-    w.println("    }");
-    w.println("    return local;");
-    w.println("  }");
+  private String methodTypeLiteral(MethodSpec m) {
+    StringBuilder result = new StringBuilder("MethodType.methodType(");
+    result.append(m.returnType).append(".class");
+    for (String p : m.paramTypes) result.append(", ").append(p).append(".class");
+    return result.append(")").toString();
   }
 
   private void renderSneak(PrintWriter w) {

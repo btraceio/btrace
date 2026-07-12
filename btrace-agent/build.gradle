@@ -85,7 +85,7 @@ jar {
 
 // Exclude sources that rely on JDK-internal modules from Javadoc to avoid missing-package errors
 tasks.named('javadoc').configure {
-    exclude 'org/openjdk/btrace/agent/PerfReaderImpl.java'
+    exclude 'io/btrace/agent/PerfReaderImpl.java'
 }
 
 task compileTestProbes {
