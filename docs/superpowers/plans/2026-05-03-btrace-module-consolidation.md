@@ -49,7 +49,7 @@ Build files modified: `settings.gradle`, `btrace-core/build.gradle`, `btrace-age
 - Modify: `settings.gradle`
 - Modify: `btrace-dist/build.gradle`
 
-- [ ] **Step 1.1: Confirm both directories are genuinely empty**
+- [x] **Step 1.1: Confirm both directories are genuinely empty**
 
 ```bash
 find btrace-ui/src btrace-api/src -name "*.java" 2>/dev/null | wc -l
@@ -57,13 +57,13 @@ find btrace-ui/src btrace-api/src -name "*.java" 2>/dev/null | wc -l
 
 Expected output: `0`
 
-- [ ] **Step 1.2: Delete btrace-ui and btrace-api**
+- [x] **Step 1.2: Delete btrace-ui and btrace-api**
 
 ```bash
 rm -rf btrace-ui btrace-api
 ```
 
-- [ ] **Step 1.3: Remove includes from settings.gradle**
+- [x] **Step 1.3: Remove includes from settings.gradle**
 
 In `settings.gradle`, remove these two lines (they will be present as part of the auto-discovery loop since both directories had `build.gradle` files):
 
@@ -76,7 +76,7 @@ grep -n "btrace-ui\|btrace-api" settings.gradle
 
 Expected: no output (they were auto-discovered, not explicitly included).
 
-- [ ] **Step 1.4: Remove apiJar task and all its dependsOn references from btrace-dist/build.gradle**
+- [x] **Step 1.4: Remove apiJar task and all its dependsOn references from btrace-dist/build.gradle**
 
 Find every occurrence:
 ```bash
@@ -113,7 +113,7 @@ buildTgz.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, e
 
 For the `buildDockerContext` task defined with `dependsOn: [btraceJar, apiJar, …]`, remove `apiJar` from the list.
 
-- [ ] **Step 1.5: Verify the build passes**
+- [x] **Step 1.5: Verify the build passes**
 
 ```bash
 ./gradlew :btrace-dist:build -x test
@@ -121,7 +121,7 @@ For the `buildDockerContext` task defined with `dependsOn: [btraceJar, apiJar, �
 
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 1.6: Commit**
+- [x] **Step 1.6: Commit**
 
 ```bash
 git add -A
@@ -136,7 +136,7 @@ git commit -m "refactor: remove empty btrace-ui and btrace-api modules"
 - Delete: `btrace-extensions/build.gradle`
 - Modify: `settings.gradle`
 
-- [ ] **Step 2.1: Remove the parent include from settings.gradle**
+- [x] **Step 2.1: Remove the parent include from settings.gradle**
 
 In `settings.gradle`, find and remove exactly this line:
 ```groovy
@@ -145,13 +145,13 @@ include 'btrace-extensions'
 
 The child includes (`btrace-extensions:btrace-metrics`, etc.) stay — do not touch them.
 
-- [ ] **Step 2.2: Delete the parent build.gradle**
+- [x] **Step 2.2: Delete the parent build.gradle**
 
 ```bash
 rm btrace-extensions/build.gradle
 ```
 
-- [ ] **Step 2.3: Check nothing references the buildExtensionsApi task**
+- [x] **Step 2.3: Check nothing references the buildExtensionsApi task**
 
 ```bash
 grep -rn "buildExtensionsApi" --include="*.gradle" .
@@ -159,7 +159,7 @@ grep -rn "buildExtensionsApi" --include="*.gradle" .
 
 Expected: no output (btrace-dist discovers extensions dynamically and does not use this task).
 
-- [ ] **Step 2.4: Verify the build passes**
+- [x] **Step 2.4: Verify the build passes**
 
 ```bash
 ./gradlew :btrace-dist:build -x test
@@ -167,7 +167,7 @@ Expected: no output (btrace-dist discovers extensions dynamically and does not u
 
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 2.5: Commit**
+- [x] **Step 2.5: Commit**
 
 ```bash
 git add -A
@@ -191,27 +191,27 @@ git commit -m "refactor: dissolve btrace-extensions parent aggregator module"
 - Modify: `settings.gradle`
 - Delete: `btrace-extension/`, `btrace-extension-processor/`
 
-- [ ] **Step 3.1: Create btrace-core test directory**
+- [x] **Step 3.1: Create btrace-core test directory**
 
 ```bash
 mkdir -p btrace-core/src/test/java
 ```
 
-- [ ] **Step 3.2: Move btrace-extension source trees into btrace-core**
+- [x] **Step 3.2: Move btrace-extension source trees into btrace-core**
 
 ```bash
 cp -r btrace-extension/src/main/java/. btrace-core/src/main/java/
 cp -r btrace-extension/src/test/java/. btrace-core/src/test/java/
 ```
 
-- [ ] **Step 3.3: Move btrace-extension-processor source trees into btrace-core**
+- [x] **Step 3.3: Move btrace-extension-processor source trees into btrace-core**
 
 ```bash
 cp -r btrace-extension-processor/src/main/java/. btrace-core/src/main/java/
 cp -r btrace-extension-processor/src/test/java/. btrace-core/src/test/java/
 ```
 
-- [ ] **Step 3.4: Update btrace-core/build.gradle — add test dependencies**
+- [x] **Step 3.4: Update btrace-core/build.gradle — add test dependencies**
 
 The moved test sources need JUnit. Add a `testImplementation` block. `btrace-core/build.gradle` currently has no `testImplementation` entries; add these lines inside the existing `dependencies { }` block:
 
@@ -230,7 +230,7 @@ test {
 
 No new `implementation` deps are needed — `btrace-extension` only used `slf4j` and `slf4j-simple`, both already present in `btrace-core`.
 
-- [ ] **Step 3.5: Update btrace-runtime/build.gradle — replace btrace-extension references**
+- [x] **Step 3.5: Update btrace-runtime/build.gradle — replace btrace-extension references**
 
 In `btrace-runtime/build.gradle`, there are four occurrences of `project(':btrace-extension')` (in `java9Implementation`, `java11Implementation`, `implementation`, and `testImplementation` scopes). Replace all with `project(':btrace-core')`:
 
@@ -258,7 +258,7 @@ testImplementation project(':btrace-core')
 
 Note: `btrace-runtime` already has `implementation project(':btrace-core')` — adding a duplicate project dependency is harmless in Gradle (it deduplicates), but for cleanliness remove the now-duplicate `implementation project(':btrace-core')` if it appears twice.
 
-- [ ] **Step 3.6: Update btrace-instr/build.gradle**
+- [x] **Step 3.6: Update btrace-instr/build.gradle**
 
 Replace `project(':btrace-extension')` → `project(':btrace-core')`:
 
@@ -274,7 +274,7 @@ After:
 
 (Remove the btrace-extension line entirely — btrace-core is already in btrace-instr's deps.)
 
-- [ ] **Step 3.7: Update btrace-agent/build.gradle**
+- [x] **Step 3.7: Update btrace-agent/build.gradle**
 
 Replace `project(':btrace-extension')` → `project(':btrace-core')` (btrace-core already declared, so just delete the btrace-extension line):
 
@@ -293,7 +293,7 @@ implementation project(':btrace-runtime')
 implementation project(':btrace-instr')
 ```
 
-- [ ] **Step 3.8: Update btrace-bootstrap/build.gradle**
+- [x] **Step 3.8: Update btrace-bootstrap/build.gradle**
 
 Replace `project(':btrace-extension')` → (remove, btrace-core already listed):
 
@@ -312,7 +312,7 @@ implementation project(':btrace-runtime')
 implementation project(':btrace-instr')
 ```
 
-- [ ] **Step 3.9: Update BTraceExtensionPlugin.groovy — fix annotationProcessor wiring**
+- [x] **Step 3.9: Update BTraceExtensionPlugin.groovy — fix annotationProcessor wiring**
 
 In `btrace-gradle-plugin/src/main/groovy/io/btrace/gradle/BTraceExtensionPlugin.groovy`, find the block (around line 160):
 
@@ -338,7 +338,7 @@ if (processorProject != null) {
 }
 ```
 
-- [ ] **Step 3.10: Remove btrace-extension and btrace-extension-processor from settings.gradle**
+- [x] **Step 3.10: Remove btrace-extension and btrace-extension-processor from settings.gradle**
 
 Find and remove these two lines from `settings.gradle`:
 ```groovy
@@ -352,13 +352,13 @@ grep -n "btrace-extension" settings.gradle
 
 If they appear as explicit `include` statements, remove those lines. If they were auto-discovered (directory-based), deleting the directories in the next step is sufficient.
 
-- [ ] **Step 3.11: Delete the source directories**
+- [x] **Step 3.11: Delete the source directories**
 
 ```bash
 rm -rf btrace-extension btrace-extension-processor
 ```
 
-- [ ] **Step 3.12: Run the full test suite**
+- [x] **Step 3.12: Run the full test suite**
 
 ```bash
 ./gradlew test
@@ -366,7 +366,7 @@ rm -rf btrace-extension btrace-extension-processor
 
 Expected: `BUILD SUCCESSFUL` with all tests passing. If `btrace-extension` tests fail in their new location in `btrace-core`, check for missing test resource files (extension test stubs use service loader; verify `META-INF/services/` files moved correctly with the source tree).
 
-- [ ] **Step 3.13: Commit**
+- [x] **Step 3.13: Commit**
 
 ```bash
 git add -A
@@ -387,7 +387,7 @@ git commit -m "refactor: merge btrace-extension and btrace-extension-processor i
 - Edit: `btrace-instr/build.gradle`
 - Edit: `btrace-compiler/build.gradle`
 
-- [ ] **Step 4.1: Move PackGenerator.java to btrace-core with updated package**
+- [x] **Step 4.1: Move PackGenerator.java to btrace-core with updated package**
 
 ```bash
 cp btrace-compiler/src/main/java/io/btrace/compiler/PackGenerator.java \
@@ -422,7 +422,7 @@ Then delete the original:
 rm btrace-compiler/src/main/java/io/btrace/compiler/PackGenerator.java
 ```
 
-- [ ] **Step 4.2: Update CompilerHelper.java import**
+- [x] **Step 4.2: Update CompilerHelper.java import**
 
 In `btrace-compiler/src/main/java/io/btrace/compiler/CompilerHelper.java`, replace:
 
@@ -436,7 +436,7 @@ with:
 import io.btrace.core.PackGenerator;
 ```
 
-- [ ] **Step 4.3: Rename the ServiceLoader service file in btrace-instr**
+- [x] **Step 4.3: Rename the ServiceLoader service file in btrace-instr**
 
 ```bash
 mv btrace-instr/src/main/resources/META-INF/services/io.btrace.compiler.PackGenerator \
@@ -445,7 +445,7 @@ mv btrace-instr/src/main/resources/META-INF/services/io.btrace.compiler.PackGene
 
 The file's content remains unchanged: `io.btrace.instr.InstrPackGenerator`
 
-- [ ] **Step 4.4: Update InstrPackGenerator.java import**
+- [x] **Step 4.4: Update InstrPackGenerator.java import**
 
 In `btrace-instr/src/main/java/io/btrace/instr/InstrPackGenerator.java`, replace:
 
@@ -459,7 +459,7 @@ with:
 import io.btrace.core.PackGenerator;
 ```
 
-- [ ] **Step 4.5: Remove btrace-compiler implementation dep from btrace-instr/build.gradle**
+- [x] **Step 4.5: Remove btrace-compiler implementation dep from btrace-instr/build.gradle**
 
 In `btrace-instr/build.gradle`, remove this line:
 
@@ -469,11 +469,11 @@ implementation project(':btrace-compiler')
 
 btrace-instr must now compile without any reference to `btrace-compiler`.
 
-- [ ] **Step 4.6: Update btrace-compiler's runtimeOnly reference to btrace-instr**
+- [x] **Step 4.6: Update btrace-compiler's runtimeOnly reference to btrace-instr**
 
 This stays as-is for now (it will change to `:btrace-agent` in Task 5). No action needed in this task.
 
-- [ ] **Step 4.7: Verify btrace-compiler still retains its btrace-runtime dependency**
+- [x] **Step 4.7: Verify btrace-compiler still retains its btrace-runtime dependency**
 
 In `btrace-compiler/build.gradle`, confirm the line:
 ```groovy
@@ -481,7 +481,7 @@ implementation project(path: ':btrace-runtime')
 ```
 is still present. This is needed for `BTraceRuntimeAccess.uniqueClientClassNames` in `Compiler.java` and is unrelated to `PackGenerator`.
 
-- [ ] **Step 4.8: Compile both affected modules**
+- [x] **Step 4.8: Compile both affected modules**
 
 ```bash
 ./gradlew :btrace-core:compileJava :btrace-compiler:compileJava :btrace-instr:compileJava
@@ -489,7 +489,7 @@ is still present. This is needed for `BTraceRuntimeAccess.uniqueClientClassNames
 
 Expected: `BUILD SUCCESSFUL` for all three.
 
-- [ ] **Step 4.9: Run tests**
+- [x] **Step 4.9: Run tests**
 
 ```bash
 ./gradlew :btrace-core:test :btrace-compiler:test :btrace-instr:test
@@ -497,7 +497,7 @@ Expected: `BUILD SUCCESSFUL` for all three.
 
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 4.10: Commit**
+- [x] **Step 4.10: Commit**
 
 ```bash
 git add -A
@@ -521,13 +521,13 @@ A circular dependency issue exists: `btrace-instr`'s tests have `testImplementat
 - Modify: `settings.gradle`
 - Delete: `btrace-instr/`
 
-- [ ] **Step 5.1: Move btrace-instr source into btrace-agent**
+- [x] **Step 5.1: Move btrace-instr source into btrace-agent**
 
 ```bash
 cp -r btrace-instr/src/main/java/. btrace-agent/src/main/java/
 ```
 
-- [ ] **Step 5.2: Move btrace-instr test sources and resources**
+- [x] **Step 5.2: Move btrace-instr test sources and resources**
 
 ```bash
 mkdir -p btrace-agent/src/test/java
@@ -538,7 +538,7 @@ cp -r btrace-instr/src/test/btrace/. btrace-agent/src/test/btrace/
 cp -r btrace-instr/src/test/resources/. btrace-agent/src/test/resources/
 ```
 
-- [ ] **Step 5.3: Update btrace-agent/build.gradle — merge compileJava blocks**
+- [x] **Step 5.3: Update btrace-agent/build.gradle — merge compileJava blocks**
 
 The current `btrace-agent/build.gradle` `compileJava` block adds `--add-exports` for JDK internals. The `btrace-instr/build.gradle` `compileJava` block sets the Java 8 toolchain. These must be combined.
 
@@ -568,7 +568,7 @@ compileJava {
 }
 ```
 
-- [ ] **Step 5.4: Add compileTestJava block to btrace-agent/build.gradle**
+- [x] **Step 5.4: Add compileTestJava block to btrace-agent/build.gradle**
 
 Add this block after `compileJava { }` in `btrace-agent/build.gradle`:
 
@@ -579,7 +579,7 @@ compileTestJava {
 }
 ```
 
-- [ ] **Step 5.5: Merge btrace-instr dependencies into btrace-agent/build.gradle**
+- [x] **Step 5.5: Merge btrace-instr dependencies into btrace-agent/build.gradle**
 
 In `btrace-agent/build.gradle`, add the following to the `dependencies { }` block (btrace-core, btrace-runtime, btrace-extension are already present; add the missing ones):
 
@@ -630,7 +630,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 ```
 
-- [ ] **Step 5.6: Add compileTestProbes task to btrace-agent/build.gradle**
+- [x] **Step 5.6: Add compileTestProbes task to btrace-agent/build.gradle**
 
 Copy the entire `compileTestProbes` task from `btrace-instr/build.gradle` into `btrace-agent/build.gradle`. There is one reference that must be updated within the task body:
 
@@ -691,7 +691,7 @@ task compileTestProbes {
 }
 ```
 
-- [ ] **Step 5.7: Update btrace-compiler/build.gradle — change runtimeOnly and testImplementation from btrace-instr to btrace-agent**
+- [x] **Step 5.7: Update btrace-compiler/build.gradle — change runtimeOnly and testImplementation from btrace-instr to btrace-agent**
 
 In `btrace-compiler/build.gradle`:
 
@@ -709,7 +709,7 @@ runtimeOnly project(path: ':btrace-agent')
 testImplementation project(path: ':btrace-agent')
 ```
 
-- [ ] **Step 5.8: Update btrace-client/build.gradle — change btrace-instr to btrace-agent**
+- [x] **Step 5.8: Update btrace-client/build.gradle — change btrace-instr to btrace-agent**
 
 In `btrace-client/build.gradle`:
 
@@ -723,7 +723,7 @@ After:
 implementation project(':btrace-agent')
 ```
 
-- [ ] **Step 5.9: Update btrace-bootstrap/build.gradle — change btrace-instr to btrace-agent**
+- [x] **Step 5.9: Update btrace-bootstrap/build.gradle — change btrace-instr to btrace-agent**
 
 In `btrace-bootstrap/build.gradle`:
 
@@ -737,7 +737,7 @@ After:
 implementation project(':btrace-agent')
 ```
 
-- [ ] **Step 5.10: Delete btrace-instr directory**
+- [x] **Step 5.10: Delete btrace-instr directory**
 
 `btrace-instr` is auto-discovered in `settings.gradle` (the loop picks up any `btrace-*` dir with a `build.gradle`). Deleting the directory is sufficient to remove it from the build:
 
@@ -745,7 +745,7 @@ implementation project(':btrace-agent')
 rm -rf btrace-instr
 ```
 
-- [ ] **Step 5.12: Compile btrace-agent**
+- [x] **Step 5.12: Compile btrace-agent**
 
 ```bash
 ./gradlew :btrace-agent:compileJava :btrace-agent:compileTestJava
@@ -753,7 +753,7 @@ rm -rf btrace-instr
 
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 5.13: Run btrace-agent tests**
+- [x] **Step 5.13: Run btrace-agent tests**
 
 ```bash
 ./gradlew :btrace-agent:compileTestProbes
@@ -768,7 +768,7 @@ Expected: `BUILD SUCCESSFUL`. If golden file tests fail with path errors (the `D
 
 Then review the diff of updated golden files in `btrace-agent/src/test/resources/instrumentorTestData/` — changes should be zero (path change doesn't affect bytecode content). Commit the regenerated golden files only if the diff confirms no content changes.
 
-- [ ] **Step 5.14: Run full build**
+- [x] **Step 5.14: Run full build**
 
 ```bash
 ./gradlew :btrace-dist:build -x test
@@ -776,7 +776,7 @@ Then review the diff of updated golden files in `btrace-agent/src/test/resources
 
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 5.15: Commit**
+- [x] **Step 5.15: Commit**
 
 ```bash
 git add -A
@@ -796,14 +796,14 @@ git commit -m "refactor: merge btrace-instr into btrace-agent"
 - Modify: `settings.gradle`
 - Delete: `btrace-ext-cli/`
 
-- [ ] **Step 6.1: Move btrace-ext-cli sources into btrace-client**
+- [x] **Step 6.1: Move btrace-ext-cli sources into btrace-client**
 
 ```bash
 cp -r btrace-ext-cli/src/main/java/. btrace-client/src/main/java/
 cp -r btrace-ext-cli/src/test/java/. btrace-client/src/test/java/
 ```
 
-- [ ] **Step 6.2: Update btrace-client/build.gradle — add lanterna, Java 11 toolchain, and test framework**
+- [x] **Step 6.2: Update btrace-client/build.gradle — add lanterna, Java 11 toolchain, and test framework**
 
 In `btrace-client/build.gradle`, add to the `dependencies { }` block:
 
@@ -832,7 +832,7 @@ test {
 }
 ```
 
-- [ ] **Step 6.3: Update btrace-dist/build.gradle — replace btrace-ext-cli reference**
+- [x] **Step 6.3: Update btrace-dist/build.gradle — replace btrace-ext-cli reference**
 
 ```bash
 grep -n "btrace-ext-cli" btrace-dist/build.gradle
@@ -840,13 +840,13 @@ grep -n "btrace-ext-cli" btrace-dist/build.gradle
 
 Replace every occurrence of `project(':btrace-ext-cli')` with `project(':btrace-client')`.
 
-- [ ] **Step 6.4: Delete btrace-ext-cli**
+- [x] **Step 6.4: Delete btrace-ext-cli**
 
 ```bash
 rm -rf btrace-ext-cli
 ```
 
-- [ ] **Step 6.5: Run btrace-client tests**
+- [x] **Step 6.5: Run btrace-client tests**
 
 ```bash
 ./gradlew :btrace-client:test
@@ -854,7 +854,7 @@ rm -rf btrace-ext-cli
 
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 6.6: Commit**
+- [x] **Step 6.6: Commit**
 
 ```bash
 git add -A
@@ -872,7 +872,7 @@ git commit -m "refactor: merge btrace-ext-cli into btrace-client"
 - Modify: `settings.gradle`
 - Delete: `btrace-bootstrap/`
 
-- [ ] **Step 7.1: Add a bootstrapInputs configuration to btrace-dist/build.gradle**
+- [x] **Step 7.1: Add a bootstrapInputs configuration to btrace-dist/build.gradle**
 
 Near the top of `btrace-dist/build.gradle` where other configurations are declared, add:
 
@@ -890,7 +890,7 @@ bootstrapInputs project(':btrace-runtime')
 bootstrapInputs project(':btrace-agent')
 ```
 
-- [ ] **Step 7.2: Add the bootIncludes closure and bootstrapJar task to btrace-dist/build.gradle**
+- [x] **Step 7.2: Add the bootIncludes closure and bootstrapJar task to btrace-dist/build.gradle**
 
 Add the following block to `btrace-dist/build.gradle` (before the `btraceJar` task). The `bootIncludes` closure is copied verbatim from `btrace-bootstrap/build.gradle`:
 
@@ -962,7 +962,7 @@ tasks.register('bootstrapJar', ShadowJar) {
 }
 ```
 
-- [ ] **Step 7.3: Update btrace-dist/build.gradle — replace project(':btrace-bootstrap') references**
+- [x] **Step 7.3: Update btrace-dist/build.gradle — replace project(':btrace-bootstrap') references**
 
 ```bash
 grep -n "btrace-bootstrap" btrace-dist/build.gradle
@@ -984,13 +984,13 @@ dependsOn bootstrapJar
 from(zipTree(bootstrapJar.archiveFile)) {
 ```
 
-- [ ] **Step 7.4: Delete btrace-bootstrap**
+- [x] **Step 7.4: Delete btrace-bootstrap**
 
 ```bash
 rm -rf btrace-bootstrap
 ```
 
-- [ ] **Step 7.5: Build btrace-dist**
+- [x] **Step 7.5: Build btrace-dist**
 
 ```bash
 ./gradlew :btrace-dist:build -x test
@@ -998,7 +998,7 @@ rm -rf btrace-bootstrap
 
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 7.6: Verify bootstrap JAR contents unchanged**
+- [x] **Step 7.6: Verify bootstrap JAR contents unchanged**
 
 ```bash
 # Build should have produced btrace-dist/build/resources/main/v<version>/libs/
@@ -1013,7 +1013,7 @@ jar tf btrace-dist/build/resources/main/*/libs/btrace.jar | grep "^io/btrace/run
 
 Expected: at least one `.class` entry for `BTraceRuntimeAccess` (confirming bootstrap classes were included).
 
-- [ ] **Step 7.7: Commit**
+- [x] **Step 7.7: Commit**
 
 ```bash
 git add -A
@@ -1030,7 +1030,7 @@ git commit -m "refactor: absorb btrace-bootstrap packaging into btrace-dist"
 - Modify: `benchmarks/runtime-benchmarks/build.gradle` (if references btrace-instr)
 - Verify: `btrace-gradle-plugin/build.gradle` and tests
 
-- [ ] **Step 8.1: Scan all build files for stale references**
+- [x] **Step 8.1: Scan all build files for stale references**
 
 ```bash
 grep -rn "btrace-instr\|btrace-extension\b\|btrace-extension-processor\|btrace-ext-cli\|btrace-bootstrap\|btrace-api\|btrace-ui" \
@@ -1039,7 +1039,7 @@ grep -rn "btrace-instr\|btrace-extension\b\|btrace-extension-processor\|btrace-e
 
 Expected: no output. If any stale references remain, update them following the same pattern used in Tasks 3–7.
 
-- [ ] **Step 8.2: Update integration-tests/build.gradle if needed**
+- [x] **Step 8.2: Update integration-tests/build.gradle if needed**
 
 ```bash
 grep -n "btrace-instr\|btrace-extension\b" integration-tests/build.gradle
@@ -1047,7 +1047,7 @@ grep -n "btrace-instr\|btrace-extension\b" integration-tests/build.gradle
 
 Replace any `project(':btrace-instr')` → `project(':btrace-agent')` and `project(':btrace-extension')` → `project(':btrace-core')`.
 
-- [ ] **Step 8.3: Update benchmark build files if needed**
+- [x] **Step 8.3: Update benchmark build files if needed**
 
 ```bash
 grep -rn "btrace-instr\|btrace-extension\b" benchmarks/ --include="*.gradle"
@@ -1055,7 +1055,7 @@ grep -rn "btrace-instr\|btrace-extension\b" benchmarks/ --include="*.gradle"
 
 Apply the same replacements as Step 8.2.
 
-- [ ] **Step 8.4: Verify btrace-gradle-plugin tests still pass**
+- [x] **Step 8.4: Verify btrace-gradle-plugin tests still pass**
 
 The plugin's test harness runs a full Gradle build that compiles extensions; it previously invoked `:btrace-extension-processor:jar`. After the merge it will use `:btrace-core` as the annotation processor. The `BTraceExtensionPlugin.groovy` change in Task 3 handles this at runtime. Verify:
 
@@ -1065,7 +1065,7 @@ The plugin's test harness runs a full Gradle build that compiles extensions; it 
 
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 8.5: Run the full test suite**
+- [x] **Step 8.5: Run the full test suite**
 
 ```bash
 ./gradlew test
@@ -1073,7 +1073,7 @@ Expected: `BUILD SUCCESSFUL`
 
 Expected: `BUILD SUCCESSFUL` with all tests passing across all modules.
 
-- [ ] **Step 8.6: Build the full distribution**
+- [x] **Step 8.6: Build the full distribution**
 
 ```bash
 ./gradlew :btrace-dist:build
@@ -1081,7 +1081,7 @@ Expected: `BUILD SUCCESSFUL` with all tests passing across all modules.
 
 Expected: `BUILD SUCCESSFUL`. Distribution archives produced in `btrace-dist/build/distributions/`.
 
-- [ ] **Step 8.7: Run integration tests**
+- [x] **Step 8.7: Run integration tests**
 
 ```bash
 ./gradlew :btrace-dist:build && ./gradlew :integration-tests:test -Pintegration
@@ -1089,7 +1089,7 @@ Expected: `BUILD SUCCESSFUL`. Distribution archives produced in `btrace-dist/bui
 
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 8.8: Verify final module count**
+- [x] **Step 8.8: Verify final module count**
 
 ```bash
 ./gradlew projects 2>/dev/null | grep "Project '" | wc -l
@@ -1097,7 +1097,7 @@ Expected: `BUILD SUCCESSFUL`
 
 Expected: 10 (btrace-core, btrace-runtime, btrace-compiler, btrace-boot, btrace-agent, btrace-client, btrace-dist, btrace-dtrace, btrace-gradle-plugin, btrace-maven-plugin) plus btrace-extensions subprojects and test/benchmark modules.
 
-- [ ] **Step 8.9: Final commit**
+- [x] **Step 8.9: Final commit**
 
 ```bash
 git add -A
