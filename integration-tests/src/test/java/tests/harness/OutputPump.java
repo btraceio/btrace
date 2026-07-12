@@ -25,8 +25,10 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Single shared implementation of the "read a BTrace client process's stdout/stderr, wait until a
- * {@link Completion} is satisfied (or timeout)" logic. Replaces four near-identical reader loops in
- * {@code RuntimeTest} (attach, attachOneliner, runBTrace, testStartup).
+ * {@link Completion} is satisfied (or timeout)" logic. Replaces the three near-identical
+ * client-reader loops in {@code RuntimeTest} (attach, attachOneliner, runBTrace); {@code
+ * testStartup} keys off a target-process {@code ready:} line rather than a separate client process
+ * and is not migrated onto this utility.
  *
  * <p>The provided {@code stdout}/{@code stderr} builders are live references: the reader threads
  * keep appending to them after {@link #run} returns, so output that arrives slightly after the
