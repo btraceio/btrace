@@ -91,7 +91,12 @@ jobs:
   test:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # forkEvery=1 on :integration-tests:test (one JVM per test class, for isolation) adds real
+    # per-class startup overhead on top of a suite that was already close to the old 15-minute
+    # ceiling. A job hitting timeout-minutes gets forcibly cancelled by GitHub Actions -- which
+    # looks identical to a flaky test failure in the run summary, but isn't one. Widened to give
+    # real headroom; see docs/superpowers/plans/2026-07-12-extension-loader-classcircularity-investigation.md.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -143,6 +148,11 @@ jobs:
       - name: Build btrace-agent jar
         run: |
           ./gradlew --no-daemon --parallel --build-cache :btrace-agent:jar
+      - name: Report runner resources
+        run: |
+          echo "CPUs: $(nproc)"
+          free -h
+          uptime
       - name: Run tests
         run: |
           set +x
