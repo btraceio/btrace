@@ -64,7 +64,6 @@ import io.btrace.extension.impl.ExtensionBridgeImpl;
 import io.btrace.instr.BTraceProbeFactory;
 import io.btrace.instr.BTraceTransformer;
 import io.btrace.instr.Constants;
-import io.btrace.instr.InvokeBootstrapWarmup;
 import io.btrace.runtime.BTraceBootstrap;
 import io.btrace.runtime.BTraceRuntimes;
 import java.io.ByteArrayOutputStream;
@@ -167,12 +166,6 @@ public final class Main {
   }
 
   private static synchronized void main(String args, Instrumentation inst) {
-    // Force java.lang.invoke's shared invokedynamic bootstrap classes (MethodHandle$1,
-    // CallSite, MethodHandleNatives, ...) to finish initializing single-threaded, before the
-    // agent starts its own server thread below. Without this, that second thread and this one
-    // can race to initialize the same classes on their first independent invokedynamic linkage,
-    // which the JVM can observe as ClassCircularityError. See InvokeBootstrapWarmup's javadoc.
-    InvokeBootstrapWarmup.warmup();
     if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization started");
     if (Main.inst != null) {
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Agent already initialized, skipping");
