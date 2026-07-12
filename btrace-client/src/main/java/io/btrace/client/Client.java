@@ -507,7 +507,6 @@ public class Client {
     return compileInternal(
         fileName,
         classPath,
-        err,
         (compiler, resolvedCp) -> compiler.compile(fileName, source, err, ".", resolvedCp));
   }
 
@@ -517,7 +516,7 @@ public class Client {
   }
 
   private byte[] compileInternal(
-      String scriptName, String classPath, PrintWriter err, CompilerInvoker invoker) {
+      String scriptName, String classPath, CompilerInvoker invoker) {
     Compiler compiler = new Compiler();
     classPath += File.pathSeparator + System.getProperty("java.class.path");
     // Add extension API JARs to classpath
