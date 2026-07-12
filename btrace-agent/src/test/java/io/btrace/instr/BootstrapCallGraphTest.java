@@ -58,7 +58,7 @@ class BootstrapCallGraphTest {
     }
 
     static void b() {
-      Supplier<String> s = () -> "hi";
+      ((Supplier<String>) () -> "hi");
       Cyclic.a(); // cycle back to a() -- must not infinite-loop
     }
   }
