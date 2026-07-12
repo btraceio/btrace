@@ -1883,13 +1883,9 @@ The BTrace MCP server runs as a local subprocess on the same machine as the targ
 
 #### Starting the server manually
 
-For testing or scripting, you can start the MCP server directly. The server jar is not
-self-contained — it depends on `btrace-core`, `btrace-client`, `btrace-compiler`, and `btrace-boot`
-at runtime — so put it on a classpath together with those jars and their dependencies:
-
-```bash
-java -cp "/path/to/btrace-mcp-libs/*" io.btrace.mcp.BTraceMcpServer
-```
+Install the `btrace-observability` plugin from the BTrace Agent Plugins marketplace. It launches
+the bundled MCP server with JBang and the single masked `io.btrace:btrace` artifact; no manual
+classpath assembly is required.
 
 The server listens on `stdio` (the MCP transport used by most clients). There is no global port
 override at server startup: `port` is a per-tool-call argument on each deploy/interact tool
@@ -1901,7 +1897,7 @@ If no BTrace agent is attached to the target JVM, the `deploy_oneliner` and `dep
 
 #### Client setup
 
-See [MCPServer.md](MCPServer.md) for per-client configuration instructions covering Claude Desktop, Claude Code, Cursor, OpenAI Codex CLI, VS Code, Windsurf, Continue.dev, and Zed. Every client follows the same pattern — point it at `btrace-mcp-server.jar` as the server command — but the configuration file location and schema differ slightly between hosts.
+See [MCPServer.md](MCPServer.md) for installation and runtime requirements.
 
 #### Available tools
 
