@@ -515,8 +515,7 @@ public class Client {
     Map<String, byte[]> compile(Compiler compiler, String classPath) throws Exception;
   }
 
-  private byte[] compileInternal(
-      String scriptName, String classPath, CompilerInvoker invoker) {
+  private byte[] compileInternal(String scriptName, String classPath, CompilerInvoker invoker) {
     Compiler compiler = new Compiler();
     classPath += File.pathSeparator + System.getProperty("java.class.path");
     // Add extension API JARs to classpath
