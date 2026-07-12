@@ -75,7 +75,7 @@ class BootstrapCallGraphTest {
     }
 
     static void innerOnlyCalledFromLambda() {
-      Supplier<String> s = () -> "found me";
+      ((Supplier<String>) () -> "found me").get();
     }
   }
 
