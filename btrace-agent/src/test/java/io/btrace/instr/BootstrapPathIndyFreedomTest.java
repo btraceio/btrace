@@ -18,6 +18,8 @@ package io.btrace.instr;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
@@ -30,31 +32,41 @@ import org.junit.jupiter.api.Test;
  * docs/superpowers/plans/2026-07-12-extension-loader-classcircularity-investigation.md for the full
  * root-cause writeup.
  *
+ * <p>Scans from two roots: {@code Main.<clinit>} (the class's static field initializers, which run
+ * unconditionally as soon as {@code Main} is first referenced -- before {@code premain()}'s body
+ * even starts) and {@code Main.premain} itself.
+ *
  * <p>If this test fails, the reported call sites are exactly the lambdas/method references that
  * need converting to anonymous classes (see {@code io.btrace.extension.ExtensionLoader#initialize}
  * for the established pattern).
  */
 class BootstrapPathIndyFreedomTest {
 
-  @Test
-  void premainReachesNoInvokedynamicCallSite() {
-    BootstrapCallGraph.Result result =
-        BootstrapCallGraph.scan(
-            "io/btrace/agent/Main",
-            "premain",
-            "(Ljava/lang/String;Ljava/lang/instrument/Instrumentation;)V",
-            owner -> owner.startsWith("io/btrace/"),
-            BootstrapPathIndyFreedomTest.class.getClassLoader());
+  private static final String MAIN = "io/btrace/agent/Main";
+  private static final java.util.function.Predicate<String> IN_SCOPE =
+      owner -> owner.startsWith("io/btrace/");
 
-    if (!result.indySites.isEmpty()) {
+  @Test
+  void bootstrapPathReachesNoInvokedynamicCallSite() {
+    ClassLoader loader = BootstrapPathIndyFreedomTest.class.getClassLoader();
+    List<IndyScanner.IndySite> found = new ArrayList<>();
+    found.addAll(BootstrapCallGraph.scan(MAIN, "<clinit>", "()V", IN_SCOPE, loader).indySites);
+    found.addAll(
+        BootstrapCallGraph.scan(
+                MAIN,
+                "premain",
+                "(Ljava/lang/String;Ljava/lang/instrument/Instrumentation;)V",
+                IN_SCOPE,
+                loader)
+            .indySites);
+
+    if (!found.isEmpty()) {
       String report =
-          result.indySites.stream()
-              .map(IndyScanner.IndySite::toString)
-              .collect(Collectors.joining("\n  "));
+          found.stream().map(IndyScanner.IndySite::toString).collect(Collectors.joining("\n  "));
       assertTrue(
           false,
-          "premain() reaches "
-              + result.indySites.size()
+          "Main.<clinit>/premain() reaches "
+              + found.size()
               + " invokedynamic call site(s) -- convert each to an anonymous class:\n  "
               + report);
     }
