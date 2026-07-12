@@ -34,7 +34,7 @@ class BootstrapCallGraphTest {
 
   static final class DirectIndy {
     static void root() {
-      Supplier<String> s = () -> "hi";
+      ((Supplier<String>) () -> "hi");
     }
   }
 
