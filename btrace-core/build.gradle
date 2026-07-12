@@ -73,6 +73,24 @@ if (testJavaVersion) {
             languageVersion = JavaLanguageVersion.of(testJavaVersion as int)
         }
     }
+    if ((testJavaVersion as int) < 17) {
+        // junit-jupiter 6.x requires JDK 17+ to resolve/compile against; downgrade to the
+        // last JDK 8-compatible release for pre-17 toolchain runs. The testImplementation
+        // platform(libs.junit) BOM above pins every org.junit.jupiter/org.junit.platform
+        // artifact (including transitive ones like junit-platform-commons) to 6.x, so a
+        // blanket eachDependency rule is needed rather than forcing individual coordinates.
+        def downgradeJunit5 = {
+            resolutionStrategy.eachDependency { details ->
+                if (details.requested.group == 'org.junit.jupiter') {
+                    details.useVersion '5.14.4'
+                } else if (details.requested.group == 'org.junit.platform') {
+                    details.useVersion '1.14.4'
+                }
+            }
+        }
+        configurations.testCompileClasspath(downgradeJunit5)
+        configurations.testRuntimeClasspath(downgradeJunit5)
+    }
 }
 
 test {
