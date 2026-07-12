@@ -58,7 +58,12 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
         "resources.Main",
         "btrace/ExternalTypeAdapterTest.java",
         null,
-        2,
+        // 2 client bootstrap lines ("Attaching...", "Successfully started...") plus the probe's
+        // two println() calls (tag=, value=), each of which emits a content line and a blank
+        // line. Waiting for all of them (instead of just the 2 bootstrap lines) ensures the
+        // harness doesn't signal target shutdown before the async retransform of the
+        // already-loaded resources.Main class has completed and the probe has actually fired.
+        6,
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
