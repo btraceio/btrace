@@ -1430,16 +1430,15 @@ public final class Main {
         ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
         // Deliberately an anonymous class, not a method reference: see the shutdown-hook comment
         // above.
-        Client client =
-            RemoteClient.getClient(
-                ctx,
-                sock,
-                new Function<Client, Future<?>>() {
-                  @Override
-                  public Future<?> apply(Client c) {
-                    return handleNewClient(c);
-                  }
-                });
+        RemoteClient.getClient(
+            ctx,
+            sock,
+            new Function<Client, Future<?>>() {
+              @Override
+              public Future<?> apply(Client c) {
+                return handleNewClient(c);
+              }
+            });
       } catch (RuntimeException | IOException re) {
         if (serverRunning) {
           log.warn("BTrace server accept failed", re);
