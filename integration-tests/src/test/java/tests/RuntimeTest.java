@@ -51,6 +51,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
+import tests.harness.Completion;
+import tests.harness.OutputPump;
 
 /**
  * @author Jaroslav Bachorik
@@ -1298,6 +1300,17 @@ public abstract class RuntimeTest {
       StringBuilder stdout,
       StringBuilder stderr)
       throws Exception {
+    return attach(pid, trace, cmdArgs, Completion.lines(checkLines), stdout, stderr);
+  }
+
+  private Process attach(
+      String pid,
+      String trace,
+      String[] cmdArgs,
+      Completion completion,
+      StringBuilder stdout,
+      StringBuilder stderr)
+      throws Exception {
     File traceFile = locateTrace(trace);
     List<String> argVals =
         new ArrayList<>(
@@ -1349,72 +1362,25 @@ public abstract class RuntimeTest {
     pb.environment().remove("JAVA_TOOL_OPTIONS");
     Process p = pb.start();
 
-    CountDownLatch l = new CountDownLatch(checkLines);
-
-    new Thread(
-            () -> {
-              try {
-                BufferedReader br =
-                    new BufferedReader(
-                        new InputStreamReader(p.getErrorStream(), StandardCharsets.UTF_8));
-
-                String line = null;
-                while ((line = br.readLine()) != null) {
-                  System.out.println("[btrace err] " + line);
-                  if (line.contains("Server VM warning")
-                      || line.contains("XML libraries not available")
-                      || line.contains("Connection reset")) {
-                    // skip JVM generated warnings
-                    continue;
-                  }
-                  if (line.startsWith("[traced app]") || line.startsWith("[btrace out]")) {
-                    // skip test debug lines
-                    continue;
-                  }
-                  stderr.append(line).append('\n');
-                  if (line.contains("Exception") || line.contains("Error")) {
-                    for (int i = 0; i < checkLines; i++) {
-                      l.countDown();
-                    }
-                  }
-                }
-              } catch (Exception e) {
-                for (int i = 0; i < checkLines; i++) {
-                  l.countDown();
-                }
-                throw new Error(e);
-              }
-            },
-            "Stderr Reader")
-        .start();
-
-    new Thread(
-            () -> {
-              try {
-                BufferedReader br =
-                    new BufferedReader(
-                        new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
-                String line = null;
-                while ((line = br.readLine()) != null) {
-                  stdout.append(line).append('\n');
-                  System.out.println("[btrace out] " + line);
-                  if (!(debugBTrace && line.contains("DEBUG"))) {
-                    l.countDown();
-                  }
-                }
-              } catch (Exception e) {
-                for (int i = 0; i < checkLines; i++) {
-                  l.countDown();
-                }
-                throw new Error(e);
-              }
-            },
-            "Stdout Reader")
-        .start();
-
-    l.await(timeout, TimeUnit.MILLISECONDS);
-
-    // Thread.sleep(100_000_000L);
+    boolean completed =
+        OutputPump.run(
+            p,
+            completion,
+            timeout,
+            debugBTrace,
+            Arrays.asList("Server VM warning", "XML libraries not available", "Connection reset"),
+            Arrays.asList("[traced app]", "[btrace out]"),
+            stdout,
+            stderr);
+    if (!completed) {
+      System.out.println(
+          "[harness] timed out after "
+              + timeout
+              + "ms waiting for "
+              + completion.describe()
+              + "; stdout so far:\n"
+              + stdout);
+    }
 
     return p;
   }
