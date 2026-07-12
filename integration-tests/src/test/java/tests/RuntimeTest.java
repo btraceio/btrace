@@ -254,6 +254,20 @@ public abstract class RuntimeTest {
   }
 
   @SuppressWarnings("DefaultCharset")
+  public void testDynamic(
+      String testApp, String testScript, Completion completion, ResultValidator v)
+      throws Exception {
+    testDynamic(testApp, testScript, null, completion, v);
+  }
+
+  @SuppressWarnings("DefaultCharset")
+  public void testDynamic(
+      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
+      throws Exception {
+    testDynamic(testApp, testScript, cmdArgs, Completion.lines(checkLines), v);
+  }
+
+  @SuppressWarnings("DefaultCharset")
   public void testDynamicOneliner(
       String testApp, String oneliner, int checkLines, ResultValidator v) throws Exception {
     testDynamicOneliner(testApp, oneliner, null, checkLines, v);
@@ -447,7 +461,7 @@ public abstract class RuntimeTest {
 
   @SuppressWarnings("DefaultCharset")
   public void testDynamic(
-      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
+      String testApp, String testScript, String[] cmdArgs, Completion completion, ResultValidator v)
       throws Exception {
     System.out.println("=== Dynamic attach");
     if (forceDebug) {
@@ -574,7 +588,7 @@ public abstract class RuntimeTest {
         }
       }
 
-      Process client = attach(pid, testScript, cmdArgs, checkLines, stdout, stderr);
+      Process client = attach(pid, testScript, cmdArgs, completion, stdout, stderr);
 
       System.out.println("Detached.");
 
