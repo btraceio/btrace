@@ -431,7 +431,6 @@ btrace [options] <PID> <script.java> [script-args]
 - `-d <path>` - Dump instrumented classes to specified path
 - `-pd <path>` - Search path for probe XML descriptors
 - `-cp <path>` / `-classpath <path>` - User class files and annotation processors path
-- `-I <path>` - Include files path
 - `-p <port>` - Port for btrace agent listener (default: 2020)
 - `-host <host>` - Remote host (default: localhost)
 - `-statsd <host:port>` - StatSD server configuration
