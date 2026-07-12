@@ -202,7 +202,7 @@ public interface JobStartEvent {
 }
 ```
 
-The processor generates `JobStartEvent$Ext` in the same package with a typed `public static` dispatcher per method. Each dispatcher uses a `volatile MethodHandle` field with lazy resolution: on first call it looks up the target class via `self.getClass().getClassLoader()` (virtual methods) or TCCL (static methods), then caches the handle. If the external class is not yet loaded, the resolver throws and the field stays `null`, so the next call retries — no `ExceptionInInitializerError` at extension load time.
+The processor generates `JobStartEvent$Ext` in the same package with a typed `public static` dispatcher per method. Each dispatcher lazily resolves the target class via `self.getClass().getClassLoader()` (virtual methods) or TCCL (static methods), then stores the `MethodHandle` in a classloader-safe `ClassValue` cache. This keeps extension calls isolated when multiple application classloaders define the same target class. If the external class is not yet loaded, resolution throws and the next call retries — no `ExceptionInInitializerError` at extension load time.
 
 Use the generated class directly in the impl:
 
