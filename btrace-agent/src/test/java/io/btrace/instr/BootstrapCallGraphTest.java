@@ -35,7 +35,7 @@ class BootstrapCallGraphTest {
 
   static final class DirectIndy {
     static void root() {
-      ((Supplier<String>) () -> "hi");
+      ((Supplier<String>) () -> "hi").get();
     }
   }
 
@@ -59,7 +59,7 @@ class BootstrapCallGraphTest {
     }
 
     static void b() {
-      ((Supplier<String>) () -> "hi");
+      ((Supplier<String>) () -> "hi").get();
       Cyclic.a(); // cycle back to a() -- must not infinite-loop
     }
   }
@@ -67,12 +67,14 @@ class BootstrapCallGraphTest {
   static final class CallOnlyReachableThroughLambdaBody {
     static void root() {
       ((Runnable)
-          () -> {
-            // This call is only reachable via the invokedynamic-created Runnable's body -- there
-            // is no direct MethodInsnNode from root() to innerOnlyCalledFromLambda(). A walker
-            // that doesn't follow into lambda implementation methods misses this entirely.
-            CallOnlyReachableThroughLambdaBody.innerOnlyCalledFromLambda();
-          });
+              () -> {
+                // This call is only reachable via the invokedynamic-created Runnable's body --
+                // there is no direct MethodInsnNode from root() to innerOnlyCalledFromLambda(). A
+                // walker that doesn't follow into lambda implementation methods misses this
+                // entirely.
+                CallOnlyReachableThroughLambdaBody.innerOnlyCalledFromLambda();
+              })
+          .run();
     }
 
     static void innerOnlyCalledFromLambda() {
