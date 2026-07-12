@@ -465,8 +465,8 @@ test {
  * │   └── btrace-extensions/
  * │       └── ext-id/
  * │           └── extension.properties
- * ├── org/openjdk/btrace/...           # Agent + API classes (.class)
- * └── org/openjdk/btrace/ext/impl/...  # Impl classes (.classdata)
+ * ├── io/btrace/...           # Agent + API classes (.class)
+ * └── io/btrace/ext/impl/...  # Impl classes (.classdata)
  *
  * Usage:
  *   ./gradlew :btrace-dist:fatAgentJar -PembedExtensions=btrace-spark,btrace-metrics

@@ -38,8 +38,8 @@ jmhJar {
   include 'META-INF/BenchmarkList'
   include 'META-INF/CompilerHints'
   include 'org/openjdk/jmh/**'
-  include 'org/openjdk/btrace/bench/**/*.class'
-  include 'org/openjdk/btrace/generated/**/*'
+  include 'io/btrace/bench/**/*.class'
+  include 'io/btrace/generated/**/*'
   include "joptsimple/**"
   include "org/apache/**"
   include 'jmh*'

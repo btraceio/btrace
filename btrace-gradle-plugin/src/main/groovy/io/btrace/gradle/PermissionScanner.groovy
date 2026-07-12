@@ -156,7 +156,7 @@ final class PermissionScanner {
         if (owner.startsWith('com/sun/management/')) {
             perms.add('MEMORY_INFO')
         }
-        if (owner.startsWith('jdk/jfr/') || owner.startsWith('org/openjdk/btrace/core/jfr/')) {
+        if (owner.startsWith('jdk/jfr/') || owner.startsWith('io/btrace/core/jfr/')) {
             perms.add('JFR_EVENTS')
         }
     }
