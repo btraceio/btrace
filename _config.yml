@@ -1,12 +1,12 @@
-name: BTrace::blog
+name: BTrace
 
-url: http://jbachorik.github.io
-baseurl: /btrace
-description: BTrace - a safe, dynamic tracing tool for the Java platform
+url: https://btrace.io
+baseurl: ""
+description: Open-source tools for understanding Java applications.
 
 source: .
 
-github: 'jbachorik/btrace'
+github: 'btraceio'
 gaaccount: 'UA-55468921-2'
 
 disqus: 'btrace'
@@ -15,10 +15,10 @@ comments: true
 permalink: /:year/:month/:title
 paginate: 3
 
-highlighter: pygments
-markdown: redcarpet
-redcarpet:
-  extensions: ["no_intra_emphasis", "fenced_code_blocks", "autolink", "tables", "with_toc_data"]
+highlighter: rouge
+markdown: kramdown
+plugins:
+  - jekyll-paginate
 
 exclude: ['README.md', 'LICENSE']
 

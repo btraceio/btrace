@@ -1,46 +1,165 @@
 ---
-layout: default
+layout: null
 ---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="BTrace builds open-source tools for tracing, diagnosing, and understanding live Java applications.">
+    <meta name="theme-color" content="#FFFFFF">
+    <meta property="og:title" content="BTrace · Java observability tools">
+    <meta property="og:description" content="Build a safe probe and understand what your live Java application is doing.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://btrace.io/">
+    <link rel="canonical" href="https://btrace.io/">
+    <title>BTrace · Java observability tools</title>
+    <link rel="icon" href="{{ '/assets/icons/btrace-compact.png' | relative_url }}" type="image/png">
+    <link rel="stylesheet" href="{{ '/assets/site.css' | relative_url }}?v=3">
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="{{ '/' | relative_url }}" aria-label="BTrace home"><img class="brand-logo" src="{{ '/assets/icons/btrace-compact.png' | relative_url }}" alt=""><span class="brand-name">BTrace</span></a>
+      <nav aria-label="Primary navigation">
+        <a href="#probe-builder">Build a probe</a>
+        <a href="#use-cases">Use cases</a>
+        <a href="#deploy">Deploy</a>
+        <a href="#projects">Projects</a>
+        <a class="nav-github" href="https://github.com/btraceio">GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
 
-<div class="article">
-    <div class="well">
-        <h1>BTrace - a safe, dynamic tracing tool for the Java platform</h1>
-        <div style="font-size: larger">BTrace is a safe, dynamic tracing tool for the Java platform.</div>
-
-        BTrace can be used to dynamically trace a running Java program 
-        (similar to DTrace for OpenSolaris applications and OS). 
-        BTrace dynamically instruments the classes of the target 
-        application to inject tracing code ("bytecode tracing").
-        {% if site.github != '' %}
-            <a href="https://github.com/{{ site.github }}/wiki">[more]</a>
-        {% endif %}
-    </div>
-</div>
-
-{% for post in paginator.posts %}
-<div class="article">
-    <div class="well">
-        <h1><a href="{{ site.baseurl}}{{ post.url }}">{{ post.date | date: "%b %-d, %Y" }} - {{ post.title }}</a></h1>
-        {% if site.comments == true and post.comments == true and site.disqus != '' %}
-        <p class="author"><a href="{{ site.baseurl }}{{ post.url }}/#disqus_thread">Comments</a></p>
-        {% endif %}
-        <div class="content">
-            {{ post.content }}
+    <main id="content">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow"><span></span> Open-source Java diagnostics</p>
+          <h1>Ask your JVM<br>what it’s <em>doing.</em></h1>
+          <p class="hero-text">BTrace helps you safely trace and diagnose live Java applications. Find the slow call, reveal the swallowed exception, and move on—without a restart or redeploy.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#probe-builder">Build a probe <span aria-hidden="true">→</span></a>
+            <a class="button button-secondary" href="#use-cases">Explore use cases</a>
+          </div>
+          <div class="hero-facts" aria-label="BTrace highlights"><span><b>Live JVM</b> diagnostics</span><span><b>Modern JVM</b> support</span><span><b>Zero</b> code changes</span></div>
         </div>
-    </div>
-</div>
-{% endfor %}
+        <div class="signal-panel" aria-label="Example BTrace output">
+          <div class="panel-bar"><span></span><span></span><span></span><code>example-output</code><em>illustrative</em></div>
+          <div class="trace-line muted"><span>01</span><code>$ btrace -n 'OrderService::* @return if duration&gt;200ms { print method, duration }' 8421</code></div>
+          <div class="trace-line"><span>02</span><code><b>✓</b> chargeCard</code><strong>306 ms</strong></div>
+          <div class="trace-line"><span>03</span><code><b>✓</b> processOrder</code><strong>331 ms</strong></div>
+          <div class="trace-line muted"><span>04</span><code>watching live methods · <i>ctrl-c</i> to detach</code></div>
+        </div>
+      </section>
 
-<div class="pagination">
-    {% if paginator.previous_page %}
-    {% if paginator.previous_page == 1 %}
-    <a class="btn btn-default" href="{{ site.baseurl}}/index.html" class="previous">Newer</a>
-    {% else %}
-    <a class="btn btn-default" href="{{ site.baseurl}}/page{{ paginator.previous_page }}" class="previous">Newer</a>
-    {% endif %}
-    {% endif %}
-    <span class="page_number ">Page: {{ paginator.page }} of {{ paginator.total_pages }}</span>
-    {% if paginator.next_page %}
-    <a class="btn btn-default" href="{{ site.baseurl}}/page{{ paginator.next_page }}" class="next">Older</a>
-    {% endif %}
-</div>
+      <section class="trust-strip" aria-label="How BTrace and JFR work together">
+        <p><span class="dot" aria-hidden="true"></span><span class="trust-copy"><b>BTrace + JFR:</b> generate targeted probes live and add custom events to a continuous recording.</span></p>
+        <p><span class="dot blue" aria-hidden="true"></span><span class="trust-copy"><b>More context:</b> JFR keeps the history while BTrace adds on-demand instrumentation when questions arise.</span></p>
+        <a href="https://github.com/btraceio/btrace/blob/develop/docs/GettingStarted.md#advanced-jfr-integration">Explore the workflow <span aria-hidden="true">→</span></a>
+      </section>
+
+      <section class="composer" id="probe-builder" aria-labelledby="composer-title">
+        <div class="section-heading composer-intro">
+          <p class="eyebrow"><span></span> Start with a question</p>
+          <h2 id="composer-title">Build your first probe.</h2>
+          <p>Pick a diagnostic goal. The command is generated in your browser and never leaves your machine.</p>
+        </div>
+        <div class="composer-grid">
+          <form class="probe-form" id="probe-form">
+            <label for="probe-goal">I want to understand</label>
+            <select id="probe-goal" name="goal">
+              <option value="slow">Which methods are slow</option>
+              <option value="calls">Which calls and arguments reach a method</option>
+              <option value="errors">Where an exception is coming from</option>
+              <option value="count">How often a method is invoked</option>
+              <option value="sql">Which SQL calls are slow</option>
+            </select>
+            <div class="form-fields" id="custom-target-fields">
+              <label for="probe-class">In class or package</label>
+              <input id="probe-class" name="class" value="com.myapp.OrderService" spellcheck="false" autocomplete="off">
+              <p class="field-help">Use <code>*</code> for a wildcard, for example <code>com.myapp.*</code>.</p>
+              <label for="probe-method">Method</label>
+              <input id="probe-method" name="method" value="*" spellcheck="false" autocomplete="off">
+            </div>
+            <div class="form-fields" id="threshold-field">
+              <label for="probe-threshold">Only show calls slower than</label>
+              <div class="threshold-input"><input id="probe-threshold" name="threshold" type="number" min="1" max="60000" value="200"><span>ms</span></div>
+            </div>
+              <p class="form-note" id="probe-note">Specific patterns and thresholds keep tracing overhead low.</p>
+          </form>
+          <section class="probe-result" aria-live="polite" aria-labelledby="probe-result-title">
+            <div class="result-heading"><div><p class="result-label">Your BTrace oneliner</p><h3 id="probe-result-title">Slow method probe</h3></div><button type="button" class="copy-button" data-copy="command">Copy command</button></div>
+            <pre class="generated-command"><code id="generated-command"></code></pre>
+            <p class="copy-status" id="copy-status" role="status" aria-live="polite"></p>
+            <div class="result-meta"><p id="probe-explainer"></p><a id="probe-doc-link" href="https://github.com/btraceio/btrace/blob/develop/docs/OnelinerGuide.md">Learn the syntax <span aria-hidden="true">→</span></a></div>
+            <details class="script-ladder">
+              <summary>Need state, multiple hooks, fields, or aggregations?</summary>
+              <p>That is a reusable Java probe. Start with this equivalent script, then add the advanced feature you need.</p>
+              <pre><code id="generated-script"></code></pre>
+              <button type="button" class="copy-button copy-script" data-copy="script">Copy Java probe</button>
+              <a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/02-oneliner-to-script.md">Learn when to move from an oneliner to a script <span aria-hidden="true">→</span></a>
+            </details>
+          </section>
+        </div>
+      </section>
+
+      <section class="use-cases" id="use-cases" aria-labelledby="use-cases-title">
+        <div class="section-heading">
+          <p class="eyebrow"><span></span> Start where it hurts</p>
+          <h2 id="use-cases-title">Useful answers, not more dashboards.</h2>
+          <p>BTrace is most useful when you have a concrete question about a running process.</p>
+        </div>
+        <div class="use-case-grid">
+          <a class="use-case-card primary" href="#probe-builder" data-goal="slow"><span class="case-icon">⌁</span><h3>Find a slow call</h3><p>Trace a method’s duration and keep only the calls that cross your latency budget.</p><span>Build a latency probe →</span></a>
+          <a class="use-case-card" href="#probe-builder" data-goal="errors"><span class="case-icon">!</span><h3>Reveal hidden failures</h3><p>Capture the stack where a caught or swallowed exception actually escaped.</p><span>Build an exception probe →</span></a>
+          <a class="use-case-card" href="#probe-builder" data-goal="sql"><span class="case-icon">▤</span><h3>Inspect database calls</h3><p>Find slow JDBC statement execution before you start guessing about the database.</p><span>Build a SQL probe →</span></a>
+          <a class="use-case-card" href="https://github.com/btraceio/btrace/blob/develop/btrace-dist/src/main/resources/samples/Deadlock.java"><span class="case-icon">⊗</span><h3>Check for deadlocks</h3><p>Run a ready-made probe that reports deadlocked Java threads periodically.</p><span>View sample probe →</span></a>
+          <a class="use-case-card" href="https://github.com/btraceio/btrace/blob/develop/btrace-dist/src/main/resources/samples/FileTracker.java"><span class="case-icon">↗</span><h3>Watch file and socket I/O</h3><p>Follow files, URLs, and sockets opened by an application you did not write.</p><span>Browse samples →</span></a>
+          <a class="use-case-card" href="https://github.com/btraceio/btrace/blob/develop/docs/GettingStarted.md#advanced-jfr-integration"><span class="case-icon">◒</span><h3>Record structured JFR events</h3><p>Use custom events when you need low-overhead data for later analysis.</p><span>Explore JFR integration →</span></a>
+        </div>
+      </section>
+
+      <section class="progression" aria-labelledby="progression-title">
+        <div><p class="eyebrow"><span></span> Grow with the question</p><h2 id="progression-title">From one line to a durable diagnostic.</h2></div>
+        <ol>
+          <li><span>01</span><div><h3>Ask once</h3><p>Attach an oneliner to answer a focused live question.</p></div></li>
+          <li><span>02</span><div><h3>Make it repeatable</h3><p>Turn the oneliner into a Java probe and keep it with your service.</p></div></li>
+          <li><span>03</span><div><h3>Measure the pattern</h3><p>Add thread-local state, sampling, aggregations, metrics, or JFR events.</p></div></li>
+          <li><span>04</span><div><h3>Package the answer</h3><p>Ship a startup agent or fat agent when the diagnostic belongs in deployment.</p></div></li>
+        </ol>
+      </section>
+
+      <section class="deployment" id="deploy" aria-labelledby="deployment-title">
+        <div class="section-heading"><p class="eyebrow"><span></span> Fit your environment</p><h2 id="deployment-title">Run it where your JVM runs.</h2><p>Choose the smallest deployment step that answers the question.</p></div>
+        <div class="deployment-grid">
+          <article><span class="deployment-index">01</span><h3>Attach now</h3><p>Best for ad-hoc diagnosis on a reachable live JVM.</p><code>btrace &lt;PID&gt; probe.java</code><a href="https://github.com/btraceio/btrace/blob/develop/docs/GettingStarted.md#four-ways-to-run-btrace">Attach guide →</a></article>
+          <article><span class="deployment-index">02</span><h3>Start with an agent</h3><p>Best when you know the probe before the application starts.</p><code>-javaagent:btrace.jar</code><a href="https://github.com/btraceio/btrace/blob/develop/docs/GettingStarted.md#java-agent-mode-pre-compiled-scripts">Agent guide →</a></article>
+          <article><span class="deployment-index">03</span><h3>Use a sidecar</h3><p>Best for interactive troubleshooting in Docker and Kubernetes.</p><code>shareProcessNamespace: true</code><a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/09-kubernetes-sidecar.md">Sidecar guide →</a></article>
+          <article><span class="deployment-index">04</span><h3>Build a fat agent</h3><p>Best when extensions and the agent must travel as one artifact.</p><code>./gradlew fatAgentJar</code><a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/08-fat-agent.md">Fat-agent guide →</a></article>
+        </div>
+      </section>
+
+      <section class="safety" id="safety" aria-labelledby="safety-title">
+        <div><p class="eyebrow"><span></span> Targeted by design</p><h2 id="safety-title">Make the next observation a good one.</h2><p>BTrace is built for safe, temporary instrumentation—not permanent fleet monitoring or application behavior changes.</p></div>
+        <div class="safety-list"><div><b>Keep probes narrow</b><p>Prefer exact classes and methods. Use thresholds, sampling, and shallow stacks on hot paths.</p></div><div><b>Know the attachment boundary</b><p>Attach normally requires the same OS user, an attachable JVM, and the right container permissions.</p></div><div><b>Choose the right recorder</b><p>Use JFR for continuous, low-overhead history; use BTrace for targeted custom instrumentation.</p></div><a href="https://github.com/btraceio/btrace/blob/develop/docs/FAQ.md#when-should-i-use-btrace">Read the decision guide →</a></div>
+      </section>
+
+      <section class="ai-section" aria-labelledby="ai-title">
+        <div><p class="eyebrow"><span></span> New diagnostic workflows</p><h2 id="ai-title">Give an AI assistant a careful way to inspect a JVM.</h2><p>The BTrace MCP server lets compatible AI clients deploy probes and surface results through a diagnostic conversation. BTrace also ships extension-backed examples for LLM, RAG, and GPU/inference observability.</p><div class="hero-actions"><a class="button button-primary" href="https://github.com/btraceio/btrace/blob/develop/docs/MCPServer.md">Explore BTrace MCP <span aria-hidden="true">→</span></a><a class="button button-secondary" href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/07-llm-observability.md">LLM observability</a></div></div>
+        <div class="ai-chat" aria-label="Example diagnostic conversation"><p class="chat-user">Which methods in my service take more than 100 ms?</p><p class="chat-tool"><span>BTrace</span> attaching a bounded latency probe…</p><p class="chat-result"><b>Found 2 methods</b><br>PaymentClient.authorize · p95 243 ms<br>OrderService.checkout · p95 271 ms</p></div>
+      </section>
+
+      <section class="projects" id="projects" aria-labelledby="projects-title">
+        <div class="section-heading"><p class="eyebrow"><span></span> The BTrace ecosystem</p><h2 id="projects-title">Tools for knowing your JVM.</h2><p>Focused open-source projects for Java developers and operators.</p></div>
+        <div class="project-grid">
+          <article class="project-card featured"><div class="project-top"><span class="icon icon-pulse">⌁</span><span class="tag">Flagship</span></div><h3>BTrace</h3><p>Production-safe dynamic tracing and diagnostics for live Java applications.</p><ul><li>Oneliners and Java probes</li><li>Attach or startup-agent modes</li></ul><a href="https://github.com/btraceio/btrace">Open project →</a></article>
+          <article class="project-card"><div class="project-top"><span class="icon">⌘</span><span class="tag">Add-ons</span></div><h3>BTrace extensions</h3><p>Curated integrations and richer diagnostic capabilities for BTrace.</p><a href="https://github.com/btraceio/btrace-extensions">Open project →</a></article>
+          <article class="project-card"><div class="project-top"><span class="icon">↗</span><span class="tag">Experimental</span></div><h3>Jafar</h3><p>An experimental Java Flight Recorder parser for exploring JVM event data.</p><a href="https://github.com/btraceio/jafar">Open project →</a></article>
+        </div>
+        <a class="all-projects" href="https://github.com/orgs/btraceio/repositories">See every BTrace project on GitHub →</a>
+      </section>
+    </main>
+
+    <footer><a class="brand" href="{{ '/' | relative_url }}"><img class="brand-logo" src="{{ '/assets/icons/btrace-compact.png' | relative_url }}" alt=""><span class="brand-name">BTrace</span></a><p>Open-source tools for understanding Java applications.</p><div><a href="https://github.com/btraceio">GitHub</a><a href="https://github.com/btraceio/btrace/issues">Report an issue</a></div></footer>
+    <script src="{{ '/assets/probe-composer.js' | relative_url }}"></script>
+  </body>
+</html>
