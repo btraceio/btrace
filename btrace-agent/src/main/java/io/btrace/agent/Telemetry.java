@@ -30,18 +30,33 @@ final class Telemetry {
 
   static final String ENDPOINT = "https://eu.posthog.com/capture/";
 
-  // Hard wall-clock cap for the guard thread (covers DNS + connect + read).
-  // connectTimeout alone does not bound DNS resolution — the guard join does.
+  // The guard requests worker cancellation after this interval. DNS implementations are not
+  // required to honor thread interruption, so the daemon worker remains the final startup guard.
   static final int GUARD_TIMEOUT_MS = 2000;
   static final int CONNECT_TIMEOUT_MS = 1000;
   static final int READ_TIMEOUT_MS = 1000;
 
-  private static final String PROP_DISABLED = "btrace.telemetry";
+  private static final String PROP_ENABLED = "btrace.telemetry";
+
+  interface Transport {
+    void send(String payload);
+  }
+
+  private static final Transport HTTP_TRANSPORT =
+      new Transport() {
+        @Override
+        public void send(String payload) {
+          sendHttp(payload);
+        }
+      };
 
   private Telemetry() {}
 
-  static boolean isEnabled() {
-    return !"false".equalsIgnoreCase(System.getProperty(PROP_DISABLED, "true"));
+  static boolean isEnabled(String agentValue) {
+    if (agentValue != null) {
+      return Boolean.parseBoolean(agentValue);
+    }
+    return Boolean.getBoolean(PROP_ENABLED);
   }
 
   static String buildPayload(String btraceVersion, String agentMode) {
@@ -73,24 +88,33 @@ final class Telemetry {
         + "}";
   }
 
-  // fireAsync returns immediately — the calling thread (agent startup) is never blocked.
-  static void fireAsync(final String btraceVersion, final String agentMode) {
-    if (!isEnabled()) {
-      return;
+  // Consent is checked before creating threads or building the payload.
+  static boolean fireAsync(
+      String telemetryValue, final String btraceVersion, final String agentMode) {
+    return fireAsync(telemetryValue, btraceVersion, agentMode, HTTP_TRANSPORT);
+  }
+
+  static boolean fireAsync(
+      String telemetryValue,
+      final String btraceVersion,
+      final String agentMode,
+      final Transport transport) {
+    if (!isEnabled(telemetryValue)) {
+      return false;
     }
     final Thread worker =
         new Thread(
             new Runnable() {
               @Override
               public void run() {
-                send(btraceVersion, agentMode);
+                deliverSafely(transport, buildPayload(btraceVersion, agentMode));
               }
             });
     worker.setDaemon(true);
     worker.setName("btrace-telemetry");
 
-    // Guard caps total wall-clock time including DNS, which connectTimeout
-    // alone does not cover. Both threads are daemon threads.
+    // The guard requests cancellation if DNS or transport work outlives the configured timeout.
+    // Both threads are daemon threads, so telemetry never keeps the target JVM alive.
     Thread guard =
         new Thread(
             new Runnable() {
@@ -106,15 +130,27 @@ final class Telemetry {
             });
     guard.setDaemon(true);
     guard.setName("btrace-telemetry-guard");
-    guard.start();
+    try {
+      guard.start();
+      return true;
+    } catch (Throwable ignored) {
+      return false;
+    }
   }
 
-  private static void send(String btraceVersion, String agentMode) {
+  static void deliverSafely(Transport transport, String payload) {
     try {
-      String payload = buildPayload(btraceVersion, agentMode);
+      transport.send(payload);
+    } catch (Throwable ignored) {
+    }
+  }
+
+  private static void sendHttp(String payload) {
+    HttpURLConnection conn = null;
+    try {
       byte[] body = payload.getBytes(Charset.forName("UTF-8"));
       URL url = new URL(ENDPOINT);
-      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn = (HttpURLConnection) url.openConnection();
       conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
       conn.setReadTimeout(READ_TIMEOUT_MS);
       conn.setRequestMethod("POST");
@@ -125,8 +161,11 @@ final class Telemetry {
         out.write(body);
       }
       conn.getResponseCode();
-      conn.disconnect();
     } catch (Throwable ignored) {
+    } finally {
+      if (conn != null) {
+        conn.disconnect();
+      }
     }
   }
 

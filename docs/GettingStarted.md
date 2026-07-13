@@ -389,6 +389,24 @@ Prepared mode remains a 3.0.0 release gate. Until the authenticated path is avai
 release, use startup-script mode with `noServer=true`, or use dynamic attach where the target JVM's
 policy permits it. Do not expose a startup command server as a remote diagnostic endpoint.
 
+#### Optional agent telemetry
+
+Agent telemetry is disabled by default. The agent creates no telemetry thread and performs no
+telemetry-related DNS or network operation unless the operator explicitly opts in:
+
+```bash
+java -javaagent:/path/to/btrace.jar=script=MyTrace.class,noServer=true,telemetry=true MyApp
+```
+
+The legacy target-JVM property `-Dbtrace.telemetry=true` is also recognized when the agent argument
+is absent. An explicit `telemetry=false` agent argument overrides that property.
+
+An opted-in startup attempts one `agent_start` event to
+`https://eu.posthog.com/capture/`. The event contains a fresh random event identifier plus
+`java_version`, `os_name`, `btrace_version`, and `agent_mode`; it contains no stable host identifier
+or application data. HTTP connect and read timeouts are one second each, and a daemon guard requests
+cancellation after two seconds. Telemetry failures are ignored and do not block agent startup.
+
 ### 4. Launcher Mode (btracer)
 
 Use the `btracer` wrapper to compile and attach in one step:
