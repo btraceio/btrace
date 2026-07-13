@@ -29,7 +29,6 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -39,6 +38,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.stream.Stream;
 import javax.annotation.processing.Processor;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
@@ -63,8 +63,8 @@ class CompilerHelper {
   }
 
   /**
-   * Extends the classpath with JARs from extension directories. Scans in order:
-   * BTRACE_HOME/libs/ext/, ~/.btrace/ext/, $BTRACE_EXT_PATH
+   * Extends the classpath with JARs from extension directories. Scans the canonical 3.0 paths,
+   * legacy paths, and {@code BTRACE_EXT_PATH}, in that order.
    *
    * @param classPath original classpath (may be null)
    * @return extended classpath including extension JARs
@@ -72,17 +72,25 @@ class CompilerHelper {
   private String extendClassPathWithExtensions(String classPath) {
     List<String> extensionJars = new ArrayList<>();
 
-    // 1. Built-in extensions: BTRACE_HOME/libs/ext/
+    // 1. Built-in extensions. The distribution explodes each extension into its own directory.
     String btraceHome = getBTraceHome();
     if (btraceHome != null) {
-      Path builtinExtPath = Paths.get(btraceHome, "libs", "ext");
+      Path builtinExtPath = Paths.get(btraceHome, "extensions");
+      addExtensionJars(builtinExtPath, extensionJars);
+
+      // Legacy pre-3.0 location.
+      builtinExtPath = Paths.get(btraceHome, "libs", "ext");
       addExtensionJars(builtinExtPath, extensionJars);
     }
 
-    // 2. User extensions: ~/.btrace/ext/
+    // 2. User extensions.
     String userHome = System.getProperty("user.home");
     if (userHome != null) {
-      Path userExtPath = Paths.get(userHome, ".btrace", "ext");
+      Path userExtPath = Paths.get(userHome, ".btrace", "extensions");
+      addExtensionJars(userExtPath, extensionJars);
+
+      // Legacy pre-3.0 location.
+      userExtPath = Paths.get(userHome, ".btrace", "ext");
       addExtensionJars(userExtPath, extensionJars);
     }
 
@@ -160,10 +168,13 @@ class CompilerHelper {
       return;
     }
 
-    try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory, "*.jar")) {
-      for (Path jar : stream) {
-        jars.add(jar.toAbsolutePath().toString());
-      }
+    try (Stream<Path> stream = Files.walk(directory)) {
+      stream
+          .filter(Files::isRegularFile)
+          .filter(path -> path.getFileName().toString().endsWith(".jar"))
+          .map(path -> path.toAbsolutePath().normalize().toString())
+          .sorted()
+          .forEach(jars::add);
     } catch (IOException ignored) {
       // Directory not accessible, skip silently
     }

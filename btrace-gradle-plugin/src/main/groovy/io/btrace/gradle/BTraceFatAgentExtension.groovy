@@ -1,6 +1,9 @@
 package io.btrace.gradle
 
+import java.util.jar.JarFile
+
 import org.gradle.api.Action
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
 
@@ -484,6 +487,55 @@ class ResolvedExtension {
     Properties metadata = new Properties()
     Project sourceProject  // non-null if from project source
     List<File> probes = []
+
+    /**
+     * Completes distribution metadata from the canonical API JAR manifest. Manifest values are
+     * authoritative, so stale extension ZIP properties cannot weaken the embedded permission
+     * policy. Project sources receive the same metadata as published extensions.
+     */
+    void hydrateFromApiManifest() {
+        if (apiJar == null || !apiJar.isFile()) {
+            throw new GradleException(
+                "[fat-agent] Cannot embed extension '${id}': API JAR is missing, so permission metadata cannot be transferred")
+        }
+
+        def attributeToProperty = [
+            'BTrace-Extension-Id': 'id',
+            'BTrace-Extension-Version': 'version',
+            'BTrace-Extension-Name': 'name',
+            'BTrace-Extension-Description': 'description',
+            'BTrace-API-Version': 'btrace.api.version',
+            'BTrace-Java-Version': 'java.version',
+            'BTrace-Extension-Services': 'services',
+            'BTrace-Extension-Requires': 'requires.extensions',
+            'BTrace-Extension-Permissions': 'permissions',
+            'BTrace-Extension-Exports': 'exports'
+        ]
+
+        try {
+            new JarFile(apiJar).withCloseable { jar ->
+                def attributes = jar.manifest?.mainAttributes
+                def permissions = attributes?.getValue('BTrace-Extension-Permissions')
+                if (permissions == null) {
+                    throw new GradleException(
+                        "[fat-agent] Cannot embed extension '${id}': ${apiJar.name} is missing BTrace-Extension-Permissions; refusing to default permissions to an empty set")
+                }
+                attributeToProperty.each { manifestName, propertyName ->
+                    def value = attributes.getValue(manifestName)
+                    if (value != null) metadata.setProperty(propertyName, value)
+                }
+            }
+        } catch (GradleException e) {
+            throw e
+        } catch (Exception e) {
+            throw new GradleException(
+                "[fat-agent] Cannot read extension metadata for '${id}' from ${apiJar}: ${e.message}",
+                e)
+        }
+
+        id = metadata.getProperty('id', id)
+        version = metadata.getProperty('version', version)
+    }
 
     @Override
     String toString() {

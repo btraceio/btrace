@@ -528,6 +528,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
       }
     } catch (VerifierException e) {
       verifierException = e;
+      log.debug("BTrace class verification failed", e);
     } finally {
       if (debug.isDumpClasses() && name != null) {
         debug.dumpClass(name, getBytecode(false));

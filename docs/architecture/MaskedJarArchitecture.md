@@ -41,6 +41,12 @@ btrace.jar (~2.9 MB)
 
 **Masked classes** (~1600+): Agent, client, and shared classes are stored as `.classdata` files under `META-INF/btrace/`. The JVM's class loading ignores these files entirely. They are loaded on demand by `MaskedClassLoader`.
 
+The client section also contains the instrumentation/runtime implementation used by `btracec` to
+turn compiled scripts into persisted probe packs. The `io.btrace.core.PackGenerator` service
+descriptor is visible from the masked JAR root, so its `io.btrace.instr.InstrPackGenerator`
+provider and non-bootstrap dependencies must be loadable by the client masked classloader as well
+as by the agent classloader.
+
 ### Manifest
 
 ```
