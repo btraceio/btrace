@@ -45,6 +45,7 @@ import static io.btrace.core.Args.STARTUP_RETRANSFORM;
 import static io.btrace.core.Args.STATSD;
 import static io.btrace.core.Args.STDOUT;
 import static io.btrace.core.Args.SYSTEM_CLASS_PATH;
+import static io.btrace.core.Args.TELEMETRY;
 import static io.btrace.core.Args.TRACK_RETRANSFORMS;
 import static io.btrace.core.Args.TRUSTED;
 
@@ -201,7 +202,7 @@ public final class Main {
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Parsing arguments");
       parseArgs();
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Arguments parsed");
-      Telemetry.fireAsync(readBTraceVersion(), agentMode);
+      Telemetry.fireAsync(argMap.get(TELEMETRY), readBTraceVersion(), agentMode);
       // settings are all built-up; set the logging system properties accordingly
       DebugSupport.initLoggers(settings.isDebug(), log);
 

@@ -125,6 +125,7 @@ The agent takes a list of comma separated arguments.
 * **dumpClasses** - dump the transformed bytecode to files (true/false)
 * **dumpDir** - specifies the folder where the transformed classes will be dumped to
 * **stdout** - redirect the btrace output to stdout instead of writing it to an arbitrary file (true/false)
+* **telemetry** - explicitly enable the default-off anonymous `agent_start` event (true/false)
 * **probeDescPath** - the path to search for probe descriptor XMLs
 * **startupRetransform** - enable retransform of all the loaded classes at attach (true/false)
 * **scriptdir** - the path to a directory containing scripts to be run at the agent startup

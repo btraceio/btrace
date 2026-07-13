@@ -541,6 +541,8 @@ java -javaagent:/path/to/btrace.jar=script=<script.class>,noServer=true[,arg=val
 - `port=<port>` - Communication port
 - `noServer=true` - Don't start the command server; use for startup scripts that need no later
   client connection
+- `telemetry=true|false` - Explicitly enable or disable the default-off `agent_start` telemetry
+  event
 - `bootClassPath=<path>` - Additional boot classpath
 
 **Examples:**
