@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tests.harness.Completion;
 
 public class ManifestLibsTests extends RuntimeTest {
   @BeforeAll
@@ -58,7 +59,7 @@ public class ManifestLibsTests extends RuntimeTest {
         "resources.Main",
         "btrace/OnTimerArgTest.java",
         new String[] {"timer=200"},
-        10,
+        Completion.untilContains("timer"),
         (stdout, stderr, retcode, jfrFile) -> {
           assertFalse(stdout.contains("FAILED"), "Script should not have failed");
           assertTrue(stderr.isEmpty(), "Non-empty stderr");
@@ -74,7 +75,8 @@ public class ManifestLibsTests extends RuntimeTest {
         "resources.Main",
         "traces/TraceAllTest.class",
         null,
-        5,
+        // Same script and marker as BTraceFunctionalTests.testTraceAll.
+        Completion.untilContains("[invocations="),
         (stdout, stderr, retcode, jfrFile) -> {
           assertFalse(stdout.contains("FAILED"), "Script should not have failed");
           assertTrue(stderr.isEmpty(), "Non-empty stderr");

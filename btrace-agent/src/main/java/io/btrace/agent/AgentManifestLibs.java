@@ -32,6 +32,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import org.slf4j.Logger;
@@ -173,13 +175,35 @@ final class AgentManifestLibs {
     return p;
   }
 
+  // Deliberately anonymous classes below, not lambdas/method references: this method can run
+  // reachable from -javaagent premain(), before the JVM's own java.lang.invoke bootstrap is
+  // guaranteed complete. See io.btrace.instr.BootstrapPathIndyFreedomTest and the investigation
+  // doc it references.
   static void scanLibTree(Path root, Set<Path> out) {
     if (root == null || !Files.exists(root)) return;
     try (java.util.stream.Stream<Path> stream = Files.walk(root)) {
       stream
-          .filter(Files::isRegularFile)
-          .filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
-          .forEach(out::add);
+          .filter(
+              new Predicate<Path>() {
+                @Override
+                public boolean test(Path p) {
+                  return Files.isRegularFile(p);
+                }
+              })
+          .filter(
+              new Predicate<Path>() {
+                @Override
+                public boolean test(Path f) {
+                  return f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar");
+                }
+              })
+          .forEach(
+              new Consumer<Path>() {
+                @Override
+                public void accept(Path p) {
+                  out.add(p);
+                }
+              });
     } catch (IOException e) {
       if (log.isDebugEnabled()) log.debug("Failed to scan libs at {}: {}", root, e.toString());
     }

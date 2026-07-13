@@ -52,6 +52,7 @@ import static io.btrace.core.Args.TRUSTED;
 import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceRuntime;
 import io.btrace.core.DebugSupport;
+import io.btrace.core.Function;
 import io.btrace.core.Messages;
 import io.btrace.core.SharedSettings;
 import io.btrace.core.comm.ErrorCommand;
@@ -120,11 +121,17 @@ public final class Main {
   private static final BTraceTransformer transformer =
       new BTraceTransformer(new DebugSupport(settings));
   // #BTRACE-42: Non-daemon thread prevents traced application from exiting
+  // Deliberately an anonymous class, not a lambda: this static field initializer runs in
+  // Main's <clinit>, unconditionally, before -javaagent premain()'s body even starts -- see
+  // io.btrace.instr.BootstrapPathIndyFreedomTest and the investigation doc it references.
   private static final ThreadFactory qProcessorThreadFactory =
-      r -> {
-        Thread result = new Thread(r, "BTrace Command Queue Processor");
-        result.setDaemon(true);
-        return result;
+      new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+          Thread result = new Thread(r, "BTrace Command Queue Processor");
+          result.setDaemon(true);
+          return result;
+        }
       };
   private static final ExecutorService serializedExecutor =
       Executors.newSingleThreadExecutor(qProcessorThreadFactory);
@@ -206,14 +213,20 @@ public final class Main {
       if (noServer) {
         log.debug("noServer is true, server not started");
       } else {
+        // Deliberately an anonymous class, not a lambda: this runs during -javaagent premain(),
+        // before the JVM's own java.lang.invoke bootstrap is guaranteed complete. See
+        // io.btrace.instr.BootstrapPathIndyFreedomTest and the investigation doc it references.
         agentThread =
             new Thread(
-                () -> {
-                  BTraceRuntime.enter();
-                  try {
-                    startServer();
-                  } finally {
-                    BTraceRuntime.leave();
+                new Runnable() {
+                  @Override
+                  public void run() {
+                    BTraceRuntime.enter();
+                    try {
+                      startServer();
+                    } finally {
+                      BTraceRuntime.leave();
+                    }
                   }
                 });
       }
@@ -246,6 +259,21 @@ public final class Main {
         }
       }
 
+      // Force io.btrace.instr.ClassFilter's static initializer to run to completion now, on
+      // this single thread, before the transformer below can possibly be reached by any other
+      // thread. ClassFilter.isSensitiveClass(...) is the first thing BTraceTransformer.transform()
+      // calls for every class definition in the JVM (any thread) once installed -- including
+      // classes loaded by the async Telemetry HTTP call (started above) and by this agent's own
+      // connection-handling thread. ClassFilter's own <clinit> force-loads several ASM classes,
+      // which are themselves subject to the same transformer once it's installed. If two threads
+      // raced to trigger ClassFilter's <clinit> for the first time post-registration, the JVM's
+      // class-initialization lock (JLS 12.4.2) plus the recursive ASM class loads inside it could
+      // deadlock against another thread's classloader lock (observed: the telemetry thread stuck
+      // in ClassFilter.<clinit>, the connection-handling thread stuck holding a classloader lock
+      // waiting on the same class-init to finish). Doing it here, single-threaded, before
+      // addTransformer, makes this race structurally impossible.
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Warming up ClassFilter");
+      io.btrace.instr.ClassFilter.isSensitiveClass("");
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Adding class transformer");
       log.debug("Adding class transformer");
       inst.addTransformer(transformer, true);
@@ -1380,17 +1408,24 @@ public final class Main {
       System.setProperty("btrace.port", String.valueOf(serverSocket.getLocalPort()));
 
       // Add shutdown hook to close server socket on JVM exit
+      // Deliberately an anonymous class, not a lambda: this method can run reachable from
+      // -javaagent premain(), before the JVM's own java.lang.invoke bootstrap is guaranteed
+      // complete. See io.btrace.instr.BootstrapPathIndyFreedomTest and the investigation doc it
+      // references.
       Runtime.getRuntime()
           .addShutdownHook(
               new Thread(
-                  () -> {
-                    serverRunning = false;
-                    if (serverSocket != null && !serverSocket.isClosed()) {
-                      try {
-                        serverSocket.close();
-                        log.debug("BTrace server socket closed");
-                      } catch (IOException e) {
-                        log.debug("Error closing server socket", e);
+                  new Runnable() {
+                    @Override
+                    public void run() {
+                      serverRunning = false;
+                      if (serverSocket != null && !serverSocket.isClosed()) {
+                        try {
+                          serverSocket.close();
+                          log.debug("BTrace server socket closed");
+                        } catch (IOException e) {
+                          log.debug("Error closing server socket", e);
+                        }
                       }
                     }
                   },
@@ -1409,7 +1444,17 @@ public final class Main {
           log.debug("client accepted {}", sock);
         }
         ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
-        Client client = RemoteClient.getClient(ctx, sock, Main::handleNewClient);
+        // Deliberately an anonymous class, not a method reference: see the shutdown-hook comment
+        // above.
+        RemoteClient.getClient(
+            ctx,
+            sock,
+            new Function<Client, Future<?>>() {
+              @Override
+              public Future<?> apply(Client c) {
+                return handleNewClient(c);
+              }
+            });
       } catch (RuntimeException | IOException re) {
         if (serverRunning) {
           log.warn("BTrace server accept failed", re);
@@ -1419,28 +1464,35 @@ public final class Main {
   }
 
   private static Future<?> handleNewClient(Client client) {
+    // Deliberately an anonymous class, not a lambda: this method can run reachable from
+    // -javaagent premain(), before the JVM's own java.lang.invoke bootstrap is guaranteed
+    // complete. See io.btrace.instr.BootstrapPathIndyFreedomTest and the investigation doc it
+    // references.
     return serializedExecutor.submit(
-        () -> {
-          try {
-            boolean entered = BTraceRuntime.enter();
+        new Runnable() {
+          @Override
+          public void run() {
             try {
-              if (log.isDebugEnabled()) {
-                log.debug("new Client created {}", client);
+              boolean entered = BTraceRuntime.enter();
+              try {
+                if (log.isDebugEnabled()) {
+                  log.debug("new Client created {}", client);
+                }
+                if (client.retransformLoaded()) {
+                  client.getRuntime().sendCommand(new StatusCommand((byte) 1));
+                }
+              } catch (UnmodifiableClassException uce) {
+                log.debug("BTrace class retransformation failed", uce);
+                client.getRuntime().sendCommand(new ErrorCommand(uce));
+                client.getRuntime().sendCommand(new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
+              } finally {
+                if (entered) {
+                  BTraceRuntime.leave();
+                }
               }
-              if (client.retransformLoaded()) {
-                client.getRuntime().sendCommand(new StatusCommand((byte) 1));
-              }
-            } catch (UnmodifiableClassException uce) {
-              log.debug("BTrace class retransformation failed", uce);
-              client.getRuntime().sendCommand(new ErrorCommand(uce));
-              client.getRuntime().sendCommand(new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
-            } finally {
-              if (entered) {
-                BTraceRuntime.leave();
-              }
+            } catch (Throwable t) {
+              log.warn("Unhandled exception in client handler", t);
             }
-          } catch (Throwable t) {
-            log.warn("Unhandled exception in client handler", t);
           }
         });
   }
