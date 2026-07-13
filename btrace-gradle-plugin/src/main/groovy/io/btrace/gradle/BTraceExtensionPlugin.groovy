@@ -234,7 +234,6 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                     }
                 }
                 // Enforce: at most one package-level @ExtensionDescriptor across the project
-                def extDescDesc = 'Lio/btrace/core/extensions/ExtensionDescriptor;'
                 int extDescCount = 0
                 def scanForPkgDescriptors = { File classesDir ->
                     if (classesDir == null || !classesDir.exists()) return
@@ -248,8 +247,8 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                         def cn = new ClassNode()
                         cr.accept(cn, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG)
                         boolean has = false
-                        (cn.visibleAnnotations ?: []).each { has |= (it.desc == extDescDesc) }
-                        (cn.invisibleAnnotations ?: []).each { has |= (it.desc == extDescDesc) }
+                        (cn.visibleAnnotations ?: []).each { has |= BTraceDescriptors.isExtensionDescriptor(it.desc) }
+                        (cn.invisibleAnnotations ?: []).each { has |= BTraceDescriptors.isExtensionDescriptor(it.desc) }
                         if (has) extDescCount++
                     }
                 }
@@ -277,8 +276,8 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                             cr.accept(cn, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG)
                             def isInterface = (cn.access & Opcodes.ACC_INTERFACE) != 0
                             def hasMarker = false
-                            (cn.visibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') }
-                            (cn.invisibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') }
+                            (cn.visibleAnnotations ?: []).each { hasMarker |= BTraceDescriptors.isServiceDescriptor(it.desc) }
+                            (cn.invisibleAnnotations ?: []).each { hasMarker |= BTraceDescriptors.isServiceDescriptor(it.desc) }
                             if (hasMarker && isInterface) detected.add(fq)
                         }
                     }
@@ -354,15 +353,14 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                         // Collect ServiceDescriptor.permissions
                         def collectServicePerms = { AnnotationNode an ->
                             if (an == null) return
-                            if (an.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') {
+                            if (BTraceDescriptors.isServiceDescriptor(an.desc)) {
                                 def vals = an.values ?: []
                                 for (int i = 0; i < vals.size(); i += 2) {
                                     if (vals[i] == 'permissions') {
                                         def arr = vals[i+1] as List
                                         arr?.each { ev ->
-                                            if (ev instanceof List && ev.size() >= 2) {
-                                                permAnnoSet.add(String.valueOf(ev[1]))
-                                            }
+                                            def permission = BTraceDescriptors.enumConstantName(ev)
+                                            if (permission != null) permAnnoSet.add(permission)
                                         }
                                     }
                                 }
@@ -672,24 +670,14 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                     mergedPerms.addAll(scannedPerms)
                     mergedPerms.addAll(extension.requiredPermissions)
 
-                    // Emit concise info about permissions for traceability
-                    if (extension.scanPermissions) {
-                        project.logger.lifecycle("[BTRACE-EXT] permissions: scanned=${scannedPerms} merged=${mergedPerms}")
-                    } else {
-                        project.logger.lifecycle("[BTRACE-EXT] permissions: merged=${mergedPerms} (scan disabled)")
-                    }
-
-                    // Cross-check: ensure manifest permissions cover descriptor-declared requirements
+                    // Discover descriptor permissions and ensure the manifest covers them.
                     try {
                         def cp = new LinkedHashSet<File>()
                         cp.addAll(authoredClassesDirs())
                         try { cp.addAll(authoredCompileClasspath()) } catch (Throwable ignore) {}
                         URLClassLoader cl = new URLClassLoader(cp.collect { it.toURI().toURL() } as URL[], (ClassLoader) null)
                         def enumConstName = { Object enumConst ->
-                            if (enumConst instanceof List && enumConst.size() >= 2) {
-                                return String.valueOf(enumConst[1]).toUpperCase(Locale.ROOT)
-                            }
-                            return null
+                            return BTraceDescriptors.enumConstantName(enumConst)
                         }
                         Set<String> annotatedPerms = [] as Set
                         explicitServiceTypes().each { String fqcn ->
@@ -701,7 +689,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                                 def cn = new ClassNode()
                                 cr.accept(cn, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG)
                                 (cn.visibleAnnotations ?: []).each { an ->
-                                    if (an.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') {
+                                    if (BTraceDescriptors.isServiceDescriptor(an.desc)) {
                                         def vals = an.values ?: []
                                         for (int i = 0; i < vals.size(); i += 2) {
                                             if (vals[i] == 'permissions') {
@@ -715,7 +703,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                                     }
                                 }
                                 (cn.invisibleAnnotations ?: []).each { an ->
-                                    if (an.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') {
+                                    if (BTraceDescriptors.isServiceDescriptor(an.desc)) {
                                         def vals = an.values ?: []
                                         for (int i = 0; i < vals.size(); i += 2) {
                                             if (vals[i] == 'permissions') {
@@ -741,7 +729,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                                 def cr2 = new ClassReader(bytes2)
                                 def cn2 = new ClassNode(); cr2.accept(cn2, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG)
                                 (cn2.visibleAnnotations ?: []).each { an ->
-                                    if (an.desc == 'Lio/btrace/core/extensions/ExtensionDescriptor;') {
+                                    if (BTraceDescriptors.isExtensionDescriptor(an.desc)) {
                                         def vals = an.values ?: []
                                         for (int i = 0; i < vals.size(); i += 2) {
                                             if (vals[i] == 'permissions') {
@@ -755,7 +743,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                                     }
                                 }
                                 (cn2.invisibleAnnotations ?: []).each { an ->
-                                    if (an.desc == 'Lio/btrace/core/extensions/ExtensionDescriptor;') {
+                                    if (BTraceDescriptors.isExtensionDescriptor(an.desc)) {
                                         def vals = an.values ?: []
                                         for (int i = 0; i < vals.size(); i += 2) {
                                             if (vals[i] == 'permissions') {
@@ -770,6 +758,9 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                                 }
                             }
                         }
+                        if (extension.scanPermissions) {
+                            mergedPerms.addAll(annotatedPerms)
+                        }
                         Set<String> manifestPerms = mergedPerms.collect { it.toString().toUpperCase(Locale.ROOT) } as Set
                         Set<String> missing = annotatedPerms.findAll { !manifestPerms.contains(it) } as Set
                         if (!missing.isEmpty()) {
@@ -779,6 +770,13 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                         throw ge
                     } catch (Throwable t) {
                         project.logger.warn("[BTRACE-EXT] permission alignment check failed to run: ${t.message}")
+                    }
+
+                    // Emit concise info about permissions for traceability after descriptor merging.
+                    if (extension.scanPermissions) {
+                        project.logger.lifecycle("[BTRACE-EXT] permissions: scanned=${scannedPerms} merged=${mergedPerms}")
+                    } else {
+                        project.logger.lifecycle("[BTRACE-EXT] permissions: merged=${mergedPerms} (scan disabled)")
                     }
 
                     def shadedPkgs = extension.shadedPackages.collect { k, v -> "$k->$v" }.join(',')
@@ -1099,8 +1097,8 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                                 def cn = new ClassNode(); cr.accept(cn, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG)
                                 boolean isInterface = (cn.access & Opcodes.ACC_INTERFACE) != 0
                                 boolean hasMarker = false
-                                (cn.visibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') }
-                                (cn.invisibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lio/btrace/core/extensions/ServiceDescriptor;') }
+                                (cn.visibleAnnotations ?: []).each { hasMarker |= BTraceDescriptors.isServiceDescriptor(it.desc) }
+                                (cn.invisibleAnnotations ?: []).each { hasMarker |= BTraceDescriptors.isServiceDescriptor(it.desc) }
                                 if (hasMarker && isInterface) services.add(fq)
                             }
                         }

@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 import java.util.jar.JarFile;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
@@ -92,6 +93,40 @@ class BTraceExtensionPluginTest {
             assertFalse(
                     shimIndex.contains("com.example.impl.HiddenInternal"),
                     "Shim index should exclude non-exported interfaces");
+        }
+    }
+
+    @Test
+    @DisplayName("3.0 descriptors discover services and permissions without explicit configuration")
+    void descriptorsDiscoverServicesAndPermissions() throws IOException {
+        writeExtensionProject("", false);
+
+        BuildResult result = createRunner().withArguments(":ext:buildApiJar").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":ext:buildApiJar").getOutcome());
+        File apiJar = projectDir.resolve("ext/build/libs/ext-1.0-api.jar").toFile();
+        try (JarFile jar = new JarFile(apiJar)) {
+            String services =
+                    jar.getManifest()
+                            .getMainAttributes()
+                            .getValue("BTrace-Extension-Services");
+            String permissions =
+                    jar.getManifest()
+                            .getMainAttributes()
+                            .getValue("BTrace-Extension-Permissions");
+            assertEquals("com.example.api.PublicService", services);
+            assertEquals(Set.of("MEMORY_INFO", "THREAD_INFO"), Set.of(permissions.split(",")));
+            assertFalse(services.contains("com.example.impl.HiddenInternal"));
+            assertFalse(services.contains("com.example.api.PublicValue"));
+            assertNotNull(jar.getEntry("com/example/api/PublicService.class"));
+            assertNotNull(jar.getEntry("com/example/api/PublicValue.class"));
+            assertFalse(
+                    jar.stream()
+                            .anyMatch(
+                                    entry ->
+                                            entry.getName()
+                                                    .equals(
+                                                            "com/example/impl/HiddenInternal.class")));
         }
     }
 
@@ -262,7 +297,7 @@ class BTraceExtensionPluginTest {
 
     private void writeStubCoreProject() throws IOException {
         Path dir = projectDir.resolve("btrace-core");
-        Files.createDirectories(dir.resolve("src/main/java/org/openjdk/btrace/core/extensions"));
+        Files.createDirectories(dir.resolve("src/main/java/io/btrace/core/extensions"));
         writeFile(
                 dir.resolve("build.gradle"),
                 "plugins { id 'java-library' }\n"
@@ -270,7 +305,7 @@ class BTraceExtensionPluginTest {
                         + "version = '1.0'\n");
         writeFile(
                 dir.resolve(
-                        "src/main/java/org/openjdk/btrace/core/extensions/ServiceDescriptor.java"),
+                        "src/main/java/io/btrace/core/extensions/ServiceDescriptor.java"),
                 "package io.btrace.core.extensions;\n"
                         + "import java.lang.annotation.ElementType;\n"
                         + "import java.lang.annotation.Retention;\n"
@@ -279,11 +314,11 @@ class BTraceExtensionPluginTest {
                         + "@Retention(RetentionPolicy.RUNTIME)\n"
                         + "@Target({ElementType.TYPE, ElementType.METHOD})\n"
                         + "public @interface ServiceDescriptor {\n"
-                        + "  String[] permissions() default {};\n"
+                        + "  Permission[] permissions() default {};\n"
                         + "}\n");
         writeFile(
                 dir.resolve(
-                        "src/main/java/org/openjdk/btrace/core/extensions/ExtensionDescriptor.java"),
+                        "src/main/java/io/btrace/core/extensions/ExtensionDescriptor.java"),
                 "package io.btrace.core.extensions;\n"
                         + "import java.lang.annotation.ElementType;\n"
                         + "import java.lang.annotation.Retention;\n"
@@ -292,11 +327,18 @@ class BTraceExtensionPluginTest {
                         + "@Retention(RetentionPolicy.RUNTIME)\n"
                         + "@Target(ElementType.PACKAGE)\n"
                         + "public @interface ExtensionDescriptor {\n"
-                        + "  String[] permissions() default {};\n"
+                        + "  String name();\n"
+                        + "  String version();\n"
+                        + "  String description() default \"\";\n"
+                        + "  Permission[] permissions() default {};\n"
                         + "}\n");
         writeFile(
+                dir.resolve("src/main/java/io/btrace/core/extensions/Permission.java"),
+                "package io.btrace.core.extensions;\n"
+                        + "public enum Permission { NONE, MEMORY_INFO, THREAD_INFO }\n");
+        writeFile(
                 dir.resolve(
-                        "src/main/java/org/openjdk/btrace/core/extensions/ExternalType.java"),
+                        "src/main/java/io/btrace/core/extensions/ExternalType.java"),
                 "package io.btrace.core.extensions;\n"
                         + "import java.lang.annotation.ElementType;\n"
                         + "import java.lang.annotation.Retention;\n"
@@ -311,7 +353,7 @@ class BTraceExtensionPluginTest {
 
     private void writeStubProcessorProject() throws IOException {
         Path dir = projectDir.resolve("btrace-extension-processor");
-        Files.createDirectories(dir.resolve("src/main/java/org/openjdk/btrace/processor"));
+        Files.createDirectories(dir.resolve("src/main/java/io/btrace/processor"));
         writeFile(
                 dir.resolve("build.gradle"),
                 "plugins { id 'java-library' }\n"
@@ -319,7 +361,7 @@ class BTraceExtensionPluginTest {
                         + "version = '1.0'\n");
         writeFile(
                 dir.resolve(
-                        "src/main/java/org/openjdk/btrace/processor/PlaceholderProcessor.java"),
+                        "src/main/java/io/btrace/processor/PlaceholderProcessor.java"),
                 "package io.btrace.processor;\n"
                         + "public final class PlaceholderProcessor {}\n");
     }
@@ -329,6 +371,11 @@ class BTraceExtensionPluginTest {
     }
 
     private void writeExtensionProject(String extraBuildLogic) throws IOException {
+        writeExtensionProject(extraBuildLogic, true);
+    }
+
+    private void writeExtensionProject(String extraBuildLogic, boolean explicitServices)
+            throws IOException {
         Path dir = projectDir.resolve("ext");
         Files.createDirectories(dir.resolve("src/main/java/com/example/api"));
         Files.createDirectories(dir.resolve("src/main/java/com/example/impl"));
@@ -349,11 +396,22 @@ class BTraceExtensionPluginTest {
                         + "  id = 'test.ext'\n"
                         + "  name = 'Test Extension'\n"
                         + "  description = 'Fixture for extension plugin tests'\n"
-                        + "  services = ['com.example.api.PublicService']\n"
-                        + "  requiredPermissions = ['NONE']\n"
-                        + "  scanPermissions = false\n"
+                        + (explicitServices
+                                ? "  services = ['com.example.api.PublicService']\n"
+                                        + "  requiredPermissions = ['NONE']\n"
+                                        + "  scanPermissions = false\n"
+                                : "")
                         + "}\n"
                         + extraBuildLogic);
+        if (!explicitServices) {
+            writeFile(
+                    dir.resolve("src/main/java/com/example/api/package-info.java"),
+                    "@io.btrace.core.extensions.ExtensionDescriptor(\n"
+                            + "    name = \"test.ext\",\n"
+                            + "    version = \"1.0\",\n"
+                            + "    permissions = {io.btrace.core.extensions.Permission.THREAD_INFO})\n"
+                            + "package com.example.api;\n");
+        }
         writeFile(
                 dir.resolve("src/main/java/com/example/api/PublicValue.java"),
                 "package com.example.api;\n"
@@ -366,6 +424,11 @@ class BTraceExtensionPluginTest {
         writeFile(
                 dir.resolve("src/main/java/com/example/api/PublicService.java"),
                 "package com.example.api;\n"
+                        + (explicitServices
+                                ? ""
+                                : "import io.btrace.core.extensions.Permission;\n"
+                                        + "import io.btrace.core.extensions.ServiceDescriptor;\n"
+                                        + "@ServiceDescriptor(permissions = {Permission.MEMORY_INFO})\n")
                         + "public interface PublicService {\n"
                         + "  PublicValue value();\n"
                         + "}\n");
@@ -424,7 +487,7 @@ class BTraceExtensionPluginTest {
                 "package com.github.jengelman.gradle.plugins.shadow\n"
                         + "import org.gradle.api.tasks.Internal\n"
                         + "import org.gradle.api.tasks.bundling.Jar\n"
-                        + "class ShadowJar extends Jar {\n"
+                        + "abstract class ShadowJar extends Jar {\n"
                         + "  @Internal Object configurations\n"
                         + "  void relocate(String from, String to) {}\n"
                         + "  void minimize() {}\n"
