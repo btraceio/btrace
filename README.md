@@ -157,6 +157,8 @@ jbang btrace <PID> <script.java>
 # ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar
 ```
 
+For launch-time use, review the [startup-mode security boundary](docs/GettingStarted.md#startup-modes-and-the-30-security-boundary). Use `noServer=true` for startup scripts that do not need later client connections; BTrace 3.0 does not support an unauthenticated remote prepared-mode endpoint.
+
 See [Getting Started Guide](docs/GettingStarted.md#jbang-installation-recommended-for-quick-start) for complete JBang documentation and examples.
 
 #### Binary Distribution

@@ -353,7 +353,7 @@ btrace -v 12345 MyTrace.java arg1 arg2
 Start a Java application with BTrace agent and a pre-compiled script:
 
 ```bash
-java -javaagent:btrace.jar=script=<script.class>[,arg1=value1]... YourApp
+java -javaagent:btrace.jar=script=<script.class>,noServer=true[,arg1=value1]... YourApp
 ```
 
 **When to use:**
@@ -367,8 +367,27 @@ java -javaagent:btrace.jar=script=<script.class>[,arg1=value1]... YourApp
 btracec MyTrace.java
 
 # Then run with agent
-java -javaagent:/path/to/btrace.jar=script=MyTrace.class MyApp
+java -javaagent:/path/to/btrace.jar=script=MyTrace.class,noServer=true MyApp
 ```
+
+#### Startup modes and the 3.0 security boundary
+
+BTrace 3.0 distinguishes launch-time startup scripts from prepared mode:
+
+- **Startup-script mode** runs reviewed probes supplied at launch. Use `noServer=true` when no
+  later client connection is needed:
+
+  ```bash
+  java -javaagent:/path/to/btrace.jar=script=MyTrace.class,noServer=true MyApp
+  ```
+
+- **Prepared mode** is required to start an authenticated, loopback-only control endpoint for
+  later probe submission. The 3.0.0 policy permits neither unauthenticated commands nor
+  non-loopback binding.
+
+Prepared mode remains a 3.0.0 release gate. Until the authenticated path is available in a tested
+release, use startup-script mode with `noServer=true`, or use dynamic attach where the target JVM's
+policy permits it. Do not expose a startup command server as a remote diagnostic endpoint.
 
 ### 4. Launcher Mode (btracer)
 
