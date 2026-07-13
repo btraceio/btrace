@@ -34,7 +34,6 @@ import static io.btrace.core.Args.HELP;
 import static io.btrace.core.Args.LIBS;
 import static io.btrace.core.Args.NO_SERVER;
 import static io.btrace.core.Args.OUTPUT;
-import static io.btrace.core.Args.PORT;
 import static io.btrace.core.Args.PROBES;
 import static io.btrace.core.Args.PROBE_DESC_PATH;
 import static io.btrace.core.Args.SCRIPT;
@@ -76,7 +75,6 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.nio.file.FileVisitResult;
@@ -86,6 +84,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -134,7 +133,7 @@ public final class Main {
   private static volatile Long fileRollMilliseconds;
   private static volatile ExtensionLoader extensionLoader;
   private static volatile boolean serverRunning = true;
-  private static ServerSocket serverSocket;
+  private static ControlServer controlServer;
   // Track appended jars to avoid duplicate classpath entries
   private static final Set<Path> BOOT_ADDED = Collections.synchronizedSet(new LinkedHashSet<>());
   private static final Set<Path> SYSTEM_ADDED = Collections.synchronizedSet(new LinkedHashSet<>());
@@ -199,19 +198,25 @@ public final class Main {
       // settings are all built-up; set the logging system properties accordingly
       DebugSupport.initLoggers(settings.isDebug(), log);
 
-      String tmp = argMap.get(NO_SERVER);
-      // noServer is defaulting to true if startup scripts are defined
-      boolean noServer = tmp != null ? Boolean.parseBoolean(tmp) : hasScripts();
       Thread agentThread = null;
-      if (noServer) {
+      if (!shouldStartServer(argMap)) {
         log.debug("noServer is true, server not started");
       } else {
+        System.setProperty("btrace.wireio", String.valueOf(WireIO.VERSION));
+        String scriptOutputFile = settings.getOutputFile();
+        if (scriptOutputFile != null && !scriptOutputFile.isEmpty()) {
+          System.setProperty("btrace.output", scriptOutputFile);
+        }
+        controlServer = ControlServer.open(argMap, "premain".equals(agentMode));
+        serverRunning = true;
+        installServerShutdownHook();
+        ControlServer endpoint = controlServer;
         agentThread =
             new Thread(
                 () -> {
                   BTraceRuntime.enter();
                   try {
-                    startServer();
+                    runServer(endpoint);
                   } finally {
                     BTraceRuntime.leave();
                   }
@@ -234,18 +239,6 @@ public final class Main {
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing unsafe");
       BTraceRuntime.initUnsafe();
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Unsafe initialized");
-      if (agentThread != null) {
-        BTraceRuntime.enter();
-        try {
-          agentThread.setDaemon(true);
-          log.debug("starting agent thread");
-
-          agentThread.start();
-        } finally {
-          BTraceRuntime.leave();
-        }
-      }
-
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Adding class transformer");
       log.debug("Adding class transformer");
       inst.addTransformer(transformer, true);
@@ -286,10 +279,21 @@ public final class Main {
       // initialize extension system after transformer is installed so early app code is not delayed
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing extensions");
       initExtensions();
+      if (agentThread != null) {
+        BTraceRuntime.enter();
+        try {
+          agentThread.setDaemon(true);
+          log.debug("starting agent thread");
+          agentThread.start();
+        } finally {
+          BTraceRuntime.leave();
+        }
+      }
       if (AGENT_DEBUG)
         System.err.println(
             "[BTrace Agent] Initialization complete, " + startedScripts + " scripts started");
     } catch (Throwable t) {
+      shutdownServer();
       // FATAL errors should always be printed
       System.err.println(
           "[BTrace Agent] FATAL: Initialization failed: "
@@ -304,8 +308,11 @@ public final class Main {
     }
   }
 
-  private static boolean hasScripts() {
-    return argMap.containsKey(SCRIPT) || argMap.containsKey(SCRIPT_DIR);
+  static boolean shouldStartServer(ArgsMap args) {
+    String configured = args.get(NO_SERVER);
+    return configured != null
+        ? !Boolean.parseBoolean(configured)
+        : !(args.containsKey(SCRIPT) || args.containsKey(SCRIPT_DIR));
   }
 
   private static final class LogValue {
@@ -1356,64 +1363,62 @@ public final class Main {
 
   // -- Internals only below this point
   @SuppressWarnings("InfiniteLoopStatement")
-  private static void startServer() {
-    int port = BTRACE_DEFAULT_PORT;
-    String p = argMap.get(PORT);
-    if (p != null) {
-      try {
-        port = Integer.parseInt(p);
-      } catch (NumberFormatException exp) {
-        error("invalid port assuming default..");
-      }
+  private static void runServer(ControlServer endpoint) {
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "starting server at {}:{} with authentication {}",
+          endpoint.getAddress().getHostAddress(),
+          endpoint.getPort(),
+          endpoint.isAuthenticationRequired() ? "required" : "disabled");
     }
-    try {
-      if (log.isDebugEnabled()) {
-        log.debug("starting server at port {}", port);
-      }
-      System.setProperty("btrace.wireio", String.valueOf(WireIO.VERSION));
-
-      String scriptOutputFile = settings.getOutputFile();
-      if (scriptOutputFile != null && !scriptOutputFile.isEmpty()) {
-        System.setProperty("btrace.output", scriptOutputFile);
-      }
-      serverSocket = new ServerSocket(port);
-      System.setProperty("btrace.port", String.valueOf(serverSocket.getLocalPort()));
-
-      // Add shutdown hook to close server socket on JVM exit
-      Runtime.getRuntime()
-          .addShutdownHook(
-              new Thread(
-                  () -> {
-                    serverRunning = false;
-                    if (serverSocket != null && !serverSocket.isClosed()) {
-                      try {
-                        serverSocket.close();
-                        log.debug("BTrace server socket closed");
-                      } catch (IOException e) {
-                        log.debug("Error closing server socket", e);
-                      }
-                    }
-                  },
-                  "BTrace Server Shutdown"));
-
-    } catch (IOException ioexp) {
-      log.error("Failed to start BTrace server on port {}", port, ioexp);
-      return;
-    }
-
     while (serverRunning) {
+      Socket sock = null;
+      boolean handedOff = false;
+      byte[] authenticationToken = null;
       try {
         log.debug("waiting for clients");
-        Socket sock = serverSocket.accept();
+        sock = endpoint.accept();
         if (log.isDebugEnabled()) {
-          log.debug("client accepted {}", sock);
+          log.debug("client accepted from {}", sock.getRemoteSocketAddress());
         }
+        authenticationToken = endpoint.copyAuthenticationToken();
         ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
-        Client client = RemoteClient.getClient(ctx, sock, Main::handleNewClient);
+        Client client =
+            RemoteClient.getClient(ctx, sock, authenticationToken, Main::handleNewClient);
+        handedOff = client != null;
       } catch (RuntimeException | IOException re) {
         if (serverRunning) {
-          log.warn("BTrace server accept failed", re);
+          log.warn("BTrace server connection rejected: {}", re.getMessage());
         }
+      } finally {
+        if (authenticationToken != null) {
+          Arrays.fill(authenticationToken, (byte) 0);
+        }
+        if (!handedOff && sock != null) {
+          try {
+            sock.close();
+          } catch (IOException ignored) {
+          }
+        }
+      }
+    }
+  }
+
+  private static void installServerShutdownHook() {
+    Runtime.getRuntime()
+        .addShutdownHook(new Thread(Main::shutdownServer, "BTrace Server Shutdown"));
+  }
+
+  private static synchronized void shutdownServer() {
+    serverRunning = false;
+    ControlServer endpoint = controlServer;
+    controlServer = null;
+    if (endpoint != null && !endpoint.isClosed()) {
+      try {
+        endpoint.close();
+        log.debug("BTrace server closed");
+      } catch (IOException e) {
+        log.debug("Error closing BTrace server", e);
       }
     }
   }

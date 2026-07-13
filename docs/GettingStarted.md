@@ -382,12 +382,27 @@ BTrace 3.0 distinguishes launch-time startup scripts from prepared mode:
   ```
 
 - **Prepared mode** is required to start an authenticated, loopback-only control endpoint for
-  later probe submission. The 3.0.0 policy permits neither unauthenticated commands nor
-  non-loopback binding.
+  later probe submission. Start the agent without a startup script and let the operating system
+  choose the port:
 
-Prepared mode remains a 3.0.0 release gate. Until the authenticated path is available in a tested
-release, use startup-script mode with `noServer=true`, or use dynamic attach where the target JVM's
-policy permits it. Do not expose a startup command server as a remote diagnostic endpoint.
+  ```bash
+  java -javaagent:/path/to/btrace.jar=port=0 MyApp
+  ```
+
+  The agent binds a loopback address, generates an owner-protected token file, and publishes the
+  actual address, port, and token-file path through target JVM properties. A 3.0 client discovers
+  those values through the Attach API when you run `btrace <pid> ...`; the token itself is never a
+  process argument or system property. Generated token files are removed during orderly shutdown.
+
+  Use `authTokenFile=/owner/protected/path` to supply or create credentials at a controlled path,
+  and `bindAddress=127.0.0.1` or `bindAddress=::1` to select a loopback family. Non-loopback and
+  wildcard addresses fail startup. To keep a startup script and accept later authenticated
+  connections, set `noServer=false` explicitly.
+
+Prepared-mode authentication runs before V1 or V2 negotiation and before every operational
+command. Older clients cannot connect to a 3.0 prepared endpoint. Remote prepared-mode operation
+is not supported in 3.0.0; use startup-script mode with `noServer=true` or dynamic attach where the
+target JVM's policy permits it instead of exposing the command server remotely.
 
 #### Optional agent telemetry
 

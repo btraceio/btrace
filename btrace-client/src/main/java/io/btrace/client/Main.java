@@ -272,6 +272,9 @@ public final class Main {
               DUMP_DIR,
               statsdDef);
       if (resumeProbe != null) {
+        if (!hostDefined) {
+          client.discoverPreparedAgent(pid.toString());
+        }
         registerExitHook(client);
         if (con != null) {
           registerSignalHandler(client);

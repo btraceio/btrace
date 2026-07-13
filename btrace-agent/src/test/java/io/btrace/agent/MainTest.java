@@ -17,6 +17,7 @@
 package io.btrace.agent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.btrace.core.ArgsMap;
@@ -58,5 +59,21 @@ class MainTest {
     List<String> scripts = Main.locateScripts(argsMap);
 
     assertEquals(1, scripts.size());
+  }
+
+  @Test
+  void noServerArgumentDisablesEndpoint() {
+    assertFalse(Main.shouldStartServer(new ArgsMap(new String[] {"noServer=true"})));
+  }
+
+  @Test
+  void startupScriptDefaultsToNoServer() {
+    assertFalse(Main.shouldStartServer(new ArgsMap(new String[] {"script=probe.class"})));
+  }
+
+  @Test
+  void explicitServerOverridesStartupScriptDefault() {
+    assertTrue(
+        Main.shouldStartServer(new ArgsMap(new String[] {"script=probe.class", "noServer=false"})));
   }
 }
