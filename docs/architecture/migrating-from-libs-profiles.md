@@ -75,21 +75,9 @@ Build: `./gradlew fatAgentJar`
 
 ### Maven Plugin
 
-```xml
-<plugin>
-    <groupId>io.btrace</groupId>
-    <artifactId>btrace-maven-plugin</artifactId>
-    <version>${btrace.version}</version>
-    <configuration>
-        <outputName>my-btrace-agent</outputName>
-        <extensions>
-            <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
-        </extensions>
-    </configuration>
-</plugin>
-```
-
-Build: `mvn package`
+The Maven fat-agent goal is unavailable in 3.0.0 and fails explicitly. Migrate fat-agent builds to
+the Gradle configuration above; the external Maven plugin remains available for script compilation,
+not 3.0 embedded-extension packaging.
 
 ### Usage
 

@@ -239,74 +239,23 @@ extensions for one whose bundled-probes list contains that name, finds none, and
 error, and no probe. Until that's wired up, use the attach-based flow from Step 4
 (`btrace <PID> Script.java`) for anything you'd otherwise want auto-started.
 
-## Step 6 — Do the same thing with Maven
+## Step 6 — Maven status in 3.0.0
 
-The Maven equivalent is a real goal, `fat-agent`, bound to the `package` phase by default
-(`@Mojo(name = "fat-agent", defaultPhase = LifecyclePhase.PACKAGE)` in `FatAgentMojo.java`). Copy
-the demo pom in:
+Maven fat-agent packaging is withdrawn for 3.0.0. The former goal used a pre-3.0 artifact and
+classdata contract and could report a successful build even though the embedded implementation
+could not load. Invoking `io.btrace:btrace-maven-plugin:3.0.0:fat-agent` now fails with an explicit
+unsupported message instead of producing that partial agent.
 
-```sh
-cp docs/tutorials/demo/fat-agent-pom.xml ~/fat-agent-demo-maven/pom.xml
-cd ~/fat-agent-demo-maven
-mvn package
-```
-
-[fat-agent-pom.xml](demo/fat-agent-pom.xml)'s `<configuration>` block uses the mojo's real
-`@Parameter` field names — `btraceVersion`, `outputName` (default `btrace-agent-fat`),
-`outputDirectory` (default `${project.build.directory}`), `extensions` (a list of
-`groupId:artifactId:version` strings) — confirmed by reading `FatAgentMojo.java`'s field
-declarations directly.
-
-**You should see** these exact log lines among Maven's output (verified: `FatAgentMojo.execute()`'s
-`getLog().info(...)` calls):
-
-```
-[INFO] Building BTrace fat agent JAR...
-[INFO] Resolved btrace-agent: .../btrace-agent-3.0.0.jar
-[INFO] Resolved btrace-boot: .../btrace-boot-3.0.0.jar
-[INFO] Processing extension: io.btrace:btrace-metrics:3.0.0
-[INFO] Created fat agent JAR: .../target/demo-btrace-agent.jar
-[INFO] Embedded 1 extension(s): [btrace-metrics]
-```
-
-> **What just happened?** The goal resolves `io.btrace:btrace-agent` and `io.btrace:btrace-boot` as
-> the base jars, extracts each configured extension's `api`/`impl`-classified artifacts, renames the
-> impl classes to `.classdata`, rewrites the manifest with `BTrace-Embedded-Extensions`, and replaces
-> your project's build artifact with the fat jar (`project.getArtifact().setFile(outputJar)`) — so
-> `target/demo-btrace-agent.jar` is what gets installed/deployed, not a plain `demo-btrace-agent-1.0.0.jar`.
-
-**Heads up — two things this tutorial could *not* confirm work end to end for Maven**, found while
-tracing the mojo against how `btrace-metrics` actually publishes:
-
-1. **Classifier mismatch.** `FatAgentMojo.processExtension()` resolves an extension's implementation
-   via `resolveArtifactWithClassifier(groupId, artifactId, version, "impl")`. But
-   `BTraceExtensionPlugin.groovy`'s `maven-publish` block (the `mavenExtension` publication) only
-   ever attaches classifiers `api`, `api-sources`, `api-javadoc`, and `extension` — there is no plain
-   `impl`-classified artifact published anywhere in this repo (confirmed by grepping for
-   `classifier = 'impl'` across the whole tree: no matches). If that holds for your release too, the
-   mojo's impl lookup fails, is caught, and logged only at `debug` ("No Impl JAR found for
-   ...") — silently producing a fat jar with the extension's API on the bootstrap classpath but no
-   working implementation behind it.
-2. **`.classdata` path mismatch.** Even when an impl jar *is* found, `FatAgentMojo.stageImplClasses()`
-   writes `.classdata` files under `META-INF/btrace-extensions/<extensionId>/impl/...`. But
-   `io.btrace.extension.impl.ClassDataLoader.findClass()` looks up `.classdata` resources by the
-   class's own package path from the jar root (`name.replace('.', '/') + ".classdata"`) — the same
-   flat layout the Gradle plugin produces, not the nested one Maven produces here.
-
-Both are real, source-confirmed gaps in this checkout, not something this tutorial is guessing at —
-but this tutorial cannot rebuild and run the actual 3.0.0 release artifacts to prove or disprove
-them empirically (no network in this environment). Treat the Maven goal's *configuration surface*
-(goal name, parameter names, output naming, manifest rewriting) as verified, and independently
-confirm an embedded extension's implementation actually loads before you rely on the Maven path in
-production. If you hit this, the Gradle plugin's `file()`/`project()` sources (Steps 1–4) don't have
-either gap.
+Use the Gradle workflow in Steps 1–5 for fat agents. The external
+[`btrace-maven`](https://github.com/btraceio/btrace-maven) project remains the Maven integration for
+compiling BTrace scripts; it is not a replacement fat-agent packager.
 
 ## Step 7 — Clean up
 
 `Ctrl+C` the demo app. Remove the scratch directories if you don't want to keep them:
 
 ```sh
-rm -rf ~/fat-agent-demo ~/fat-agent-demo-maven
+rm -rf ~/fat-agent-demo
 ```
 
 ## Troubleshooting
@@ -324,10 +273,8 @@ rm -rf ~/fat-agent-demo ~/fat-agent-demo-maven
   versa)** — see Step 4's callout: embedded and filesystem extensions are gated differently right
   now; embedding bypasses the privileged-permission check that
   [Tutorial 4](04-extensions-and-permissions.md) demonstrates for filesystem extensions.
-- **A probe using `@Injected` against a Maven-built fat jar's embedded service gets a throwing/no-op
-  shim, or the service class can't be found at all** — see Step 6's two callouts; confirm the impl
-  artifact actually resolved (`mvn package -X` and look for "No Impl JAR found") and that its
-  `.classdata` files ended up where `ClassDataLoader` expects them.
+- **The Maven `fat-agent` goal fails as unsupported** — expected for 3.0.0; use the Gradle plugin
+  from this tutorial.
 
 ## Go deeper
 

@@ -328,52 +328,10 @@ jar -tf btrace-dist/build/resources/main/v*/libs/btrace-agent-fat.jar | grep btr
 
 ## BTrace Maven Plugin
 
-For Maven users, a Maven plugin is also available to build fat agent JARs.
-
-### Usage
-
-```xml
-<build>
-    <plugins>
-        <plugin>
-            <groupId>io.btrace</groupId>
-            <artifactId>btrace-maven-plugin</artifactId>
-            <version>${btrace.version}</version>
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>fat-agent</goal>
-                    </goals>
-                </execution>
-            </executions>
-            <configuration>
-                <outputName>my-btrace-agent</outputName>
-                <extensions>
-                    <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
-                    <extension>io.btrace:btrace-statsd:${btrace.version}</extension>
-                </extensions>
-            </configuration>
-        </plugin>
-    </plugins>
-</build>
-```
-
-### Configuration Parameters
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `btraceVersion` | Plugin version | BTrace version to use for base agent/boot JARs |
-| `extensions` | (none) | List of extension coordinates (`groupId:artifactId:version`) |
-| `outputName` | `btrace-agent-fat` | Output file name (without `.jar`) |
-| `outputDirectory` | `${project.build.directory}` | Output directory |
-| `skip` | `false` | Skip execution |
-
-### Build
-
-```bash
-mvn package
-```
-
-The fat agent JAR is created at `target/${outputName}.jar`.
+The in-repository Maven `fat-agent` goal is withdrawn for 3.0.0 and fails explicitly. It targeted
+pre-3.0 artifacts and could create an agent whose embedded implementation classes were not
+loadable. Use the Gradle plugin documented above. The external
+[`btrace-maven`](https://github.com/btraceio/btrace-maven) project continues to support script
+compilation.
 
 See the main [README](../README.md) and [Getting Started Guide](../docs/GettingStarted.md) for usage instructions.

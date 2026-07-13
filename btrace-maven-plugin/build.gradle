@@ -11,27 +11,16 @@ compileJava {
     targetCompatibility = JavaVersion.VERSION_11
 }
 
-description = 'BTrace Maven Plugin for building fat agent JARs with embedded extensions'
+description = 'Compatibility stub for the unsupported BTrace 3.0 Maven fat-agent goal'
 
 dependencies {
     // Maven Plugin API
     compileOnly 'org.apache.maven:maven-plugin-api:3.9.6'
     compileOnly 'org.apache.maven.plugin-tools:maven-plugin-annotations:3.11.0'
-    compileOnly 'org.apache.maven:maven-core:3.9.6'
-    compileOnly 'org.apache.maven:maven-artifact:3.9.6'
-
-    // Maven Resolver (Aether) for dependency resolution
-    compileOnly 'org.apache.maven.resolver:maven-resolver-api:2.0.20'
-    implementation 'org.apache.maven.resolver:maven-resolver-util:1.9.18'
-
-    // JAR manipulation
-    implementation 'org.codehaus.plexus:plexus-archiver:4.9.1'
-    implementation 'org.codehaus.plexus:plexus-io:3.4.2'
 
     // Testing
     testImplementation libs.junit.jupiter
     testImplementation 'org.apache.maven:maven-plugin-api:3.9.6'
-    testImplementation 'org.apache.maven.plugin-tools:maven-plugin-annotations:3.11.0'
 }
 
 // Process the plugin.xml to substitute version (using @token@ format to avoid Maven expression conflicts)

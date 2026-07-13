@@ -19,7 +19,7 @@ These tutorials are hands-on labs; the concept-oriented companion is the
 | 05 | [Let an AI Assistant Debug Your JVM in 10 Minutes](05-mcp-server.md) | wire the BTrace MCP server into an AI coding assistant and run a real diagnostic conversation | ~10 min |
 | 06 | [Write Your Own Extension in 30 Minutes](06-write-your-own-extension.md) | scaffold, build, install, and grant permissions for your own `io.btrace.extension` Gradle-plugin extension | ~25 min |
 | 07 | [Watch Your LLM App Think](07-llm-observability.md) | put a latency budget on an LLM call and read token/latency/cost and budget violations off one combined dashboard | ~10 min |
-| 08 | [One JAR to Rule Them All: Building a BTrace Fat Agent](08-fat-agent.md) | package BTrace plus a real extension into a single `-javaagent` JAR with the Gradle and Maven fat-agent plugins | ~15 min |
+| 08 | [One JAR to Rule Them All: Building a BTrace Fat Agent](08-fat-agent.md) | package BTrace plus a real extension into a single `-javaagent` JAR with the supported Gradle fat-agent plugin | ~15 min |
 | 09 | [BTrace in Kubernetes, the Sidecar Way](09-kubernetes-sidecar.md) | package BTrace into three container variants and attach across a container boundary, as a sidecar or a baked-in `-javaagent` | ~15 min |
 
 ## Coming next
