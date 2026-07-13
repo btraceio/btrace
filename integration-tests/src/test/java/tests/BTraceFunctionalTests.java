@@ -445,7 +445,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
         "resources.Main",
         "btrace/JfrTest.java",
         Completion.untilContains("Main.callA"),
-        30,
+        Completion.lines(30),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {

@@ -219,44 +219,23 @@ public abstract class RuntimeTest {
     timeout = defaultTimeoutMs;
   }
 
-  public void testWithJfr(String testApp, String testScript, int checkLines, ResultValidator v)
-      throws Exception {
-    startJfr = true;
-    test(testApp, testScript, checkLines, v);
-  }
-
-  @SuppressWarnings("DefaultCharset")
-  public void testWithJfr(
-      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
-      throws Exception {
-    startJfr = true;
-    testDynamic(testApp, testScript, cmdArgs, checkLines, v);
-  }
-
   @SuppressWarnings("DefaultCharset")
   public void testWithJfr(
       String testApp,
       String testScript,
       Completion completion,
-      int startupCheckLines,
+      Completion startupCompletion,
       ResultValidator v)
       throws Exception {
     startJfr = true;
     testDynamic(testApp, testScript, completion, v);
-    testStartup(testApp, testScript.replace(".java", ".class"), null, startupCheckLines, v);
+    testStartup(testApp, testScript.replace(".java", ".class"), null, startupCompletion, v);
   }
 
   @SuppressWarnings("DefaultCharset")
-  public void test(String testApp, String testScript, int checkLines, ResultValidator v)
+  public void test(String testApp, String testScript, Completion completion, ResultValidator v)
       throws Exception {
-    test(testApp, testScript, null, checkLines, v);
-  }
-
-  @SuppressWarnings("DefaultCharset")
-  public void test(
-      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
-      throws Exception {
-    test(testApp, testScript, cmdArgs, Completion.lines(checkLines), v);
+    test(testApp, testScript, null, completion, v);
   }
 
   @SuppressWarnings("DefaultCharset")
@@ -268,12 +247,6 @@ public abstract class RuntimeTest {
   }
 
   @SuppressWarnings("DefaultCharset")
-  public void testDynamic(String testApp, String testScript, int checkLines, ResultValidator v)
-      throws Exception {
-    testDynamic(testApp, testScript, null, checkLines, v);
-  }
-
-  @SuppressWarnings("DefaultCharset")
   public void testDynamic(
       String testApp, String testScript, Completion completion, ResultValidator v)
       throws Exception {
@@ -281,29 +254,9 @@ public abstract class RuntimeTest {
   }
 
   @SuppressWarnings("DefaultCharset")
-  public void testDynamic(
-      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
-      throws Exception {
-    testDynamic(testApp, testScript, cmdArgs, Completion.lines(checkLines), v);
-  }
-
-  @SuppressWarnings("DefaultCharset")
-  public void testDynamicOneliner(
-      String testApp, String oneliner, int checkLines, ResultValidator v) throws Exception {
-    testDynamicOneliner(testApp, oneliner, null, checkLines, v);
-  }
-
-  @SuppressWarnings("DefaultCharset")
   public void testDynamicOneliner(
       String testApp, String oneliner, Completion completion, ResultValidator v) throws Exception {
     testDynamicOneliner(testApp, oneliner, null, completion, v);
-  }
-
-  @SuppressWarnings("DefaultCharset")
-  public void testDynamicOneliner(
-      String testApp, String oneliner, String[] cmdArgs, int checkLines, ResultValidator v)
-      throws Exception {
-    testDynamicOneliner(testApp, oneliner, cmdArgs, Completion.lines(checkLines), v);
   }
 
   @SuppressWarnings("DefaultCharset")
@@ -698,12 +651,6 @@ public abstract class RuntimeTest {
     }
 
     v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
-  }
-
-  public void testStartup(
-      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
-      throws Exception {
-    testStartup(testApp, testScript, cmdArgs, Completion.lines(checkLines), v);
   }
 
   public void testStartup(
@@ -1305,17 +1252,6 @@ public abstract class RuntimeTest {
       String pid,
       String trace,
       String[] cmdArgs,
-      int checkLines,
-      StringBuilder stdout,
-      StringBuilder stderr)
-      throws Exception {
-    return attach(pid, trace, cmdArgs, Completion.lines(checkLines), stdout, stderr);
-  }
-
-  private Process attach(
-      String pid,
-      String trace,
-      String[] cmdArgs,
       Completion completion,
       StringBuilder stdout,
       StringBuilder stderr)
@@ -1392,17 +1328,6 @@ public abstract class RuntimeTest {
     }
 
     return p;
-  }
-
-  private Process attachOneliner(
-      String pid,
-      String oneliner,
-      String[] cmdArgs,
-      int checkLines,
-      StringBuilder stdout,
-      StringBuilder stderr)
-      throws Exception {
-    return attachOneliner(pid, oneliner, cmdArgs, Completion.lines(checkLines), stdout, stderr);
   }
 
   private Process attachOneliner(
