@@ -125,5 +125,4 @@ Important consequences:
 
 ## Related Documents
 
-- [BTraceInstrAnalysis](BTraceInstrAnalysis.md) — analysis of the ASM-based instrumentation pipeline
 - [ExtensionInvokeDynamicBridge](ExtensionInvokeDynamicBridge.md) — invokedynamic-based extension linkage
