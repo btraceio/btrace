@@ -234,6 +234,19 @@ public abstract class RuntimeTest {
   }
 
   @SuppressWarnings("DefaultCharset")
+  public void testWithJfr(
+      String testApp,
+      String testScript,
+      Completion completion,
+      int startupCheckLines,
+      ResultValidator v)
+      throws Exception {
+    startJfr = true;
+    testDynamic(testApp, testScript, completion, v);
+    testStartup(testApp, testScript.replace(".java", ".class"), null, startupCheckLines, v);
+  }
+
+  @SuppressWarnings("DefaultCharset")
   public void test(String testApp, String testScript, int checkLines, ResultValidator v)
       throws Exception {
     test(testApp, testScript, null, checkLines, v);
