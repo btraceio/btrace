@@ -86,7 +86,7 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 ### Deployment & Operations
 - **Installation** → [Getting Started: Installation](GettingStarted.md#installation)
 - **Deployment Modes** → [Getting Started: Running BTrace](GettingStarted.md#four-ways-to-run-btrace)
-- **Fat Agent (Single-JAR)** → [Getting Started: Fat Agent](GettingStarted.md#fat-agent-jar-single-jar-deployment), [Architecture](architecture/fat-agent-plugin.md), [Gradle Plugin](../btrace-gradle-plugin/README.md), [Maven Plugin](GettingStarted.md#maven-plugin)
+- **Fat Agent (Single-JAR)** → [Getting Started: Fat Agent](GettingStarted.md#fat-agent-jar-single-jar-deployment), [Architecture](architecture/fat-agent-plugin.md), [Gradle Plugin](../btrace-gradle-plugin/README.md)
 - **Docker & Containers** → [Getting Started: Containers](GettingStarted.md#btrace-in-containers-and-kubernetes)
 - **Kubernetes** → [Getting Started: K8s](GettingStarted.md#btrace-in-containers-and-kubernetes), [FAQ: Microservices](FAQ.md#can-i-use-btrace-with-microservices), [Troubleshooting: K8s](Troubleshooting.md#kubernetes-and-cloud-deployments)
 - **Performance Tuning** → [FAQ: Performance Impact](FAQ.md#whats-the-performance-impact-of-btrace), [Troubleshooting: Performance](Troubleshooting.md#performance-issues)
@@ -132,7 +132,7 @@ BTrace includes 50+ sample scripts demonstrating real-world use cases:
 - **GitHub Repository**: [github.com/btraceio/btrace](https://github.com/btraceio/btrace)
 - **Wiki (External)**: [github.com/btraceio/btrace/wiki](https://github.com/btraceio/btrace/wiki/Home)
 - **Maven Plugin (Script Compilation)**: [github.com/btraceio/btrace-maven](https://github.com/btraceio/btrace-maven)
-- **Maven Plugin (Fat Agent)**: [Gradle Plugin README](../btrace-gradle-plugin/README.md#btrace-maven-plugin)
+- **Maven fat-agent status**: unpublished module removed for 3.0.0; see [Getting Started](GettingStarted.md#maven-builds)
 - **Releases**: [GitHub Releases](https://github.com/btraceio/btrace/releases/latest)
 
 ### Community

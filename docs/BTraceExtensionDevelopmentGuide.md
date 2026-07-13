@@ -376,26 +376,11 @@ java -javaagent:my-btrace-agent.jar MyApp
 - **Version Locking**: Ensure compatible extension versions are bundled together
 - **Cloud-Native**: Perfect for containers and distributed systems
 
-### Maven Plugin
+### Maven builds
 
-For Maven users, the `btrace-maven-plugin` provides equivalent functionality:
-
-```xml
-<plugin>
-    <groupId>io.btrace</groupId>
-    <artifactId>btrace-maven-plugin</artifactId>
-    <version>${btrace.version}</version>
-    <configuration>
-        <extensions>
-            <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
-        </extensions>
-    </configuration>
-</plugin>
-```
-
-Build with `mvn package` to create the fat agent JAR.
-
-See [Fat Agent Plugin Architecture](architecture/fat-agent-plugin.md) for implementation details.
+The unpublished Maven `fat-agent` module was removed for 3.0.0 because it targets the pre-3.0
+extension publication and classdata layout. Use the Gradle fat-agent plugin for embedded
+extensions.
 
 ## Bundled Probes and Zero-Config Auto-Selection
 

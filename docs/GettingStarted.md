@@ -764,35 +764,12 @@ The plugin auto-registers the annotation processor, which generates `JobEvent$Ex
 
 Extensions embedded in a fat agent can automatically activate the right bundled probes by implementing `ExtensionConfigurator`. The agent calls the configurator at startup to detect the environment (driver vs executor, namenode vs datanode, etc.) and enables the matching probes — no `probes=` argument needed. See [Extension Development Guide — Bundled Probes](BTraceExtensionDevelopmentGuide.md#bundled-probes-and-zero-config-auto-selection).
 
-### Maven Plugin
+### Maven builds
 
-For Maven users, a Maven plugin is also available:
-
-```xml
-<plugin>
-    <groupId>io.btrace</groupId>
-    <artifactId>btrace-maven-plugin</artifactId>
-    <version>${btrace.version}</version>
-    <executions>
-        <execution>
-            <goals>
-                <goal>fat-agent</goal>
-            </goals>
-        </execution>
-    </executions>
-    <configuration>
-        <outputName>my-btrace-agent</outputName>
-        <extensions>
-            <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
-            <extension>io.btrace:btrace-statsd:${btrace.version}</extension>
-        </extensions>
-    </configuration>
-</plugin>
-```
-
-Build with `mvn package` to create `target/my-btrace-agent.jar`.
-
-See [Fat Agent Plugin Architecture](architecture/fat-agent-plugin.md) and [Gradle Plugin README](../btrace-gradle-plugin/README.md) for complete documentation.
+The unpublished Maven fat-agent module was removed for 3.0.0 because its pre-3.0 artifact contract
+cannot safely load published 3.0 extensions. Use the
+[`io.btrace.fat-agent` Gradle plugin](../btrace-gradle-plugin/README.md), or deploy the standard
+`io.btrace:btrace` artifact without embedded extensions.
 
 ## Common Pitfalls and Solutions
 
