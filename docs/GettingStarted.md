@@ -348,6 +348,19 @@ btrace -v 12345 MyTrace.java arg1 arg2
 - `-p <port>` - Specify port for communication
 - `-o <file>` - Redirect output to file
 
+Before attaching, inspect readiness without loading an agent or opening the BTrace command socket:
+
+```bash
+btrace doctor <pid>
+btrace doctor <pid> --json
+```
+
+Doctor reads target properties through the Attach API and then detaches. It reports the target
+JDK/vendor, Attach availability, an existing BTrace endpoint, and next-deployment remediation.
+Dynamic-agent loading permission is always reported as `not_tested`, because observing it would
+require the state-changing load that doctor deliberately avoids. Exit codes are stable: `0` ready,
+`2` preparation required, `3` inaccessible, and `4` unexpected failure or invalid invocation.
+
 ### 3. Java Agent Mode (Pre-compiled Scripts)
 
 Start a Java application with BTrace agent and a pre-compiled script:

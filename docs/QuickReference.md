@@ -418,6 +418,23 @@ Attach to running JVM and trace.
 btrace [options] <PID> <script.java> [script-args]
 ```
 
+Read-only readiness diagnostics:
+
+```bash
+btrace doctor <pid> [--json]
+```
+
+Doctor attaches only to read target system properties, then detaches; it never loads an agent or
+opens the BTrace command connection. It distinguishes Attach API availability from dynamic-agent
+loading permission, which is reported as `not_tested`.
+
+| Exit | Status | Meaning |
+| ---: | --- | --- |
+| 0 | ready | A usable BTrace endpoint is published. |
+| 2 | preparation required | The target is readable but has no usable endpoint. |
+| 3 | inaccessible | Attach is unavailable or denied. |
+| 4 | unexpected failure | Invocation or provider failure prevented diagnosis. |
+
 **Common Options:**
 - `--version` - Show the version
 - `-v` - Run in verbose mode

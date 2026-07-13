@@ -32,5 +32,6 @@ class MainTest {
     assertFalse(usage.contains("--boot-jar"));
     assertFalse(usage.contains("--extract-agent"));
     assertTrue(usage.contains("--oneliner"));
+    assertTrue(usage.contains("btrace doctor <pid> [--json]"));
   }
 }

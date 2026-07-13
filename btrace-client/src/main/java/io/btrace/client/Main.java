@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,6 +107,18 @@ public final class Main {
   }
 
   public static void main(String[] args) throws Exception {
+    if (args.length > 0 && "doctor".equals(args[0])) {
+      int exitCode =
+          Doctor.run(
+              Arrays.copyOfRange(args, 1, args.length),
+              new PrintWriter(System.out, true),
+              new PrintWriter(System.err, true));
+      if (exitCode != Doctor.EXIT_READY) {
+        System.exit(exitCode);
+      }
+      return;
+    }
+
     int port = BTRACE_DEFAULT_PORT;
     String host = BTRACE_DEFAULT_HOST;
     String classPath = ".";

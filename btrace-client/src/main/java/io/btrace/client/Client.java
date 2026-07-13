@@ -63,6 +63,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -871,6 +872,9 @@ public class Client {
             }
             continue;
           }
+          if (isDynamicAgentLoadingRestricted(ale)) {
+            throw dynamicAgentLoadFailure(pid, agentPath, ale);
+          }
           throw ale;
         }
       }
@@ -885,12 +889,14 @@ public class Client {
         configureConnection(loadedAgentProperties);
       }
     } catch (RuntimeException | IOException re) {
-      System.err.println("[DEBUG] IOException/RuntimeException during attach:");
-      re.printStackTrace();
+      if (log.isDebugEnabled()) {
+        log.debug("Attach failed for PID {}", pid, re);
+      }
       throw re;
     } catch (Exception exp) {
-      System.err.println("[DEBUG] Exception during attach:");
-      exp.printStackTrace();
+      if (log.isDebugEnabled()) {
+        log.debug("Attach failed for PID {}", pid, exp);
+      }
       throw new IOException("Failed to attach to PID " + pid, exp);
     } finally {
       if (vm != null) {
@@ -900,6 +906,35 @@ public class Client {
         }
       }
     }
+  }
+
+  static boolean isDynamicAgentLoadingRestricted(Throwable failure) {
+    for (Throwable current = failure; current != null; current = current.getCause()) {
+      String message = current.getMessage();
+      if (message == null) {
+        continue;
+      }
+      String normalized = message.toLowerCase(Locale.ROOT);
+      if (normalized.contains("dynamic agent loading is not enabled")
+          || normalized.contains("dynamic agent loading is disabled")
+          || normalized.contains("use -xx:+enabledynamicagentloading")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static IOException dynamicAgentLoadFailure(
+      String pid, String agentPath, AgentLoadException failure) {
+    String message =
+        "Dynamic agent loading was rejected for PID "
+            + pid
+            + ".\nFor the next deployment, relaunch with -XX:+EnableDynamicAgentLoading, or use "
+            + "reviewed prepared mode with -javaagent:"
+            + agentPath
+            + "=port=0.\nBTrace did not inspect the target VM flag state; this guidance is based "
+            + "on the agent-load rejection.";
+    return new IOException(message, failure);
   }
 
   void discoverPreparedAgent(String pid) throws IOException {

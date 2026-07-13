@@ -18,6 +18,7 @@ package io.btrace.client;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.sun.tools.attach.AgentLoadException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -278,6 +279,35 @@ class ClientTest {
     for (byte value : token) {
       assertEquals(0, value);
     }
+  }
+
+  @Test
+  void recognizesRestrictedDynamicAgentLoadingFailure() {
+    AgentLoadException failure =
+        new AgentLoadException(
+            "Dynamic agent loading is not enabled. Use -XX:+EnableDynamicAgentLoading");
+
+    assertTrue(Client.isDynamicAgentLoadingRestricted(failure));
+    assertFalse(
+        Client.isDynamicAgentLoadingRestricted(new AgentLoadException("Agent JAR not found")));
+    assertFalse(
+        Client.isDynamicAgentLoadingRestricted(
+            new AgentLoadException(
+                "EnableDynamicAgentLoading was enabled but agent initialization failed")));
+  }
+
+  @Test
+  void restrictedDynamicAgentGuidanceUsesResolvedAgentPathWithoutClaimingFlagState() {
+    AgentLoadException cause = new AgentLoadException("Dynamic agent loading is disabled");
+
+    IOException failure =
+        Client.dynamicAgentLoadFailure("1234", "/opt/btrace/libs/btrace.jar", cause);
+
+    assertTrue(failure.getMessage().contains("PID 1234"));
+    assertTrue(failure.getMessage().contains("-XX:+EnableDynamicAgentLoading"));
+    assertTrue(failure.getMessage().contains("-javaagent:/opt/btrace/libs/btrace.jar=port=0"));
+    assertTrue(failure.getMessage().contains("did not inspect the target VM flag state"));
+    assertSame(cause, failure.getCause());
   }
 
   private static Object readField(Client client, String name) throws Exception {
