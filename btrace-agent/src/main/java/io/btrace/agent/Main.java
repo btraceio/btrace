@@ -1452,7 +1452,15 @@ public final class Main {
 
   private static void installServerShutdownHook() {
     Runtime.getRuntime()
-        .addShutdownHook(new Thread(Main::shutdownServer, "BTrace Server Shutdown"));
+        .addShutdownHook(
+            new Thread(
+                new Runnable() {
+                  @Override
+                  public void run() {
+                    shutdownServer();
+                  }
+                },
+                "BTrace Server Shutdown"));
   }
 
   private static synchronized void shutdownServer() {
