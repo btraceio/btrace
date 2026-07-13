@@ -21,6 +21,7 @@ Get up and running in 5 minutes with installation, your first script, and common
 | **[MCP Server](MCPServer.md)** | Using BTrace from AI clients via the Model Context Protocol | AI-assisted debugging, LLM integrations |
 | **[Migration Guide 2.x → 3.0](Migration-2.x-to-3.0.md)** | Upgrading from BTrace 2.x: package rename, Java version policy, breaking changes | Existing 2.x users |
 | **[Extension Development Guide](BTraceExtensionDevelopmentGuide.md)** | Writing, packaging, and publishing BTrace extensions | Extension authors, platform maintainers |
+| **[3.0 Release Checklist](ReleaseChecklist.md)** | JDK, protocol, security, packaging, and RC go/no-go gates | Release maintainers |
 
 ## Learning Paths
 

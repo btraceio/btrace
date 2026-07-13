@@ -28,8 +28,6 @@ import org.gradle.api.file.FileCollection
  * </pre>
  */
 class BTraceFatAgentExtension {
-    static final String DEFAULT_REGISTRY_URL = 'https://btraceio.github.io/btrace-extensions/registry/extensions.json'
-
     private final Project project
     private final List<ExtensionSource> extensionSources = []
     private final ProbeBundleSpec probeBundle
@@ -58,16 +56,9 @@ class BTraceFatAgentExtension {
     /** Property name for filtering extensions when autoDiscover is true */
     String filterProperty = 'embedExtensions'
 
-    /** Extension registry URL for resolving registry("id") sources. */
-    String registryUrl = System.getProperty('btrace.extensions.registry', DEFAULT_REGISTRY_URL)
-
-    /** Local cache file for the extension registry document. */
-    File registryCacheFile
-
     BTraceFatAgentExtension(Project project) {
         this.project = project
         this.outputDir = project.layout.buildDirectory.dir('libs').get().asFile
-        this.registryCacheFile = project.layout.buildDirectory.file('registry/extensions.json').get().asFile
         this.probeBundle = new ProbeBundleSpec(project)
     }
 

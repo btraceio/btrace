@@ -40,7 +40,7 @@ The release workflow performs these steps:
 
 1. **Validation**: Verifies inputs, checks tag doesn't exist
 2. **Build & Test**: Runs full build and unit tests
-3. **Integration Tests**: Tests on JDK 8, 11, 17, 21
+3. **Integration Tests**: Tests on JDK 8, 11, 17, 21, 25, and the configured OpenJDK EA build
 4. **Prepare Release**: Creates/updates release branch, updates version, creates tag
 5. **Stage to Maven Central**: Uploads artifacts to staging (requires manual release)
 6. **⏸️ MANUAL CHECKPOINT**: You must release artifacts via Central Portal
@@ -58,6 +58,10 @@ The final tag and GitHub release depend on the release-smoke job. Failures uploa
 target, client, compiler, migration, and doctor logs so packaging and readiness failures can be
 diagnosed without rerunning the release. The gate reads artifact availability only; it never uses
 download counts or network analytics.
+
+Every release must also complete the [BTrace 3.0 Release Gate Checklist](ReleaseChecklist.md). The
+workflow records exact commands, full logs, and filtered Markdown summaries for the focused module,
+plugin, formatting, clean masked-JAR, distribution, and target-JDK matrix gates.
 
 ### Manual Release Step
 

@@ -25,14 +25,18 @@ dependencies {
     implementation 'org.ow2.asm:asm:9.9.1'
     implementation 'org.ow2.asm:asm-tree:9.9.1'
 
-    // Testing — version pinned here to match the root project's version catalog (settings.gradle).
-    // Note: this is an included build and cannot access the root project's 'libs' version catalog.
+    // This is an included build and cannot access the root version catalog. Keep its tests on the
+    // last Java 8-compatible JUnit line; the production plugin remains Java 11-compatible.
     testImplementation gradleTestKit()
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.14.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 test {
+    // Gradle 9 TestKit cannot start its nested build from a Java 11 test worker.
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
     useJUnitPlatform()
 }
 
