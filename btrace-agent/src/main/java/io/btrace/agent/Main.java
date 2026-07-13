@@ -258,6 +258,21 @@ public final class Main {
         }
       }
 
+      // Force io.btrace.instr.ClassFilter's static initializer to run to completion now, on
+      // this single thread, before the transformer below can possibly be reached by any other
+      // thread. ClassFilter.isSensitiveClass(...) is the first thing BTraceTransformer.transform()
+      // calls for every class definition in the JVM (any thread) once installed -- including
+      // classes loaded by the async Telemetry HTTP call (started above) and by this agent's own
+      // connection-handling thread. ClassFilter's own <clinit> force-loads several ASM classes,
+      // which are themselves subject to the same transformer once it's installed. If two threads
+      // raced to trigger ClassFilter's <clinit> for the first time post-registration, the JVM's
+      // class-initialization lock (JLS 12.4.2) plus the recursive ASM class loads inside it could
+      // deadlock against another thread's classloader lock (observed: the telemetry thread stuck
+      // in ClassFilter.<clinit>, the connection-handling thread stuck holding a classloader lock
+      // waiting on the same class-init to finish). Doing it here, single-threaded, before
+      // addTransformer, makes this race structurally impossible.
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Warming up ClassFilter");
+      io.btrace.instr.ClassFilter.isSensitiveClass("");
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Adding class transformer");
       log.debug("Adding class transformer");
       inst.addTransformer(transformer, true);
