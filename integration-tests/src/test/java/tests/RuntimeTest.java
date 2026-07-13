@@ -256,8 +256,15 @@ public abstract class RuntimeTest {
   public void test(
       String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
       throws Exception {
-    testDynamic(testApp, testScript, cmdArgs, checkLines, v);
-    testStartup(testApp, testScript.replace(".java", ".class"), cmdArgs, checkLines, v);
+    test(testApp, testScript, cmdArgs, Completion.lines(checkLines), v);
+  }
+
+  @SuppressWarnings("DefaultCharset")
+  public void test(
+      String testApp, String testScript, String[] cmdArgs, Completion completion, ResultValidator v)
+      throws Exception {
+    testDynamic(testApp, testScript, cmdArgs, completion, v);
+    testStartup(testApp, testScript.replace(".java", ".class"), cmdArgs, completion, v);
   }
 
   @SuppressWarnings("DefaultCharset")
@@ -696,6 +703,12 @@ public abstract class RuntimeTest {
   public void testStartup(
       String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
       throws Exception {
+    testStartup(testApp, testScript, cmdArgs, Completion.lines(checkLines), v);
+  }
+
+  public void testStartup(
+      String testApp, String testScript, String[] cmdArgs, Completion completion, ResultValidator v)
+      throws Exception {
     System.out.println("=== On-Startup");
     Path agentPath = locateAgent();
     if (agentPath == null) {
@@ -759,89 +772,73 @@ public abstract class RuntimeTest {
     StringBuilder stderr = new StringBuilder();
     AtomicInteger ret = new AtomicInteger(-1);
 
-    BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
-
-    CountDownLatch testAppLatch = new CountDownLatch(1);
-    CountDownLatch stdoutLatch = new CountDownLatch(checkLines);
     AtomicReference<String> pidStringRef = new AtomicReference<>();
 
-    Thread outT =
-        new Thread(
-            () -> {
-              try {
-                String l;
-                while ((l = stdoutReader.readLine()) != null) {
-                  stdout.append(l).append(System.lineSeparator());
-                  if (l.startsWith("ready:")) {
-                    pidStringRef.set(l.split("\\:")[1]);
-                    testAppLatch.countDown();
-                  } else {
-                    stdoutLatch.countDown();
-                  }
-                  if (debugTestApp) {
-                    System.out.println("[traced app] " + l);
-                  }
-                }
+    // The target app prints "ready:<pid>" as its very first stdout line, unconditionally (see
+    // resources.TestApp#start) -- on-startup mode has no separate client process to synchronize
+    // with, so this is purely a side channel to recover the target's PID for the JFR-dump step
+    // below. Intercept it ahead of the real completion so that bootstrap line never counts toward
+    // the caller's completion condition, matching the previous hand-rolled reader's behavior of
+    // excluding "ready:" lines from checkLines.
+    Completion readyAwareCompletion =
+        new Completion() {
+          @Override
+          public boolean onStdout(String line) {
+            if (line.startsWith("ready:")) {
+              pidStringRef.set(line.split(":")[1]);
+              return false;
+            }
+            return completion.onStdout(line);
+          }
 
-              } catch (Exception e) {
-                e.printStackTrace(System.err);
-              }
-            },
-            "STDOUT Reader");
-    outT.setDaemon(true);
+          @Override
+          public boolean onStderr(String line) {
+            return completion.onStderr(line);
+          }
 
-    BufferedReader stderrReader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-
-    Thread errT =
-        new Thread(
-            () -> {
-              try {
-                String l = null;
-                while ((l = stderrReader.readLine()) != null) {
-                  if (l.contains("SLF4J")
-                      || l.contains("Server VM warning")
-                      || l.contains("XML")
-                      || l.contains("Successfully started BTrace probe")
-                      || l.contains("terminally deprecated method in sun.misc.Unsafe")
-                      || l.contains("sun.misc.Unsafe::objectFieldOffset")
-                      || l.contains("sun.misc.Unsafe::arrayBaseOffset")
-                      || l.contains("Please consider reporting this to the maintainers of class")
-                      || l.contains("org.jctools.util.UnsafeAccess")
-                      || l.contains("ASM verification requested for ")
-                      || l.contains("ASM verification OK for ")
-                      || l.contains("A restricted method")
-                      || l.contains("has been called by")
-                      || l.contains("enable-native-access")
-                      || l.contains("Restricted methods will be blocked")) {
-                    continue;
-                  }
-                  stderr.append(l).append(System.lineSeparator());
-                  if (l.contains("Server VM warning")
-                      || l.contains("XML libraries not available")) {
-                    continue;
-                  }
-                  if (debugTestApp) {
-                    System.err.println("[traced app] " + l);
-                  }
-                  testAppLatch.countDown();
-                  for (int i = 0; i < checkLines; i++) {
-                    stdoutLatch.countDown();
-                  }
-                }
-              } catch (Exception e) {
-                e.printStackTrace(System.err);
-              }
-            },
-            "STDERR Reader");
-    errT.setDaemon(true);
-
-    outT.start();
-    errT.start();
+          @Override
+          public String describe() {
+            return completion.describe();
+          }
+        };
 
     // Startup tests need extra time: the target JVM must start, load the agent, instrument all
     // matching classes, and then print output. Use 4× the dynamic-attach timeout.
-    testAppLatch.await(timeout * 4, TimeUnit.MILLISECONDS);
-    stdoutLatch.await(timeout * 4, TimeUnit.MILLISECONDS);
+    long startupTimeoutMs = timeout * 4;
+    boolean completed =
+        OutputPump.run(
+            p,
+            readyAwareCompletion,
+            startupTimeoutMs,
+            debugBTrace,
+            Arrays.asList(
+                "SLF4J",
+                "Server VM warning",
+                "XML",
+                "Successfully started BTrace probe",
+                "terminally deprecated method in sun.misc.Unsafe",
+                "sun.misc.Unsafe::objectFieldOffset",
+                "sun.misc.Unsafe::arrayBaseOffset",
+                "Please consider reporting this to the maintainers of class",
+                "org.jctools.util.UnsafeAccess",
+                "ASM verification requested for ",
+                "ASM verification OK for ",
+                "A restricted method",
+                "has been called by",
+                "enable-native-access",
+                "Restricted methods will be blocked"),
+            Collections.emptyList(),
+            stdout,
+            stderr);
+    if (!completed) {
+      System.out.println(
+          "[harness] timed out after "
+              + startupTimeoutMs
+              + "ms waiting for "
+              + completion.describe()
+              + "; stdout so far:\n"
+              + stdout);
+    }
     // Allow some time for late BTrace output to flush in on-startup mode.
     try {
       Thread.sleep(1000L);
@@ -890,8 +887,6 @@ public abstract class RuntimeTest {
       if (!p.waitFor(10, TimeUnit.SECONDS)) {
         p.destroyForcibly();
       }
-      outT.join(5000);
-      errT.join(5000);
     }
   }
 

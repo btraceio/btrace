@@ -75,7 +75,8 @@ public class ManifestLibsTests extends RuntimeTest {
         "resources.Main",
         "traces/TraceAllTest.class",
         null,
-        5,
+        // Same script and marker as BTraceFunctionalTests.testTraceAll.
+        Completion.untilContains("[invocations="),
         (stdout, stderr, retcode, jfrFile) -> {
           assertFalse(stdout.contains("FAILED"), "Script should not have failed");
           assertTrue(stderr.isEmpty(), "Non-empty stderr");

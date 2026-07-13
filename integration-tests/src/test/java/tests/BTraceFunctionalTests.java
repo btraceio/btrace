@@ -280,7 +280,11 @@ public class BTraceFunctionalTests extends RuntimeTest {
         "resources.Main",
         "traces/TraceAllTest.class",
         null,
-        10,
+        // TraceAllTest's @OnTimer handler only prints once it has observed at least one traced
+        // invocation, so "[invocations=" is a real content marker (unlike testOSMBean's client
+        // banner problem) rather than framework bootstrap noise -- wait for it directly instead
+        // of guessing at a line count.
+        Completion.untilContains("[invocations="),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -589,7 +593,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
           "resources.ThreadSpawner",
           "traces/ThreadStart.class",
           null,
-          20,
+          // Same marker as the dynamic=true branch above.
+          Completion.untilContains("starting testThread"),
           new ResultValidator() {
             @Override
             public void validate(String stdout, String stderr, int retcode, String jfrFile) {
