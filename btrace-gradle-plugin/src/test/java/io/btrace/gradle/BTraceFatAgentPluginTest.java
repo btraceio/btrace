@@ -309,6 +309,8 @@ class BTraceFatAgentPluginTest {
                         + "tasks.named('stageProbes') { dependsOn 'compileBundledProbe' }\n"
                         + "btraceFatAgent {\n"
                         + "  agentJarTask = 'jar'\n"
+                        + "  manifestAttributes['Premain-Class'] = 'io.btrace.agent.Main'\n"
+                        + "  manifestAttributes['Agent-Class'] = 'io.btrace.agent.Main'\n"
                         + "  bundledProbes {\n"
                         + "    from layout.buildDirectory.dir('compiled-probes').get().asFile\n"
                         + "    include 'com.example.NestedProbe'\n"
