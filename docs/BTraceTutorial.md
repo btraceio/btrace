@@ -1885,7 +1885,7 @@ MCP (Model Context Protocol) is a protocol that lets AI assistants call external
 
 #### How the BTrace MCP server works
 
-The BTrace MCP server runs as a local subprocess on the same machine as the target JVM. The AI client starts and manages the server process; you do not need to keep a terminal open for it. When the AI calls a BTrace tool, the server forwards the request to the BTrace agent (or attaches one if none is present) and returns the result. Because the server only connects to local JVMs, and because BTrace's safety model — no loops, no allocation, no exceptions, no field assignment — still applies to every probe, the AI cannot break or hang the target application.
+The BTrace MCP server runs as a local subprocess on the same machine as the target JVM. The AI client starts and manages the server process; you do not need to keep a terminal open for it. When the AI calls a BTrace tool, the server forwards the request to the BTrace agent (or attaches one if none is present) and returns the result. Because the server only connects to local JVMs, and because BTrace's safety model still applies to every probe — no loops, no field writes, no thread creation, and only whitelisted method calls — the AI can observe the target application in detail but cannot alter its behavior. These restrictions bound resource use rather than eliminate it: implicit allocation (autoboxing, string concatenation) is permitted, and a recursive helper is limited only by the thread stack, so probes are constrained but not guaranteed allocation-free.
 
 #### Starting the server manually
 
@@ -2006,7 +2006,7 @@ Probe stopped and removed from PID 12345.
 
 #### Security note
 
-The BTrace MCP server only attaches to JVMs on the local machine; it cannot connect to remote processes. Every probe the AI deploys goes through BTrace's standard verifier, which enforces the same restrictions as any other BTrace script: no loops, no object allocation, no exceptions, no field writes. The AI can observe your application in detail but cannot alter its behavior or cause it to crash.
+The BTrace MCP server only attaches to JVMs on the local machine; it cannot connect to remote processes. Every probe the AI deploys goes through BTrace's standard verifier, which enforces the same restrictions as any other BTrace script: no loops, no field writes, no thread creation, and only whitelisted method calls. The AI can observe your application in detail but cannot alter its behavior. These restrictions bound resource use rather than eliminate it — implicit allocation (autoboxing, string concatenation) is permitted and a recursive helper is limited only by the thread stack — so probes cannot corrupt application state but are not guaranteed to be allocation-free.
 
 ## Lesson 14 - Packaging: Fat Agents and Containers
 

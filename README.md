@@ -117,9 +117,9 @@ Tips:
 - Prefer IPv4 if your environment has odd local IPs: set `GRADLE_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"`.
 - Run specific modules:
   - Runtime: `./gradlew :btrace-runtime:test`
-  - Extension: `./gradlew :btrace-extension:test`
+  - Core (incl. extension SPI): `./gradlew :btrace-core:test`
   - Compiler: `./gradlew :btrace-compiler:test`
-  - Instr: `./gradlew :btrace-instr:test`
+  - Agent (incl. instrumentation): `./gradlew :btrace-agent:test`
 - Update instrumentor golden files when bytecode output changes: `./gradlew test -PupdateTestData`.
 
 Integration tests (optional):
