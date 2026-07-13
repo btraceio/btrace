@@ -275,7 +275,20 @@ public abstract class RuntimeTest {
 
   @SuppressWarnings("DefaultCharset")
   public void testDynamicOneliner(
+      String testApp, String oneliner, Completion completion, ResultValidator v) throws Exception {
+    testDynamicOneliner(testApp, oneliner, null, completion, v);
+  }
+
+  @SuppressWarnings("DefaultCharset")
+  public void testDynamicOneliner(
       String testApp, String oneliner, String[] cmdArgs, int checkLines, ResultValidator v)
+      throws Exception {
+    testDynamicOneliner(testApp, oneliner, cmdArgs, Completion.lines(checkLines), v);
+  }
+
+  @SuppressWarnings("DefaultCharset")
+  public void testDynamicOneliner(
+      String testApp, String oneliner, String[] cmdArgs, Completion completion, ResultValidator v)
       throws Exception {
     System.out.println("=== Dynamic attach (oneliner)");
     if (forceDebug) {
@@ -400,7 +413,7 @@ public abstract class RuntimeTest {
         }
       }
 
-      Process client = attachOneliner(pid, oneliner, cmdArgs, checkLines, stdout, stderr);
+      Process client = attachOneliner(pid, oneliner, cmdArgs, completion, stdout, stderr);
 
       System.out.println("Detached.");
 
@@ -425,7 +438,13 @@ public abstract class RuntimeTest {
           } else {
             jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
           }
-          jcmdPb.start().waitFor();
+          Process jcmdProcess = jcmdPb.start();
+          // jcmd attaches to the target JVM's own Attach Listener thread, which BTrace's own
+          // attach may have left stuck -- bound the wait so a jammed attach mechanism can never
+          // hang the whole test run indefinitely.
+          if (!jcmdProcess.waitFor(10, TimeUnit.SECONDS)) {
+            jcmdProcess.destroyForcibly();
+          }
         } catch (Exception e) {
           e.printStackTrace(System.err);
         }
@@ -617,7 +636,13 @@ public abstract class RuntimeTest {
           } else {
             jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
           }
-          jcmdPb.start().waitFor();
+          Process jcmdProcess = jcmdPb.start();
+          // jcmd attaches to the target JVM's own Attach Listener thread, which BTrace's own
+          // attach may have left stuck -- bound the wait so a jammed attach mechanism can never
+          // hang the whole test run indefinitely.
+          if (!jcmdProcess.waitFor(10, TimeUnit.SECONDS)) {
+            jcmdProcess.destroyForcibly();
+          }
         } catch (Exception ignore) {
           // best effort
         }
@@ -829,7 +854,17 @@ public abstract class RuntimeTest {
       } else {
         jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
       }
-      jcmdPb.start().waitFor();
+      try {
+        Process jcmdProcess = jcmdPb.start();
+        // jcmd attaches to the target JVM's own Attach Listener thread, which the on-startup
+        // agent's attach may have left stuck -- bound the wait so a jammed attach mechanism can
+        // never hang the whole test run indefinitely.
+        if (!jcmdProcess.waitFor(10, TimeUnit.SECONDS)) {
+          jcmdProcess.destroyForcibly();
+        }
+      } catch (Exception e) {
+        e.printStackTrace(System.err);
+      }
     }
 
     try {
