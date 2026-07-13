@@ -73,7 +73,7 @@ jobs:
       create_branch: ${{ steps.check-branch.outputs.create }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: ${{ inputs.commit_sha }}
           fetch-depth: 0
@@ -154,20 +154,20 @@ jobs:
       cache-key: ${{ steps.cache-key.outputs.key }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: ${{ inputs.commit_sha }}
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11
 
       - name: Set up Java
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
         with:
           java-version: 11
           distribution: temurin
@@ -185,7 +185,7 @@ jobs:
           echo "key=${key}" >> $GITHUB_OUTPUT
 
       - name: Cache Gradle
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -238,7 +238,7 @@ jobs:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: ${{ inputs.commit_sha }}
 
@@ -262,7 +262,7 @@ jobs:
           echo 'y' | sdk install java 11.0.31-tem
 
       - name: Cache Gradle
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -310,7 +310,7 @@ jobs:
       release_sha: ${{ steps.commit.outputs.sha }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: ${{ inputs.commit_sha }}
           fetch-depth: 0
@@ -379,20 +379,20 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout RC tag
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: ${{ env.RC_TAG }}
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11
 
       - name: Set up Java
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
         with:
           java-version: 11
           distribution: temurin
@@ -404,7 +404,7 @@ jobs:
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Cache Gradle
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -503,7 +503,7 @@ jobs:
     steps:
       - name: Checkout jbang-catalog
         continue-on-error: true
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           repository: btraceio/jbang-catalog
           token: ${{ secrets.JBANG_CATALOG_PAT || secrets.GITHUB_TOKEN }}
@@ -565,7 +565,7 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout at release SHA
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: ${{ needs.prepare-release.outputs.release_sha }}
           fetch-depth: 0
@@ -604,20 +604,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: ${{ inputs.dry_run == true && inputs.commit_sha || env.RC_TAG }}
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11
 
       - name: Set up Java
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
         with:
           java-version: 11
           distribution: temurin
@@ -665,7 +665,7 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
@@ -705,7 +705,7 @@ jobs:
           echo "skip_notes=${SKIP_NOTES}" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -732,20 +732,20 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout release tag
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: ${{ env.RELEASE_TAG }}
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-11
 
       - name: Set up Java
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
         with:
           java-version: 11
           distribution: temurin
@@ -773,7 +773,7 @@ jobs:
     if: ${{ inputs.release_type != 'patch' && inputs.dry_run != true }}
     steps:
       - name: Checkout develop
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: develop
           fetch-depth: 0
@@ -807,7 +807,7 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout release branch
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: ${{ inputs.release_branch }}
           fetch-depth: 0
@@ -853,7 +853,7 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           fetch-depth: 0
 

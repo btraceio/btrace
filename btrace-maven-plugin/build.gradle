@@ -21,7 +21,7 @@ dependencies {
     compileOnly 'org.apache.maven:maven-artifact:3.9.6'
 
     // Maven Resolver (Aether) for dependency resolution
-    compileOnly 'org.apache.maven.resolver:maven-resolver-api:1.9.18'
+    compileOnly 'org.apache.maven.resolver:maven-resolver-api:2.0.20'
     implementation 'org.apache.maven.resolver:maven-resolver-util:1.9.18'
 
     // JAR manipulation
