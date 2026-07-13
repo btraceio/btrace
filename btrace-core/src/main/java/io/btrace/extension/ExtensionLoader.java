@@ -92,7 +92,21 @@ public abstract class ExtensionLoader {
     // Bytecode verifier (instr) uses this to check @Injected fields without loading classes.
     // Runtime reflection in Client#validateDeclaredServices complements this by checking
     // actual loadability and module/classloader access in the target JVM.
-    ServiceDeclarationRegistry.setResolver(fqcn -> instance.findExtensionForService(fqcn) != null);
+    //
+    // Deliberately an anonymous class, not a lambda: this runs during -javaagent premain(),
+    // before the JVM's own java.lang.invoke bootstrap is guaranteed complete. A lambda here
+    // triggers invokedynamic linkage this early, which can race the agent's own server thread
+    // doing the same and throw ClassCircularityError (java/lang/invoke/MethodHandle$1). See
+    // io.btrace.instr.InvokeBootstrapWarmup, which forces that bootstrap to finish
+    // single-threaded before this method runs; this anonymous class is defense-in-depth for
+    // this specific known-hot call site.
+    ServiceDeclarationRegistry.setResolver(
+        new ServiceDeclarationRegistry.Resolver() {
+          @Override
+          public boolean isDeclaredService(String fqcn) {
+            return instance.findExtensionForService(fqcn) != null;
+          }
+        });
 
     // Discover all available extensions
     if (log.isDebugEnabled()) {
