@@ -46,11 +46,18 @@ The release workflow performs these steps:
 6. **⏸️ MANUAL CHECKPOINT**: You must release artifacts via Central Portal
 7. **Wait for Maven Central**: Polls until artifacts are available (30 min timeout)
 8. **Build Distributions**: Creates tar.gz, zip, deb, rpm packages
-9. **GitHub Release**: Creates release with artifacts and changelog
-10. **SDKMan Update**: Announces new version to SDKMan
-11. **JBang**: Automatic - uses Maven Central artifacts
-12. **Version Bumps**: Updates develop and release branch to next snapshots
-13. **Milestones**: Creates/closes milestone, associates merged PRs
+9. **Release Smoke**: Exercises acquisition, first-trace, prepared, migration, extension, protocol,
+   archive, container, version, and license paths against the release candidate
+10. **GitHub Release**: Creates release with artifacts and changelog
+11. **SDKMan Update**: Announces new version to SDKMan
+12. **JBang**: Verifies both the Maven coordinate and catalog alias
+13. **Version Bumps**: Updates develop and release branch to next snapshots
+14. **Milestones**: Creates/closes milestone, associates merged PRs
+
+The final tag and GitHub release depend on the release-smoke job. Failures upload the individual
+target, client, compiler, migration, and doctor logs so packaging and readiness failures can be
+diagnosed without rerunning the release. The gate reads artifact availability only; it never uses
+download counts or network analytics.
 
 ### Manual Release Step
 
@@ -86,6 +93,15 @@ DRY_RUN=true ./scripts/release.sh minor
 ```
 
 Or use the GitHub Actions UI to trigger with `dry_run: true`.
+
+To run the live portion locally after building from a clean checkout:
+
+```bash
+./gradlew clean :btrace-dist:btraceJar :btrace-dist:fatAgentJar :btrace-dist:explodeExtensions
+./gradlew :btrace-dist:releaseSmoke
+```
+
+The smoke task requires JDK 11+, Bash, Python 3, and a local JVM that permits Attach API access.
 
 ## Maven Central
 
@@ -137,8 +153,7 @@ For major releases, `sdkMajorRelease` is used; for minor/patch, `sdkMinorRelease
 
 ## JBang
 
-JBang automatically picks up new versions from Maven Central. No manual action required.
-Once Maven Central has the artifacts, users can run:
+Once Maven Central has the artifact and the catalog is updated, users can run:
 
 ```bash
 jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
@@ -147,6 +162,8 @@ jbang btrace@btraceio <PID> script.java
 
 Release checklist for JBang:
 - The release workflow updates `btraceio/jbang-catalog` automatically when `JBANG_CATALOG_PAT` is configured.
+- The release-smoke gate executes both `jbang io.btrace:btrace:<version> --version` and the
+  `btrace@btraceio` catalog alias before the final release tag is created.
 - If the workflow cannot push, update `btrace.java` in `btraceio/jbang-catalog` to the new major/minor version.
 
 ## Rollback Procedure

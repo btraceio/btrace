@@ -34,6 +34,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
+import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import org.gradle.testkit.runner.BuildResult;
@@ -582,6 +583,45 @@ class BTraceFatAgentPluginTest {
     }
 
     @Test
+    @DisplayName("Extension API manifest metadata is retained when staging")
+    void extensionApiManifestMetadataRetained() throws IOException {
+        Path extensionDir = projectDir.resolve("sample-extension");
+        Files.createDirectories(extensionDir);
+        createExtensionApiJar(extensionDir.resolve("sample-api.jar"));
+        createExtensionImplJar(extensionDir.resolve("sample-impl.jar"));
+
+        writeFile(buildFile,
+            "plugins {\n" +
+            "    id 'io.btrace.fat-agent'\n" +
+            "}\n" +
+            "\n" +
+            "btraceFatAgent {\n" +
+            "    autoDiscover = false\n" +
+            "    embedExtensions {\n" +
+            "        file('sample-extension')\n" +
+            "    }\n" +
+            "}\n"
+        );
+
+        BuildResult result = createRunner()
+            .withArguments("stageExtensions")
+            .build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":stageExtensions").getOutcome());
+        String properties = Files.readString(
+            projectDir.resolve(
+                "build/fat-agent-staging/META-INF/btrace-extensions/sample/extension.properties"));
+        assertTrue(properties.contains("services=com.example.SampleService"));
+        assertTrue(properties.contains("permissions=THREADS"));
+        assertTrue(properties.contains("btrace.api.version=3.0+"));
+        assertEquals(
+            "com.example.SampleServiceImpl",
+            Files.readString(
+                projectDir.resolve(
+                    "build/fat-agent-staging/META-INF/services/com.example.SampleService")));
+    }
+
+    @Test
     @DisplayName("Registry source fails clearly for unknown extension id")
     void registrySourceFailsForUnknownId() throws IOException {
         Path registry = projectDir.resolve("extensions.json");
@@ -659,6 +699,31 @@ class BTraceFatAgentPluginTest {
             // The manifest is the only content needed by this packaging fixture.
         }
         return extensionDir;
+    }
+
+    private void createExtensionApiJar(Path jarPath) throws IOException {
+        Manifest manifest = new Manifest();
+        Attributes attributes = manifest.getMainAttributes();
+        attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        attributes.putValue("BTrace-Extension-Id", "sample");
+        attributes.putValue("BTrace-Extension-Version", "1.2.3");
+        attributes.putValue("BTrace-Extension-Name", "Sample extension");
+        attributes.putValue("BTrace-API-Version", "3.0+");
+        attributes.putValue("BTrace-Java-Version", "8+");
+        attributes.putValue("BTrace-Extension-Services", "com.example.SampleService");
+        attributes.putValue("BTrace-Extension-Permissions", "THREADS");
+        try (JarOutputStream ignored =
+            new JarOutputStream(Files.newOutputStream(jarPath), manifest)) {
+            // The staging regression only needs canonical manifest metadata.
+        }
+    }
+
+    private void createExtensionImplJar(Path jarPath) throws IOException {
+        try (JarOutputStream jar = new JarOutputStream(Files.newOutputStream(jarPath))) {
+            jar.putNextEntry(new JarEntry("META-INF/services/com.example.SampleService"));
+            jar.write("com.example.SampleServiceImpl".getBytes(StandardCharsets.UTF_8));
+            jar.closeEntry();
+        }
     }
 
     private void writeFile(File file, String content) throws IOException {

@@ -187,8 +187,9 @@ The fat agent JAR manifest includes:
 
 | Attribute | Description |
 |-----------|-------------|
-| `Premain-Class` | `io.btrace.agent.Main` |
-| `Agent-Class` | `io.btrace.agent.Main` |
+| `Premain-Class` | `io.btrace.boot.Loader` |
+| `Agent-Class` | `io.btrace.boot.Loader` |
+| `BTrace-Agent-Main` | `io.btrace.agent.Main` |
 | `Can-Redefine-Classes` | `true` |
 | `Can-Retransform-Classes` | `true` |
 | `Boot-Class-Path` | `btrace-agent-fat.jar` (self-reference) |

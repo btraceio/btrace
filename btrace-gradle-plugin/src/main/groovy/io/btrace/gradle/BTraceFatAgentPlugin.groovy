@@ -192,10 +192,9 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
 
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-            // Configure output directory
-            doFirst {
-                destinationDirectory.set(extension.outputDir)
-            }
+            // Declare the output during task configuration so Gradle can track it. The extension
+            // remains lazy because consumers commonly set outputDir after applying the plugin.
+            destinationDirectory.set(project.layout.dir(project.provider { extension.outputDir }))
 
             // Include staged extension content
             from(stagingDir) {
@@ -205,11 +204,15 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             // Configure manifest
             manifest {
                 attributes(
-                    'Premain-Class': 'io.btrace.agent.Main',
-                    'Agent-Class': 'io.btrace.agent.Main',
+                    'Premain-Class': 'io.btrace.boot.Loader',
+                    'Agent-Class': 'io.btrace.boot.Loader',
+                    'Main-Class': 'io.btrace.boot.Loader',
                     'Can-Redefine-Classes': 'true',
                     'Can-Retransform-Classes': 'true',
-                    'Boot-Class-Path': "${extension.baseName}.jar"
+                    'Boot-Class-Path': "${extension.baseName}.jar",
+                    'BTrace-Version': project.version,
+                    'BTrace-Agent-Main': 'io.btrace.agent.Main',
+                    'BTrace-Client-Main': 'io.btrace.client.Main'
                 )
             }
 
@@ -277,6 +280,7 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             try {
                 def ext = source.resolve()
                 if (ext != null) {
+                    ext.hydrateFromApiManifest()
                     resolved << ext
                     project.logger.info("[fat-agent] Resolved extension: ${ext}")
                 }
@@ -307,8 +311,6 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
      * Stage a resolved extension to the staging directory.
      */
     private void stageExtension(Project project, File stagingDir, ResolvedExtension ext) {
-        def manifestMetadata = readApiManifestMetadata(ext)
-
         // Stage API classes as .class files (for bootstrap)
         if (ext.apiJar?.exists()) {
             project.copy {
@@ -327,6 +329,17 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
                 include '**/*.class'
                 rename '(.+)\\.class', '$1.classdata'
             }
+            def declaredServices = (ext.metadata?.getProperty('services') ?: '')
+                .split(',')
+                .collect { it.trim() }
+                .findAll { !it.isEmpty() }
+            if (!declaredServices.isEmpty()) {
+                project.copy {
+                    from project.zipTree(ext.implJar)
+                    into stagingDir
+                    include declaredServices.collect { "META-INF/services/${it}" }
+                }
+            }
             project.logger.info("[fat-agent] Staged impl (as .classdata) from: ${ext.implJar.name}")
         }
 
@@ -334,56 +347,46 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
         def extMetaDir = new File(stagingDir, "META-INF/btrace-extensions/${ext.id}")
         extMetaDir.mkdirs()
 
+        def properties = new LinkedHashMap<String, String>()
+        properties.id = ext.id
+        properties.version = ext.version
+        properties.name = ext.metadata?.getProperty('name') ?: ext.id
+        properties.description = ext.metadata?.getProperty('description') ?: ''
+        ['btrace.api.version', 'java.version', 'services', 'requires.extensions', 'permissions',
+         'exports', 'configurator', 'probes'].each { key ->
+            def value = ext.metadata?.getProperty(key)
+            if (value != null) properties[key] = value
+        }
+
+        def escapeProperty = { String value ->
+            def escaped = new StringBuilder()
+            value.toCharArray().eachWithIndex { char character, int index ->
+                switch (character) {
+                    case '\\': escaped.append('\\\\'); break
+                    case '\t': escaped.append('\\t'); break
+                    case '\n': escaped.append('\\n'); break
+                    case '\r': escaped.append('\\r'); break
+                    case '\f': escaped.append('\\f'); break
+                    case ' ': escaped.append(index == 0 ? '\\ ' : ' '); break
+                    default:
+                        int codePoint = (int) character
+                        if (codePoint < 0x20 || codePoint > 0x7e) {
+                            escaped.append(String.format('\\u%04x', codePoint))
+                        } else {
+                            escaped.append(character)
+                        }
+                }
+            }
+            escaped.toString()
+        }
         def propsFile = new File(extMetaDir, 'extension.properties')
-        propsFile.text = """\
-id=${ext.id}
-version=${ext.version}
-name=${manifestMetadata.name}
-description=${manifestMetadata.description}
-btrace.api.version=${manifestMetadata.btraceApiVersion}
-java.version=${manifestMetadata.javaVersion}
-services=${manifestMetadata.services}
-requires.extensions=${manifestMetadata.requiresExtensions}
-permissions=${manifestMetadata.permissions}
-"""
+        propsFile.withWriter('ISO-8859-1') { writer ->
+            properties.each { key, value ->
+                writer.write("${key}=${escapeProperty(value)}\n")
+            }
+        }
 
         project.logger.info("[fat-agent] Created extension.properties for ${ext.id}")
-    }
-
-    /**
-     * Reads metadata from the API JAR that a filesystem repository would use. Permission metadata
-     * is mandatory: silently replacing a missing attribute with an empty set would let embedded
-     * packaging bypass the privileged-extension policy.
-     */
-    private Map<String, String> readApiManifestMetadata(ResolvedExtension ext) {
-        if (ext.apiJar == null || !ext.apiJar.isFile()) {
-            throw new GradleException(
-                "[fat-agent] Cannot embed extension '${ext.id}': API JAR is missing, so permission metadata cannot be transferred")
-        }
-
-        try (JarFile apiJar = new JarFile(ext.apiJar)) {
-            def attrs = apiJar.manifest?.mainAttributes
-            def permissions = attrs?.getValue('BTrace-Extension-Permissions')
-            if (permissions == null) {
-                throw new GradleException(
-                    "[fat-agent] Cannot embed extension '${ext.id}': ${ext.apiJar.name} is missing BTrace-Extension-Permissions; refusing to default permissions to an empty set")
-            }
-            return [
-                name: attrs.getValue('BTrace-Extension-Name') ?: ext.metadata?.getProperty('name') ?: ext.id,
-                description: attrs.getValue('BTrace-Extension-Description') ?: ext.metadata?.getProperty('description') ?: '',
-                btraceApiVersion: attrs.getValue('BTrace-API-Version') ?: '3.0+',
-                javaVersion: attrs.getValue('BTrace-Java-Version') ?: '8+',
-                services: attrs.getValue('BTrace-Extension-Services') ?: '',
-                requiresExtensions: attrs.getValue('BTrace-Extension-Requires') ?: '',
-                permissions: permissions
-            ]
-        } catch (GradleException e) {
-            throw e
-        } catch (Exception e) {
-            throw new GradleException(
-                "[fat-agent] Cannot read permission metadata for extension '${ext.id}' from ${ext.apiJar}: ${e.message}",
-                e)
-        }
     }
 
     /**

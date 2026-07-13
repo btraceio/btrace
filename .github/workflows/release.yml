@@ -560,7 +560,7 @@ jobs:
   # ============================================================
   finalize-tag:
     name: Finalize Release Tag
-    needs: [prepare-release, wait-for-maven]
+    needs: [prepare-release, release-smoke]
     runs-on: ubuntu-latest
     if: ${{ inputs.dry_run != true }}
     steps:
@@ -634,9 +634,9 @@ jobs:
           VERSION="${{ inputs.release_version }}"
           sed -i "s/project.version = '.*'/project.version = '${VERSION}'/" common.gradle
 
-      - name: Build distribution packages
+      - name: Build distribution packages from a clean tree
         run: |
-          ./gradlew :btrace-dist:build --no-daemon
+          ./gradlew clean :btrace-dist:build --no-daemon
 
       - name: List artifacts
         run: |
@@ -654,6 +654,101 @@ jobs:
             btrace-dist/build/distributions/btrace-v${{ inputs.release_version }}-sdkman-bin.zip
             btrace-dist/build/distributions/*.deb
             btrace-dist/build/distributions/*.rpm
+
+  # ============================================================
+  # Job 6b: Acquisition paths and first-trace release smoke tests
+  # ============================================================
+  release-smoke:
+    name: Release Acquisition and First Trace
+    needs: [prepare-release, wait-for-maven, update-jbang-catalog, build-distributions]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: ${{ inputs.dry_run != true }}
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ needs.prepare-release.outputs.release_sha }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Download release distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: release-distributions
+          path: release-distributions
+
+      - name: Extract binary distribution
+        run: |
+          mkdir -p release-candidate
+          unzip -q "release-distributions/btrace-v${RELEASE_VERSION}-bin.zip" -d release-candidate
+
+      - name: Build fat agent from the release commit
+        run: |
+          ./gradlew clean :btrace-dist:fatAgentJar :btrace-dist:explodeExtensions --no-daemon
+
+      - name: Download Maven release metadata
+        run: |
+          mkdir -p release-metadata
+          curl --fail --show-error --silent --retry 6 --retry-delay 10 \
+            "https://repo1.maven.org/maven2/io/btrace/btrace/${RELEASE_VERSION}/btrace-${RELEASE_VERSION}.pom" \
+            --output release-metadata/btrace.pom
+
+      - name: Build release container from the candidate distribution
+        run: |
+          mkdir -p release-container/btrace
+          cp -R release-candidate/. release-container/btrace/
+          cp docker/docker-entrypoint.sh release-container/
+          docker build \
+            --build-arg "BTRACE_VERSION=${RELEASE_VERSION}" \
+            --tag "btrace-release-smoke:${RELEASE_VERSION}" \
+            --file docker/Dockerfile \
+            release-container
+
+      - name: Verify archive, Maven, manifest, version, and container metadata
+        run: |
+          scripts/verify-release-artifacts.sh \
+            --distribution release-candidate \
+            --sdkman-archive "release-distributions/btrace-v${RELEASE_VERSION}-sdkman-bin.zip" \
+            --maven-pom release-metadata/btrace.pom \
+            --container-image "btrace-release-smoke:${RELEASE_VERSION}" \
+            --version "${RELEASE_VERSION}"
+
+      - name: Run built-distribution smoke matrix
+        run: |
+          TMPDIR="${RUNNER_TEMP}" scripts/release-smoke.sh \
+            --distribution release-candidate \
+            --fat-agent btrace-dist/build/resources/main/v${RELEASE_VERSION}/libs/btrace-agent-fat.jar \
+            --version "${RELEASE_VERSION}" \
+            --keep-work
+
+      - name: Verify Maven coordinate and JBang catalog alias
+        run: |
+          curl -Ls https://sh.jbang.dev | bash -s - app setup
+          export PATH="$HOME/.jbang/bin:$PATH"
+          jbang "io.btrace:btrace:${RELEASE_VERSION}" --version | tee jbang-coordinate.log
+          grep -F "${RELEASE_VERSION}" jbang-coordinate.log
+          jbang catalog add --name btraceio \
+            https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
+          jbang btrace@btraceio --version | tee jbang-catalog.log
+          grep -F "${RELEASE_VERSION}" jbang-catalog.log
+
+      - name: Upload release-smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-smoke-diagnostics
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/btrace-release-smoke.*/logs
+            jbang-*.log
 
   # ============================================================
   # Job 7: Create GitHub Release

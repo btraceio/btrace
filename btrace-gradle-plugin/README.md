@@ -256,8 +256,9 @@ The fat agent JAR contains:
 btrace-agent-fat.jar
 ├── META-INF/
 │   ├── MANIFEST.MF
-│   │   ├── Premain-Class: io.btrace.agent.Main
-│   │   ├── Agent-Class: io.btrace.agent.Main
+│   │   ├── Premain-Class: io.btrace.boot.Loader
+│   │   ├── Agent-Class: io.btrace.boot.Loader
+│   │   ├── BTrace-Agent-Main: io.btrace.agent.Main
 │   │   ├── Boot-Class-Path: btrace-agent-fat.jar
 │   │   └── BTrace-Embedded-Extensions: ext1,ext2,ext3
 │   └── btrace-extensions/
