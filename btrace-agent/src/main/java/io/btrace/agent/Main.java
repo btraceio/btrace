@@ -249,18 +249,6 @@ public final class Main {
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing unsafe");
       BTraceRuntime.initUnsafe();
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Unsafe initialized");
-      if (agentThread != null) {
-        BTraceRuntime.enter();
-        try {
-          agentThread.setDaemon(true);
-          log.debug("starting agent thread");
-
-          agentThread.start();
-        } finally {
-          BTraceRuntime.leave();
-        }
-      }
-
       // Force io.btrace.instr.ClassFilter's static initializer to run to completion now, on
       // this single thread, before the transformer below can possibly be reached by any other
       // thread. ClassFilter.isSensitiveClass(...) is the first thing BTraceTransformer.transform()
