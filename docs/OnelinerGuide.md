@@ -353,7 +353,7 @@ btrace -n 'com.myapp.Service::operation @return if duration>0ms { print return }
 
 ## Limitations
 
-Current limitations of Alternative 1 (Minimal) oneliners:
+Current limitations of oneliners:
 
 1. **Single probe point** - Cannot have multiple probes in one oneliner
 2. **No aggregations** - Cannot use histograms, averages, etc.
@@ -362,7 +362,7 @@ Current limitations of Alternative 1 (Minimal) oneliners:
 5. **Simple filters only** - No AND/OR logic in filters
 6. **No state** - Cannot maintain variables across invocations
 
-**Future enhancements (Alternative 2):**
+**Potential future enhancements:**
 - Multi-probe support: `probe1 | probe2 | probe3`
 - Aggregations: `@hist=histogram; ... { @hist << duration by method }`
 - CALL location: `@call:TargetClass::targetMethod`

@@ -25,6 +25,7 @@ import java.net.ServerSocket;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tests.harness.Completion;
 
 /**
  * Integration tests for Extension lifecycle management.
@@ -58,7 +59,7 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
         "resources.Main",
         "btrace/ExtensionLifecycleFullTest.java",
         new String[] {"extensionCloseTest=true"},
-        10,
+        Completion.untilContains("LIFECYCLE: extension method called"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -79,7 +80,7 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
         "resources.Main",
         "btrace/ExtensionLifecycleErrorTest.java",
         new String[] {"extensionCloseTest=true"},
-        10,
+        Completion.untilContains("LIFECYCLE: extension method called", "Triggering error exit"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -102,7 +103,8 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
         "resources.Main",
         "btrace/ExtensionLifecycleMultipleTest.java",
         new String[] {"extensionCloseTest=true"},
-        10,
+        Completion.untilContains(
+            "LIFECYCLE: printer extension called", "LIFECYCLE: metrics extension called"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
