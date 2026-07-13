@@ -6,6 +6,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.file.DuplicatesStrategy
+import java.util.jar.JarFile
 
 /**
  * Gradle plugin for building fat agent JARs with embedded extensions.
@@ -244,6 +245,8 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
      * Stage a resolved extension to the staging directory.
      */
     private void stageExtension(Project project, File stagingDir, ResolvedExtension ext) {
+        def manifestMetadata = readApiManifestMetadata(ext)
+
         // Stage API classes as .class files (for bootstrap)
         if (ext.apiJar?.exists()) {
             project.copy {
@@ -273,11 +276,52 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
         propsFile.text = """\
 id=${ext.id}
 version=${ext.version}
-name=${ext.metadata?.getProperty('name') ?: ext.id}
-description=${ext.metadata?.getProperty('description') ?: ''}
+name=${manifestMetadata.name}
+description=${manifestMetadata.description}
+btrace.api.version=${manifestMetadata.btraceApiVersion}
+java.version=${manifestMetadata.javaVersion}
+services=${manifestMetadata.services}
+requires.extensions=${manifestMetadata.requiresExtensions}
+permissions=${manifestMetadata.permissions}
 """
 
         project.logger.info("[fat-agent] Created extension.properties for ${ext.id}")
+    }
+
+    /**
+     * Reads metadata from the API JAR that a filesystem repository would use. Permission metadata
+     * is mandatory: silently replacing a missing attribute with an empty set would let embedded
+     * packaging bypass the privileged-extension policy.
+     */
+    private Map<String, String> readApiManifestMetadata(ResolvedExtension ext) {
+        if (ext.apiJar == null || !ext.apiJar.isFile()) {
+            throw new GradleException(
+                "[fat-agent] Cannot embed extension '${ext.id}': API JAR is missing, so permission metadata cannot be transferred")
+        }
+
+        try (JarFile apiJar = new JarFile(ext.apiJar)) {
+            def attrs = apiJar.manifest?.mainAttributes
+            def permissions = attrs?.getValue('BTrace-Extension-Permissions')
+            if (permissions == null) {
+                throw new GradleException(
+                    "[fat-agent] Cannot embed extension '${ext.id}': ${ext.apiJar.name} is missing BTrace-Extension-Permissions; refusing to default permissions to an empty set")
+            }
+            return [
+                name: attrs.getValue('BTrace-Extension-Name') ?: ext.metadata?.getProperty('name') ?: ext.id,
+                description: attrs.getValue('BTrace-Extension-Description') ?: ext.metadata?.getProperty('description') ?: '',
+                btraceApiVersion: attrs.getValue('BTrace-API-Version') ?: '3.0+',
+                javaVersion: attrs.getValue('BTrace-Java-Version') ?: '8+',
+                services: attrs.getValue('BTrace-Extension-Services') ?: '',
+                requiresExtensions: attrs.getValue('BTrace-Extension-Requires') ?: '',
+                permissions: permissions
+            ]
+        } catch (GradleException e) {
+            throw e
+        } catch (Exception e) {
+            throw new GradleException(
+                "[fat-agent] Cannot read permission metadata for extension '${ext.id}' from ${ext.apiJar}: ${e.message}",
+                e)
+        }
     }
 
     /**
