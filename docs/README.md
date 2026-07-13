@@ -112,8 +112,8 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 - **v2 Binary Protocol** → [Version 2 Protocol Architecture](architecture/Version2ProtocolArchitecture.md) — custom binary serialization
 - **Extension Framework** → [Extension invokedynamic Bridge](architecture/ExtensionInvokeDynamicBridge.md), [Extension Configuration](architecture/ExtensionConfiguration.md), [Extension Manifest](architecture/ExtensionManifestFormat.md), [Extension Storage](architecture/ExtensionStorageDesign.md)
 - **Extension Catalog** → [Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for packaging and distribution
-- **Instrumentation** → [BTrace Instrumentation Analysis](architecture/BTraceInstrAnalysis.md)
 - **Instrumentation Backends (ASM / ClassFile API)** → [Instrumentation Backends](architecture/InstrumentationBackends.md) — automatic backend selection for future JDK class files
+- **Agent Library Attributes** → [Agent Manifest Library Attributes](architecture/agent-manifest-libs.md) — declaring boot/system JARs via the agent manifest
 
 ### Hands-On Tutorials
 
