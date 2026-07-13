@@ -136,6 +136,11 @@ The agent takes a list of comma separated arguments.
 
 The scripts to be run must have already been compiled to bytecode (a *.class* file) by __btracec__.
 
+For a launch-time script that needs no later client connection, set `noServer=true`. BTrace 3.0
+does not treat an unauthenticated startup command server as prepared mode; prepared mode requires
+authentication and loopback-only binding. Until that path is available in a tested release, use
+startup-script mode with `noServer=true` or dynamic attach where JVM policy permits it.
+
 ###### Using `btracer'
 
 `btracer [opts] <pre-compiled-btrace.class> <vm-arg> <application-args>`

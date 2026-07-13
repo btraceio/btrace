@@ -532,23 +532,24 @@ btracep MyTrace.class
 ### Java Agent Mode
 Start app with BTrace agent directly.
 ```bash
-java -javaagent:/path/to/btrace.jar=script=<script.class>[,arg=value]... YourApp
+java -javaagent:/path/to/btrace.jar=script=<script.class>,noServer=true[,arg=value]... YourApp
 ```
 
 **Agent Parameters:**
 - `script=<path>` - BTrace script class file
 - `scriptdir=<dir>` - Directory to load scripts from
 - `port=<port>` - Communication port
-- `noServer=true` - Don't start command server
+- `noServer=true` - Don't start the command server; use for startup scripts that need no later
+  client connection
 - `bootClassPath=<path>` - Additional boot classpath
 
 **Examples:**
 ```bash
-# Basic agent mode
-java -javaagent:btrace.jar=script=MyTrace.class MyApp
+# Startup script with no command endpoint
+java -javaagent:btrace.jar=script=MyTrace.class,noServer=true MyApp
 
-# With custom port
-java -javaagent:btrace.jar=script=MyTrace.class,port=2020 MyApp
+# With debug logging and no command endpoint
+java -javaagent:btrace.jar=script=MyTrace.class,noServer=true,debug=true MyApp
 ```
 
 ### Wire Protocol
