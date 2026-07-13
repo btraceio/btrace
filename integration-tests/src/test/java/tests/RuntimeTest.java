@@ -677,6 +677,9 @@ public abstract class RuntimeTest {
     String jfrFile = null;
     List<String> args =
         new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", targetAppCp));
+    if (cmdArgs != null && cmdArgs.length > 0) {
+      args.addAll(Arrays.asList(cmdArgs));
+    }
     if (permissionsFile != null) {
       args.add("-Dbtrace.permissions=" + permissionsFile);
     }
