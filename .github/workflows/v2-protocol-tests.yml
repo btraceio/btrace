@@ -38,11 +38,11 @@ jobs:
             sdk: 21.0.11-tem
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-21
@@ -53,16 +53,16 @@ jobs:
       # (see btrace-core/build.gradle).
       - name: Set up JDK 21 (Gradle runner)
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
         with:
           java-version: 21
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Cache Gradle packages
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             ~/.gradle/caches
@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload Test Reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-reports-java-${{ matrix.java }}
           retention-days: 7
@@ -109,11 +109,11 @@ jobs:
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'test:v2-protocol'))
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-21
@@ -121,13 +121,13 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
         with:
           java-version: 21
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Run Protocol Negotiation Tests
         run: |
@@ -145,7 +145,7 @@ jobs:
 
       - name: Upload Negotiation Test Reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: negotiation-test-reports
           retention-days: 7
@@ -162,11 +162,11 @@ jobs:
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'test:v2-protocol'))
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-21
@@ -174,13 +174,13 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
         with:
           java-version: 21
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Run Edge Case Tests
         run: |
@@ -201,7 +201,7 @@ jobs:
 
       - name: Upload Edge Case Reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: edge-case-reports
           retention-days: 7
@@ -214,11 +214,11 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[benchmark]')
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-21
@@ -226,13 +226,13 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
         with:
           java-version: 21
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Run Quick JMH Benchmarks (warmup=1, iterations=2, fork=1)
         run: |
@@ -244,7 +244,7 @@ jobs:
 
       - name: Upload JMH Results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: jmh-results
           retention-days: 30
@@ -276,11 +276,11 @@ jobs:
             agent: "v2"
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-21
@@ -288,13 +288,13 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
         with:
           java-version: 21
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Test ${{ matrix.scenario.name }} Compatibility
         run: |
@@ -305,7 +305,7 @@ jobs:
 
       - name: Upload Compatibility Reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: compatibility-${{ matrix.scenario.name }}
           retention-days: 7
@@ -319,7 +319,7 @@ jobs:
     if: always()
     steps:
       - name: Download All Test Reports
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           path: test-reports
 
@@ -368,11 +368,11 @@ jobs:
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'test:v2-protocol'))
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Cache Java binaries
         id: cache-java
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-21
@@ -380,20 +380,20 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
         with:
           java-version: 21
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Run Tests with Coverage
         run: |
           ./gradlew :btrace-core:test jacocoTestReport
 
       - name: Upload Coverage Reports
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-reports
           retention-days: 30
