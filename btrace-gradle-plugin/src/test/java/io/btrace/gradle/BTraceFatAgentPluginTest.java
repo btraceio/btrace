@@ -26,11 +26,16 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import java.util.jar.Attributes;
 import java.util.jar.JarFile;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.TaskOutcome;
@@ -504,6 +509,79 @@ class BTraceFatAgentPluginTest {
     }
 
     @Test
+    @DisplayName("Embedded packaging transfers privileged permission metadata")
+    void embeddedPackagingTransfersPermissions() throws IOException {
+        Path extensionDir = writeExtensionFixture("NETWORK");
+        writeFile(
+                buildFile,
+                "plugins { id 'io.btrace.fat-agent' }\n"
+                        + "btraceFatAgent {\n"
+                        + "    embedExtensions { file('"
+                        + extensionDir.toString().replace("\\", "/")
+                        + "') }\n"
+                        + "}\n");
+
+        BuildResult result = createRunner().withArguments("stageExtensions").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":stageExtensions").getOutcome());
+        Properties staged = new Properties();
+        try (InputStream input =
+                Files.newInputStream(
+                        projectDir.resolve(
+                                "build/fat-agent-staging/META-INF/btrace-extensions/privileged-test/extension.properties"))) {
+            staged.load(input);
+        }
+        assertEquals("NETWORK", staged.getProperty("permissions"));
+        assertEquals("test.ext.Service", staged.getProperty("services"));
+    }
+
+    @Test
+    @DisplayName("Embedded packaging preserves an explicitly empty permission set")
+    void embeddedPackagingPreservesEmptyPermissions() throws IOException {
+        Path extensionDir = writeExtensionFixture("");
+        writeFile(
+                buildFile,
+                "plugins { id 'io.btrace.fat-agent' }\n"
+                        + "btraceFatAgent {\n"
+                        + "    embedExtensions { file('"
+                        + extensionDir.toString().replace("\\", "/")
+                        + "') }\n"
+                        + "}\n");
+
+        BuildResult result = createRunner().withArguments("stageExtensions").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":stageExtensions").getOutcome());
+        Properties staged = new Properties();
+        try (InputStream input =
+                Files.newInputStream(
+                        projectDir.resolve(
+                                "build/fat-agent-staging/META-INF/btrace-extensions/privileged-test/extension.properties"))) {
+            staged.load(input);
+        }
+        assertEquals("", staged.getProperty("permissions"));
+    }
+
+    @Test
+    @DisplayName("Embedded packaging fails closed when permission metadata is missing")
+    void embeddedPackagingRejectsMissingPermissions() throws IOException {
+        Path extensionDir = writeExtensionFixture(null);
+        writeFile(
+                buildFile,
+                "plugins { id 'io.btrace.fat-agent' }\n"
+                        + "btraceFatAgent {\n"
+                        + "    embedExtensions { file('"
+                        + extensionDir.toString().replace("\\", "/")
+                        + "') }\n"
+                        + "}\n");
+
+        BuildResult result = createRunner().withArguments("stageExtensions").buildAndFail();
+
+        assertTrue(result.getOutput().contains("missing BTrace-Extension-Permissions"));
+        assertTrue(
+                result.getOutput().contains("refusing to default permissions to an empty set"));
+    }
+
+    @Test
     @DisplayName("Registry source fails clearly for unknown extension id")
     void registrySourceFailsForUnknownId() throws IOException {
         Path registry = projectDir.resolve("extensions.json");
@@ -554,6 +632,33 @@ class BTraceFatAgentPluginTest {
                         + "'\n"
                         + "  }\n"
                         + "}\n");
+    }
+
+    private Path writeExtensionFixture(String permissions) throws IOException {
+        Path extensionDir = projectDir.resolve("privileged-extension");
+        Files.createDirectories(extensionDir);
+        Files.writeString(
+                extensionDir.resolve("extension.properties"),
+                "id=privileged-test\nversion=1.0.0\n",
+                StandardCharsets.UTF_8);
+
+        Manifest manifest = new Manifest();
+        Attributes attributes = manifest.getMainAttributes();
+        attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        attributes.putValue("BTrace-Extension-Id", "privileged-test");
+        attributes.putValue("BTrace-Extension-Version", "1.0.0");
+        attributes.putValue("BTrace-Extension-Name", "Privileged test");
+        attributes.putValue("BTrace-Extension-Services", "test.ext.Service");
+        if (permissions != null) {
+            attributes.putValue("BTrace-Extension-Permissions", permissions);
+        }
+        try (OutputStream output =
+                        Files.newOutputStream(
+                                extensionDir.resolve("privileged-test-api.jar"));
+                JarOutputStream ignored = new JarOutputStream(output, manifest)) {
+            // The manifest is the only content needed by this packaging fixture.
+        }
+        return extensionDir;
     }
 
     private void writeFile(File file, String content) throws IOException {
