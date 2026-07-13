@@ -414,18 +414,24 @@ There are two activation modes:
 
 ### Declaring Bundled Probes
 
-List probe class simple names in `extension.properties`:
+Declare the compiled probe directory and exact binary names in the fat-agent build:
 
-```properties
-probes=SparkJobTracer,SparkStageTracer,SparkExecutorTracer
+```groovy
+btraceFatAgent {
+    bundledProbes {
+        from layout.buildDirectory.dir('compiled-probes').get().asFile
+        include 'org.example.spark.SparkJobTracer'
+        include 'org.example.spark.SparkStageTracer'
+    }
+}
 ```
 
-The corresponding `.class` files must be present in the fat agent JAR under:
+The corresponding `.class` files are stored in the fat agent JAR under:
 ```
-META-INF/btrace-probes/{probe-simple-name}.class
+META-INF/btrace-probes/{binary-name-as-package-path}.class
 ```
 
-The fat agent plugin stages them automatically when you use `bundledProbes {}` in `btraceFatAgent`.
+Both explicit `probes=` selection and configurator selection resolve this same canonical location.
 
 ### Implementing a Configurator
 

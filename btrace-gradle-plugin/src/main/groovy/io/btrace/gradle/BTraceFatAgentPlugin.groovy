@@ -6,6 +6,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.file.DuplicatesStrategy
+import javax.lang.model.SourceVersion
 
 /**
  * Gradle plugin for building fat agent JARs with embedded extensions.
@@ -85,7 +86,7 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             group = 'BTrace Fat Agent'
             description = 'Stages bundled probes for fat agent JAR'
 
-            outputs.dir(new File(stagingDir, 'probes'))
+            outputs.dir(new File(stagingDir, 'META-INF/btrace-probes'))
 
             doLast {
                 def probeSpec = extension.probeBundle
@@ -94,32 +95,65 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
                 }
 
                 def probesDir = new File(stagingDir, 'META-INF/btrace-probes')
+                project.delete(probesDir)
                 probesDir.mkdirs()
+
+                def toProbePath = { String binaryName ->
+                    validateProbeBinaryName(binaryName)
+                    return binaryName.replace('.', '/') + '.class'
+                }
+                def includePaths = probeSpec.includes.collect(toProbePath)
+                def excludePaths = probeSpec.excludes.collect(toProbePath)
 
                 // Copy pre-compiled probes
                 probeSpec.probeDirs.each { dir ->
-                    if (dir.exists()) {
-                        project.copy {
-                            from dir
-                            into probesDir
-                            include '**/*.class'
-                            if (!probeSpec.includes.isEmpty()) {
-                                include probeSpec.includes.collect { "${it}.class" }
-                            }
-                            if (!probeSpec.excludes.isEmpty()) {
-                                exclude probeSpec.excludes.collect { "${it}.class" }
-                            }
-                        }
-                        project.logger.info("[fat-agent] Staged probes from: ${dir}")
+                    if (!dir.isDirectory()) {
+                        throw new GradleException(
+                            "[fat-agent] Bundled probe directory does not exist: ${dir}")
                     }
+                    project.copy {
+                        from dir
+                        into probesDir
+                        include '**/*.class'
+                        if (!includePaths.isEmpty()) {
+                            include includePaths
+                        }
+                        if (!excludePaths.isEmpty()) {
+                            exclude excludePaths
+                        }
+                    }
+                    project.logger.info("[fat-agent] Staged probes from: ${dir}")
                 }
 
                 // Compile source probes if configured
                 if (probeSpec.hasSourceProbes()) {
                     compileProbes(project, probeSpec, probesDir)
                 }
+
+                def stagedNames = [] as Set
+                probesDir.eachFileRecurse { File probeFile ->
+                    if (!probeFile.name.endsWith('.class')) return
+                    def relative = probesDir.toPath().relativize(probeFile.toPath()).toString()
+                    def binaryName = relative
+                        .replace(File.separatorChar, (char) '/')
+                        .replaceAll(/\.class$/, '')
+                        .replace('/', '.')
+                    validateProbeBinaryName(binaryName)
+                    stagedNames.add(binaryName)
+                }
+                probeSpec.includes.each { String binaryName ->
+                    if (!stagedNames.contains(binaryName)) {
+                        throw new GradleException(
+                            "[fat-agent] Named bundled probe '${binaryName}' was not found in configured probe inputs")
+                    }
+                }
+                if (stagedNames.isEmpty()) {
+                    throw new GradleException('[fat-agent] Bundled probe inputs produced no .class files')
+                }
+                project.logger.lifecycle("[fat-agent] Staged bundled probes: ${stagedNames.join(', ')}")
             }
         }
+        stageProbes.configure { mustRunAfter stageExtensions }
 
         // Task: Build fat agent JAR
         // Try to use ShadowJar if available for package relocation support
@@ -238,6 +272,20 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
         }
 
         return resolved
+    }
+
+    private static void validateProbeBinaryName(String binaryName) {
+        boolean valid = binaryName != null &&
+            binaryName ==~ /[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*/
+        if (valid) {
+            valid = binaryName.split(/\./).every { String part ->
+                SourceVersion.isIdentifier(part) && !SourceVersion.isKeyword(part)
+            }
+        }
+        if (!valid) {
+            throw new GradleException(
+                "[fat-agent] Invalid bundled probe binary name: '${binaryName}'")
+        }
     }
 
     /**

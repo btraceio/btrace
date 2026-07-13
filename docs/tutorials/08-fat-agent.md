@@ -209,35 +209,32 @@ processOrder  p50=58ms  p95=346ms  p99=402ms  (n=41)
 > permission, it is active for anyone who runs your jar, with no separate opt-in — treat the act of
 > embedding itself as the grant.
 
-## Step 5 — Heads up: "zero-config startup probes" don't work yet in this checkout
+## Step 5 — Add a startup probe
 
-`docs/BTraceExtensionDevelopmentGuide.md` documents a second mechanism: bundle a *compiled probe*
-class into the fat agent (via `btraceFatAgent { bundledProbes { from(...) } }`) so it can run
-automatically at JVM startup — either because you pass `-javaagent:jar=probes=MyProbe` explicitly,
-or because an extension's `ExtensionConfigurator` picks it for you. That's a genuinely useful
-capability for a platform engineer (a Spark executor that self-instruments with no operator
-action), so it's worth knowing precisely where it stands.
+The Gradle plugin can bundle a compiled probe so it starts with the target JVM. Configure the
+directory containing the compiled package tree and name the probe by its full binary name:
 
-Independently tracing the two ends of this feature turned up a mismatch:
+```groovy
+btraceFatAgent {
+    bundledProbes {
+        from layout.buildDirectory.dir('compiled-probes').get().asFile
+        include 'com.example.OrderStartupProbe'
+    }
+}
+```
 
-- The Gradle plugin's `stageProbes` task copies compiled probe classes to
-  `META-INF/btrace-probes/` inside the jar (`BTraceFatAgentPlugin.groovy`), matching what
-  `docs/architecture/fat-agent-plugin.md` and `docs/BTraceExtensionDevelopmentGuide.md` both
-  describe.
-- The agent's actual loader never reads from that path. `Main.loadProbesFromNames()` only looks at
-  each *embedded extension's own* `getBundledProbes()` list (populated from a `probes=` key inside
-  that extension's own `extension.properties`), and then loads the named class from
-  `<extension's resourceBasePath>/probes/<Name>.class` — i.e.
-  `META-INF/btrace-extensions/<extension-id>/probes/<Name>.class`
-  (`EmbeddedExtensionRepository.discoverBundledProbes()` /
-  `Main.loadEmbeddedProbe()`). Nothing reads `META-INF/btrace-probes/` at runtime.
+The class is stored at
+`META-INF/btrace-probes/com/example/OrderStartupProbe.class`. Select it with:
 
-So as of this checkout, staging a probe with the fat-agent plugin's `bundledProbes {}` block and
-then passing `probes=YourProbe` (or relying on a configurator) is a silent no-op: the agent logs
-`"Loading bundled probes: YourProbe"` (a real, verified log line from `Main.java`), scans embedded
-extensions for one whose bundled-probes list contains that name, finds none, and moves on — no
-error, and no probe. Until that's wired up, use the attach-based flow from Step 4
-(`btrace <PID> Script.java`) for anything you'd otherwise want auto-started.
+```sh
+java -javaagent:build/libs/btrace-agent-fat.jar=probes=com.example.OrderStartupProbe,output=stdout \
+     DemoApp
+```
+
+Probe names are exact Java binary names. Invalid names, configured classes that are missing at
+build time, and requested resources that are missing at startup all fail loudly instead of being
+ignored. This also prevents a `probes=` value from escaping the `META-INF/btrace-probes/`
+namespace.
 
 ## Step 6 — Do the same thing with Maven
 
