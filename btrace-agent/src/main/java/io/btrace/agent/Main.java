@@ -116,6 +116,67 @@ public final class Main {
   public static final int BTRACE_DEFAULT_PORT = 2020;
   private static final boolean AGENT_DEBUG = Boolean.getBoolean("btrace.agent.debug");
   private static final Pattern KV_PATTERN = Pattern.compile(",");
+  private static final Pattern BUNDLED_PROBE_NAME =
+      Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*");
+  private static final Set<String> JAVA_KEYWORDS =
+      Collections.unmodifiableSet(
+          new LinkedHashSet<>(
+              Arrays.asList(
+                  "_",
+                  "abstract",
+                  "assert",
+                  "boolean",
+                  "break",
+                  "byte",
+                  "case",
+                  "catch",
+                  "char",
+                  "class",
+                  "const",
+                  "continue",
+                  "default",
+                  "do",
+                  "double",
+                  "else",
+                  "enum",
+                  "extends",
+                  "false",
+                  "final",
+                  "finally",
+                  "float",
+                  "for",
+                  "goto",
+                  "if",
+                  "implements",
+                  "import",
+                  "instanceof",
+                  "int",
+                  "interface",
+                  "long",
+                  "native",
+                  "new",
+                  "null",
+                  "package",
+                  "private",
+                  "protected",
+                  "public",
+                  "return",
+                  "short",
+                  "static",
+                  "strictfp",
+                  "super",
+                  "switch",
+                  "synchronized",
+                  "this",
+                  "throw",
+                  "throws",
+                  "transient",
+                  "true",
+                  "try",
+                  "void",
+                  "volatile",
+                  "while")));
+  private static final String BUNDLED_PROBE_ROOT = "META-INF/btrace-probes/";
   private static final SharedSettings settings = SharedSettings.GLOBAL;
   private static final BTraceTransformer transformer =
       new BTraceTransformer(new DebugSupport(settings));
@@ -467,15 +528,17 @@ public final class Main {
       // Initialize invokedynamic bridge for extensions after loader is ready
       ExtensionBridgeImpl.initialize(extensionLoader);
 
-      // Load bundled probes from embedded extensions if configured
+      // Load standalone bundled probes or probes selected by embedded extension configurators.
       loadBundledProbes();
 
+    } catch (BundledProbeException e) {
+      throw e;
     } catch (Exception e) {
       log.error("Failed to initialize extension system: {}", e.getMessage(), e);
     }
   }
 
-  /** Load bundled probes from embedded extensions based on agent args or configurator. */
+  /** Load bundled probes from explicit agent arguments or embedded extension configurators. */
   private static void loadBundledProbes() {
     if (extensionLoader == null) {
       return;
@@ -501,7 +564,7 @@ public final class Main {
       for (String p : probesArg.split(",")) {
         requested.add(p.trim());
       }
-      loadProbesFromNames(requested, toStdOut);
+      loadStandaloneProbes(requested, toStdOut);
     } else {
       // No explicit probes= — ask each extension's configurator.
       AgentRuntimeEnvironment env = new AgentRuntimeEnvironment();
@@ -524,7 +587,7 @@ public final class Main {
         boolean toStdOut = config.getOutput() == ProbeConfiguration.Output.STDOUT;
         log.info(
             "Extension {} configurator enabled probes: {}", ext.getId(), config.getEnabledProbes());
-        loadProbesFromNames(config.getEnabledProbes(), toStdOut);
+        loadExtensionProbes(ext, config.getEnabledProbes(), toStdOut);
       }
     }
   }
@@ -557,31 +620,72 @@ public final class Main {
     }
   }
 
-  /** Load the named probes from embedded extensions. */
-  private static void loadProbesFromNames(List<String> probeNames, boolean traceToStdOut) {
-    for (ExtensionDescriptorDTO ext : extensionLoader.getAvailableExtensions()) {
-      if (!ext.isEmbedded()) {
-        continue;
+  /** Load standalone probes staged by the fat-agent Gradle plugin. */
+  static void loadStandaloneProbes(List<String> probeNames, boolean traceToStdOut) {
+    for (String probeName : probeNames) {
+      String resourcePath = bundledProbeResourcePath(probeName);
+      if (!loadEmbeddedProbe(resourcePath, probeName, traceToStdOut)) {
+        throw new BundledProbeException(
+            "Bundled probe '" + probeName + "' was not found or could not be loaded");
       }
-      List<String> bundledProbes = ext.getBundledProbes();
-      if (bundledProbes.isEmpty()) {
-        continue;
+      log.info("Loaded bundled probe: {}", probeName);
+    }
+  }
+
+  /** Load probes selected by one embedded extension's configurator. */
+  private static void loadExtensionProbes(
+      ExtensionDescriptorDTO ext, List<String> probeNames, boolean traceToStdOut) {
+    for (String probeName : probeNames) {
+      String resolvedProbeName = resolveExtensionProbeName(ext, probeName);
+      String path = bundledProbeResourcePath(resolvedProbeName);
+      if (!loadEmbeddedProbe(path, resolvedProbeName, traceToStdOut)) {
+        throw new BundledProbeException(
+            "Bundled probe '"
+                + probeName
+                + "' from extension '"
+                + ext.getId()
+                + "' was not found or could not be loaded");
       }
-      for (String probeName : probeNames) {
-        if (!probeName.matches("[A-Za-z0-9_.]+")) {
-          log.warn("Ignoring probe with invalid name: '{}'", probeName);
-          continue;
+      log.info("Loaded bundled probe: {} from extension {}", probeName, ext.getId());
+    }
+  }
+
+  static String resolveExtensionProbeName(ExtensionDescriptorDTO ext, String probeName) {
+    if (probeName != null && probeName.indexOf('.') == -1) {
+      for (String bundledProbe : ext.getBundledProbes()) {
+        int simpleNameStart = bundledProbe.lastIndexOf('.') + 1;
+        if (bundledProbe.regionMatches(simpleNameStart, probeName, 0, probeName.length())
+            && bundledProbe.length() - simpleNameStart == probeName.length()) {
+          return bundledProbe;
         }
-        for (String bundledProbe : bundledProbes) {
-          if (bundledProbe.endsWith("." + probeName) || bundledProbe.equals(probeName)) {
-            String path = ext.getResourceBasePath() + "/probes/" + probeName + ".class";
-            if (loadEmbeddedProbe(path, probeName, traceToStdOut)) {
-              log.info("Loaded bundled probe: {} from extension {}", probeName, ext.getId());
-              break;
-            }
-          }
+      }
+    }
+    return probeName;
+  }
+
+  static String bundledProbeResourcePath(String probeName) {
+    validateBundledProbeName(probeName);
+    return BUNDLED_PROBE_ROOT + probeName.replace('.', '/') + ".class";
+  }
+
+  static void validateBundledProbeName(String probeName) {
+    boolean valid = probeName != null && BUNDLED_PROBE_NAME.matcher(probeName).matches();
+    if (valid) {
+      for (String part : probeName.split("\\.")) {
+        if (JAVA_KEYWORDS.contains(part)) {
+          valid = false;
+          break;
         }
       }
+    }
+    if (!valid) {
+      throw new BundledProbeException("Invalid bundled probe binary name: '" + probeName + "'");
+    }
+  }
+
+  static final class BundledProbeException extends IllegalStateException {
+    BundledProbeException(String message) {
+      super(message);
     }
   }
 
