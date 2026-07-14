@@ -30,6 +30,7 @@ import java.nio.file.attribute.AclEntryPermission;
 import java.nio.file.attribute.AclEntryType;
 import java.nio.file.attribute.AclFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
@@ -57,13 +58,18 @@ final class PreparedModeCredentials implements Closeable {
   }
 
   static PreparedModeCredentials create(String configuredPath) throws IOException {
+    return create(configuredPath, currentFileOwner());
+  }
+
+  static PreparedModeCredentials create(String configuredPath, UserPrincipal expectedOwner)
+      throws IOException {
     Path path = null;
     boolean generated = false;
     byte[] token = null;
     try {
       if (configuredPath == null || configuredPath.trim().isEmpty()) {
         Path directory = Paths.get(System.getProperty("java.io.tmpdir")).toAbsolutePath();
-        path = createSecureTempFile(directory);
+        path = createSecureTempFile(directory, expectedOwner);
         generated = true;
       } else {
         path = Paths.get(configuredPath).toAbsolutePath().normalize();
@@ -71,13 +77,13 @@ final class PreparedModeCredentials implements Closeable {
           if (Files.isSymbolicLink(path) || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
             throw new IOException("Prepared-mode token path must be a regular file");
           }
-          verifyOwnerOnly(path);
+          verifyOwnerOnly(path, expectedOwner);
         } else {
           Path parent = path.getParent();
           if (parent == null || !Files.isDirectory(parent)) {
             throw new IOException("Prepared-mode token directory does not exist");
           }
-          createSecureFile(path);
+          createSecureFile(path, expectedOwner);
           generated = true;
         }
       }
@@ -85,7 +91,7 @@ final class PreparedModeCredentials implements Closeable {
       if (generated) {
         token = generateToken();
         Files.write(path, token, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
-        verifyOwnerOnly(path);
+        verifyOwnerOnly(path, expectedOwner);
       } else {
         token = ConnectionAuthenticator.readToken(path);
       }
@@ -127,7 +133,8 @@ final class PreparedModeCredentials implements Closeable {
     }
   }
 
-  private static Path createSecureTempFile(Path directory) throws IOException {
+  private static Path createSecureTempFile(Path directory, UserPrincipal expectedOwner)
+      throws IOException {
     if (supportsPosix(directory)) {
       return Files.createTempFile(
           directory, "btrace-", ".token", PosixFilePermissions.asFileAttribute(OWNER_READ_WRITE));
@@ -135,7 +142,7 @@ final class PreparedModeCredentials implements Closeable {
     Path path = Files.createTempFile(directory, "btrace-", ".token");
     try {
       restrictAclToOwner(path);
-      verifyOwnerOnly(path);
+      verifyOwnerOnly(path, expectedOwner);
       return path;
     } catch (IOException | RuntimeException failure) {
       Files.deleteIfExists(path);
@@ -143,7 +150,7 @@ final class PreparedModeCredentials implements Closeable {
     }
   }
 
-  private static void createSecureFile(Path path) throws IOException {
+  private static void createSecureFile(Path path, UserPrincipal expectedOwner) throws IOException {
     if (supportsPosix(path.getParent())) {
       Files.createFile(path, PosixFilePermissions.asFileAttribute(OWNER_READ_WRITE));
       return;
@@ -151,7 +158,7 @@ final class PreparedModeCredentials implements Closeable {
     Files.createFile(path);
     try {
       restrictAclToOwner(path);
-      verifyOwnerOnly(path);
+      verifyOwnerOnly(path, expectedOwner);
     } catch (IOException | RuntimeException failure) {
       Files.deleteIfExists(path);
       throw failure;
@@ -161,6 +168,17 @@ final class PreparedModeCredentials implements Closeable {
   private static boolean supportsPosix(Path path) throws IOException {
     FileStore store = Files.getFileStore(path);
     return store.supportsFileAttributeView(PosixFileAttributeView.class);
+  }
+
+  private static UserPrincipal currentFileOwner() throws IOException {
+    // File ownership comes from the OS account running the JVM; unlike user.name, it cannot be
+    // changed with a system property.
+    Path reference = Files.createTempFile("btrace-owner-", ".tmp");
+    try {
+      return Files.getOwner(reference, LinkOption.NOFOLLOW_LINKS);
+    } finally {
+      Files.deleteIfExists(reference);
+    }
   }
 
   private static void restrictAclToOwner(Path path) throws IOException {
@@ -190,11 +208,15 @@ final class PreparedModeCredentials implements Closeable {
     view.setAcl(Collections.singletonList(ownerEntry));
   }
 
-  private static void verifyOwnerOnly(Path path) throws IOException {
+  private static void verifyOwnerOnly(Path path, UserPrincipal expectedOwner) throws IOException {
     PosixFileAttributeView posix =
         Files.getFileAttributeView(path, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
     if (posix != null) {
-      Set<PosixFilePermission> permissions = posix.readAttributes().permissions();
+      PosixFileAttributes attributes = posix.readAttributes();
+      if (!attributes.owner().equals(expectedOwner)) {
+        throw new IOException("Prepared-mode token file is owned by another account");
+      }
+      Set<PosixFilePermission> permissions = attributes.permissions();
       if (!permissions.contains(PosixFilePermission.OWNER_READ)
           || permissions.contains(PosixFilePermission.GROUP_READ)
           || permissions.contains(PosixFilePermission.GROUP_WRITE)
@@ -213,6 +235,9 @@ final class PreparedModeCredentials implements Closeable {
       throw new IOException("Owner-only token-file permissions cannot be verified");
     }
     UserPrincipal owner = acl.getOwner();
+    if (!owner.equals(expectedOwner)) {
+      throw new IOException("Prepared-mode token file is owned by another account");
+    }
     boolean ownerCanRead = false;
     List<AclEntry> entries = acl.getAcl();
     for (AclEntry entry : entries) {

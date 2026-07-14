@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.nio.file.attribute.UserPrincipal;
 import java.util.Set;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -82,6 +83,22 @@ class PreparedModeCredentialsTest {
     Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-r-----"));
 
     assertThrows(IOException.class, () -> PreparedModeCredentials.create(path.toString()));
+  }
+
+  @Test
+  void existingTokenOwnedByAnotherAccountFailsClosed() throws Exception {
+    Path path = tempDir.resolve("foreign.token");
+    Files.write(path, "known-secret".getBytes(StandardCharsets.UTF_8));
+    if (supportsPosix(path)) {
+      Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
+    }
+    UserPrincipal anotherAccount = () -> "another-account";
+
+    IOException failure =
+        assertThrows(
+            IOException.class,
+            () -> PreparedModeCredentials.create(path.toString(), anotherAccount));
+    assertTrue(failure.getMessage().contains("owned by another account"));
   }
 
   @Test
