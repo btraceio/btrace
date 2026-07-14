@@ -421,12 +421,13 @@ btrace [options] <PID> <script.java> [script-args]
 Read-only readiness diagnostics:
 
 ```bash
-btrace doctor <pid> [--json]
+btrace doctor <pid> [--json] [-v]
 ```
 
 Doctor attaches only to read target system properties, then detaches; it never loads an agent or
 opens the BTrace command connection. It distinguishes Attach API availability from dynamic-agent
-loading permission, which is reported as `not_tested`.
+loading permission, which is reported as `not_tested`. Add `-v` to print a stack trace when an
+unexpected provider or runtime failure prevents diagnosis.
 
 | Exit | Status | Meaning |
 | ---: | --- | --- |

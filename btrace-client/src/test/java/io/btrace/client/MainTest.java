@@ -16,6 +16,7 @@
  */
 package io.btrace.client;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -32,6 +33,13 @@ class MainTest {
     assertFalse(usage.contains("--boot-jar"));
     assertFalse(usage.contains("--extract-agent"));
     assertTrue(usage.contains("--oneliner"));
-    assertTrue(usage.contains("btrace doctor <pid> [--json]"));
+    assertTrue(usage.contains("btrace doctor <pid> [--json] [-v]"));
+  }
+
+  @Test
+  void verboseFlagBeforeDoctorIsDispatchedToDoctor() {
+    assertArrayEquals(
+        new String[] {"-v", "1234", "--json"},
+        Main.doctorArguments(new String[] {"-v", "doctor", "1234", "--json"}));
   }
 }

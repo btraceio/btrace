@@ -34,7 +34,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,10 +106,11 @@ public final class Main {
   }
 
   public static void main(String[] args) throws Exception {
-    if (args.length > 0 && "doctor".equals(args[0])) {
+    String[] doctorArguments = doctorArguments(args);
+    if (doctorArguments != null) {
       int exitCode =
           Doctor.run(
-              Arrays.copyOfRange(args, 1, args.length),
+              doctorArguments,
               new PrintWriter(System.out, true),
               new PrintWriter(System.err, true));
       if (exitCode != Doctor.EXIT_READY) {
@@ -401,6 +401,22 @@ public final class Main {
     } catch (IOException exp) {
       errorExit(exp.getMessage(), 1);
     }
+  }
+
+  static String[] doctorArguments(String[] args) {
+    int doctorIndex =
+        args.length > 0 && "doctor".equals(args[0])
+            ? 0
+            : args.length > 1 && "-v".equals(args[0]) && "doctor".equals(args[1]) ? 1 : -1;
+    if (doctorIndex < 0) {
+      return null;
+    }
+
+    String[] doctorArguments = new String[args.length - 1];
+    System.arraycopy(args, 0, doctorArguments, 0, doctorIndex);
+    System.arraycopy(
+        args, doctorIndex + 1, doctorArguments, doctorIndex, args.length - doctorIndex - 1);
+    return doctorArguments;
   }
 
   private static CommandListener createCommandListener(Client client) {

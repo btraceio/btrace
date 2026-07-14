@@ -167,6 +167,21 @@ class DoctorTest {
   }
 
   @Test
+  void verboseUnexpectedFailurePrintsStackTrace() {
+    Doctor.Attacher attacher = new FailingAttacher(new IllegalStateException("broken provider"));
+    StringWriter output = new StringWriter();
+    StringWriter error = new StringWriter();
+
+    int exitCode =
+        Doctor.run(
+            new String[] {"1234", "-v"}, new PrintWriter(output), new PrintWriter(error), attacher);
+
+    assertEquals(Doctor.EXIT_UNEXPECTED_FAILURE, exitCode);
+    assertTrue(output.toString().contains("Status: UNEXPECTED_FAILURE (exit 4)"));
+    assertTrue(error.toString().contains("java.lang.IllegalStateException: broken provider"));
+  }
+
+  @Test
   void invalidPidReturnsJsonUsageFailureWithoutAttaching() {
     RecordingAttacher attacher = new RecordingAttacher(baseProperties());
     StringWriter output = new StringWriter();
@@ -180,6 +195,26 @@ class DoctorTest {
 
     assertEquals(Doctor.EXIT_UNEXPECTED_FAILURE, exitCode);
     assertTrue(output.toString().contains("\"status\":\"unexpected_failure\""));
+    assertEquals(0, attacher.attachCount);
+  }
+
+  @Test
+  void laterJsonFlagIsPreservedForInvalidExtraArgument() {
+    RecordingAttacher attacher = new RecordingAttacher(baseProperties());
+    StringWriter output = new StringWriter();
+    StringWriter error = new StringWriter();
+
+    int exitCode =
+        Doctor.run(
+            new String[] {"1234", "extra", "--json"},
+            new PrintWriter(output),
+            new PrintWriter(error),
+            attacher);
+
+    assertEquals(Doctor.EXIT_UNEXPECTED_FAILURE, exitCode);
+    assertTrue(output.toString().contains("\"status\":\"unexpected_failure\""));
+    assertTrue(output.toString().contains("doctor accepts exactly one PID"));
+    assertEquals("", error.toString());
     assertEquals(0, attacher.attachCount);
   }
 

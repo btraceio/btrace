@@ -59,20 +59,24 @@ final class Doctor {
         output.println(report.toJson());
       } else {
         error.println(parsed.error);
-        error.println("Usage: btrace doctor <pid> [--json]");
+        error.println("Usage: btrace doctor <pid> [--json] [-v]");
       }
       output.flush();
       error.flush();
       return EXIT_UNEXPECTED_FAILURE;
     }
 
-    Report report = inspect(parsed.pid, attacher);
+    Report report = inspect(parsed.pid, attacher, parsed.verbose ? error : null);
     output.println(parsed.json ? report.toJson() : report.toHuman());
     output.flush();
     return report.status.exitCode;
   }
 
   static Report inspect(String pid, Attacher attacher) {
+    return inspect(pid, attacher, null);
+  }
+
+  private static Report inspect(String pid, Attacher attacher, PrintWriter verboseError) {
     boolean attachApiAvailable = attacher.isAvailable();
     if (!attachApiAvailable) {
       return Report.inaccessible(pid, false, "Attach API is unavailable in this BTrace runtime.");
@@ -84,6 +88,10 @@ final class Doctor {
     } catch (AttachNotSupportedException | IOException | SecurityException inaccessible) {
       return Report.inaccessible(pid, true, safeMessage(inaccessible));
     } catch (Exception | LinkageError unexpected) {
+      if (verboseError != null) {
+        unexpected.printStackTrace(verboseError);
+        verboseError.flush();
+      }
       return Report.unexpected(pid, true, safeMessage(unexpected));
     }
   }
@@ -410,7 +418,8 @@ final class Doctor {
           null,
           null,
           detail,
-          Collections.singletonList("Rerun with -v and report the unexpected failure."));
+          Collections.singletonList(
+              "Rerun with btrace doctor <pid> -v and report the unexpected failure."));
     }
 
     String toHuman() {
@@ -553,33 +562,48 @@ final class Doctor {
   private static final class ParsedArguments {
     final String pid;
     final boolean json;
+    final boolean verbose;
     final String error;
 
-    private ParsedArguments(String pid, boolean json, String error) {
+    private ParsedArguments(String pid, boolean json, boolean verbose, String error) {
       this.pid = pid;
       this.json = json;
+      this.verbose = verbose;
       this.error = error;
     }
 
     static ParsedArguments parse(String[] args) {
       boolean json = false;
+      for (String argument : args) {
+        if ("--json".equals(argument)) {
+          json = true;
+        }
+      }
+
+      boolean jsonSeen = false;
+      boolean verbose = false;
       String pid = null;
       for (String argument : args) {
         if ("--json".equals(argument)) {
-          if (json) {
-            return new ParsedArguments(pid, true, "--json may be specified only once.");
+          if (jsonSeen) {
+            return new ParsedArguments(pid, true, verbose, "--json may be specified only once.");
           }
-          json = true;
+          jsonSeen = true;
+        } else if ("-v".equals(argument)) {
+          if (verbose) {
+            return new ParsedArguments(pid, json, true, "-v may be specified only once.");
+          }
+          verbose = true;
         } else if (pid == null) {
           pid = argument;
         } else {
-          return new ParsedArguments(pid, json, "doctor accepts exactly one PID.");
+          return new ParsedArguments(pid, json, verbose, "doctor accepts exactly one PID.");
         }
       }
       if (pid == null || !pid.matches("[1-9][0-9]*")) {
-        return new ParsedArguments(pid, json, "doctor requires a positive numeric PID.");
+        return new ParsedArguments(pid, json, verbose, "doctor requires a positive numeric PID.");
       }
-      return new ParsedArguments(pid, json, null);
+      return new ParsedArguments(pid, json, verbose, null);
     }
   }
 
