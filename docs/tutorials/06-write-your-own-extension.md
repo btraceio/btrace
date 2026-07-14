@@ -351,15 +351,10 @@ rm -rf "$BTRACE_HOME/extensions/order-counter" ~/.btrace/permissions.properties
 - **`Shadow plugin ('com.gradleup.shadow') must be applied`** — the plugin tries to auto-apply
   Shadow and only fails loudly if that can't resolve (e.g. offline, or the portal is unreachable).
   Add `id 'com.gradleup.shadow'` to your `plugins { }` block explicitly and re-run.
-- **You left out `services = [...]` and nothing got exported** — the plugin *can* auto-detect
-  service interfaces from `@ServiceDescriptor` without you listing them, but as of this checkout
-  that detection (`SingleSourceApiPartition.SERVICE_DESCRIPTOR_DESC` and the equivalent checks in
-  `BTraceExtensionPlugin.groovy`) matches the annotation's *old* package name
-  (`org.openjdk.btrace.core.extensions.ServiceDescriptor`), not the current
-  `io.btrace.core.extensions.ServiceDescriptor` your API actually uses. In other words:
-  auto-detection is currently dead code for this codebase's own annotations. Always declare
-  `services` explicitly in `btraceExtension { }`, exactly as this tutorial and the real
-  `btrace-metrics` module (`btrace-extensions/btrace-metrics/build.gradle`) both do.
+- **You left out `services = [...]` and nothing got exported** — automatic discovery only exports
+  interfaces annotated with `io.btrace.core.extensions.ServiceDescriptor`. Confirm the annotation
+  is on the compiled service interface (not only its implementation). An explicit `services` list
+  remains available when an extension cannot annotate the interface it exports.
 - **`Could not find io.btrace:btrace-core:<your-project-version>`** — the plugin auto-registers
   the `@ExternalType` annotation processor, and outside the BTrace monorepo (no sibling
   `:btrace-core` project) it resolves that processor as

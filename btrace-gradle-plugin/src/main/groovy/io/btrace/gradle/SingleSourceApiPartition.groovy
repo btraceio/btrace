@@ -32,10 +32,6 @@ import org.objectweb.asm.tree.MethodNode
  */
 @CompileStatic
 final class SingleSourceApiPartition {
-    private static final String SERVICE_DESCRIPTOR_DESC =
-        'Lio/btrace/core/extensions/ServiceDescriptor;'
-    private static final String EXTERNAL_TYPE_DESC =
-        'Lio/btrace/core/extensions/ExternalType;'
     private static final Pattern EXCLUDED_GENERATED =
         Pattern.compile('.*(\\$Ext|\\.btrace\\.shim\\.).*')
 
@@ -44,7 +40,7 @@ final class SingleSourceApiPartition {
     static Set<String> detectServiceTypes(Collection<File> classDirs) {
         Set<String> detected = new LinkedHashSet<>()
         indexClasses(classDirs).each { String fqcn, IndexedClass indexed ->
-            if (indexed.interfaceType && indexed.hasAnnotation(SERVICE_DESCRIPTOR_DESC)) {
+            if (indexed.interfaceType && indexed.hasAnnotation(BTraceDescriptors.SERVICE_DESCRIPTOR)) {
                 detected.add(fqcn)
             }
         }
@@ -130,7 +126,7 @@ final class SingleSourceApiPartition {
         index.each { String fqcn, IndexedClass indexed ->
             if (exportedTypes.contains(fqcn)) {
                 includes.add(indexed.relativeClassPath)
-                if (indexed.hasAnnotation(EXTERNAL_TYPE_DESC)) {
+                if (indexed.hasAnnotation(BTraceDescriptors.EXTERNAL_TYPE)) {
                     IndexedClass adapter = index.get(fqcn + '$Ext')
                     if (adapter != null) {
                         includes.add(adapter.relativeClassPath)
