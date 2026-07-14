@@ -212,6 +212,7 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
       String btraceApiVersion = props.getProperty("btrace.api.version", "3.0+");
       String javaVersion = props.getProperty("java.version", "8+");
       String servicesStr = props.getProperty("services", "");
+      String requiredExtensionsStr = props.getProperty("requires.extensions", "");
       String configurator = props.getProperty("configurator");
 
       List<String> services =
@@ -246,6 +247,7 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
           .btraceApiVersion(btraceApiVersion)
           .javaVersion(javaVersion)
           .services(services)
+          .requiredExtensions(ExtensionMetadata.parseList(requiredExtensionsStr))
           .repository(this)
           .requiredPermissions(requiredPermissions)
           .embedded(true)
