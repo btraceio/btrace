@@ -532,24 +532,42 @@ btracep MyTrace.class
 ### Java Agent Mode
 Start app with BTrace agent directly.
 ```bash
-java -javaagent:/path/to/btrace.jar=script=<script.class>[,arg=value]... YourApp
+java -javaagent:/path/to/btrace.jar=script=<script.class>,noServer=true[,arg=value]... YourApp
 ```
 
 **Agent Parameters:**
 - `script=<path>` - BTrace script class file
 - `scriptdir=<dir>` - Directory to load scripts from
-- `port=<port>` - Communication port
-- `noServer=true` - Don't start command server
+- `port=<port>` - Communication port; prepared mode accepts `0` and publishes the selected port
+- `bindAddress=<address>` - Loopback bind address (`127.0.0.1` or `::1`); non-loopback and wildcard
+  addresses are rejected in 3.0.0
+- `authTokenFile=<path>` - Existing owner-protected prepared-mode token file, or a path where the
+  agent creates one; the token value is never passed as an argument
+- `noServer=true` - Don't start the command server; use for startup scripts that need no later
+  client connection
+- `telemetry=true|false` - Explicitly enable or disable the default-off `agent_start` telemetry
+  event
 - `bootClassPath=<path>` - Additional boot classpath
 
 **Examples:**
 ```bash
-# Basic agent mode
-java -javaagent:btrace.jar=script=MyTrace.class MyApp
+# Startup script with no command endpoint
+java -javaagent:btrace.jar=script=MyTrace.class,noServer=true MyApp
 
-# With custom port
-java -javaagent:btrace.jar=script=MyTrace.class,port=2020 MyApp
+# With debug logging and no command endpoint
+java -javaagent:btrace.jar=script=MyTrace.class,noServer=true,debug=true MyApp
+
+# Authenticated prepared endpoint on an automatically selected loopback port
+java -javaagent:btrace.jar=port=0 MyApp
+
+# Run a startup probe and retain the authenticated endpoint for later PID-based connections
+java -javaagent:btrace.jar=script=MyTrace.class,noServer=false,port=0 MyApp
 ```
+
+A 3.0 client obtains the prepared endpoint and token-file path through the target JVM's Attach API.
+Authentication precedes V1/V2 negotiation; older clients and missing or incorrect credentials fail
+closed. Generated credentials are removed at shutdown. Remote prepared mode is unsupported in
+3.0.0.
 
 ### Wire Protocol
 Client and agent communicate over a pluggable wire protocol: V1 (Java serialization, backward compatible) and V2 (binary, faster). The version is auto-negotiated by default. System properties:

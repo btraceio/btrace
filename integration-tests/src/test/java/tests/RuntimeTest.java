@@ -219,38 +219,31 @@ public abstract class RuntimeTest {
     timeout = defaultTimeoutMs;
   }
 
-  public void testWithJfr(String testApp, String testScript, int checkLines, ResultValidator v)
-      throws Exception {
-    startJfr = true;
-    test(testApp, testScript, checkLines, v);
-  }
-
   @SuppressWarnings("DefaultCharset")
   public void testWithJfr(
-      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
+      String testApp,
+      String testScript,
+      Completion completion,
+      Completion startupCompletion,
+      ResultValidator v)
       throws Exception {
     startJfr = true;
-    testDynamic(testApp, testScript, cmdArgs, checkLines, v);
+    testDynamic(testApp, testScript, completion, v);
+    testStartup(testApp, testScript.replace(".java", ".class"), null, startupCompletion, v);
   }
 
   @SuppressWarnings("DefaultCharset")
-  public void test(String testApp, String testScript, int checkLines, ResultValidator v)
+  public void test(String testApp, String testScript, Completion completion, ResultValidator v)
       throws Exception {
-    test(testApp, testScript, null, checkLines, v);
+    test(testApp, testScript, null, completion, v);
   }
 
   @SuppressWarnings("DefaultCharset")
   public void test(
-      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
+      String testApp, String testScript, String[] cmdArgs, Completion completion, ResultValidator v)
       throws Exception {
-    testDynamic(testApp, testScript, cmdArgs, checkLines, v);
-    testStartup(testApp, testScript.replace(".java", ".class"), cmdArgs, checkLines, v);
-  }
-
-  @SuppressWarnings("DefaultCharset")
-  public void testDynamic(String testApp, String testScript, int checkLines, ResultValidator v)
-      throws Exception {
-    testDynamic(testApp, testScript, null, checkLines, v);
+    testDynamic(testApp, testScript, cmdArgs, completion, v);
+    testStartup(testApp, testScript.replace(".java", ".class"), cmdArgs, completion, v);
   }
 
   @SuppressWarnings("DefaultCharset")
@@ -261,21 +254,14 @@ public abstract class RuntimeTest {
   }
 
   @SuppressWarnings("DefaultCharset")
-  public void testDynamic(
-      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
-      throws Exception {
-    testDynamic(testApp, testScript, cmdArgs, Completion.lines(checkLines), v);
+  public void testDynamicOneliner(
+      String testApp, String oneliner, Completion completion, ResultValidator v) throws Exception {
+    testDynamicOneliner(testApp, oneliner, null, completion, v);
   }
 
   @SuppressWarnings("DefaultCharset")
   public void testDynamicOneliner(
-      String testApp, String oneliner, int checkLines, ResultValidator v) throws Exception {
-    testDynamicOneliner(testApp, oneliner, null, checkLines, v);
-  }
-
-  @SuppressWarnings("DefaultCharset")
-  public void testDynamicOneliner(
-      String testApp, String oneliner, String[] cmdArgs, int checkLines, ResultValidator v)
+      String testApp, String oneliner, String[] cmdArgs, Completion completion, ResultValidator v)
       throws Exception {
     System.out.println("=== Dynamic attach (oneliner)");
     if (forceDebug) {
@@ -400,9 +386,42 @@ public abstract class RuntimeTest {
         }
       }
 
-      Process client = attachOneliner(pid, oneliner, cmdArgs, checkLines, stdout, stderr);
+      Process client = attachOneliner(pid, oneliner, cmdArgs, completion, stdout, stderr);
 
       System.out.println("Detached.");
+
+      // If JFR was enabled, dump the recording while the target is still guaranteed alive.
+      // This MUST happen before the process is signaled to shut down and potentially
+      // force-killed below -- destroyForcibly() bypasses JVM shutdown hooks entirely, so
+      // dumponexit=true never fires, and dumping against an already-dead PID silently does
+      // nothing, leaving a 0-byte JFR file (see the investigation doc for the observed failure).
+      if (startJfr && pidStringRef.get() != null) {
+        try {
+          Thread.sleep(1500L);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
+        try {
+          ProcessBuilder jcmdPb;
+          String jcmdExe = Paths.get(testJavaHome, "bin", "jcmd").toString();
+          if (jfrFile != null) {
+            jcmdPb =
+                new ProcessBuilder(
+                    jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
+          } else {
+            jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
+          }
+          Process jcmdProcess = jcmdPb.start();
+          // jcmd attaches to the target JVM's own Attach Listener thread, which BTrace's own
+          // attach may have left stuck -- bound the wait so a jammed attach mechanism can never
+          // hang the whole test run indefinitely.
+          if (!jcmdProcess.waitFor(10, TimeUnit.SECONDS)) {
+            jcmdProcess.destroyForcibly();
+          }
+        } catch (Exception e) {
+          e.printStackTrace(System.err);
+        }
+      }
 
       // Signal the target app to shut down
       pw.println("done");
@@ -431,29 +450,6 @@ public abstract class RuntimeTest {
       Thread.sleep(500L);
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
-    }
-    // If JFR was enabled for dynamic attach, give it a moment and dump the recording
-    if (startJfr && pidStringRef.get() != null) {
-      try {
-        Thread.sleep(1500L);
-      } catch (InterruptedException ie) {
-        Thread.currentThread().interrupt();
-      }
-      try {
-        ProcessBuilder jcmdPb;
-        String jcmdExe =
-            testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
-        if (jfrFile != null) {
-          jcmdPb =
-              new ProcessBuilder(
-                  jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
-        } else {
-          jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
-        }
-        jcmdPb.start().waitFor();
-      } catch (Exception e) {
-        e.printStackTrace(System.err);
-      }
     }
 
     v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
@@ -592,6 +588,39 @@ public abstract class RuntimeTest {
 
       System.out.println("Detached.");
 
+      // If JFR was enabled, dump the recording while the target is still guaranteed alive.
+      // This MUST happen before the process is signaled to shut down and potentially
+      // force-killed below -- destroyForcibly() bypasses JVM shutdown hooks entirely, so
+      // dumponexit=true never fires, and dumping against an already-dead PID silently does
+      // nothing, leaving a 0-byte JFR file (see the investigation doc for the observed failure).
+      if (startJfr && pidStringRef.get() != null) {
+        try {
+          Thread.sleep(1500L);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
+        try {
+          ProcessBuilder jcmdPb;
+          String jcmdExe = Paths.get(testJavaHome, "bin", "jcmd").toString();
+          if (jfrFile != null) {
+            jcmdPb =
+                new ProcessBuilder(
+                    jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
+          } else {
+            jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
+          }
+          Process jcmdProcess = jcmdPb.start();
+          // jcmd attaches to the target JVM's own Attach Listener thread, which BTrace's own
+          // attach may have left stuck -- bound the wait so a jammed attach mechanism can never
+          // hang the whole test run indefinitely.
+          if (!jcmdProcess.waitFor(10, TimeUnit.SECONDS)) {
+            jcmdProcess.destroyForcibly();
+          }
+        } catch (Exception ignore) {
+          // best effort
+        }
+      }
+
       // Signal the target app to shut down
       pw.println("done");
       pw.flush();
@@ -620,35 +649,12 @@ public abstract class RuntimeTest {
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
     }
-    // If JFR was enabled for dynamic attach, give it a moment and dump the recording
-    if (startJfr && pidStringRef.get() != null) {
-      try {
-        Thread.sleep(1500L);
-      } catch (InterruptedException ie) {
-        Thread.currentThread().interrupt();
-      }
-      try {
-        ProcessBuilder jcmdPb;
-        String jcmdExe =
-            testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
-        if (jfrFile != null) {
-          jcmdPb =
-              new ProcessBuilder(
-                  jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
-        } else {
-          jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
-        }
-        jcmdPb.start().waitFor();
-      } catch (Exception ignore) {
-        // best effort
-      }
-    }
 
     v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
   }
 
   public void testStartup(
-      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
+      String testApp, String testScript, String[] cmdArgs, Completion completion, ResultValidator v)
       throws Exception {
     System.out.println("=== On-Startup");
     Path agentPath = locateAgent();
@@ -671,6 +677,9 @@ public abstract class RuntimeTest {
     String jfrFile = null;
     List<String> args =
         new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", targetAppCp));
+    if (cmdArgs != null && cmdArgs.length > 0) {
+      args.addAll(Arrays.asList(cmdArgs));
+    }
     if (permissionsFile != null) {
       args.add("-Dbtrace.permissions=" + permissionsFile);
     }
@@ -713,89 +722,73 @@ public abstract class RuntimeTest {
     StringBuilder stderr = new StringBuilder();
     AtomicInteger ret = new AtomicInteger(-1);
 
-    BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
-
-    CountDownLatch testAppLatch = new CountDownLatch(1);
-    CountDownLatch stdoutLatch = new CountDownLatch(checkLines);
     AtomicReference<String> pidStringRef = new AtomicReference<>();
 
-    Thread outT =
-        new Thread(
-            () -> {
-              try {
-                String l;
-                while ((l = stdoutReader.readLine()) != null) {
-                  stdout.append(l).append(System.lineSeparator());
-                  if (l.startsWith("ready:")) {
-                    pidStringRef.set(l.split("\\:")[1]);
-                    testAppLatch.countDown();
-                  } else {
-                    stdoutLatch.countDown();
-                  }
-                  if (debugTestApp) {
-                    System.out.println("[traced app] " + l);
-                  }
-                }
+    // The target app prints "ready:<pid>" as its very first stdout line, unconditionally (see
+    // resources.TestApp#start) -- on-startup mode has no separate client process to synchronize
+    // with, so this is purely a side channel to recover the target's PID for the JFR-dump step
+    // below. Intercept it ahead of the real completion so that bootstrap line never counts toward
+    // the caller's completion condition, matching the previous hand-rolled reader's behavior of
+    // excluding "ready:" lines from checkLines.
+    Completion readyAwareCompletion =
+        new Completion() {
+          @Override
+          public boolean onStdout(String line) {
+            if (line.startsWith("ready:")) {
+              pidStringRef.set(line.split(":")[1]);
+              return false;
+            }
+            return completion.onStdout(line);
+          }
 
-              } catch (Exception e) {
-                e.printStackTrace(System.err);
-              }
-            },
-            "STDOUT Reader");
-    outT.setDaemon(true);
+          @Override
+          public boolean onStderr(String line) {
+            return completion.onStderr(line);
+          }
 
-    BufferedReader stderrReader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-
-    Thread errT =
-        new Thread(
-            () -> {
-              try {
-                String l = null;
-                while ((l = stderrReader.readLine()) != null) {
-                  if (l.contains("SLF4J")
-                      || l.contains("Server VM warning")
-                      || l.contains("XML")
-                      || l.contains("Successfully started BTrace probe")
-                      || l.contains("terminally deprecated method in sun.misc.Unsafe")
-                      || l.contains("sun.misc.Unsafe::objectFieldOffset")
-                      || l.contains("sun.misc.Unsafe::arrayBaseOffset")
-                      || l.contains("Please consider reporting this to the maintainers of class")
-                      || l.contains("org.jctools.util.UnsafeAccess")
-                      || l.contains("ASM verification requested for ")
-                      || l.contains("ASM verification OK for ")
-                      || l.contains("A restricted method")
-                      || l.contains("has been called by")
-                      || l.contains("enable-native-access")
-                      || l.contains("Restricted methods will be blocked")) {
-                    continue;
-                  }
-                  stderr.append(l).append(System.lineSeparator());
-                  if (l.contains("Server VM warning")
-                      || l.contains("XML libraries not available")) {
-                    continue;
-                  }
-                  if (debugTestApp) {
-                    System.err.println("[traced app] " + l);
-                  }
-                  testAppLatch.countDown();
-                  for (int i = 0; i < checkLines; i++) {
-                    stdoutLatch.countDown();
-                  }
-                }
-              } catch (Exception e) {
-                e.printStackTrace(System.err);
-              }
-            },
-            "STDERR Reader");
-    errT.setDaemon(true);
-
-    outT.start();
-    errT.start();
+          @Override
+          public String describe() {
+            return completion.describe();
+          }
+        };
 
     // Startup tests need extra time: the target JVM must start, load the agent, instrument all
     // matching classes, and then print output. Use 4× the dynamic-attach timeout.
-    testAppLatch.await(timeout * 4, TimeUnit.MILLISECONDS);
-    stdoutLatch.await(timeout * 4, TimeUnit.MILLISECONDS);
+    long startupTimeoutMs = timeout * 4;
+    boolean completed =
+        OutputPump.run(
+            p,
+            readyAwareCompletion,
+            startupTimeoutMs,
+            debugBTrace,
+            Arrays.asList(
+                "SLF4J",
+                "Server VM warning",
+                "XML",
+                "Successfully started BTrace probe",
+                "terminally deprecated method in sun.misc.Unsafe",
+                "sun.misc.Unsafe::objectFieldOffset",
+                "sun.misc.Unsafe::arrayBaseOffset",
+                "Please consider reporting this to the maintainers of class",
+                "org.jctools.util.UnsafeAccess",
+                "ASM verification requested for ",
+                "ASM verification OK for ",
+                "A restricted method",
+                "has been called by",
+                "enable-native-access",
+                "Restricted methods will be blocked"),
+            Collections.emptyList(),
+            stdout,
+            stderr);
+    if (!completed) {
+      System.out.println(
+          "[harness] timed out after "
+              + startupTimeoutMs
+              + "ms waiting for "
+              + completion.describe()
+              + "; stdout so far:\n"
+              + stdout);
+    }
     // Allow some time for late BTrace output to flush in on-startup mode.
     try {
       Thread.sleep(1000L);
@@ -821,7 +814,17 @@ public abstract class RuntimeTest {
       } else {
         jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
       }
-      jcmdPb.start().waitFor();
+      try {
+        Process jcmdProcess = jcmdPb.start();
+        // jcmd attaches to the target JVM's own Attach Listener thread, which the on-startup
+        // agent's attach may have left stuck -- bound the wait so a jammed attach mechanism can
+        // never hang the whole test run indefinitely.
+        if (!jcmdProcess.waitFor(10, TimeUnit.SECONDS)) {
+          jcmdProcess.destroyForcibly();
+        }
+      } catch (Exception e) {
+        e.printStackTrace(System.err);
+      }
     }
 
     try {
@@ -834,8 +837,6 @@ public abstract class RuntimeTest {
       if (!p.waitFor(10, TimeUnit.SECONDS)) {
         p.destroyForcibly();
       }
-      outT.join(5000);
-      errT.join(5000);
     }
   }
 
@@ -891,6 +892,7 @@ public abstract class RuntimeTest {
     private int pid;
     private final CountDownLatch testAppLatch = new CountDownLatch(1);
     private final Process process;
+    private final StringBuilder startupStderr = new StringBuilder();
 
     public TestApp(Process process, boolean debug) {
       this.process = process;
@@ -933,7 +935,9 @@ public abstract class RuntimeTest {
                         || l.contains("XML libraries not available")) {
                       continue;
                     }
-                    testAppLatch.countDown();
+                    synchronized (startupStderr) {
+                      startupStderr.append(l).append('\n');
+                    }
                     if (debug) {
                       System.err.println("[traced app] " + l);
                     }
@@ -947,6 +951,21 @@ public abstract class RuntimeTest {
 
       outT.start();
       errT.start();
+
+      Thread exitT =
+          new Thread(
+              () -> {
+                try {
+                  process.waitFor();
+                } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                } finally {
+                  testAppLatch.countDown();
+                }
+              },
+              "Target Process Waiter");
+      exitT.setDaemon(true);
+      exitT.start();
     }
 
     public void stop() throws InterruptedException {
@@ -959,12 +978,33 @@ public abstract class RuntimeTest {
     }
 
     public int getPid() throws InterruptedException {
-      testAppLatch.await();
+      if (!testAppLatch.await(30, TimeUnit.SECONDS)) {
+        throw new IllegalStateException("Target process did not become ready within 30 seconds");
+      }
+      if (pid <= 0) {
+        String errors;
+        synchronized (startupStderr) {
+          errors = startupStderr.toString();
+        }
+        throw new IllegalStateException("Target process exited before becoming ready: " + errors);
+      }
       return pid;
     }
   }
 
   public TestApp launchTestApp(String testApp, String... cmdArgs) throws Exception {
+    return launchTestAppInternal(testApp, null, Collections.emptyList(), cmdArgs);
+  }
+
+  protected TestApp launchTestAppWithAgent(
+      String testApp, String agentArguments, String... jvmArguments) throws Exception {
+    return launchTestAppInternal(
+        testApp, agentArguments, Arrays.asList(jvmArguments), new String[0]);
+  }
+
+  private TestApp launchTestAppInternal(
+      String testApp, String agentArguments, List<String> additionalJvmArguments, String... cmdArgs)
+      throws Exception {
     if (forceDebug) {
       // force debug flags
       debugBTrace = true;
@@ -982,14 +1022,24 @@ public abstract class RuntimeTest {
     }
     args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
     args.add("-XX:+IgnoreUnrecognizedVMOptions");
+    args.add("-Dbtrace.suppressJavaDeprecationWarning=true");
     // uncomment the following line to get extra JFR logs
     //    args.add("-Xlog:jfr*=trace");
     args.addAll(extraJvmArgs);
+    args.addAll(additionalJvmArguments);
     if (startJfr) {
       jfrFile = Files.createTempFile("btrace-", ".jfr").toString();
       args.add("-XX:StartFlightRecording=settings=default,dumponexit=true,filename=" + jfrFile);
     }
+    if (agentArguments != null) {
+      Path agentPath = locateAgent();
+      if (agentPath == null) {
+        throw new IllegalStateException("Missing btrace.jar or btrace-agent.jar");
+      }
+      args.add("-javaagent:" + agentPath + "=" + agentArguments);
+    }
     args.add(testApp);
+    args.addAll(Arrays.asList(cmdArgs));
 
     ProcessBuilder pb = new ProcessBuilder(args);
     pb.environment().remove("JAVA_TOOL_OPTIONS");
@@ -1155,11 +1205,6 @@ public abstract class RuntimeTest {
   }
 
   public Process runBTrace(
-      String[] args, int checkLines, StringBuilder stdout, StringBuilder stderr) throws Exception {
-    return runBTrace(args, Completion.lines(checkLines), stdout, stderr);
-  }
-
-  public Process runBTrace(
       String[] args, Completion completion, StringBuilder stdout, StringBuilder stderr)
       throws Exception {
     List<String> argVals =
@@ -1259,17 +1304,6 @@ public abstract class RuntimeTest {
       String pid,
       String trace,
       String[] cmdArgs,
-      int checkLines,
-      StringBuilder stdout,
-      StringBuilder stderr)
-      throws Exception {
-    return attach(pid, trace, cmdArgs, Completion.lines(checkLines), stdout, stderr);
-  }
-
-  private Process attach(
-      String pid,
-      String trace,
-      String[] cmdArgs,
       Completion completion,
       StringBuilder stdout,
       StringBuilder stderr)
@@ -1346,17 +1380,6 @@ public abstract class RuntimeTest {
     }
 
     return p;
-  }
-
-  private Process attachOneliner(
-      String pid,
-      String oneliner,
-      String[] cmdArgs,
-      int checkLines,
-      StringBuilder stdout,
-      StringBuilder stderr)
-      throws Exception {
-    return attachOneliner(pid, oneliner, cmdArgs, Completion.lines(checkLines), stdout, stderr);
   }
 
   private Process attachOneliner(

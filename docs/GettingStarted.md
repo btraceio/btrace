@@ -353,7 +353,7 @@ btrace -v 12345 MyTrace.java arg1 arg2
 Start a Java application with BTrace agent and a pre-compiled script:
 
 ```bash
-java -javaagent:btrace.jar=script=<script.class>[,arg1=value1]... YourApp
+java -javaagent:btrace.jar=script=<script.class>,noServer=true[,arg1=value1]... YourApp
 ```
 
 **When to use:**
@@ -367,8 +367,60 @@ java -javaagent:btrace.jar=script=<script.class>[,arg1=value1]... YourApp
 btracec MyTrace.java
 
 # Then run with agent
-java -javaagent:/path/to/btrace.jar=script=MyTrace.class MyApp
+java -javaagent:/path/to/btrace.jar=script=MyTrace.class,noServer=true MyApp
 ```
+
+#### Startup modes and the 3.0 security boundary
+
+BTrace 3.0 distinguishes launch-time startup scripts from prepared mode:
+
+- **Startup-script mode** runs reviewed probes supplied at launch. Use `noServer=true` when no
+  later client connection is needed:
+
+  ```bash
+  java -javaagent:/path/to/btrace.jar=script=MyTrace.class,noServer=true MyApp
+  ```
+
+- **Prepared mode** is required to start an authenticated, loopback-only control endpoint for
+  later probe submission. Start the agent without a startup script and let the operating system
+  choose the port:
+
+  ```bash
+  java -javaagent:/path/to/btrace.jar=port=0 MyApp
+  ```
+
+  The agent binds a loopback address, generates an owner-protected token file, and publishes the
+  actual address, port, and token-file path through target JVM properties. A 3.0 client discovers
+  those values through the Attach API when you run `btrace <pid> ...`; the token itself is never a
+  process argument or system property. Generated token files are removed during orderly shutdown.
+
+  Use `authTokenFile=/owner/protected/path` to supply or create credentials at a controlled path,
+  and `bindAddress=127.0.0.1` or `bindAddress=::1` to select a loopback family. Non-loopback and
+  wildcard addresses fail startup. To keep a startup script and accept later authenticated
+  connections, set `noServer=false` explicitly.
+
+Prepared-mode authentication runs before V1 or V2 negotiation and before every operational
+command. Older clients cannot connect to a 3.0 prepared endpoint. Remote prepared-mode operation
+is not supported in 3.0.0; use startup-script mode with `noServer=true` or dynamic attach where the
+target JVM's policy permits it instead of exposing the command server remotely.
+
+#### Optional agent telemetry
+
+Agent telemetry is disabled by default. The agent creates no telemetry thread and performs no
+telemetry-related DNS or network operation unless the operator explicitly opts in:
+
+```bash
+java -javaagent:/path/to/btrace.jar=script=MyTrace.class,noServer=true,telemetry=true MyApp
+```
+
+The legacy target-JVM property `-Dbtrace.telemetry=true` is also recognized when the agent argument
+is absent. An explicit `telemetry=false` agent argument overrides that property.
+
+An opted-in startup attempts one `agent_start` event to
+`https://eu.posthog.com/capture/`. The event contains a fresh random event identifier plus
+`java_version`, `os_name`, `btrace_version`, and `agent_mode`; it contains no stable host identifier
+or application data. HTTP connect and read timeouts are one second each, and a daemon guard requests
+cancellation after two seconds. Telemetry failures are ignored and do not block agent startup.
 
 ### 4. Launcher Mode (btracer)
 

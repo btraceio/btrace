@@ -20,6 +20,7 @@ For the developer command reference and code-navigation pointers, see [CLAUDE.md
 - In Java code, import types and use simple names; do not introduce fully qualified type names in source.
 - Main code targets Java 8 and uses the Java 11 toolchain. Follow Spotless/Google Java Format.
 - Unit tests live in `src/test/java` and use `*Test`; integration tests live in `integration-tests/src/test/java`.
+- Changes to user-visible behavior that crosses modules or process boundaries must include end-to-end functional coverage in `integration-tests`; unit and component tests are required where useful but are not a substitute for exercising the real client, agent, target JVM, and protocol interaction.
 
 ## Build and verification
 

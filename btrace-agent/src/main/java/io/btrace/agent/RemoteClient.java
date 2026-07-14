@@ -19,6 +19,7 @@ package io.btrace.agent;
 import io.btrace.core.*;
 import io.btrace.core.comm.BinaryWireProtocol;
 import io.btrace.core.comm.Command;
+import io.btrace.core.comm.ConnectionAuthenticator;
 import io.btrace.core.comm.DisconnectCommand;
 import io.btrace.core.comm.EventCommand;
 import io.btrace.core.comm.ExitCommand;
@@ -41,6 +42,7 @@ import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -80,9 +82,12 @@ class RemoteClient extends Client {
 
   private final CircularBuffer<Command> delayedCommands = new CircularBuffer<>(5000);
 
-  static Client getClient(ClientContext ctx, Socket sock, Function<Client, Future<?>> initCallback)
+  static Client getClient(
+      ClientContext ctx,
+      Socket sock,
+      byte[] authenticationToken,
+      Function<Client, Future<?>> initCallback)
       throws IOException {
-    SharedSettings settings = ctx.getSettings();
     ProtocolConfig config = ProtocolConfig.fromSystemProperties();
     InputStream rawInput = sock.getInputStream();
     OutputStream output = sock.getOutputStream();
@@ -98,6 +103,9 @@ class RemoteClient extends Client {
     boolean timeoutRestored = false;
     try {
       sock.setSoTimeout(ProtocolNegotiator.getNegotiationTimeoutMs());
+      if (authenticationToken != null) {
+        ConnectionAuthenticator.authenticateAgent(rawInput, output, authenticationToken);
+      }
       ProtocolVersion negotiated;
       if (config.isAutoNegotiate()) {
         negotiated = negotiator.negotiateAgent(input, output);
@@ -114,6 +122,7 @@ class RemoteClient extends Client {
           negotiated == ProtocolVersion.V2
               ? new BinaryWireProtocol(input, output)
               : new JavaSerializationProtocol(input, output);
+      SharedSettings settings = ctx.getSettings();
 
       while (true) {
         Command cmd;
@@ -186,6 +195,9 @@ class RemoteClient extends Client {
         }
       }
     } finally {
+      if (authenticationToken != null) {
+        Arrays.fill(authenticationToken, (byte) 0);
+      }
       // Restore the original timeout on any exit path that did not hand off a live client
       // (negotiation failure, EXIT, or an unexpected command). The socket is typically closed
       // by the caller on these paths, so this is best-effort.

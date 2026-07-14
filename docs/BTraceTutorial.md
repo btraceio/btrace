@@ -118,6 +118,9 @@ Once you are attached to the target JVM you can press Ctrl-C in the terminal to 
 The agent takes a list of comma separated arguments.
 
 * **noServer** - don't start the socket server
+* **port** - command-server port; prepared mode accepts `0` for an automatically selected port
+* **bindAddress** - explicit loopback bind address; non-loopback and wildcard addresses fail closed
+* **authTokenFile** - existing owner-protected token file, or a path where the agent creates one
 * **bootClassPath** - boot classpath to be used
 * **systemClassPath** - system classpath to be used
 * **debug** - turns on verbose debug messages (true/false)
@@ -125,6 +128,7 @@ The agent takes a list of comma separated arguments.
 * **dumpClasses** - dump the transformed bytecode to files (true/false)
 * **dumpDir** - specifies the folder where the transformed classes will be dumped to
 * **stdout** - redirect the btrace output to stdout instead of writing it to an arbitrary file (true/false)
+* **telemetry** - explicitly enable the default-off anonymous `agent_start` event (true/false)
 * **probeDescPath** - the path to search for probe descriptor XMLs
 * **startupRetransform** - enable retransform of all the loaded classes at attach (true/false)
 * **scriptdir** - the path to a directory containing scripts to be run at the agent startup
@@ -135,6 +139,21 @@ The agent takes a list of comma separated arguments.
 * **script** - colon separated list of tracing scripts to be run at the agent startup
 
 The scripts to be run must have already been compiled to bytecode (a *.class* file) by __btracec__.
+
+For a launch-time script that needs no later client connection, set `noServer=true`. BTrace 3.0
+does not treat an unauthenticated startup command server as prepared mode. To prepare a JVM for a
+later PID-based BTrace connection, start the agent without a script:
+
+```bash
+java -javaagent:btrace.jar=port=0 MyApp
+```
+
+The agent binds loopback, creates owner-protected credentials, and publishes discovery metadata
+through the target JVM. The 3.0 client reads that metadata through the Attach API, authenticates
+before V1/V2 negotiation, and never places the token in arguments, properties, or logs. Set
+`noServer=false` explicitly if a startup script must also retain the authenticated endpoint.
+Generated credentials are removed at shutdown. Older clients fail closed, and remote prepared mode
+is unsupported in 3.0.0.
 
 ###### Using `btracer'
 
@@ -1142,7 +1161,7 @@ public class MyProbe {
 }
 ```
 
-The plugin generates the service descriptor manifest, computes the required permission set, and produces a distributable ZIP that installs under `$BTRACE_HOME/extensions/`. Always list your service interface(s) explicitly in `services = [...]` as shown above — the plugin's own auto-detection fallback (for projects that omit `services`) still scans for the pre-3.0 `org.openjdk.btrace.core.extensions.ServiceDescriptor` annotation, not the current `io.btrace.core.extensions` package, so it never fires against a 3.0-style extension in this checkout. See the [hands-on lab](tutorials/06-write-your-own-extension.md) for the full, verified story on that and other plugin gotchas, and the [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for detailed coverage of: classloader isolation, permission declarations, `@ExternalType` adapters, fat-agent embedding, and the full API design rules documented in [ExtensionInterfaceRules.md](ExtensionInterfaceRules.md).
+The plugin generates the service descriptor manifest, computes the required permission set, and produces a distributable ZIP that installs under `$BTRACE_HOME/extensions/`. Service interfaces annotated with `io.btrace.core.extensions.ServiceDescriptor` are discovered automatically when `services = [...]` is omitted; an explicit list remains useful when the interface cannot be annotated. See the [hands-on lab](tutorials/06-write-your-own-extension.md) for the full, verified workflow, and the [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for detailed coverage of classloader isolation, permission declarations, `@ExternalType` adapters, fat-agent embedding, and the API design rules documented in [ExtensionInterfaceRules.md](ExtensionInterfaceRules.md).
 
 ---
 
