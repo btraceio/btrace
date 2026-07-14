@@ -76,6 +76,14 @@ class EmbeddedExtensionPermissionTest {
   }
 
   @Test
+  void embeddedExtensionPreservesRequiredExtensions() throws Exception {
+    ExtensionDescriptorDTO embedded = scanEmbeddedExtension();
+
+    assertEquals(
+        Collections.singletonList("embedded-prerequisite"), embedded.getRequiredExtensions());
+  }
+
+  @Test
   void bridgeDeniesPrivilegedEmbeddedExtensionByDefault() throws Exception {
     ExtensionDescriptorDTO embedded = scanEmbeddedExtension();
     TestLoader loader = new TestLoader(embedded);
@@ -107,7 +115,7 @@ class EmbeddedExtensionPermissionTest {
             + EXTENSION_ID
             + "\nversion=1.0.0\nname=Embedded privileged test\nservices="
             + SERVICE
-            + "\npermissions=NETWORK\n";
+            + "\nrequires.extensions=embedded-prerequisite\npermissions=NETWORK\n";
     writeJar(
         jar,
         manifest,

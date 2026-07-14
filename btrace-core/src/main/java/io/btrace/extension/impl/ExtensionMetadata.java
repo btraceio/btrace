@@ -282,7 +282,7 @@ final class ExtensionMetadata {
     }
   }
 
-  private static List<String> parseList(String value) {
+  static List<String> parseList(String value) {
     if (value == null || value.trim().isEmpty()) {
       return new ArrayList<>();
     }
