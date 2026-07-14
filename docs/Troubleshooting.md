@@ -18,6 +18,21 @@ This guide helps you diagnose and resolve common BTrace issues.
 
 ## JVM Attachment Issues
 
+Start with the read-only diagnostic before trying to load the agent:
+
+```bash
+btrace doctor <pid>
+# Machine-readable automation output:
+btrace doctor <pid> --json
+```
+
+Doctor reports whether the Attach API is available and the target is accessible, but reports
+dynamic-agent loading permission as `not_tested`: determining that permission would require an
+agent-load attempt. If a normal BTrace attach is explicitly rejected because dynamic loading is
+disabled, BTrace prints two next-deployment choices instead of an unconditional stack trace:
+relaunch with `-XX:+EnableDynamicAgentLoading`, or configure reviewed prepared mode with
+`-javaagent:/path/to/btrace.jar=port=0`.
+
 ### Unable to attach to target VM
 
 **Error message:**
