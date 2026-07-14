@@ -103,7 +103,6 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
-import javax.lang.model.SourceVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,6 +118,64 @@ public final class Main {
   private static final Pattern KV_PATTERN = Pattern.compile(",");
   private static final Pattern BUNDLED_PROBE_NAME =
       Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*");
+  private static final Set<String> JAVA_KEYWORDS =
+      Collections.unmodifiableSet(
+          new LinkedHashSet<>(
+              Arrays.asList(
+                  "_",
+                  "abstract",
+                  "assert",
+                  "boolean",
+                  "break",
+                  "byte",
+                  "case",
+                  "catch",
+                  "char",
+                  "class",
+                  "const",
+                  "continue",
+                  "default",
+                  "do",
+                  "double",
+                  "else",
+                  "enum",
+                  "extends",
+                  "false",
+                  "final",
+                  "finally",
+                  "float",
+                  "for",
+                  "goto",
+                  "if",
+                  "implements",
+                  "import",
+                  "instanceof",
+                  "int",
+                  "interface",
+                  "long",
+                  "native",
+                  "new",
+                  "null",
+                  "package",
+                  "private",
+                  "protected",
+                  "public",
+                  "return",
+                  "short",
+                  "static",
+                  "strictfp",
+                  "super",
+                  "switch",
+                  "synchronized",
+                  "this",
+                  "throw",
+                  "throws",
+                  "transient",
+                  "true",
+                  "try",
+                  "void",
+                  "volatile",
+                  "while")));
   private static final String BUNDLED_PROBE_ROOT = "META-INF/btrace-probes/";
   private static final SharedSettings settings = SharedSettings.GLOBAL;
   private static final BTraceTransformer transformer =
@@ -579,8 +636,9 @@ public final class Main {
   private static void loadExtensionProbes(
       ExtensionDescriptorDTO ext, List<String> probeNames, boolean traceToStdOut) {
     for (String probeName : probeNames) {
-      String path = bundledProbeResourcePath(probeName);
-      if (!loadEmbeddedProbe(path, probeName, traceToStdOut)) {
+      String resolvedProbeName = resolveExtensionProbeName(ext, probeName);
+      String path = bundledProbeResourcePath(resolvedProbeName);
+      if (!loadEmbeddedProbe(path, resolvedProbeName, traceToStdOut)) {
         throw new BundledProbeException(
             "Bundled probe '"
                 + probeName
@@ -592,6 +650,19 @@ public final class Main {
     }
   }
 
+  static String resolveExtensionProbeName(ExtensionDescriptorDTO ext, String probeName) {
+    if (probeName != null && probeName.indexOf('.') == -1) {
+      for (String bundledProbe : ext.getBundledProbes()) {
+        int simpleNameStart = bundledProbe.lastIndexOf('.') + 1;
+        if (bundledProbe.regionMatches(simpleNameStart, probeName, 0, probeName.length())
+            && bundledProbe.length() - simpleNameStart == probeName.length()) {
+          return bundledProbe;
+        }
+      }
+    }
+    return probeName;
+  }
+
   static String bundledProbeResourcePath(String probeName) {
     validateBundledProbeName(probeName);
     return BUNDLED_PROBE_ROOT + probeName.replace('.', '/') + ".class";
@@ -601,7 +672,7 @@ public final class Main {
     boolean valid = probeName != null && BUNDLED_PROBE_NAME.matcher(probeName).matches();
     if (valid) {
       for (String part : probeName.split("\\.")) {
-        if (!SourceVersion.isIdentifier(part) || SourceVersion.isKeyword(part)) {
+        if (JAVA_KEYWORDS.contains(part)) {
           valid = false;
           break;
         }

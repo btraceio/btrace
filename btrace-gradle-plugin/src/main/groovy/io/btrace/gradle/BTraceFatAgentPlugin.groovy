@@ -4,6 +4,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.file.DuplicatesStrategy
 import javax.lang.model.SourceVersion
@@ -86,16 +87,28 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             group = 'BTrace Fat Agent'
             description = 'Stages bundled probes for fat agent JAR'
 
+            inputs.files(project.provider { extension.probeBundle.probeDirs })
+                .withPropertyName('probeDirectories')
+                .withPathSensitivity(PathSensitivity.RELATIVE)
+            inputs.files(project.provider { extension.probeBundle.sourceRoots })
+                .withPropertyName('probeSourceRoots')
+                .withPathSensitivity(PathSensitivity.RELATIVE)
+            inputs.property(
+                'probeIncludes',
+                project.provider { new ArrayList<>(extension.probeBundle.includes) })
+            inputs.property(
+                'probeExcludes',
+                project.provider { new ArrayList<>(extension.probeBundle.excludes) })
             outputs.dir(new File(stagingDir, 'META-INF/btrace-probes'))
 
             doLast {
                 def probeSpec = extension.probeBundle
+                def probesDir = new File(stagingDir, 'META-INF/btrace-probes')
+                project.delete(probesDir)
                 if (!probeSpec.hasProbes()) {
                     return
                 }
 
-                def probesDir = new File(stagingDir, 'META-INF/btrace-probes')
-                project.delete(probesDir)
                 probesDir.mkdirs()
 
                 def toProbePath = { String binaryName ->
@@ -114,8 +127,9 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
                     project.copy {
                         from dir
                         into probesDir
-                        include '**/*.class'
-                        if (!includePaths.isEmpty()) {
+                        if (includePaths.isEmpty()) {
+                            include '**/*.class'
+                        } else {
                             include includePaths
                         }
                         if (!excludePaths.isEmpty()) {

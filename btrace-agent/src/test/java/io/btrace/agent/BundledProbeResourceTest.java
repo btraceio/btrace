@@ -19,6 +19,9 @@ package io.btrace.agent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import io.btrace.extension.ExtensionDescriptorDTO;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
@@ -38,9 +41,50 @@ class BundledProbeResourceTest {
   }
 
   @Test
+  void extensionProbeSimpleNameResolvesToDeclaredBinaryName() {
+    ExtensionDescriptorDTO extension =
+        new ExtensionDescriptorDTO.Builder()
+            .id("spark")
+            .version("1.0")
+            .jarPath(Paths.get("spark.jar"))
+            .bundledProbes(
+                Arrays.asList("org.example.spark.SparkJobTracer", "org.example.OtherProbe"))
+            .build();
+
+    String resolved = Main.resolveExtensionProbeName(extension, "SparkJobTracer");
+
+    assertEquals("org.example.spark.SparkJobTracer", resolved);
+    assertEquals(
+        "META-INF/btrace-probes/org/example/spark/SparkJobTracer.class",
+        Main.bundledProbeResourcePath(resolved));
+  }
+
+  @Test
+  void extensionProbeQualifiedNameIsPreserved() {
+    ExtensionDescriptorDTO extension =
+        new ExtensionDescriptorDTO.Builder()
+            .id("spark")
+            .version("1.0")
+            .jarPath(Paths.get("spark.jar"))
+            .bundledProbes(Collections.singletonList("org.example.spark.SparkJobTracer"))
+            .build();
+
+    assertEquals(
+        "org.example.spark.SparkJobTracer",
+        Main.resolveExtensionProbeName(extension, "org.example.spark.SparkJobTracer"));
+  }
+
+  @Test
   void traversalAndResourceSyntaxAreRejected() {
     String[] invalid = {
-      "../Probe", "com/example/Probe", "com..example.Probe", ".Probe", "Probe.class", ""
+      "../Probe",
+      "com/example/Probe",
+      "com..example.Probe",
+      ".Probe",
+      "Probe.class",
+      "class.Probe",
+      "Probe.null",
+      ""
     };
     for (String name : invalid) {
       assertThrows(Main.BundledProbeException.class, () -> Main.bundledProbeResourcePath(name));

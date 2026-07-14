@@ -251,6 +251,56 @@ class BTraceFatAgentPluginTest {
     }
 
     @Test
+    @DisplayName("stageProbes reruns when a bundled probe class changes")
+    void stageProbesTracksProbeDirectoryContents() throws IOException {
+        Path probe = projectDir.resolve("probes/com/example/NestedProbe.class");
+        Files.createDirectories(probe.getParent());
+        Files.write(probe, new byte[] {0, 1, 2, 3});
+        writeFile(
+                buildFile,
+                "plugins { id 'io.btrace.fat-agent' }\n"
+                        + "btraceFatAgent {\n"
+                        + "  bundledProbes { from 'probes' }\n"
+                        + "}\n");
+
+        BuildResult first = createRunner().withArguments("stageProbes").build();
+        BuildResult unchanged = createRunner().withArguments("stageProbes").build();
+        Files.write(probe, new byte[] {4, 5, 6, 7});
+        BuildResult changed = createRunner().withArguments("stageProbes").build();
+
+        assertEquals(TaskOutcome.SUCCESS, first.task(":stageProbes").getOutcome());
+        assertEquals(TaskOutcome.UP_TO_DATE, unchanged.task(":stageProbes").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, changed.task(":stageProbes").getOutcome());
+        assertEquals(
+                (byte) 4,
+                Files.readAllBytes(
+                                projectDir.resolve(
+                                        "build/fat-agent-staging/META-INF/btrace-probes/com/example/NestedProbe.class"))
+                        [0]);
+    }
+
+    @Test
+    @DisplayName("stageProbes reruns when bundled probe selection changes")
+    void stageProbesTracksProbeSelection() throws IOException {
+        Path firstProbe = projectDir.resolve("probes/com/example/FirstProbe.class");
+        Path secondProbe = projectDir.resolve("probes/com/example/SecondProbe.class");
+        Files.createDirectories(firstProbe.getParent());
+        Files.write(firstProbe, new byte[] {0});
+        Files.write(secondProbe, new byte[] {1});
+        writeProbeSelection("com.example.FirstProbe");
+
+        BuildResult first = createRunner().withArguments("stageProbes").build();
+        writeProbeSelection("com.example.SecondProbe");
+        BuildResult changed = createRunner().withArguments("stageProbes").build();
+
+        assertEquals(TaskOutcome.SUCCESS, first.task(":stageProbes").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, changed.task(":stageProbes").getOutcome());
+        Path stagedRoot = projectDir.resolve("build/fat-agent-staging/META-INF/btrace-probes");
+        assertTrue(Files.notExists(stagedRoot.resolve("com/example/FirstProbe.class")));
+        assertTrue(Files.exists(stagedRoot.resolve("com/example/SecondProbe.class")));
+    }
+
+    @Test
     @DisplayName("Launched fat agent executes and tears down a nested bundled probe")
     void launchedFatAgentExecutesAndTearsDownBundledProbe() throws Exception {
         Path agentSource = projectDir.resolve("src/main/java/io/btrace/agent/Main.java");
@@ -490,6 +540,20 @@ class BTraceFatAgentPluginTest {
             .withProjectDir(projectDir.toFile())
             .withPluginClasspath()
             .forwardOutput();
+    }
+
+    private void writeProbeSelection(String probeName) throws IOException {
+        writeFile(
+                buildFile,
+                "plugins { id 'io.btrace.fat-agent' }\n"
+                        + "btraceFatAgent {\n"
+                        + "  bundledProbes {\n"
+                        + "    from 'probes'\n"
+                        + "    include '"
+                        + probeName
+                        + "'\n"
+                        + "  }\n"
+                        + "}\n");
     }
 
     private void writeFile(File file, String content) throws IOException {
