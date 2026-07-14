@@ -29,6 +29,7 @@ import io.btrace.core.annotations.DTraceRef;
 import io.btrace.core.comm.BinaryWireProtocol;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.CommandListener;
+import io.btrace.core.comm.ConnectionAuthenticator;
 import io.btrace.core.comm.DisconnectCommand;
 import io.btrace.core.comm.EventCommand;
 import io.btrace.core.comm.ExitCommand;
@@ -53,10 +54,12 @@ import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ConnectException;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.UnknownHostException;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -119,7 +122,9 @@ public class Client {
   }
 
   // port on which BTrace agent listens
-  private final int port;
+  private volatile int port;
+  private volatile String discoveredAddress;
+  private volatile byte[] authenticationToken;
   // the output file or null
   private final String outputFile;
   // are we running debug mode?
@@ -250,7 +255,8 @@ public class Client {
       Properties serverVmProps = vm.getSystemProperties();
       String serverPort = serverVmProps.getProperty("btrace.port");
       if (serverPort != null) {
-        return Integer.parseInt(serverPort) == port;
+        configureConnection(serverVmProps);
+        return true;
       }
     } catch (Exception ignore) {
       // fall through to port probe
@@ -333,6 +339,7 @@ public class Client {
 
   private WireProtocol createProtocol(Socket socket, String host, boolean allowFallback)
       throws IOException {
+    authenticate(socket);
     ProtocolConfig config = ProtocolConfig.fromSystemProperties();
     ProtocolVersion preferred = config.getVersion();
 
@@ -344,8 +351,9 @@ public class Client {
           throw e;
         }
         closeSocketQuietly(socket);
-        Socket fallback = new Socket(host, port);
+        Socket fallback = new Socket(resolveHost(host), port);
         this.sock = fallback;
+        authenticate(fallback);
         return createV1Protocol(fallback);
       }
     }
@@ -389,6 +397,93 @@ public class Client {
       socket.close();
     } catch (IOException ignore) {
     }
+  }
+
+  private void authenticate(Socket socket) throws IOException {
+    byte[] configuredToken = authenticationToken;
+    if (configuredToken == null) {
+      return;
+    }
+    byte[] token = configuredToken.clone();
+    int previousTimeout = socket.getSoTimeout();
+    try {
+      socket.setSoTimeout(ProtocolNegotiator.getNegotiationTimeoutMs());
+      ConnectionAuthenticator.authenticateClient(
+          socket.getInputStream(), socket.getOutputStream(), token);
+    } finally {
+      Arrays.fill(token, (byte) 0);
+      try {
+        socket.setSoTimeout(previousTimeout);
+      } catch (IOException ignored) {
+      }
+    }
+  }
+
+  String resolveHost(String requestedHost) {
+    String address = discoveredAddress;
+    return address != null && !address.isEmpty() ? address : requestedHost;
+  }
+
+  void configureConnection(Properties targetProperties) throws IOException {
+    int replacementPort = port;
+    String serverPort = targetProperties.getProperty(ControlServerProperties.PORT);
+    if (serverPort != null) {
+      try {
+        int discoveredPort = Integer.parseInt(serverPort);
+        if (discoveredPort < 1 || discoveredPort > 65535) {
+          throw new IOException("Target BTrace server published an invalid port");
+        }
+        replacementPort = discoveredPort;
+      } catch (NumberFormatException e) {
+        throw new IOException("Target BTrace server published an invalid port");
+      }
+    }
+
+    String address = targetProperties.getProperty(ControlServerProperties.ADDRESS);
+    String replacementAddress = null;
+    if (address != null && !address.trim().isEmpty()) {
+      InetAddress discovered = InetAddress.getByName(address.trim());
+      if (!discovered.isLoopbackAddress()) {
+        throw new IOException("Target BTrace server published a non-loopback address");
+      }
+      replacementAddress = discovered.getHostAddress();
+    }
+
+    String authenticationRequired =
+        targetProperties.getProperty(ControlServerProperties.AUTH_REQUIRED, "false");
+    if (!"true".equalsIgnoreCase(authenticationRequired)
+        && !"false".equalsIgnoreCase(authenticationRequired)) {
+      throw new IOException("Target BTrace server published invalid authentication metadata");
+    }
+
+    byte[] replacementToken = null;
+    if (Boolean.parseBoolean(authenticationRequired)) {
+      String tokenFile = targetProperties.getProperty(ControlServerProperties.TOKEN_FILE);
+      if (tokenFile == null || tokenFile.trim().isEmpty()) {
+        throw new IOException("Prepared BTrace agent did not publish authentication credentials");
+      }
+      replacementToken =
+          ConnectionAuthenticator.readToken(Paths.get(tokenFile).toAbsolutePath().normalize());
+    }
+
+    port = replacementPort;
+    discoveredAddress = replacementAddress;
+    replaceAuthenticationToken(replacementToken);
+  }
+
+  private void replaceAuthenticationToken(byte[] replacement) {
+    byte[] previous = authenticationToken;
+    authenticationToken = replacement;
+    if (previous != null) {
+      Arrays.fill(previous, (byte) 0);
+    }
+  }
+
+  private static final class ControlServerProperties {
+    static final String PORT = "btrace.port";
+    static final String ADDRESS = "btrace.address";
+    static final String AUTH_REQUIRED = "btrace.auth.required";
+    static final String TOKEN_FILE = "btrace.auth.tokenFile";
   }
 
   /**
@@ -653,19 +748,9 @@ public class Client {
       Properties serverVmProps = vm.getSystemProperties();
       warnIfDeprecatedTargetJvm(pid, serverVmProps.getProperty("java.version", ""));
       int serverPort = Integer.parseInt(serverVmProps.getProperty("btrace.port", "-1"));
-      boolean agentAlreadyRunning = false;
-      if (serverPort != -1) {
-        if (serverPort != port) {
-          throw new IOException(
-              "Can not attach to PID "
-                  + pid
-                  + " on port "
-                  + port
-                  + ". There is already a BTrace server active on port "
-                  + serverPort
-                  + "!");
-        }
-        agentAlreadyRunning = true;
+      boolean agentAlreadyRunning = serverPort != -1;
+      if (agentAlreadyRunning) {
+        configureConnection(serverVmProps);
         if (log.isDebugEnabled()) {
           log.debug("agent already running on port {}", port);
         }
@@ -795,6 +880,10 @@ public class Client {
       if (log.isDebugEnabled()) {
         log.debug("loaded {}", agentPath);
       }
+      Properties loadedAgentProperties = vm.getSystemProperties();
+      if (loadedAgentProperties.getProperty("btrace.port") != null) {
+        configureConnection(loadedAgentProperties);
+      }
     } catch (RuntimeException | IOException re) {
       System.err.println("[DEBUG] IOException/RuntimeException during attach:");
       re.printStackTrace();
@@ -803,6 +892,29 @@ public class Client {
       System.err.println("[DEBUG] Exception during attach:");
       exp.printStackTrace();
       throw new IOException("Failed to attach to PID " + pid, exp);
+    } finally {
+      if (vm != null) {
+        try {
+          vm.detach();
+        } catch (IOException ignored) {
+        }
+      }
+    }
+  }
+
+  void discoverPreparedAgent(String pid) throws IOException {
+    VirtualMachine vm = null;
+    try {
+      vm = VirtualMachine.attach(pid);
+      Properties targetProperties = vm.getSystemProperties();
+      if (targetProperties.getProperty("btrace.port") == null) {
+        throw new IOException("No BTrace control endpoint is available for PID " + pid);
+      }
+      configureConnection(targetProperties);
+    } catch (RuntimeException | IOException failure) {
+      throw failure;
+    } catch (Exception failure) {
+      throw new IOException("Failed to discover BTrace agent for PID " + pid, failure);
     } finally {
       if (vm != null) {
         try {
@@ -824,7 +936,7 @@ public class Client {
       long timeout = System.nanoTime() + TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
       while (sock == null && System.nanoTime() <= timeout) {
         try {
-          sock = new Socket(host, port);
+          sock = new Socket(resolveHost(host), port);
         } catch (ConnectException e) {
           log.debug("server not yet available; retrying ...");
           Thread.sleep(20);
@@ -865,7 +977,7 @@ public class Client {
       long timeout = System.nanoTime() + TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
       while (sock == null && System.nanoTime() <= timeout) {
         try {
-          sock = new Socket(host, port);
+          sock = new Socket(resolveHost(host), port);
         } catch (ConnectException e) {
           log.debug("server not yet available; retrying ...");
           Thread.sleep(20);
@@ -907,7 +1019,7 @@ public class Client {
       long timeout = System.nanoTime() + TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
       while (sock == null && System.nanoTime() <= timeout) {
         try {
-          sock = new Socket(host, port);
+          sock = new Socket(resolveHost(host), port);
         } catch (ConnectException e) {
           log.debug("server not yet available; retrying ...");
           Thread.sleep(20);
@@ -1012,7 +1124,7 @@ public class Client {
       long timeout = System.nanoTime() + TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
       while (sock == null && System.nanoTime() <= timeout) {
         try {
-          sock = new Socket(host, port);
+          sock = new Socket(resolveHost(host), port);
         } catch (ConnectException e) {
           log.debug("server not yet available; retrying ...");
           Thread.sleep(20);
@@ -1114,13 +1226,31 @@ public class Client {
   public synchronized void close() throws IOException {
     // Mark as disconnected to prevent shutdown hook from attempting further sends
     disconnected = true;
-    if (protocol != null) {
-      protocol.close();
+    IOException failure = null;
+    try {
+      if (protocol != null) {
+        protocol.close();
+      }
+    } catch (IOException e) {
+      failure = e;
     }
-    if (sock != null) {
-      sock.close();
+    try {
+      if (sock != null) {
+        sock.close();
+      }
+    } catch (IOException e) {
+      if (failure == null) {
+        failure = e;
+      } else {
+        failure.addSuppressed(e);
+      }
+    } finally {
+      reset();
+      replaceAuthenticationToken(null);
     }
-    reset();
+    if (failure != null) {
+      throw failure;
+    }
   }
 
   public boolean isDisconnected() {

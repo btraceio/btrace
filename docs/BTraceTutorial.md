@@ -118,6 +118,9 @@ Once you are attached to the target JVM you can press Ctrl-C in the terminal to 
 The agent takes a list of comma separated arguments.
 
 * **noServer** - don't start the socket server
+* **port** - command-server port; prepared mode accepts `0` for an automatically selected port
+* **bindAddress** - explicit loopback bind address; non-loopback and wildcard addresses fail closed
+* **authTokenFile** - existing owner-protected token file, or a path where the agent creates one
 * **bootClassPath** - boot classpath to be used
 * **systemClassPath** - system classpath to be used
 * **debug** - turns on verbose debug messages (true/false)
@@ -138,9 +141,19 @@ The agent takes a list of comma separated arguments.
 The scripts to be run must have already been compiled to bytecode (a *.class* file) by __btracec__.
 
 For a launch-time script that needs no later client connection, set `noServer=true`. BTrace 3.0
-does not treat an unauthenticated startup command server as prepared mode; prepared mode requires
-authentication and loopback-only binding. Until that path is available in a tested release, use
-startup-script mode with `noServer=true` or dynamic attach where JVM policy permits it.
+does not treat an unauthenticated startup command server as prepared mode. To prepare a JVM for a
+later PID-based BTrace connection, start the agent without a script:
+
+```bash
+java -javaagent:btrace.jar=port=0 MyApp
+```
+
+The agent binds loopback, creates owner-protected credentials, and publishes discovery metadata
+through the target JVM. The 3.0 client reads that metadata through the Attach API, authenticates
+before V1/V2 negotiation, and never places the token in arguments, properties, or logs. Set
+`noServer=false` explicitly if a startup script must also retain the authenticated endpoint.
+Generated credentials are removed at shutdown. Older clients fail closed, and remote prepared mode
+is unsupported in 3.0.0.
 
 ###### Using `btracer'
 

@@ -37,6 +37,8 @@ public final class Args {
   public static final String PROBE_DESC_PATH = "probeDescPath";
   public static final String DEBUG = "debug";
   public static final String TELEMETRY = "telemetry";
+  public static final String BIND_ADDRESS = "bindAddress";
+  public static final String AUTH_TOKEN_FILE = "authTokenFile";
   public static final String PORT = "port";
   public static final String STDOUT = "stdout";
   public static final String NO_SERVER = "noServer";

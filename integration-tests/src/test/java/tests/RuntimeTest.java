@@ -892,6 +892,7 @@ public abstract class RuntimeTest {
     private int pid;
     private final CountDownLatch testAppLatch = new CountDownLatch(1);
     private final Process process;
+    private final StringBuilder startupStderr = new StringBuilder();
 
     public TestApp(Process process, boolean debug) {
       this.process = process;
@@ -934,7 +935,9 @@ public abstract class RuntimeTest {
                         || l.contains("XML libraries not available")) {
                       continue;
                     }
-                    testAppLatch.countDown();
+                    synchronized (startupStderr) {
+                      startupStderr.append(l).append('\n');
+                    }
                     if (debug) {
                       System.err.println("[traced app] " + l);
                     }
@@ -948,6 +951,21 @@ public abstract class RuntimeTest {
 
       outT.start();
       errT.start();
+
+      Thread exitT =
+          new Thread(
+              () -> {
+                try {
+                  process.waitFor();
+                } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                } finally {
+                  testAppLatch.countDown();
+                }
+              },
+              "Target Process Waiter");
+      exitT.setDaemon(true);
+      exitT.start();
     }
 
     public void stop() throws InterruptedException {
@@ -960,12 +978,33 @@ public abstract class RuntimeTest {
     }
 
     public int getPid() throws InterruptedException {
-      testAppLatch.await();
+      if (!testAppLatch.await(30, TimeUnit.SECONDS)) {
+        throw new IllegalStateException("Target process did not become ready within 30 seconds");
+      }
+      if (pid <= 0) {
+        String errors;
+        synchronized (startupStderr) {
+          errors = startupStderr.toString();
+        }
+        throw new IllegalStateException("Target process exited before becoming ready: " + errors);
+      }
       return pid;
     }
   }
 
   public TestApp launchTestApp(String testApp, String... cmdArgs) throws Exception {
+    return launchTestAppInternal(testApp, null, Collections.emptyList(), cmdArgs);
+  }
+
+  protected TestApp launchTestAppWithAgent(
+      String testApp, String agentArguments, String... jvmArguments) throws Exception {
+    return launchTestAppInternal(
+        testApp, agentArguments, Arrays.asList(jvmArguments), new String[0]);
+  }
+
+  private TestApp launchTestAppInternal(
+      String testApp, String agentArguments, List<String> additionalJvmArguments, String... cmdArgs)
+      throws Exception {
     if (forceDebug) {
       // force debug flags
       debugBTrace = true;
@@ -983,14 +1022,24 @@ public abstract class RuntimeTest {
     }
     args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
     args.add("-XX:+IgnoreUnrecognizedVMOptions");
+    args.add("-Dbtrace.suppressJavaDeprecationWarning=true");
     // uncomment the following line to get extra JFR logs
     //    args.add("-Xlog:jfr*=trace");
     args.addAll(extraJvmArgs);
+    args.addAll(additionalJvmArguments);
     if (startJfr) {
       jfrFile = Files.createTempFile("btrace-", ".jfr").toString();
       args.add("-XX:StartFlightRecording=settings=default,dumponexit=true,filename=" + jfrFile);
     }
+    if (agentArguments != null) {
+      Path agentPath = locateAgent();
+      if (agentPath == null) {
+        throw new IllegalStateException("Missing btrace.jar or btrace-agent.jar");
+      }
+      args.add("-javaagent:" + agentPath + "=" + agentArguments);
+    }
     args.add(testApp);
+    args.addAll(Arrays.asList(cmdArgs));
 
     ProcessBuilder pb = new ProcessBuilder(args);
     pb.environment().remove("JAVA_TOOL_OPTIONS");
