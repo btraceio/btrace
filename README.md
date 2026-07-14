@@ -364,19 +364,9 @@ Keys
 
 ### Maven Integration
 
-**Fat Agent Plugin** (in this repo): Build fat agent JARs with embedded extensions:
-```xml
-<plugin>
-    <groupId>io.btrace</groupId>
-    <artifactId>btrace-maven-plugin</artifactId>
-    <version>${btrace.version}</version>
-    <configuration>
-        <extensions>
-            <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
-        </extensions>
-    </configuration>
-</plugin>
-```
+**Fat Agent Plugin:** The unpublished in-repository Maven fat-agent module was removed for 3.0.0
+because it cannot consume the published 3.0 extension layout safely. Use the
+`io.btrace.fat-agent` Gradle plugin documented above.
 
 **Script Compilation Plugin** ([external repo](https://github.com/btraceio/btrace-maven)):
 - Compilation of BTrace scripts during the build process

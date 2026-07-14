@@ -271,50 +271,10 @@ steps:
 
 ## Maven Plugin
 
-For Maven users, the `btrace-maven-plugin` provides equivalent functionality:
-
-```xml
-<plugin>
-    <groupId>io.btrace</groupId>
-    <artifactId>btrace-maven-plugin</artifactId>
-    <version>${btrace.version}</version>
-    <executions>
-        <execution>
-            <goals>
-                <goal>fat-agent</goal>
-            </goals>
-        </execution>
-    </executions>
-    <configuration>
-        <outputName>my-btrace-agent</outputName>
-        <extensions>
-            <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
-            <extension>io.btrace:btrace-statsd:${btrace.version}</extension>
-        </extensions>
-    </configuration>
-</plugin>
-```
-
-### Configuration Parameters
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `btraceVersion` | Plugin version | BTrace version for base agent/boot JARs |
-| `extensions` | (none) | Extension coordinates (`groupId:artifactId:version`) |
-| `outputName` | `btrace-agent-fat` | Output file name (without `.jar`) |
-| `outputDirectory` | `${project.build.directory}` | Output directory |
-| `skip` | `false` | Skip execution |
-
-### Implementation
-
-The Maven plugin follows the same staging process as the Gradle plugin:
-
-1. Resolves the `btrace` artifact (single masked JAR) from Maven Central
-2. Resolves each extension artifact (API JAR with classifier `api`, impl JAR with classifier `impl`)
-3. Stages API classes as `.class` files (bootstrap)
-4. Stages impl classes as `.classdata` files (runtime-loaded)
-5. Writes extension metadata to `META-INF/btrace-extensions/{id}/`
-6. Updates manifest with `BTrace-Embedded-Extensions` attribute
+The unpublished Maven fat-agent module was removed for 3.0.0. It resolved artifacts and staged
+classdata according to pre-3.0 contracts, which could produce a successful build whose embedded
+services could not load. The Gradle plugin described in this guide is the supported 3.0 fat-agent
+implementation.
 
 ## Limitations
 
