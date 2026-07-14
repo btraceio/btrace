@@ -7,9 +7,9 @@ minimal container.
 **Persona:** a platform engineer who ships BTrace as part of someone else's deployment, not just
 runs it themselves. **Time:** ~15 minutes.
 
-A note before you start: this tutorial builds real JARs with Gradle and Maven, which need your own
+A note before you start: this tutorial builds real JARs with Gradle and therefore requires your own
 build environment and network access to a Maven repository — this is not something a docs sandbox
-can execute for you. Every command, DSL property, and file path below is traced to the plugin/mojo
+can execute for you. Every command, DSL property, and file path below is traced to the Gradle plugin
 source and its test suite (cited inline); where that source revealed a real gap between what's
 documented and what the runtime actually does, this tutorial says so plainly instead of pretending
 otherwise — see the callouts marked **Heads up**.
@@ -22,7 +22,7 @@ otherwise — see the callouts marked **Heads up**.
 
 ## Step 1 — Get something to embed
 
-The fat agent plugins embed *extensions*, not scripts. This tutorial embeds `btrace-metrics` — the
+The fat-agent plugin embeds *extensions*, not scripts. This tutorial embeds `btrace-metrics` — the
 same HdrHistogram-backed extension from
 [Tutorial 4](04-extensions-and-permissions.md#step-2--ask-btrace-to-hand-your-probe-a-metrics-service).
 Build its distributable package from the repo root:
