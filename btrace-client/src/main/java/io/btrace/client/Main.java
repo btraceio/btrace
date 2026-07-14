@@ -106,6 +106,19 @@ public final class Main {
   }
 
   public static void main(String[] args) throws Exception {
+    String[] doctorArguments = doctorArguments(args);
+    if (doctorArguments != null) {
+      int exitCode =
+          Doctor.run(
+              doctorArguments,
+              new PrintWriter(System.out, true),
+              new PrintWriter(System.err, true));
+      if (exitCode != Doctor.EXIT_READY) {
+        System.exit(exitCode);
+      }
+      return;
+    }
+
     int port = BTRACE_DEFAULT_PORT;
     String host = BTRACE_DEFAULT_HOST;
     String classPath = ".";
@@ -272,6 +285,9 @@ public final class Main {
               DUMP_DIR,
               statsdDef);
       if (resumeProbe != null) {
+        if (!hostDefined) {
+          client.discoverPreparedAgent(pid.toString());
+        }
         registerExitHook(client);
         if (con != null) {
           registerSignalHandler(client);
@@ -385,6 +401,22 @@ public final class Main {
     } catch (IOException exp) {
       errorExit(exp.getMessage(), 1);
     }
+  }
+
+  static String[] doctorArguments(String[] args) {
+    int doctorIndex =
+        args.length > 0 && "doctor".equals(args[0])
+            ? 0
+            : args.length > 1 && "-v".equals(args[0]) && "doctor".equals(args[1]) ? 1 : -1;
+    if (doctorIndex < 0) {
+      return null;
+    }
+
+    String[] doctorArguments = new String[args.length - 1];
+    System.arraycopy(args, 0, doctorArguments, 0, doctorIndex);
+    System.arraycopy(
+        args, doctorIndex + 1, doctorArguments, doctorIndex, args.length - doctorIndex - 1);
+    return doctorArguments;
   }
 
   private static CommandListener createCommandListener(Client client) {

@@ -33,12 +33,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import jdk.jfr.EventType;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingFile;
@@ -48,6 +50,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import tests.harness.Completion;
 
 /**
  * A set of end-to-end functional tests.
@@ -75,7 +78,14 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/OSMBeanTest.java",
-        2,
+        // n=2, not 1: the client subprocess emits its own "Attaching BTrace to PID" banner line
+        // on stdout (Main.java) strictly before the real VirtualMachine.attach() call executes.
+        // Waiting for just 1 non-empty line is satisfied by that banner alone, races ahead of the
+        // actual attach, and the harness signals the target process to shut down while attach is
+        // still in flight -- producing an intermittent "No such process" IOException in the
+        // client. n=2 waits past both the "Attaching..." and "Successfully started..." (or
+        // equivalent second) banner line first, which is what the original checkLines=2 achieved.
+        Completion.untilMatches(Pattern.compile(".+"), 2),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -91,7 +101,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
       testDynamic(
           "resources.Main",
           "btrace/OnProbeTest.java",
-          5,
+          Completion.untilContains("[this, noargs]", "[this, args]"),
           new ResultValidator() {
             @Override
             public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -111,7 +121,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/OnTimerTest.java",
-        10,
+        Completion.untilContains("vm version", "vm starttime", "timer"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -130,7 +140,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
         "resources.Main",
         "btrace/OnTimerArgTest.java",
         new String[] {"timer=500"},
-        10,
+        Completion.untilContains("vm version", "vm starttime", "timer"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -149,7 +159,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/OnExitTest.java",
-        5,
+        Completion.untilContains("onexit"),
         (stdout, stderr, retcode, jfrFile) -> {
           assertFalse(stdout.contains("FAILED"), "Script should not have failed");
           assertTrue(stderr.isEmpty(), "Non-empty stderr");
@@ -163,7 +173,16 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/OnMethodTest.java",
-        14,
+        Completion.untilContains(
+            "[this, noargs]",
+            "[this, args]",
+            "{xxx}",
+            "heap:init",
+            "prop: test",
+            "fieldSet: field java.lang.String resources.Main#field",
+            "fieldSet: static field java.lang.String resources.Main#sField",
+            "fieldGet: field java.lang.String resources.Main#field",
+            "fieldGet: static field java.lang.String resources.Main#sField"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -192,7 +211,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamicOneliner(
         "resources.Main",
         oneLiner,
-        30,
+        Completion.untilContains("callB", "Hello World"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -211,7 +230,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
         "resources.Main",
         "btrace/ExtensionLifecycleTest.java",
         new String[] {"extensionCloseTest=true"},
-        10,
+        Completion.untilContains("extension close: btrace-utils"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -261,7 +280,11 @@ public class BTraceFunctionalTests extends RuntimeTest {
         "resources.Main",
         "traces/TraceAllTest.class",
         null,
-        10,
+        // TraceAllTest's @OnTimer handler only prints once it has observed at least one traced
+        // invocation, so "[invocations=" is a real content marker (unlike testOSMBean's client
+        // banner problem) rather than framework bootstrap noise -- wait for it directly instead
+        // of guessing at a line count.
+        Completion.untilContains("[invocations="),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -278,7 +301,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
         "resources.Main",
         "btrace/OnMethodLevelTest.java",
         new String[] {"level=200"},
-        5,
+        Completion.untilContains("[this, noargs]", "[this, args]", "{xxx}"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -297,7 +320,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/OnMethodTest.java",
-        2,
+        Completion.untilContains("Going to retransform class"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -313,7 +336,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/OnMethodReturnTest.java",
-        5,
+        Completion.untilContains("[this, anytype(void)]", "[this, void]", "[this, 2]"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -332,7 +355,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/OnMethodSubclassTest.java",
-        5,
+        Completion.untilContains("print:class resources.Main"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -352,7 +375,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
         "resources.Main",
         "btrace/ProbeArgsTest.java",
         new String[] {"arg1", "arg2=val2"},
-        5,
+        Completion.untilContains("arg#=2", "arg1=", "arg2=val2"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -371,7 +394,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/PerfCounterTest.java",
-        5,
+        Completion.untilContains("matching probe"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -387,7 +410,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/issues/BTRACE400.java",
-        5,
+        Completion.untilContains(
+            "private java.lang.String resources.Main.id", "class resources.Main"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -420,7 +444,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testWithJfr(
         "resources.Main",
         "btrace/JfrTest.java",
-        30,
+        Completion.untilContains("Main.callA"),
+        Completion.lines(30),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -554,7 +579,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
           "resources.ThreadSpawner",
           "traces/ThreadStart.class",
           null,
-          10,
+          Completion.untilContains("starting testThread"),
           new ResultValidator() {
             @Override
             public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -568,7 +593,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
           "resources.ThreadSpawner",
           "traces/ThreadStart.class",
           null,
-          20,
+          // Same marker as the dynamic=true branch above.
+          Completion.untilContains("starting testThread"),
           new ResultValidator() {
             @Override
             public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -586,7 +612,14 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/MetricsTest.java",
-        20,
+        Completion.untilContains(
+            "=== HDR Histogram Metrics Test ===",
+            "=== Metrics Report ===",
+            "Count:",
+            "Mean:",
+            "P50:",
+            "P95:",
+            "P99:"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -666,7 +699,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamicOneliner(
         "resources.Main",
         "resources.Main::callA @entry { print method }",
-        10,
+        Completion.untilContains("callA"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -682,7 +715,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamicOneliner(
         "resources.Main",
         "resources.Main::callB @entry { print args }",
-        10,
+        Completion.untilContains("[1, Hello World]"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -698,7 +731,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamicOneliner(
         "resources.Main",
         "resources.Main::callB @return { print method, duration }",
-        10,
+        Completion.untilContains("callB"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -714,7 +747,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamicOneliner(
         "resources.Main",
         "/resources\\..*Main/::callA @entry { print method }",
-        10,
+        Completion.untilContains("callA"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -730,7 +763,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamicOneliner(
         "resources.Main",
         "resources.Main::callB @entry { stack }",
-        10,
+        Completion.untilContains("resources.Main.callA"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -748,7 +781,22 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamicOneliner(
         "resources.Main",
         "resources.Main::callB @invalid { print }",
-        5,
+        new Completion() {
+          @Override
+          public boolean onStdout(String line) {
+            return line.toLowerCase(Locale.ROOT).contains("error");
+          }
+
+          @Override
+          public boolean onStderr(String line) {
+            return true;
+          }
+
+          @Override
+          public String describe() {
+            return "a compile error on stdout or any stderr line";
+          }
+        },
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -766,7 +814,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/FlatDslTest.java",
-        5,
+        Completion.untilContains("flat-dsl:"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {

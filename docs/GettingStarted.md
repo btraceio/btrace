@@ -348,12 +348,25 @@ btrace -v 12345 MyTrace.java arg1 arg2
 - `-p <port>` - Specify port for communication
 - `-o <file>` - Redirect output to file
 
+Before attaching, inspect readiness without loading an agent or opening the BTrace command socket:
+
+```bash
+btrace doctor <pid>
+btrace doctor <pid> --json
+```
+
+Doctor reads target properties through the Attach API and then detaches. It reports the target
+JDK/vendor, Attach availability, an existing BTrace endpoint, and next-deployment remediation.
+Dynamic-agent loading permission is always reported as `not_tested`, because observing it would
+require the state-changing load that doctor deliberately avoids. Exit codes are stable: `0` ready,
+`2` preparation required, `3` inaccessible, and `4` unexpected failure or invalid invocation.
+
 ### 3. Java Agent Mode (Pre-compiled Scripts)
 
 Start a Java application with BTrace agent and a pre-compiled script:
 
 ```bash
-java -javaagent:btrace.jar=script=<script.class>[,arg1=value1]... YourApp
+java -javaagent:btrace.jar=script=<script.class>,noServer=true[,arg1=value1]... YourApp
 ```
 
 **When to use:**
@@ -367,8 +380,60 @@ java -javaagent:btrace.jar=script=<script.class>[,arg1=value1]... YourApp
 btracec MyTrace.java
 
 # Then run with agent
-java -javaagent:/path/to/btrace.jar=script=MyTrace.class MyApp
+java -javaagent:/path/to/btrace.jar=script=MyTrace.class,noServer=true MyApp
 ```
+
+#### Startup modes and the 3.0 security boundary
+
+BTrace 3.0 distinguishes launch-time startup scripts from prepared mode:
+
+- **Startup-script mode** runs reviewed probes supplied at launch. Use `noServer=true` when no
+  later client connection is needed:
+
+  ```bash
+  java -javaagent:/path/to/btrace.jar=script=MyTrace.class,noServer=true MyApp
+  ```
+
+- **Prepared mode** is required to start an authenticated, loopback-only control endpoint for
+  later probe submission. Start the agent without a startup script and let the operating system
+  choose the port:
+
+  ```bash
+  java -javaagent:/path/to/btrace.jar=port=0 MyApp
+  ```
+
+  The agent binds a loopback address, generates an owner-protected token file, and publishes the
+  actual address, port, and token-file path through target JVM properties. A 3.0 client discovers
+  those values through the Attach API when you run `btrace <pid> ...`; the token itself is never a
+  process argument or system property. Generated token files are removed during orderly shutdown.
+
+  Use `authTokenFile=/owner/protected/path` to supply or create credentials at a controlled path,
+  and `bindAddress=127.0.0.1` or `bindAddress=::1` to select a loopback family. Non-loopback and
+  wildcard addresses fail startup. To keep a startup script and accept later authenticated
+  connections, set `noServer=false` explicitly.
+
+Prepared-mode authentication runs before V1 or V2 negotiation and before every operational
+command. Older clients cannot connect to a 3.0 prepared endpoint. Remote prepared-mode operation
+is not supported in 3.0.0; use startup-script mode with `noServer=true` or dynamic attach where the
+target JVM's policy permits it instead of exposing the command server remotely.
+
+#### Optional agent telemetry
+
+Agent telemetry is disabled by default. The agent creates no telemetry thread and performs no
+telemetry-related DNS or network operation unless the operator explicitly opts in:
+
+```bash
+java -javaagent:/path/to/btrace.jar=script=MyTrace.class,noServer=true,telemetry=true MyApp
+```
+
+The legacy target-JVM property `-Dbtrace.telemetry=true` is also recognized when the agent argument
+is absent. An explicit `telemetry=false` agent argument overrides that property.
+
+An opted-in startup attempts one `agent_start` event to
+`https://eu.posthog.com/capture/`. The event contains a fresh random event identifier plus
+`java_version`, `os_name`, `btrace_version`, and `agent_mode`; it contains no stable host identifier
+or application data. HTTP connect and read timeouts are one second each, and a daemon guard requests
+cancellation after two seconds. Telemetry failures are ignored and do not block agent startup.
 
 ### 4. Launcher Mode (btracer)
 
@@ -764,35 +829,12 @@ The plugin auto-registers the annotation processor, which generates `JobEvent$Ex
 
 Extensions embedded in a fat agent can automatically activate the right bundled probes by implementing `ExtensionConfigurator`. The agent calls the configurator at startup to detect the environment (driver vs executor, namenode vs datanode, etc.) and enables the matching probes — no `probes=` argument needed. See [Extension Development Guide — Bundled Probes](BTraceExtensionDevelopmentGuide.md#bundled-probes-and-zero-config-auto-selection).
 
-### Maven Plugin
+### Maven builds
 
-For Maven users, a Maven plugin is also available:
-
-```xml
-<plugin>
-    <groupId>io.btrace</groupId>
-    <artifactId>btrace-maven-plugin</artifactId>
-    <version>${btrace.version}</version>
-    <executions>
-        <execution>
-            <goals>
-                <goal>fat-agent</goal>
-            </goals>
-        </execution>
-    </executions>
-    <configuration>
-        <outputName>my-btrace-agent</outputName>
-        <extensions>
-            <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
-            <extension>io.btrace:btrace-statsd:${btrace.version}</extension>
-        </extensions>
-    </configuration>
-</plugin>
-```
-
-Build with `mvn package` to create `target/my-btrace-agent.jar`.
-
-See [Fat Agent Plugin Architecture](architecture/fat-agent-plugin.md) and [Gradle Plugin README](../btrace-gradle-plugin/README.md) for complete documentation.
+The unpublished Maven fat-agent module was removed for 3.0.0 because its pre-3.0 artifact contract
+cannot safely load published 3.0 extensions. Use the
+[`io.btrace.fat-agent` Gradle plugin](../btrace-gradle-plugin/README.md), or deploy the standard
+`io.btrace:btrace` artifact without embedded extensions.
 
 ## Common Pitfalls and Solutions
 

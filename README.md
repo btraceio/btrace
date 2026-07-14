@@ -157,6 +157,8 @@ jbang btrace <PID> <script.java>
 # ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar
 ```
 
+For launch-time use, review the [startup-mode security boundary](docs/GettingStarted.md#startup-modes-and-the-30-security-boundary). Use `noServer=true` for startup scripts that do not need later client connections; BTrace 3.0 does not support an unauthenticated remote prepared-mode endpoint.
+
 See [Getting Started Guide](docs/GettingStarted.md#jbang-installation-recommended-for-quick-start) for complete JBang documentation and examples.
 
 #### Binary Distribution
@@ -362,19 +364,9 @@ Keys
 
 ### Maven Integration
 
-**Fat Agent Plugin** (in this repo): Build fat agent JARs with embedded extensions:
-```xml
-<plugin>
-    <groupId>io.btrace</groupId>
-    <artifactId>btrace-maven-plugin</artifactId>
-    <version>${btrace.version}</version>
-    <configuration>
-        <extensions>
-            <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
-        </extensions>
-    </configuration>
-</plugin>
-```
+**Fat Agent Plugin:** The unpublished in-repository Maven fat-agent module was removed for 3.0.0
+because it cannot consume the published 3.0 extension layout safely. Use the
+`io.btrace.fat-agent` Gradle plugin documented above.
 
 **Script Compilation Plugin** ([external repo](https://github.com/btraceio/btrace-maven)):
 - Compilation of BTrace scripts during the build process
