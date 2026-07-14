@@ -208,6 +208,24 @@ public interface WireProtocol {
 
 ## Protocol Negotiation
 
+### Prepared-mode authentication boundary
+
+When the agent was loaded at JVM startup with its command server enabled, authentication occurs
+before the V1/V2 choice described below. The client sends `BTA1`, a four-byte big-endian token
+length, and the token bytes. The agent responds with `BTAK` on success or `BTAF` on failure. Only
+after `BTAK` may the client send the V1 serialization header or the V2 `BTR2` prefix.
+
+Both sides apply the protocol-negotiation timeout to this preamble. Invalid lengths, truncated or
+incorrect tokens, and direct V1/V2 bytes are rejected before any command decoder is constructed.
+V2-to-V1 fallback opens a new connection and authenticates it again; authentication failure never
+causes an unauthenticated fallback. Dynamically attached agents retain the version-negotiation flow
+without this prepared-mode preamble for compatibility with 2.2.x clients.
+
+```text
+prepared: TCP connect -> BTA1 + length + token -> BTAK -> V1/V2 negotiation -> commands
+dynamic:  TCP connect -> V1/V2 negotiation -> commands
+```
+
 ### Design Principle: Once Per Connection
 
 **Critical:** Protocol negotiation happens **once** when a connection is established, not per command.
@@ -215,7 +233,8 @@ public interface WireProtocol {
 **Timeline:**
 ```
 Time 0ms:     TCP socket established
-Time 1ms:     Client sends magic bytes (BTR2) or v1 header
+Time 1ms:     Prepared mode authenticates; dynamic mode skips this step
+Time 2ms:     Client sends magic bytes (BTR2) or v1 header
 Time 5ms:     Agent responds with protocol acknowledgment
 Time 6ms:     Protocol locked for session (v1 or v2)
 Time 7ms:     First command sent (using negotiated protocol)
@@ -309,6 +328,9 @@ Socket sock = acceptConnection();
 InputStream in = sock.getInputStream();
 OutputStream out = sock.getOutputStream();
 
+// Prepared mode only; rejects before a protocol decoder exists
+ConnectionAuthenticator.authenticateAgent(in, out, expectedToken);
+
 // Negotiate protocol (reads first bytes)
 ProtocolVersion version = ProtocolNegotiator.negotiateAgent(in, out);
 
@@ -328,6 +350,9 @@ wire.write(out, statusResponse);
 Socket sock = new Socket(host, port);
 InputStream in = sock.getInputStream();
 OutputStream out = sock.getOutputStream();
+
+// Prepared mode only; repeats on every fallback connection
+ConnectionAuthenticator.authenticateClient(in, out, token);
 
 // Negotiate protocol (sends magic bytes, waits for response)
 ProtocolVersion preferred = getPreferredVersion(); // from config

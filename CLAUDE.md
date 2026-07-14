@@ -11,8 +11,8 @@ Use a workspace-local Gradle cache when appropriate, and redirect Gradle output 
 GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-dist:build
 
 # Module, test class, or formatting check
-GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-instr:test
-GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-instr:test --tests '*CompilerTest'
+GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-agent:test
+GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-agent:test --tests '*InstrStackTest'
 GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew spotlessCheck
 
 # Integration tests: build the distribution first
@@ -25,16 +25,16 @@ GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew test -PupdateTestData
 ## Where to look
 
 - Script compiler and verifier: `btrace-compiler`
-- Agent lifecycle: `btrace-agent`; bytecode weaving: `btrace-instr`
+- Agent lifecycle and bytecode weaving: `btrace-agent` (instrumentation engine lives in its `io.btrace.instr` package)
 - Script API, runtime, and protocol: `btrace-core`, `btrace-runtime`
 - CLI: `btrace-client`; packaging: `btrace-dist`
-- Golden instrumentation data: `btrace-instr/src/test/resources/instrumentorTestData/`
+- Golden instrumentation data: `btrace-agent/src/test/resources/instrumentorTestData/`
 
 ## Detailed references
 
 - [Documentation index](docs/README.md)
 - [Masked JAR architecture](docs/architecture/MaskedJarArchitecture.md) — required reading for distribution/class-loading changes
-- [Instrumentation architecture](docs/architecture/BTraceInstrAnalysis.md) and [backends](docs/architecture/InstrumentationBackends.md)
+- [Instrumentation backends](docs/architecture/InstrumentationBackends.md)
 - [Protocol architecture](docs/architecture/Version2ProtocolArchitecture.md)
 - [Extension development](docs/BTraceExtensionDevelopmentGuide.md)
 - [Troubleshooting](docs/Troubleshooting.md)

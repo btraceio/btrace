@@ -4,9 +4,8 @@
 
 BTrace is a Java tracing tool: the client compiles and sends a script, the agent instruments the target JVM, and the runtime emits results. The root project is a multi-module Gradle build.
 
-- `btrace-agent` — attachable agent and script lifecycle
+- `btrace-agent` — attachable agent, script lifecycle, and bytecode instrumentation/weaving
 - `btrace-compiler` — script verification and compilation
-- `btrace-instr` — instrumentation and weaving
 - `btrace-runtime` / `btrace-core` — script APIs, runtime support, and protocol
 - `btrace-client` — CLI and attachment client
 - `btrace-dist` — distribution assembly; `integration-tests` — end-to-end tests
@@ -21,6 +20,7 @@ For the developer command reference and code-navigation pointers, see [CLAUDE.md
 - In Java code, import types and use simple names; do not introduce fully qualified type names in source.
 - Main code targets Java 8 and uses the Java 11 toolchain. Follow Spotless/Google Java Format.
 - Unit tests live in `src/test/java` and use `*Test`; integration tests live in `integration-tests/src/test/java`.
+- Changes to user-visible behavior that crosses modules or process boundaries must include end-to-end functional coverage in `integration-tests`; unit and component tests are required where useful but are not a substitute for exercising the real client, agent, target JVM, and protocol interaction.
 
 ## Build and verification
 
@@ -58,7 +58,7 @@ Read [Masked JAR Architecture](docs/architecture/MaskedJarArchitecture.md) befor
 ## Reference map
 
 - [Contribution workflow](CONTRIBUTING.md)
-- [Instrumentation analysis](docs/architecture/BTraceInstrAnalysis.md) and [backend selection](docs/architecture/InstrumentationBackends.md)
+- [Instrumentation backend selection](docs/architecture/InstrumentationBackends.md)
 - [v2 wire protocol](docs/architecture/Version2ProtocolArchitecture.md)
 - [Extension development](docs/BTraceExtensionDevelopmentGuide.md) and [interface rules](docs/ExtensionInterfaceRules.md)
 - [Troubleshooting](docs/Troubleshooting.md)

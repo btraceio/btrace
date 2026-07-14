@@ -117,9 +117,9 @@ Tips:
 - Prefer IPv4 if your environment has odd local IPs: set `GRADLE_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"`.
 - Run specific modules:
   - Runtime: `./gradlew :btrace-runtime:test`
-  - Extension: `./gradlew :btrace-extension:test`
+  - Core (incl. extension SPI): `./gradlew :btrace-core:test`
   - Compiler: `./gradlew :btrace-compiler:test`
-  - Instr: `./gradlew :btrace-instr:test`
+  - Agent (incl. instrumentation): `./gradlew :btrace-agent:test`
 - Update instrumentor golden files when bytecode output changes: `./gradlew test -PupdateTestData`.
 
 Integration tests (optional):
@@ -156,6 +156,8 @@ jbang btrace <PID> <script.java>
 ```sh
 # ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar
 ```
+
+For launch-time use, review the [startup-mode security boundary](docs/GettingStarted.md#startup-modes-and-the-30-security-boundary). Use `noServer=true` for startup scripts that do not need later client connections; BTrace 3.0 does not support an unauthenticated remote prepared-mode endpoint.
 
 See [Getting Started Guide](docs/GettingStarted.md#jbang-installation-recommended-for-quick-start) for complete JBang documentation and examples.
 

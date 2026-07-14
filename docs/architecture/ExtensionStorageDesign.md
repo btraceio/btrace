@@ -282,17 +282,17 @@ extension.repository.cache=${HOME}/.btrace/cache
 
 ## Migration Path
 
-### Phase 1: Dual Mode (Current + New)
+### Dual mode (backward compatible)
 - Keep extensions in boot JAR for backward compatibility
 - Add new extension loading mechanism
 - Extensions can be discovered from both locations
 
-### Phase 2: Deprecation
+### Deprecation
 - Move built-in extensions to `extensions/` in distribution
 - Boot JAR checks if extension exists in extensions/ before loading from itself
 - Log deprecation warnings
 
-### Phase 3: Removal
+### Removal
 - Remove extensions from boot JAR
 - Only load from extension directories
 

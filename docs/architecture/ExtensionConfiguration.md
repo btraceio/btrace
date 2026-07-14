@@ -142,14 +142,6 @@ System config ($BTRACE_HOME/conf/extensions.conf)
 Built-in defaults (all enabled, autoload=true)
 ```
 
-## Implementation Plan
-
-1. Create ExtensionConfig class to parse and store configuration
-2. Update ExtensionLoader to accept and use ExtensionConfig
-3. Update Main.java to load configuration before initializing extensions
-4. Add configuration file to distribution at conf/extensions.conf (empty/commented)
-5. Document configuration in user guide
-
 ## Backward Compatibility
 
 - If no configuration file exists, all extensions are enabled with autoload

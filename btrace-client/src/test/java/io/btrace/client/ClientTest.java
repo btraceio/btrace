@@ -22,7 +22,19 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
@@ -145,5 +157,132 @@ class ClientTest {
     } catch (Exception e) {
       fail("Failed to verify backward compatibility: " + e.getMessage());
     }
+  }
+
+  @Test
+  void preparedDiscoveryAdoptsEndpointAndCredentials() throws Exception {
+    Path tokenFile = tempDir.resolve("prepared.token");
+    byte[] token = "prepared-secret".getBytes(StandardCharsets.UTF_8);
+    Files.write(tokenFile, token);
+    Properties properties = new Properties();
+    properties.setProperty("btrace.port", "43210");
+    properties.setProperty("btrace.address", "::1");
+    properties.setProperty("btrace.auth.required", "true");
+    properties.setProperty("btrace.auth.tokenFile", tokenFile.toString());
+    Client client = new Client(0);
+
+    client.configureConnection(properties);
+
+    assertEquals(43210, readField(client, "port"));
+    assertEquals(InetAddress.getByName("::1").getHostAddress(), client.resolveHost("localhost"));
+    assertArrayEquals(token, (byte[]) readField(client, "authenticationToken"));
+  }
+
+  @Test
+  void missingPreparedCredentialsFailClosed() {
+    Properties properties = new Properties();
+    properties.setProperty("btrace.port", "43210");
+    properties.setProperty("btrace.auth.required", "true");
+
+    assertThrows(IOException.class, () -> new Client(0).configureConnection(properties));
+  }
+
+  @Test
+  void nonLoopbackDiscoveryFailsWithoutReplacingExistingConnection() throws Exception {
+    Path tokenFile = tempDir.resolve("prepared.token");
+    byte[] token = "prepared-secret".getBytes(StandardCharsets.UTF_8);
+    Files.write(tokenFile, token);
+    Properties valid = new Properties();
+    valid.setProperty("btrace.port", "43210");
+    valid.setProperty("btrace.address", "127.0.0.1");
+    valid.setProperty("btrace.auth.required", "true");
+    valid.setProperty("btrace.auth.tokenFile", tokenFile.toString());
+    Client client = new Client(0);
+    client.configureConnection(valid);
+
+    Properties invalid = new Properties();
+    invalid.setProperty("btrace.port", "12345");
+    invalid.setProperty("btrace.address", "192.0.2.1");
+    invalid.setProperty("btrace.auth.required", "false");
+
+    assertThrows(IOException.class, () -> client.configureConnection(invalid));
+    assertEquals(43210, readField(client, "port"));
+    assertEquals("127.0.0.1", client.resolveHost("localhost"));
+    assertArrayEquals(token, (byte[]) readField(client, "authenticationToken"));
+  }
+
+  @Test
+  void preparedAuthenticationResponseIsTimeoutBounded() throws Exception {
+    Path tokenFile = tempDir.resolve("prepared.token");
+    byte[] token = "prepared-secret".getBytes(StandardCharsets.UTF_8);
+    Files.write(tokenFile, token);
+    CountDownLatch releaseServer = new CountDownLatch(1);
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    System.setProperty("btrace.protocol.negotiation.timeout", "100");
+    try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+      Future<?> accepted =
+          executor.submit(
+              () -> {
+                try (Socket socket = server.accept()) {
+                  byte[] request = new byte[8 + token.length];
+                  int offset = 0;
+                  while (offset < request.length) {
+                    int read =
+                        socket.getInputStream().read(request, offset, request.length - offset);
+                    if (read < 0) {
+                      break;
+                    }
+                    offset += read;
+                  }
+                  releaseServer.await(5, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                  throw new RuntimeException(e);
+                }
+              });
+      Properties properties = new Properties();
+      properties.setProperty("btrace.port", String.valueOf(server.getLocalPort()));
+      properties.setProperty("btrace.address", server.getInetAddress().getHostAddress());
+      properties.setProperty("btrace.auth.required", "true");
+      properties.setProperty("btrace.auth.tokenFile", tokenFile.toString());
+      Client client = new Client(0);
+      client.configureConnection(properties);
+
+      assertThrows(
+          SocketTimeoutException.class,
+          () -> client.connectAndListProbes("localhost", command -> {}));
+      releaseServer.countDown();
+      accepted.get(5, TimeUnit.SECONDS);
+      client.close();
+    } finally {
+      releaseServer.countDown();
+      executor.shutdownNow();
+      System.clearProperty("btrace.protocol.negotiation.timeout");
+    }
+  }
+
+  @Test
+  void closeClearsDiscoveredCredentials() throws Exception {
+    Path tokenFile = tempDir.resolve("prepared.token");
+    Files.write(tokenFile, "prepared-secret".getBytes(StandardCharsets.UTF_8));
+    Properties properties = new Properties();
+    properties.setProperty("btrace.port", "43210");
+    properties.setProperty("btrace.auth.required", "true");
+    properties.setProperty("btrace.auth.tokenFile", tokenFile.toString());
+    Client client = new Client(0);
+    client.configureConnection(properties);
+    byte[] token = (byte[]) readField(client, "authenticationToken");
+
+    client.close();
+
+    assertNull(readField(client, "authenticationToken"));
+    for (byte value : token) {
+      assertEquals(0, value);
+    }
+  }
+
+  private static Object readField(Client client, String name) throws Exception {
+    Field field = Client.class.getDeclaredField(name);
+    field.setAccessible(true);
+    return field.get(client);
   }
 }

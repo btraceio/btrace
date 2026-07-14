@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tests.harness.Completion;
 
 /**
  * Integration tests for BTrace probe kinds that exercise the ClassFile API backend on JDK 26+.
@@ -58,7 +59,7 @@ public class ClassFileApiTests extends RuntimeTest {
     testDynamic(
         "resources.MainJdkApi",
         "btrace/ClassFileApiEntryTest.java",
-        5,
+        Completion.untilContains("Math.abs entered: abs"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -75,7 +76,7 @@ public class ClassFileApiTests extends RuntimeTest {
     testDynamic(
         "resources.MainJdkApi",
         "btrace/ClassFileApiReturnTest.java",
-        5,
+        Completion.untilContains("Math.abs returned: "),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -92,7 +93,7 @@ public class ClassFileApiTests extends RuntimeTest {
     testDynamic(
         "resources.MainJdkApi",
         "btrace/ClassFileApiDurationTest.java",
-        5,
+        Completion.untilContains("Math.max duration: "),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -112,7 +113,18 @@ public class ClassFileApiTests extends RuntimeTest {
     testDynamic(
         "resources.MainJdkApi",
         "btrace/ClassFileApiFeatureSmokeTest.java",
-        100,
+        Completion.untilContains(
+            "cfapi FIELD_GET",
+            "cfapi FIELD_SET",
+            "cfapi ARRAY_GET",
+            "cfapi ARRAY_SET",
+            "cfapi NEWARRAY",
+            "cfapi SYNC_ENTRY",
+            "cfapi SYNC_EXIT",
+            "cfapi CALL",
+            "cfapi NEW",
+            "cfapi CATCH",
+            "cfapi ERROR"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {

@@ -118,6 +118,9 @@ Once you are attached to the target JVM you can press Ctrl-C in the terminal to 
 The agent takes a list of comma separated arguments.
 
 * **noServer** - don't start the socket server
+* **port** - command-server port; prepared mode accepts `0` for an automatically selected port
+* **bindAddress** - explicit loopback bind address; non-loopback and wildcard addresses fail closed
+* **authTokenFile** - existing owner-protected token file, or a path where the agent creates one
 * **bootClassPath** - boot classpath to be used
 * **systemClassPath** - system classpath to be used
 * **debug** - turns on verbose debug messages (true/false)
@@ -125,6 +128,7 @@ The agent takes a list of comma separated arguments.
 * **dumpClasses** - dump the transformed bytecode to files (true/false)
 * **dumpDir** - specifies the folder where the transformed classes will be dumped to
 * **stdout** - redirect the btrace output to stdout instead of writing it to an arbitrary file (true/false)
+* **telemetry** - explicitly enable the default-off anonymous `agent_start` event (true/false)
 * **probeDescPath** - the path to search for probe descriptor XMLs
 * **startupRetransform** - enable retransform of all the loaded classes at attach (true/false)
 * **scriptdir** - the path to a directory containing scripts to be run at the agent startup
@@ -135,6 +139,21 @@ The agent takes a list of comma separated arguments.
 * **script** - colon separated list of tracing scripts to be run at the agent startup
 
 The scripts to be run must have already been compiled to bytecode (a *.class* file) by __btracec__.
+
+For a launch-time script that needs no later client connection, set `noServer=true`. BTrace 3.0
+does not treat an unauthenticated startup command server as prepared mode. To prepare a JVM for a
+later PID-based BTrace connection, start the agent without a script:
+
+```bash
+java -javaagent:btrace.jar=port=0 MyApp
+```
+
+The agent binds loopback, creates owner-protected credentials, and publishes discovery metadata
+through the target JVM. The 3.0 client reads that metadata through the Attach API, authenticates
+before V1/V2 negotiation, and never places the token in arguments, properties, or logs. Set
+`noServer=false` explicitly if a startup script must also retain the authenticated endpoint.
+Generated credentials are removed at shutdown. Older clients fail closed, and remote prepared mode
+is unsupported in 3.0.0.
 
 ###### Using `btracer'
 
@@ -1879,7 +1898,7 @@ MCP (Model Context Protocol) is a protocol that lets AI assistants call external
 
 #### How the BTrace MCP server works
 
-The BTrace MCP server runs as a local subprocess on the same machine as the target JVM. The AI client starts and manages the server process; you do not need to keep a terminal open for it. When the AI calls a BTrace tool, the server forwards the request to the BTrace agent (or attaches one if none is present) and returns the result. Because the server only connects to local JVMs, and because BTrace's safety model — no loops, no allocation, no exceptions, no field assignment — still applies to every probe, the AI cannot break or hang the target application.
+The BTrace MCP server runs as a local subprocess on the same machine as the target JVM. The AI client starts and manages the server process; you do not need to keep a terminal open for it. When the AI calls a BTrace tool, the server forwards the request to the BTrace agent (or attaches one if none is present) and returns the result. Because the server only connects to local JVMs, and because BTrace's safety model still applies to every probe — no loops, no field writes, no thread creation, and only whitelisted method calls — the AI can observe the target application in detail but cannot alter its behavior. These restrictions bound resource use rather than eliminate it: implicit allocation (autoboxing, string concatenation) is permitted, and a recursive helper is limited only by the thread stack, so probes are constrained but not guaranteed allocation-free.
 
 #### Starting the server manually
 
@@ -2000,7 +2019,7 @@ Probe stopped and removed from PID 12345.
 
 #### Security note
 
-The BTrace MCP server only attaches to JVMs on the local machine; it cannot connect to remote processes. Every probe the AI deploys goes through BTrace's standard verifier, which enforces the same restrictions as any other BTrace script: no loops, no object allocation, no exceptions, no field writes. The AI can observe your application in detail but cannot alter its behavior or cause it to crash.
+The BTrace MCP server only attaches to JVMs on the local machine; it cannot connect to remote processes. Every probe the AI deploys goes through BTrace's standard verifier, which enforces the same restrictions as any other BTrace script: no loops, no field writes, no thread creation, and only whitelisted method calls. The AI can observe your application in detail but cannot alter its behavior. These restrictions bound resource use rather than eliminate it — implicit allocation (autoboxing, string concatenation) is permitted and a recursive helper is limited only by the thread stack — so probes cannot corrupt application state but are not guaranteed to be allocation-free.
 
 ## Lesson 14 - Packaging: Fat Agents and Containers
 

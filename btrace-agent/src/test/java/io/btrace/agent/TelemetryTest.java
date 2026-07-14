@@ -16,12 +16,24 @@
  */
 package io.btrace.agent;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class TelemetryTest {
+
+  @BeforeEach
+  void resetProp() {
+    System.clearProperty("btrace.telemetry");
+  }
 
   @AfterEach
   void clearProp() {
@@ -29,21 +41,38 @@ class TelemetryTest {
   }
 
   @Test
-  void enabledByDefault() {
+  void disabledByDefault() {
     System.clearProperty("btrace.telemetry");
-    assertTrue(Telemetry.isEnabled());
+    assertFalse(Telemetry.isEnabled(null));
   }
 
   @Test
-  void disabledWhenPropertyIsFalse() {
+  void enabledWhenAgentArgumentIsTrue() {
     System.setProperty("btrace.telemetry", "false");
-    assertFalse(Telemetry.isEnabled());
+    assertTrue(Telemetry.isEnabled("true"));
   }
 
   @Test
-  void enabledWhenPropertyIsTrue() {
+  void agentArgumentFalseOverridesSystemProperty() {
     System.setProperty("btrace.telemetry", "true");
-    assertTrue(Telemetry.isEnabled());
+    AtomicInteger attempts = new AtomicInteger();
+
+    boolean scheduled =
+        Telemetry.fireAsync("false", "2.2.6", "premain", payload -> attempts.incrementAndGet());
+
+    assertFalse(scheduled);
+    assertEquals(0, attempts.get());
+  }
+
+  @Test
+  void systemPropertyRemainsAnExplicitOptIn() {
+    System.setProperty("btrace.telemetry", "true");
+    assertTrue(Telemetry.isEnabled(null));
+  }
+
+  @Test
+  void nonBooleanValueDoesNotEnableTelemetry() {
+    assertFalse(Telemetry.isEnabled("yes"));
   }
 
   @Test
@@ -65,19 +94,43 @@ class TelemetryTest {
   }
 
   @Test
-  void fireAsyncDoesNotThrowWhenDisabled() {
-    System.setProperty("btrace.telemetry", "false");
-    assertDoesNotThrow(() -> Telemetry.fireAsync("2.2.6", "premain"));
+  void defaultPathDoesNotInvokeTransport() {
+    AtomicInteger attempts = new AtomicInteger();
+
+    boolean scheduled =
+        Telemetry.fireAsync(null, "2.2.6", "premain", payload -> attempts.incrementAndGet());
+
+    assertFalse(scheduled);
+    assertEquals(0, attempts.get());
   }
 
   @Test
-  void fireAsyncReturnsImmediately() throws InterruptedException {
-    System.setProperty("btrace.telemetry", "true");
-    long start = System.currentTimeMillis();
-    assertDoesNotThrow(() -> Telemetry.fireAsync("2.2.6", "agentmain"));
-    long elapsed = System.currentTimeMillis() - start;
-    assertTrue(elapsed < 100, "fireAsync blocked for " + elapsed + "ms");
-    // Let daemon threads settle before the next test
-    Thread.sleep(300);
+  void optInAttemptsExactlyOneEvent() throws InterruptedException {
+    AtomicInteger attempts = new AtomicInteger();
+    CountDownLatch attempted = new CountDownLatch(1);
+
+    boolean scheduled =
+        Telemetry.fireAsync(
+            "true",
+            "2.2.6",
+            "agentmain",
+            payload -> {
+              attempts.incrementAndGet();
+              attempted.countDown();
+            });
+
+    assertTrue(scheduled);
+    assertTrue(attempted.await(5, TimeUnit.SECONDS));
+    assertEquals(1, attempts.get());
+  }
+
+  @Test
+  void transportFailureIsIgnored() {
+    Telemetry.Transport unavailableEndpoint =
+        payload -> {
+          throw new IllegalStateException("endpoint unavailable");
+        };
+
+    assertDoesNotThrow(() -> Telemetry.deliverSafely(unavailableEndpoint, "{}"));
   }
 }
