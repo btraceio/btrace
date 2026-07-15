@@ -91,9 +91,17 @@ public final class Main {
   }
 
   private static String getJavaVersion() {
+    String javaHome = System.getenv("JAVA_HOME");
+    if (javaHome == null || javaHome.trim().isEmpty()) {
+      // Fall back to the JVM the client itself is running on; JAVA_HOME is not required to be set.
+      javaHome = System.getProperty("java.home");
+    }
+    if (javaHome == null || javaHome.trim().isEmpty()) {
+      return null;
+    }
     Properties props = new Properties();
     try {
-      props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")));
+      props.load(Files.newInputStream(Paths.get(javaHome, "release")));
       return props.getProperty("JAVA_VERSION").replace("\"", "");
     } catch (IOException ignored) {
       return null;
