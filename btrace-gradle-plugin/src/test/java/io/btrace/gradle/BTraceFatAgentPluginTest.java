@@ -33,6 +33,7 @@ import java.nio.file.Path;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
+import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
@@ -233,6 +234,7 @@ class BTraceFatAgentPluginTest {
     @Test
     @DisplayName("Fat agent packages nested bundled probe binary names")
     void packagesNestedBundledProbe() throws IOException {
+        writeMinimalMaskedAgentFixture();
         Path probe = projectDir.resolve("probes/com/example/NestedProbe.class");
         Files.createDirectories(probe.getParent());
         Files.write(probe, new byte[] {0, 1, 2, 3});
@@ -240,6 +242,7 @@ class BTraceFatAgentPluginTest {
                 buildFile,
                 "plugins { id 'io.btrace.fat-agent' }\n"
                         + "btraceFatAgent {\n"
+                        + "  agentJarTask = 'jar'\n"
                         + "  bundledProbes {\n"
                         + "    from 'probes'\n"
                         + "    include 'com.example.NestedProbe'\n"
@@ -308,20 +311,25 @@ class BTraceFatAgentPluginTest {
     @Test
     @DisplayName("Launched fat agent executes and tears down a nested bundled probe")
     void launchedFatAgentExecutesAndTearsDownBundledProbe() throws Exception {
-        Path agentSource = projectDir.resolve("src/main/java/io/btrace/agent/Main.java");
+        Path agentSource = projectDir.resolve("src/main/java/io/btrace/boot/Loader.java");
         Path appSource = projectDir.resolve("src/main/java/demo/App.java");
         Path probeSource = projectDir.resolve("probe-src/com/example/NestedProbe.java");
+        Path maskedAgentMain =
+                projectDir.resolve(
+                        "src/main/resources/META-INF/btrace/agent/io/btrace/agent/Main.classdata");
         Files.createDirectories(agentSource.getParent());
         Files.createDirectories(appSource.getParent());
         Files.createDirectories(probeSource.getParent());
+        Files.createDirectories(maskedAgentMain.getParent());
+        Files.write(maskedAgentMain, new byte[] {0});
         Files.writeString(
                 agentSource,
-                "package io.btrace.agent;\n"
+                "package io.btrace.boot;\n"
                         + "import java.io.InputStream;\n"
-                        + "public final class Main {\n"
+                        + "public final class Loader {\n"
                         + "  public static void premain(String name) throws Exception {\n"
                         + "    String path = \"META-INF/btrace-probes/\" + name.replace('.', '/') + \".class\";\n"
-                        + "    ClassLoader loader = Main.class.getClassLoader();\n"
+                        + "    ClassLoader loader = Loader.class.getClassLoader();\n"
                         + "    try (InputStream in = loader != null ? loader.getResourceAsStream(path) : ClassLoader.getSystemResourceAsStream(path)) {\n"
                         + "      if (in == null) throw new IllegalStateException(\"missing \" + path);\n"
                         + "      Class<?> probe = new ProbeLoader().define(in.readAllBytes());\n"
@@ -364,8 +372,6 @@ class BTraceFatAgentPluginTest {
                         + "tasks.named('stageProbes') { dependsOn 'compileBundledProbe' }\n"
                         + "btraceFatAgent {\n"
                         + "  agentJarTask = 'jar'\n"
-                        + "  manifestAttributes['Premain-Class'] = 'io.btrace.agent.Main'\n"
-                        + "  manifestAttributes['Agent-Class'] = 'io.btrace.agent.Main'\n"
                         + "  bundledProbes {\n"
                         + "    from layout.buildDirectory.dir('compiled-probes').get().asFile\n"
                         + "    include 'com.example.NestedProbe'\n"
@@ -396,6 +402,50 @@ class BTraceFatAgentPluginTest {
         assertTrue(output.contains("BUNDLED_PROBE_EXECUTED"), output);
         assertTrue(output.contains("APP_RAN"), output);
         assertTrue(output.contains("BUNDLED_PROBE_TORN_DOWN"), output);
+    }
+
+    @Test
+    @DisplayName("Conventional agent JARs fail the masked fat-agent contract")
+    void conventionalAgentJarFailsClearly() throws IOException {
+        Path agentSource = projectDir.resolve("src/main/java/io/btrace/agent/Main.java");
+        Files.createDirectories(agentSource.getParent());
+        Files.writeString(
+                agentSource,
+                "package io.btrace.agent; public final class Main {}\n",
+                StandardCharsets.UTF_8);
+        writeFile(
+                buildFile,
+                "plugins { id 'io.btrace.fat-agent' }\n"
+                        + "btraceFatAgent { agentJarTask = 'jar' }\n");
+
+        BuildResult result = createRunner().withArguments("fatAgentJar").buildAndFail();
+
+        assertTrue(result.getOutput().contains("Invalid masked BTrace fat JAR"));
+        assertTrue(result.getOutput().contains("missing io/btrace/boot/Loader.class"));
+        assertTrue(result.getOutput().contains("reference the btraceJar task"));
+    }
+
+    @Test
+    @DisplayName("Fat agents require the masked agent section")
+    void fatAgentWithoutMaskedAgentMainFailsClearly() throws IOException {
+        Path loaderSource = projectDir.resolve("src/main/java/io/btrace/boot/Loader.java");
+        Files.createDirectories(loaderSource.getParent());
+        Files.writeString(
+                loaderSource,
+                "package io.btrace.boot; public final class Loader {}\n",
+                StandardCharsets.UTF_8);
+        writeFile(
+                buildFile,
+                "plugins { id 'io.btrace.fat-agent' }\n"
+                        + "btraceFatAgent { agentJarTask = 'jar' }\n");
+
+        BuildResult result = createRunner().withArguments("fatAgentJar").buildAndFail();
+
+        assertTrue(result.getOutput().contains("Invalid masked BTrace fat JAR"));
+        assertTrue(
+                result.getOutput()
+                        .contains(
+                                "missing META-INF/btrace/agent/io/btrace/agent/Main.classdata"));
     }
 
     @Test
@@ -582,16 +632,12 @@ class BTraceFatAgentPluginTest {
     }
 
     @Test
-    @DisplayName("Registry source fails clearly for unknown extension id")
-    void registrySourceFailsForUnknownId() throws IOException {
-        Path registry = projectDir.resolve("extensions.json");
-        Files.writeString(
-            registry,
-            "{\n" +
-            "  \"schema_version\": 1,\n" +
-            "  \"extensions\": []\n" +
-            "}\n",
-            StandardCharsets.UTF_8);
+    @DisplayName("Extension API manifest metadata is retained when staging")
+    void extensionApiManifestMetadataRetained() throws IOException {
+        Path extensionDir = projectDir.resolve("sample-extension");
+        Files.createDirectories(extensionDir);
+        createExtensionApiJar(extensionDir.resolve("sample-api.jar"));
+        createExtensionImplJar(extensionDir.resolve("sample-impl.jar"));
 
         writeFile(buildFile,
             "plugins {\n" +
@@ -599,18 +645,29 @@ class BTraceFatAgentPluginTest {
             "}\n" +
             "\n" +
             "btraceFatAgent {\n" +
-            "    registryUrl = '" + registry.toUri().toString() + "'\n" +
+            "    autoDiscover = false\n" +
             "    embedExtensions {\n" +
-            "        registry('missing-ext')\n" +
+            "        file('sample-extension')\n" +
             "    }\n" +
             "}\n"
         );
 
         BuildResult result = createRunner()
             .withArguments("stageExtensions")
-            .buildAndFail();
+            .build();
 
-        assertTrue(result.getOutput().contains("Unknown extension id: missing-ext"));
+        assertEquals(TaskOutcome.SUCCESS, result.task(":stageExtensions").getOutcome());
+        String properties = Files.readString(
+            projectDir.resolve(
+                "build/fat-agent-staging/META-INF/btrace-extensions/sample/extension.properties"));
+        assertTrue(properties.contains("services=com.example.SampleService"));
+        assertTrue(properties.contains("permissions=THREADS"));
+        assertTrue(properties.contains("btrace.api.version=3.0+"));
+        assertEquals(
+            "com.example.SampleServiceImpl",
+            Files.readString(
+                projectDir.resolve(
+                    "build/fat-agent-staging/META-INF/services/com.example.SampleService")));
     }
 
     private GradleRunner createRunner() {
@@ -632,6 +689,20 @@ class BTraceFatAgentPluginTest {
                         + "'\n"
                         + "  }\n"
                         + "}\n");
+    }
+
+    private void writeMinimalMaskedAgentFixture() throws IOException {
+        Path loaderSource = projectDir.resolve("src/main/java/io/btrace/boot/Loader.java");
+        Path maskedAgentMain =
+                projectDir.resolve(
+                        "src/main/resources/META-INF/btrace/agent/io/btrace/agent/Main.classdata");
+        Files.createDirectories(loaderSource.getParent());
+        Files.createDirectories(maskedAgentMain.getParent());
+        Files.writeString(
+                loaderSource,
+                "package io.btrace.boot; public final class Loader {}\n",
+                StandardCharsets.UTF_8);
+        Files.write(maskedAgentMain, new byte[] {0});
     }
 
     private Path writeExtensionFixture(String permissions) throws IOException {
@@ -659,6 +730,31 @@ class BTraceFatAgentPluginTest {
             // The manifest is the only content needed by this packaging fixture.
         }
         return extensionDir;
+    }
+
+    private void createExtensionApiJar(Path jarPath) throws IOException {
+        Manifest manifest = new Manifest();
+        Attributes attributes = manifest.getMainAttributes();
+        attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        attributes.putValue("BTrace-Extension-Id", "sample");
+        attributes.putValue("BTrace-Extension-Version", "1.2.3");
+        attributes.putValue("BTrace-Extension-Name", "Sample extension");
+        attributes.putValue("BTrace-API-Version", "3.0+");
+        attributes.putValue("BTrace-Java-Version", "8+");
+        attributes.putValue("BTrace-Extension-Services", "com.example.SampleService");
+        attributes.putValue("BTrace-Extension-Permissions", "THREADS");
+        try (JarOutputStream ignored =
+            new JarOutputStream(Files.newOutputStream(jarPath), manifest)) {
+            // The staging regression only needs canonical manifest metadata.
+        }
+    }
+
+    private void createExtensionImplJar(Path jarPath) throws IOException {
+        try (JarOutputStream jar = new JarOutputStream(Files.newOutputStream(jarPath))) {
+            jar.putNextEntry(new JarEntry("META-INF/services/com.example.SampleService"));
+            jar.write("com.example.SampleServiceImpl".getBytes(StandardCharsets.UTF_8));
+            jar.closeEntry();
+        }
     }
 
     private void writeFile(File file, String content) throws IOException {

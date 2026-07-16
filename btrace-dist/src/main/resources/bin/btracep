@@ -54,7 +54,7 @@ if [ -f "${CLIENT_JAR}" ]; then
       exit 1
     fi
 
-    ${JAVA_HOME}/bin/java ${JAVA_ARGS} -Dbtrace.client.main=io.btrace.client.ProbePrinter -cp ${CLIENT_JAR}:${TOOLS_JAR} io.btrace.boot.Loader $*
+    "${JAVA_HOME}/bin/java" ${JAVA_ARGS} -Dbtrace.client.main=io.btrace.client.ProbePrinter -cp "${CLIENT_JAR}:${TOOLS_JAR}" io.btrace.boot.Loader "$@"
   else
     echo "Please set a valid JAVA_HOME before running this script"
     exit 1

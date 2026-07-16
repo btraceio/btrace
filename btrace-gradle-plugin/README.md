@@ -232,8 +232,8 @@ plugins {
 btraceFatAgent {
     baseName = 'my-custom-agent'
 
-    // Reference base BTrace JAR (required for standalone builds)
-    agentJarTask = 'btraceJar'  // or provide path
+    // Task producing the masked BTrace JAR (required for standalone builds)
+    agentJarTask = 'btraceJar'
 
     embedExtensions {
         maven('io.btrace:btrace-metrics:3.0.0')
@@ -256,8 +256,9 @@ The fat agent JAR contains:
 btrace-agent-fat.jar
 ├── META-INF/
 │   ├── MANIFEST.MF
-│   │   ├── Premain-Class: io.btrace.agent.Main
-│   │   ├── Agent-Class: io.btrace.agent.Main
+│   │   ├── Premain-Class: io.btrace.boot.Loader
+│   │   ├── Agent-Class: io.btrace.boot.Loader
+│   │   ├── BTrace-Agent-Main: io.btrace.agent.Main
 │   │   ├── Boot-Class-Path: btrace-agent-fat.jar
 │   │   └── BTrace-Embedded-Extensions: ext1,ext2,ext3
 │   └── btrace-extensions/
@@ -271,6 +272,9 @@ btrace-agent-fat.jar
 ├── org/example/ext/api/...         # Extension API classes (.class)
 └── org/example/ext/impl/...        # Extension impl classes (.classdata)
 ```
+
+`fatAgentJar` validates this masked-JAR structure after assembly and fails if the loader, masked
+agent entry point, or mandatory loader manifest attributes are missing.
 
 ### Using the Fat Agent
 
