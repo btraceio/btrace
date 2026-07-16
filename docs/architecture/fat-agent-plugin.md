@@ -195,6 +195,11 @@ The fat agent JAR manifest includes:
 | `Boot-Class-Path` | `btrace-agent-fat.jar` (self-reference) |
 | `BTrace-Embedded-Extensions` | Comma-separated list of extension IDs |
 
+After assembly, the plugin verifies that the JAR contains `io/btrace/boot/Loader.class`, the masked
+`META-INF/btrace/agent/io/btrace/agent/Main.classdata` entry, and the mandatory loader manifest
+attributes. A conventional agent JAR is not a valid base input; `agentJarTask` must reference the
+task producing the masked BTrace JAR (normally `btraceJar`).
+
 ## Runtime Behavior
 
 ### Extension Loading

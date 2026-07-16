@@ -34,6 +34,10 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    // Gradle 9 TestKit launches nested builds and requires a Java 17+ runtime.
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 gradlePlugin {

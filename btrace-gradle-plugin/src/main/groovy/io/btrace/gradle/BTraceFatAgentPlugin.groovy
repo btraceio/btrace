@@ -36,6 +36,11 @@ import java.util.jar.JarFile
  * via {@code ClassDataLoader}).
  */
 class BTraceFatAgentPlugin implements Plugin<Project> {
+    private static final String LOADER_CLASS = 'io.btrace.boot.Loader'
+    private static final String AGENT_MAIN_CLASS = 'io.btrace.agent.Main'
+    private static final String LOADER_ENTRY = 'io/btrace/boot/Loader.class'
+    private static final String MASKED_AGENT_MAIN_ENTRY =
+        'META-INF/btrace/agent/io/btrace/agent/Main.classdata'
 
     @Override
     void apply(Project project) {
@@ -228,6 +233,10 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
                     manifest.attributes.putAll(extension.manifestAttributes)
                 }
             }
+
+            doLast {
+                validateMaskedFatAgent(archiveFile.get().asFile)
+            }
         }
 
         // Wire up dependencies after ALL projects are evaluated (important for auto-discovery)
@@ -305,6 +314,46 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             throw new GradleException(
                 "[fat-agent] Invalid bundled probe binary name: '${binaryName}'")
         }
+    }
+
+    private static void validateMaskedFatAgent(File fatJar) {
+        new JarFile(fatJar).withCloseable { jar ->
+            def attributes = jar.manifest?.mainAttributes
+            if (attributes == null) {
+                throw invalidFatAgent(fatJar, 'missing META-INF/MANIFEST.MF')
+            }
+
+            requireJarEntry(jar, fatJar, LOADER_ENTRY)
+            requireJarEntry(jar, fatJar, MASKED_AGENT_MAIN_ENTRY)
+            requireManifestAttribute(attributes, fatJar, 'Premain-Class', LOADER_CLASS)
+            requireManifestAttribute(attributes, fatJar, 'Agent-Class', LOADER_CLASS)
+            requireManifestAttribute(attributes, fatJar, 'Main-Class', LOADER_CLASS)
+            requireManifestAttribute(
+                attributes, fatJar, 'BTrace-Agent-Main', AGENT_MAIN_CLASS)
+            requireManifestAttribute(
+                attributes, fatJar, 'Boot-Class-Path', fatJar.name)
+        }
+    }
+
+    private static void requireJarEntry(JarFile jar, File fatJar, String entry) {
+        if (jar.getJarEntry(entry) == null) {
+            throw invalidFatAgent(fatJar, "missing ${entry}")
+        }
+    }
+
+    private static void requireManifestAttribute(
+        def attributes, File fatJar, String name, String expected) {
+        def actual = attributes.getValue(name)
+        if (actual != expected) {
+            throw invalidFatAgent(
+                fatJar, "manifest ${name} must be '${expected}' but was '${actual}'")
+        }
+    }
+
+    private static GradleException invalidFatAgent(File fatJar, String problem) {
+        return new GradleException(
+            "[fat-agent] Invalid masked BTrace fat JAR ${fatJar}: ${problem}. " +
+                "Configure agentJarTask to reference the btraceJar task.")
     }
 
     /**
