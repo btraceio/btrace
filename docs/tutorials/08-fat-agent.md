@@ -82,11 +82,8 @@ btraceFatAgent {
 are exactly the DSL surface the plugin exposes — verified against
 `BTraceFatAgentExtension.groovy` (fields `baseName`, `outputDir`, `manifestAttributes`,
 `relocations`, `autoDiscover`; the `ExtensionSourceSpec` builders `project()`, `maven()`, `file()`,
-`files()`). Don't reach for a `registry(...)` source, even though `BTraceFatAgentExtension` has a
-`registryUrl` field whose doc comment says it's "for resolving `registry(\"id\")` sources", and
-`BTraceFatAgentPluginTest.registrySourceFailsForUnknownId()` calls exactly that — there is no
-`registry(...)` method anywhere on `ExtensionSourceSpec` in this checkout, so that test (and any
-build using `registry(...)`) fails outright rather than doing what its name implies.
+`files()`). Registry sources are not part of the 3.0 DSL; unknown source builders and configuration
+properties fail during Gradle configuration instead of being accepted as no-ops.
 
 ## Step 3 — Build it and look inside
 
