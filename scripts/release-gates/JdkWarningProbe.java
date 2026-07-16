@@ -5,7 +5,6 @@ public final class JdkWarningProbe {
 
   public static void main(String[] args) {
     JavaVersionCheck.warnIfDeprecatedJvm();
-    JavaVersionCheck.warnIfDeprecatedJvm();
     System.out.println("JAVA_FEATURE=" + JavaVersionCheck.javaFeatureVersion());
   }
 }
