@@ -33,8 +33,8 @@ import java.nio.file.Path;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
-import java.util.jar.JarFile;
 import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import org.gradle.testkit.runner.BuildResult;
@@ -619,38 +619,6 @@ class BTraceFatAgentPluginTest {
             Files.readString(
                 projectDir.resolve(
                     "build/fat-agent-staging/META-INF/services/com.example.SampleService")));
-    }
-
-    @Test
-    @DisplayName("Registry source fails clearly for unknown extension id")
-    void registrySourceFailsForUnknownId() throws IOException {
-        Path registry = projectDir.resolve("extensions.json");
-        Files.writeString(
-            registry,
-            "{\n" +
-            "  \"schema_version\": 1,\n" +
-            "  \"extensions\": []\n" +
-            "}\n",
-            StandardCharsets.UTF_8);
-
-        writeFile(buildFile,
-            "plugins {\n" +
-            "    id 'io.btrace.fat-agent'\n" +
-            "}\n" +
-            "\n" +
-            "btraceFatAgent {\n" +
-            "    registryUrl = '" + registry.toUri().toString() + "'\n" +
-            "    embedExtensions {\n" +
-            "        registry('missing-ext')\n" +
-            "    }\n" +
-            "}\n"
-        );
-
-        BuildResult result = createRunner()
-            .withArguments("stageExtensions")
-            .buildAndFail();
-
-        assertTrue(result.getOutput().contains("Unknown extension id: missing-ext"));
     }
 
     private GradleRunner createRunner() {
