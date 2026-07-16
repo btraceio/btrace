@@ -58,7 +58,6 @@ The final tag and GitHub release depend on the release-smoke job. Failures uploa
 target, client, compiler, migration, and doctor logs so packaging and readiness failures can be
 diagnosed without rerunning the release. The gate reads artifact availability only; it never uses
 download counts or network analytics.
-
 Every release must also complete the [BTrace 3.0 Release Gate Checklist](ReleaseChecklist.md). The
 workflow records exact commands, full logs, and filtered Markdown summaries for the focused module,
 plugin, formatting, clean masked-JAR, distribution, and target-JDK matrix gates.

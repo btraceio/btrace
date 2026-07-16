@@ -44,10 +44,10 @@ class BTraceFatAgentExtension {
     /** Package relocations (from -> to) */
     Map<String, String> relocations = [:]
 
-    /** Reference to agent JAR task (required for standalone builds) */
+    /** Reference to the task producing the masked BTrace JAR (normally btraceJar). */
     Object agentJarTask
 
-    /** Reference to boot JAR task (required for standalone builds) */
+    /** Legacy reference to a separate boot JAR task. Prefer a single masked btraceJar. */
     Object bootJarTask
 
     /** Whether to auto-discover extensions from subprojects (default: false) */
