@@ -116,8 +116,11 @@ public class Issue888RuntimeHardeningIntegrationTest extends RuntimeTest {
         started.get(20, TimeUnit.SECONDS);
         assertTrue(awaitMBeanStatus(targetInput, targetOutput, "mbean:present:token=true"));
         activeClient.sendEvent("issue-888");
-        targetInput.println("work");
         assertTrue(awaitMessage(probeMessages, "issue-888-event-handler"));
+        // Wait for the failing event handler and its error handler to unwind before entering the
+        // instrumented method. The runtime intentionally suppresses reentrant handler execution.
+        assertTrue(awaitMessage(probeMessages, "issue-888-error-handler"));
+        targetInput.println("work");
         assertTrue(awaitMessage(probeMessages, "issue-888-method-handler"));
         assertTrue(awaitMessage(probeMessages, "issue-888-error-handler"));
         assertTrue(awaitMessage(probeMessages, "issue-888-normal-after-failure"));
