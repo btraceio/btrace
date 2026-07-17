@@ -34,8 +34,11 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delegate {
+  private static final Logger log = LoggerFactory.getLogger(BTraceRuntimeAccessImpl.class);
   private static final BTraceRuntimeAccessImpl INSTANCE = new BTraceRuntimeAccessImpl();
 
   static final class RTWrapper {
@@ -54,11 +57,12 @@ public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delega
       rt = null;
       try {
         return c.call();
-      } catch (Exception ignored) {
+      } catch (VirtualMachineError | ThreadDeath fatal) {
+        throw fatal;
+      } catch (Throwable failure) {
+        log.error("BTrace handler execution failed", failure);
       } finally {
-        if (oldRuntime != null) {
-          rt = oldRuntime;
-        }
+        rt = oldRuntime;
       }
       return null;
     }

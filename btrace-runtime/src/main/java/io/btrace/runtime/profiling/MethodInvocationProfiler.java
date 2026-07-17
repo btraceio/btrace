@@ -65,6 +65,8 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
       MethodInvocationRecorder mir = mirRef.get();
       if (mir != null) {
         mir.reset();
+      } else {
+        recorders.remove(mirRef);
       }
     }
   }
@@ -77,7 +79,10 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
     int mergedEntries = 0, mergedCapacity = 0;
     for (WeakReference<MethodInvocationRecorder> mirRef : recorders) {
       MethodInvocationRecorder mir = mirRef.get();
-      if (mir == null) continue;
+      if (mir == null) {
+        recorders.remove(mirRef);
+        continue;
+      }
 
       Record[] records = mir.getRecords(reset);
       if (records == null || records.length == 0) continue; // just skip the empty data
@@ -129,5 +134,13 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
   @Override
   public Snapshot getMBeanValue() {
     return lastValidSnapshot;
+  }
+
+  void addClearedRecorderForTest() {
+    recorders.add(new WeakReference<MethodInvocationRecorder>(null));
+  }
+
+  int recorderReferenceCountForTest() {
+    return recorders.size();
   }
 }

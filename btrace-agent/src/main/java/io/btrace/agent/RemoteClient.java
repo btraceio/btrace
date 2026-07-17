@@ -43,10 +43,15 @@ import java.io.PushbackInputStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.IntConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +63,25 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings({"SynchronizeOnNonFinalField", "SynchronizationOnLocalVariableOrMethodParameter"})
 class RemoteClient extends Client {
   private static final Logger log = LoggerFactory.getLogger(RemoteClient.class);
+  private static final long TERMINAL_HANDSHAKE_WAIT_MILLIS = 2000L;
+
+  /**
+   * Retains the output side after the inbound reader has consumed an ExitCommand. Only a
+   * successfully written runtime-generated Exit completes this handshake and permits final agent
+   * cleanup/transport close.
+   */
+  private static final class TerminalHandshake {
+    private final CountDownLatch completed = new CountDownLatch(1);
+    private final AtomicBoolean finalizationStarted = new AtomicBoolean(false);
+
+    boolean awaitCompletion() throws InterruptedException {
+      return completed.await(TERMINAL_HANDSHAKE_WAIT_MILLIS, TimeUnit.MILLISECONDS);
+    }
+
+    void complete() {
+      completed.countDown();
+    }
+  }
 
   private final class DelayedCommandExecutor implements Function<Command, Boolean> {
     private final boolean isConnected;
@@ -81,6 +105,8 @@ class RemoteClient extends Client {
       AtomicReferenceFieldUpdater.newUpdater(RemoteClient.class, WireProtocol.class, "protocol");
 
   private final CircularBuffer<Command> delayedCommands = new CircularBuffer<>(5000);
+  private final AtomicReference<TerminalHandshake> terminalHandshake = new AtomicReference<>();
+  private final IntConsumer terminalExitFinalizer;
 
   static Client getClient(
       ClientContext ctx,
@@ -216,6 +242,7 @@ class RemoteClient extends Client {
     super(ctx);
     this.sock = sock;
     this.protocol = protocol;
+    terminalExitFinalizer = null;
     this.settings.from(ctx.getSettings());
     Class<?> btraceClazz = loadClass(cmd);
     if (btraceClazz == null) {
@@ -223,6 +250,26 @@ class RemoteClient extends Client {
     }
 
     initClient();
+  }
+
+  private RemoteClient(
+      ClientContext ctx, WireProtocol protocol, Socket sock, IntConsumer terminalExitFinalizer) {
+    super(ctx);
+    this.sock = sock;
+    this.protocol = protocol;
+    this.terminalExitFinalizer = terminalExitFinalizer;
+  }
+
+  static RemoteClient createForTerminalTest(
+      ClientContext ctx,
+      WireProtocol protocol,
+      Socket sock,
+      BTraceRuntime.Impl runtime,
+      IntConsumer terminalExitFinalizer) {
+    RemoteClient client = new RemoteClient(ctx, protocol, sock, terminalExitFinalizer);
+    client.setRuntimeForTest(runtime);
+    client.initClient();
+    return client;
   }
 
   private void initClient() {
@@ -243,7 +290,16 @@ class RemoteClient extends Client {
                       case Command.EXIT:
                         {
                           log.debug("received exit command");
-                          onCommand(cmd);
+                          TerminalHandshake handshake = beginTerminalHandshake();
+                          BTraceRuntime.Impl rt = getRuntime();
+                          if (rt != null) {
+                            rt.handleExit(((ExitCommand) cmd).getExitCode());
+                          }
+                          try {
+                            handshake.awaitCompletion();
+                          } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                          }
 
                           return;
                         }
@@ -293,11 +349,14 @@ class RemoteClient extends Client {
                 }
               } finally {
                 BTraceRuntime.leave();
-                try {
-                  // Ensure streams and socket are closed once the client side closed first.
-                  closeAll();
-                } catch (IOException ignore) {
-                  // best effort
+                if (terminalHandshake.get() == null) {
+                  try {
+                    // A normal peer close owns its regular transport cleanup. A pending terminal
+                    // handshake deliberately retains output until the generated Exit is written.
+                    closeAll();
+                  } catch (IOException ignore) {
+                    // best effort
+                  }
                 }
               }
             });
@@ -350,9 +409,12 @@ class RemoteClient extends Client {
       switch (cmd.getType()) {
         case Command.EXIT:
           if (isConnected) {
-            output.write(cmd);
+            synchronized (output) {
+              output.write(cmd);
+              output.flush();
+            }
           }
-          onExit(((ExitCommand) cmd).getExitCode());
+          completeTerminalExit(((ExitCommand) cmd).getExitCode());
           break;
         case Command.LIST_PROBES:
           {
@@ -411,6 +473,38 @@ class RemoteClient extends Client {
 
   public boolean isDisconnected() {
     return disconnected;
+  }
+
+  private TerminalHandshake beginTerminalHandshake() {
+    TerminalHandshake handshake = terminalHandshake.get();
+    if (handshake != null) {
+      return handshake;
+    }
+    TerminalHandshake created = new TerminalHandshake();
+    return terminalHandshake.compareAndSet(null, created) ? created : terminalHandshake.get();
+  }
+
+  private void completeTerminalExit(int exitCode) {
+    TerminalHandshake handshake = beginTerminalHandshake();
+    if (!handshake.finalizationStarted.compareAndSet(false, true)) {
+      return;
+    }
+    handshake.complete();
+    // Client.onExit is finalization-only. The runtime generated and wrote the sole terminal Exit
+    // above, so final agent cleanup cannot recurse into runtime shutdown or emit an echo.
+    if (terminalExitFinalizer != null) {
+      try {
+        terminalExitFinalizer.accept(exitCode);
+      } finally {
+        try {
+          closeAll();
+        } catch (IOException e) {
+          log.debug("Unable to close terminal test transport", e);
+        }
+      }
+    } else {
+      super.onExit(exitCode);
+    }
   }
 
   @Override
