@@ -17,7 +17,6 @@
 package io.btrace.runtime;
 
 import io.btrace.core.ArgsMap;
-import io.btrace.core.BTraceRuntime;
 import io.btrace.core.comm.CommandListener;
 import io.btrace.core.jfr.JfrEvent;
 import java.lang.instrument.Instrumentation;
@@ -28,7 +27,6 @@ import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.util.Set;
 import sun.misc.Perf;
-import sun.misc.Unsafe;
 import sun.reflect.CallerSensitive;
 import sun.reflect.Reflection;
 
@@ -80,6 +78,16 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
 
   private final Method findBootstrapOrNullMtd;
 
+  private static final class IsolatedBTraceClassLoader extends ClassLoader {
+    IsolatedBTraceClassLoader(ClassLoader parent) {
+      super(parent);
+    }
+
+    Class<?> define(String name, byte[] code) {
+      return defineClass(name, code, 0, code.length);
+    }
+  }
+
   public BTraceRuntimeImpl_8() {
     boolean jfr = false;
     try {
@@ -123,17 +131,13 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   @Override
   public Class<?> defineClass(byte[] code) {
     try {
-      Unsafe unsafe = BTraceRuntime.initUnsafe();
-      if (unsafe == null) {
-        throw new IllegalStateException("Unsafe is unavailable");
-      }
       // Use stack trace instead of Reflection.getCallerClass() to avoid
       // CallerSensitive annotation requirement (only works from bootstrap CL)
       StackTraceElement[] stack = Thread.currentThread().getStackTrace();
       // stack[0] = getStackTrace, stack[1] = defineClass (this method), stack[2] = caller
       String callerClassName = stack.length > 2 ? stack[2].getClassName() : null;
       if (callerClassName == null || !callerClassName.startsWith("io.btrace.")) {
-        throw new SecurityException("unsafe defineClass");
+        throw new SecurityException("BTrace defineClass");
       }
       // Always define the probe in a fresh, isolated ClassLoader parented to the app CL.
       // This makes the probe class unloadable once the probe's MethodHandles and its
@@ -143,10 +147,9 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
       if (parent == null) {
         parent = Thread.currentThread().getContextClassLoader();
       }
-      ClassLoader loader = new ClassLoader(parent) {};
-      Class<?> cl = unsafe.defineClass(getClassName(), code, 0, code.length, loader, null);
-      unsafe.ensureClassInitialized(cl);
-      return cl;
+      IsolatedBTraceClassLoader loader = new IsolatedBTraceClassLoader(parent);
+      loader.define(getClassName(), code);
+      return Class.forName(getClassName(), true, loader);
     } catch (Throwable failure) {
       throw definitionFailureForTest(failure);
     }

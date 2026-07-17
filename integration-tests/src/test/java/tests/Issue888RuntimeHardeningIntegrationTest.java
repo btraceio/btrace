@@ -27,6 +27,7 @@ import io.btrace.core.comm.MessageCommand;
 import io.btrace.core.comm.StatusCommand;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -45,6 +46,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import tests.harness.Completion;
 
 /** Real staged-JAR client/agent/target lifecycle coverage for #888. */
 public class Issue888RuntimeHardeningIntegrationTest extends RuntimeTest {
@@ -81,70 +83,85 @@ public class Issue888RuntimeHardeningIntegrationTest extends RuntimeTest {
     String ready = awaitLine(targetOutput, "ready:", 10L);
     assertNotNull(ready, "target did not report its PID");
     String pid = ready.substring("ready:".length());
-    PrintWriter targetInput = new PrintWriter(target.getOutputStream(), true);
     Client client = null;
     ExecutorService executor = Executors.newSingleThreadExecutor();
-    try {
-      File trace = locateTrace("btrace/Issue888RuntimeHardeningTest.java");
-      client = createClientForTests(trace.getParentFile().getAbsolutePath());
-      client.attach(pid, null, getEventsClassPath());
-      byte[] code = readProbeClass();
-      CompletableFuture<Void> started = new CompletableFuture<>();
-      CompletableFuture<Integer> terminalExit = new CompletableFuture<>();
-      List<Command> commands = Collections.synchronizedList(new ArrayList<Command>());
-      LinkedBlockingQueue<String> probeMessages = new LinkedBlockingQueue<>();
-      Client activeClient = client;
-      Future<?> submission =
-          executor.submit(
-              () -> {
-                try {
-                  activeClient.submit(
-                      "localhost",
-                      trace.getName(),
-                      code,
-                      new String[0],
-                      command ->
-                          handleCommand(command, started, terminalExit, commands, probeMessages));
-                } catch (Throwable failure) {
-                  started.completeExceptionally(failure);
-                  terminalExit.completeExceptionally(failure);
-                }
-              });
+    try (PrintWriter targetInput = new PrintWriter(target.getOutputStream(), true)) {
+      try {
+        File trace = locateTrace("btrace/Issue888RuntimeHardeningTest.java");
+        client = createClientForTests(trace.getParentFile().getAbsolutePath());
+        client.attach(pid, null, getEventsClassPath());
+        byte[] code = readProbeClass();
+        CompletableFuture<Void> started = new CompletableFuture<>();
+        CompletableFuture<Integer> terminalExit = new CompletableFuture<>();
+        List<Command> commands = Collections.synchronizedList(new ArrayList<Command>());
+        LinkedBlockingQueue<String> probeMessages = new LinkedBlockingQueue<>();
+        Client activeClient = client;
+        Future<?> submission =
+            executor.submit(
+                () -> {
+                  try {
+                    activeClient.submit(
+                        "localhost",
+                        trace.getName(),
+                        code,
+                        new String[0],
+                        command ->
+                            handleCommand(command, started, terminalExit, commands, probeMessages));
+                  } catch (Throwable failure) {
+                    started.completeExceptionally(failure);
+                    terminalExit.completeExceptionally(failure);
+                  }
+                });
 
-      started.get(20, TimeUnit.SECONDS);
-      assertTrue(awaitMBeanStatus(targetInput, targetOutput, "mbean:present:token=true"));
-      activeClient.sendEvent("issue-888");
-      targetInput.println("work");
-      assertTrue(awaitMessage(probeMessages, "issue-888-event-handler"));
-      assertTrue(awaitMessage(probeMessages, "issue-888-method-handler"));
-      assertTrue(awaitMessage(probeMessages, "issue-888-error-handler"));
-      assertTrue(awaitMessage(probeMessages, "issue-888-normal-after-failure"));
-      assertTrue(
-          awaitHandlerDiagnostics(targetErrors, targetErrorHistory),
-          "the target did not retain both handler diagnostics on stderr; stdout="
-              + targetOutputHistory
-              + ", stderr="
-              + targetErrorHistory);
+        started.get(20, TimeUnit.SECONDS);
+        assertTrue(awaitMBeanStatus(targetInput, targetOutput, "mbean:present:token=true"));
+        activeClient.sendEvent("issue-888");
+        targetInput.println("work");
+        assertTrue(awaitMessage(probeMessages, "issue-888-event-handler"));
+        assertTrue(awaitMessage(probeMessages, "issue-888-method-handler"));
+        assertTrue(awaitMessage(probeMessages, "issue-888-error-handler"));
+        assertTrue(awaitMessage(probeMessages, "issue-888-normal-after-failure"));
+        assertTrue(
+            awaitHandlerDiagnostics(targetErrors, targetErrorHistory),
+            "the target did not retain both handler diagnostics on stderr; stdout="
+                + targetOutputHistory
+                + ", stderr="
+                + targetErrorHistory);
 
-      // A real inbound Exit is the terminal trigger. The client command loop must still receive
-      // the runtime-owned marker and generated Exit after submitting it.
-      activeClient.sendExit(EXIT_CODE);
-      assertEquals(EXIT_CODE, terminalExit.get(20, TimeUnit.SECONDS).intValue());
-      submission.get(20, TimeUnit.SECONDS);
-      assertTerminalOrder(commands);
-      assertTrue(awaitMBeanStatus(targetInput, targetOutput, "mbean:absent"));
-    } finally {
-      if (client != null) {
-        client.close();
+        // A real inbound Exit is the terminal trigger. The client command loop must still receive
+        // the runtime-owned marker and generated Exit after submitting it.
+        activeClient.sendExit(EXIT_CODE);
+        assertEquals(EXIT_CODE, terminalExit.get(20, TimeUnit.SECONDS).intValue());
+        submission.get(20, TimeUnit.SECONDS);
+        assertTerminalOrder(commands);
+        assertTrue(awaitMBeanStatus(targetInput, targetOutput, "mbean:absent"));
+      } finally {
+        if (client != null) {
+          client.close();
+        }
+        executor.shutdownNow();
+        targetInput.println("done");
+        if (!target.waitFor(10, TimeUnit.SECONDS)) {
+          target.destroyForcibly();
+        }
+        targetPump.join(1000L);
+        errorPump.join(1000L);
       }
-      executor.shutdownNow();
-      targetInput.println("done");
-      if (!target.waitFor(10, TimeUnit.SECONDS)) {
-        target.destroyForcibly();
-      }
-      targetPump.join(1000L);
-      errorPump.join(1000L);
     }
+  }
+
+  @Test
+  void targetShutdownDeliversSuccessfulExitToCli() throws Exception {
+    testDynamic(
+        "resources.Main",
+        "btrace/OnTimerArgTest.java",
+        new String[] {"timer=200"},
+        Completion.untilContains("timer"),
+        (stdout, stderr, exitCode, jfrFile) -> {
+          assertEquals(0, exitCode, "target shutdown must deliver a successful terminal exit");
+          assertTrue(stderr.isEmpty(), "unexpected BTrace client stderr: " + stderr);
+          assertTrue(stdout.contains("timer"), "expected timer output");
+        });
   }
 
   private Process startTarget() throws Exception {
@@ -192,7 +209,7 @@ public class Issue888RuntimeHardeningIntegrationTest extends RuntimeTest {
         started.completeExceptionally(new IllegalStateException("Probe startup failed"));
       }
     } else if (command instanceof MessageCommand) {
-      probeMessages.offer(((MessageCommand) command).getMessage());
+      offerOrFail(probeMessages, ((MessageCommand) command).getMessage(), "probe message");
     } else if (command instanceof ExitCommand) {
       terminalExit.complete(((ExitCommand) command).getExitCode());
     }
@@ -296,12 +313,12 @@ public class Issue888RuntimeHardeningIntegrationTest extends RuntimeTest {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(stream, "UTF-8"));
                 String line;
                 while ((line = reader.readLine()) != null) {
-                  lines.offer(line);
+                  offerOrFail(lines, line, name + " output");
                   if (history != null) {
                     history.add(line);
                   }
                 }
-              } catch (Exception ignored) {
+              } catch (IOException ignored) {
                 // The target is deliberately closed in test cleanup.
               }
             },
@@ -309,5 +326,11 @@ public class Issue888RuntimeHardeningIntegrationTest extends RuntimeTest {
     pump.setDaemon(true);
     pump.start();
     return pump;
+  }
+
+  private static void offerOrFail(LinkedBlockingQueue<String> lines, String line, String source) {
+    if (!lines.offer(line)) {
+      throw new IllegalStateException("Unable to retain " + source);
+    }
   }
 }

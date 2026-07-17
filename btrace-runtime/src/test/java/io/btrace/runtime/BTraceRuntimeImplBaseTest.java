@@ -67,6 +67,9 @@ class BTraceRuntimeImplBaseTest {
     CountDownLatch bufferedMessage = new CountDownLatch(1);
     CountDownLatch postExitMessage = new CountDownLatch(1);
     CountDownLatch terminalExit = new CountDownLatch(1);
+    CountDownLatch exitDispatchStarted = new CountDownLatch(1);
+    CountDownLatch allowExitDispatch = new CountDownLatch(1);
+    CountDownLatch shutdownReturned = new CountDownLatch(1);
     BTraceRuntimeImpl_8 runtime =
         new BTraceRuntimeImpl_8(
             "issue-888-runtime-test",
@@ -82,6 +85,13 @@ class BTraceRuntimeImplBaseTest {
                 postExitMessage.countDown();
               }
               if (command instanceof ExitCommand) {
+                exitDispatchStarted.countDown();
+                try {
+                  allowExitDispatch.await(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                  throw new AssertionError(e);
+                }
                 terminalExit.countDown();
               }
             },
@@ -94,7 +104,18 @@ class BTraceRuntimeImplBaseTest {
     runtime.commit(speculation);
     assertTrue(bufferedMessage.await(5, TimeUnit.SECONDS));
 
-    runtime.handleExit(23);
+    Thread shutdown =
+        new Thread(
+            () -> {
+              runtime.handleExit(23);
+              shutdownReturned.countDown();
+            },
+            "issue-888-terminal-shutdown");
+    shutdown.start();
+    assertTrue(exitDispatchStarted.await(5, TimeUnit.SECONDS));
+    assertFalse(shutdownReturned.await(250, TimeUnit.MILLISECONDS));
+    allowExitDispatch.countDown();
+    assertTrue(shutdownReturned.await(5, TimeUnit.SECONDS));
     runtime.handleExit(99);
     assertTrue(terminalExit.await(5, TimeUnit.SECONDS));
 

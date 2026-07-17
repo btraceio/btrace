@@ -214,6 +214,9 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
       }
       if (dispatched) {
         acknowledgeTerminalMarker(t);
+        if (t.getType() == Command.EXIT) {
+          terminalExitDispatched.countDown();
+        }
       }
       if (t.getType() == Command.EXIT) {
         exitSignal.set(true);
@@ -460,6 +463,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   private final AtomicBoolean terminalShutdownRequested = new AtomicBoolean(false);
   private final AtomicBoolean terminalExitQueued = new AtomicBoolean(false);
   private final CountDownLatch terminalMarkerAcknowledged = new CountDownLatch(1);
+  private final CountDownLatch terminalExitDispatched = new CountDownLatch(1);
   private volatile MessageCommand terminalMarker;
   private volatile int terminalExitCode;
   private final MessagePassingQueue.WaitStrategy waitStrategy =
@@ -991,11 +995,13 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     }
 
     // The queue consumer cannot acknowledge a marker while it is executing this call. An
-    // application/agent caller may wait briefly for the diagnostic to be dispatched, but timeout
-    // is not terminal failure: the consumer remains responsible for eventually producing Exit.
+    // application/agent caller may wait briefly for the diagnostic and generated Exit to be
+    // dispatched, but timeout is not terminal failure: the consumer remains responsible for
+    // eventually producing Exit.
     if (Thread.currentThread() != cmdThread) {
       try {
         terminalMarkerAcknowledged.await(TERMINAL_MARKER_ACK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+        terminalExitDispatched.await(TERMINAL_MARKER_ACK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }

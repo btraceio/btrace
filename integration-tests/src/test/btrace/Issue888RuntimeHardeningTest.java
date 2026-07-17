@@ -28,7 +28,7 @@ public class Issue888RuntimeHardeningTest {
 
   @OnError
   public static void onError(Throwable throwable) {
-    println("issue-888-error-handler");
+    println("issue-888-error-handler:" + BTraceUtils.str(throwable));
     BTraceUtils.substr("x", 2);
   }
 
