@@ -1488,6 +1488,10 @@ public abstract class RuntimeTest {
     return eventsClassPath;
   }
 
+  protected static String getTargetAppClassPath() {
+    return targetAppCp;
+  }
+
   protected Client createClientForTests(String probeDescPath) {
     String libs = System.getProperty("btrace.libs");
     String agentJar = null;

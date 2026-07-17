@@ -153,14 +153,13 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
       // initialize the class by creating a dummy instance
       clz.getConstructor().newInstance();
       return clz;
-    } catch (IllegalAccessException
-        | NoSuchMethodException
-        | SecurityException
-        | InstantiationException
-        | InvocationTargetException ignored) {
-
+    } catch (Throwable failure) {
+      throw definitionFailureForTest(failure);
     }
-    return null;
+  }
+
+  static IllegalStateException definitionFailureForTest(Throwable failure) {
+    return DefineClassSupport.failure("Java 9 runtime", failure);
   }
 
   /**
@@ -176,14 +175,9 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
       // initialize the class by creating a dummy instance
       clz.getConstructor().newInstance();
       return clz;
-    } catch (IllegalAccessException
-        | NoSuchMethodException
-        | SecurityException
-        | InstantiationException
-        | InvocationTargetException ignored) {
-
+    } catch (Throwable failure) {
+      throw definitionFailureForTest(failure);
     }
-    return null;
   }
 
   @Override

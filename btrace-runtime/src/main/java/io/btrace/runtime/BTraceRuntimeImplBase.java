@@ -79,9 +79,12 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.management.ListenerNotFoundException;
 import javax.management.MBeanServer;
 import javax.management.NotificationEmitter;
@@ -191,7 +194,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     }
   }
 
-  private static final class ConsumerWrapper implements MessagePassingQueue.Consumer<Command> {
+  private final class ConsumerWrapper implements MessagePassingQueue.Consumer<Command> {
     private final CommandListener cmdHandler;
     private final AtomicBoolean exitSignal;
 
@@ -202,10 +205,15 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
 
     @Override
     public void accept(Command t) {
+      boolean dispatched = false;
       try {
         cmdHandler.onCommand(t);
+        dispatched = true;
       } catch (IOException e) {
         log.warn("Command handler I/O error", e);
+      }
+      if (dispatched) {
+        acknowledgeTerminalMarker(t);
       }
       if (t.getType() == Command.EXIT) {
         exitSignal.set(true);
@@ -291,7 +299,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   // Command queue for the client
   private final CommandQueue queue;
 
-  private static class SpeculativeQueueManager {
+  static final class SpeculativeQueueManager {
     // maximum number of speculative buffers
     private static final int MAX_SPECULATIVE_BUFFERS = Short.MAX_VALUE;
     // per buffer message limit
@@ -299,32 +307,53 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     // next speculative buffer id
     private int nextSpeculationId;
     // speculative buffers map
-    private ConcurrentHashMap<Integer, MpmcArrayQueue<Command>> speculativeQueues;
+    private final ConcurrentHashMap<Integer, MpmcArrayQueue<Command>> speculativeQueues;
     // per thread current speculative buffer id
-    private ThreadLocal<Integer> currentSpeculationId;
+    private final ThreadLocal<Integer> currentSpeculationId;
+    private final ReentrantReadWriteLock lifecycleLock = new ReentrantReadWriteLock();
+    private volatile boolean closed;
+    private volatile TestHook testHook;
+
+    interface TestHook {
+      void afterOpenCheck(String operation);
+    }
 
     SpeculativeQueueManager() {
       speculativeQueues = new ConcurrentHashMap<>();
       currentSpeculationId = new ThreadLocal<>();
     }
 
-    void clear() {
-      speculativeQueues.clear();
-      speculativeQueues = null;
-      currentSpeculationId.remove();
-      currentSpeculationId = null;
+    void clear(CommandQueue result) {
+      lifecycleLock.writeLock().lock();
+      try {
+        closed = true;
+        speculativeQueues.clear();
+        result.clear();
+      } finally {
+        lifecycleLock.writeLock().unlock();
+      }
     }
 
     int speculation() {
-      int nextId = getNextSpeculationId();
-      if (nextId != -1) {
-        speculativeQueues.put(nextId, new MpmcArrayQueue<>(MAX_SPECULATIVE_MSG_LIMIT));
+      lifecycleLock.readLock().lock();
+      try {
+        if (closed) return -1;
+        afterOpenCheck("speculation");
+        int nextId = getNextSpeculationId();
+        if (nextId != -1) {
+          speculativeQueues.put(nextId, new MpmcArrayQueue<>(MAX_SPECULATIVE_MSG_LIMIT));
+        }
+        return nextId;
+      } finally {
+        lifecycleLock.readLock().unlock();
       }
-      return nextId;
     }
 
-    boolean send(Command cmd) {
-      if (currentSpeculationId != null) {
+    void send(Command cmd, CommandQueue result) {
+      lifecycleLock.readLock().lock();
+      try {
+        if (closed) return;
+        afterOpenCheck("send");
         Integer curId = currentSpeculationId.get();
         if ((curId != null) && (cmd.getType() != Command.EXIT)) {
           MpmcArrayQueue<Command> sb = speculativeQueues.get(curId);
@@ -333,40 +362,78 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
               sb.clear();
               sb.offer(new MessageCommand("speculative buffer overflow: " + curId));
             }
-            return true;
+            return;
           }
         }
+        result.enqueue(cmd);
+      } finally {
+        lifecycleLock.readLock().unlock();
       }
-      return false;
     }
 
     void speculate(int id) {
-      validateId(id);
-      currentSpeculationId.set(id);
+      lifecycleLock.readLock().lock();
+      try {
+        if (closed) return;
+        afterOpenCheck("speculate");
+        validateId(id);
+        currentSpeculationId.set(id);
+      } finally {
+        lifecycleLock.readLock().unlock();
+      }
     }
 
     void commit(int id, CommandQueue result) {
-      validateId(id);
-      currentSpeculationId.set(null);
-      MpmcArrayQueue<Command> sb = speculativeQueues.get(id);
-      if (sb != null) {
-        result.addAll(sb);
-        sb.clear();
-        speculativeQueues.remove(id);
+      lifecycleLock.readLock().lock();
+      try {
+        if (closed) return;
+        afterOpenCheck("commit");
+        validateId(id);
+        currentSpeculationId.set(null);
+        MpmcArrayQueue<Command> sb = speculativeQueues.get(id);
+        if (sb != null) {
+          result.addAll(sb);
+          sb.clear();
+          speculativeQueues.remove(id);
+        }
+      } finally {
+        lifecycleLock.readLock().unlock();
       }
     }
 
     void discard(int id) {
-      validateId(id);
-      currentSpeculationId.set(null);
-      MpmcArrayQueue<Command> sb = speculativeQueues.get(id);
-      if (sb != null) {
-        sb.clear();
-        speculativeQueues.remove(id);
+      lifecycleLock.readLock().lock();
+      try {
+        if (closed) return;
+        afterOpenCheck("discard");
+        validateId(id);
+        currentSpeculationId.set(null);
+        MpmcArrayQueue<Command> sb = speculativeQueues.get(id);
+        if (sb != null) {
+          sb.clear();
+          speculativeQueues.remove(id);
+        }
+      } finally {
+        lifecycleLock.readLock().unlock();
       }
     }
 
     // -- Internals only below this point
+    void setTestHook(TestHook testHook) {
+      this.testHook = testHook;
+    }
+
+    int speculativeQueueCountForTest() {
+      return speculativeQueues.size();
+    }
+
+    private void afterOpenCheck(String operation) {
+      TestHook hook = testHook;
+      if (hook != null) {
+        hook.afterOpenCheck(operation);
+      }
+    }
+
     private synchronized int getNextSpeculationId() {
       if (nextSpeculationId == MAX_SPECULATIVE_BUFFERS) {
         return -1;
@@ -386,8 +453,15 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   // background thread that sends Commands to the handler
   private volatile Thread cmdThread;
   private final Instrumentation instrumentation;
+  private volatile BTraceMBean.Registration mbeanRegistration;
 
   private final AtomicBoolean exitting = new AtomicBoolean(false);
+  private static final long TERMINAL_MARKER_ACK_TIMEOUT_MILLIS = 2000L;
+  private final AtomicBoolean terminalShutdownRequested = new AtomicBoolean(false);
+  private final AtomicBoolean terminalExitQueued = new AtomicBoolean(false);
+  private final CountDownLatch terminalMarkerAcknowledged = new CountDownLatch(1);
+  private volatile MessageCommand terminalMarker;
+  private volatile int terminalExitCode;
   private final MessagePassingQueue.WaitStrategy waitStrategy =
       i -> {
         if (exitting.get()) return 0;
@@ -445,8 +519,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
                 queue.drain(
                     new ConsumerWrapper(cmdListener, exitting), waitStrategy, exitCondition);
               } finally {
-                queue.clear();
-                specQueueManager.clear();
+                specQueueManager.clear(queue);
                 leave();
                 disabled = true;
               }
@@ -528,7 +601,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
           e);
     }
 
-    BTraceMBean.registerMBean(clazz);
+    mbeanRegistration = BTraceMBean.registerMBean(clazz);
   }
 
   /**
@@ -641,7 +714,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   }
 
   public final void shutdownCmdLine() {
-    exitting.set(true);
+    requestTerminalShutdown(0);
   }
 
   /**
@@ -657,6 +730,10 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   @Override
   public final void handleException(Throwable th) {
     if (currentException.get() != null) {
+      // A throwing @OnError handler re-enters through the woven exception bridge while the
+      // original failure is still being handled. Do not recurse into user code, but do not make
+      // that second failure invisible to the target operator either.
+      log.error("BTrace error-handler execution failed", th);
       return;
     }
     boolean entered = BTraceRuntimeAccessImpl.enterInternal(this);
@@ -664,8 +741,9 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
       currentException.set(th);
 
       if (th instanceof ExitException) {
-        exitImpl(((ExitException) th).exitCode());
+        requestTerminalShutdown(((ExitException) th).exitCode());
       } else {
+        log.error("BTrace handler execution failed", th);
         if (errorHandlers != null) {
           for (ErrorHandler eh : errorHandlers) {
             // @OnError handlers are guarded: their woven prologue calls enter(runtime),
@@ -891,16 +969,74 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
 
   @Override
   public final void handleExit(int exitCode) {
-    cleanupExtensions();
-    exitImpl(exitCode);
-    try {
-      // Use timeout to prevent indefinite blocking during shutdown
-      // Don't interrupt - let cmdThread finish processing remaining commands
-      cmdThread.join(2000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
+    requestTerminalShutdown(exitCode);
+  }
+
+  /**
+   * Starts the one-way runtime-owned terminal handshake. The command queue deliberately remains
+   * live until its consumer has delivered the marker and queued the corresponding {@link
+   * ExitCommand}; closing it here would race the diagnostic with transport teardown.
+   */
+  private void requestTerminalShutdown(int exitCode) {
+    if (terminalShutdownRequested.compareAndSet(false, true)) {
+      terminalExitCode = exitCode;
+      String cleanupOutcome = completeTerminalCleanup(exitCode);
+      MessageCommand marker = new MessageCommand("[BTRACE] terminal cleanup: " + cleanupOutcome);
+      terminalMarker = marker;
+      if (queue != null) {
+        queue.enqueue(marker);
+      } else {
+        log.warn("Cannot dispatch terminal cleanup marker without a command queue");
+      }
     }
-    cleanupRuntime();
+
+    // The queue consumer cannot acknowledge a marker while it is executing this call. An
+    // application/agent caller may wait briefly for the diagnostic to be dispatched, but timeout
+    // is not terminal failure: the consumer remains responsible for eventually producing Exit.
+    if (Thread.currentThread() != cmdThread) {
+      try {
+        terminalMarkerAcknowledged.await(TERMINAL_MARKER_ACK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  private String completeTerminalCleanup(int exitCode) {
+    StringBuilder outcome = new StringBuilder();
+    try {
+      exitImpl(exitCode);
+      outcome.append("runtime=cleaned");
+    } catch (Throwable t) {
+      log.error("BTrace exit cleanup failed", t);
+      outcome.append("runtime=failed");
+    }
+    try {
+      cleanupRuntime();
+    } catch (Throwable t) {
+      log.error("BTrace runtime cleanup failed", t);
+      outcome.append(",runtime-finalizer=failed");
+    }
+
+    BTraceMBean.Registration registration = mbeanRegistration;
+    if (registration == null) {
+      outcome.append(",mbean=absent");
+    } else {
+      outcome.append(",mbean=").append(registration.closeAndReport());
+    }
+    return outcome.toString();
+  }
+
+  /** Called only by the command-thread consumer after successful marker delivery. */
+  private void acknowledgeTerminalMarker(Command command) {
+    MessageCommand marker = terminalMarker;
+    if (command != marker || marker == null || !terminalExitQueued.compareAndSet(false, true)) {
+      return;
+    }
+    terminalMarkerAcknowledged.countDown();
+    if (queue != null && !queue.enqueue(new ExitCommand(terminalExitCode))) {
+      log.error("Unable to enqueue terminal BTrace exit command");
+    }
   }
 
   public final int getLevel() {
@@ -1130,10 +1266,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   }
 
   public final void send(Command cmd) {
-    boolean speculated = specQueueManager.send(cmd);
-    if (!speculated) {
-      enqueue(cmd);
-    }
+    specQueueManager.send(cmd, queue);
   }
 
   private void enqueue(Command cmd) {
@@ -1175,7 +1308,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
 
   @Override
   public final void exit(int exitCode) {
-    exitImpl(exitCode);
+    requestTerminalShutdown(exitCode);
   }
 
   private synchronized void exitImpl(int exitCode) {
@@ -1208,9 +1341,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
       }
 
       cleanupExtensions();
-      send(new ExitCommand(exitCode));
     } finally {
-      disabled = true;
       if (entered) {
         BTraceRuntime.leave();
       }

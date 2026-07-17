@@ -122,8 +122,11 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
 
   @Override
   public Class<?> defineClass(byte[] code) {
-    Unsafe unsafe = BTraceRuntime.initUnsafe();
-    if (unsafe != null) {
+    try {
+      Unsafe unsafe = BTraceRuntime.initUnsafe();
+      if (unsafe == null) {
+        throw new IllegalStateException("Unsafe is unavailable");
+      }
       // Use stack trace instead of Reflection.getCallerClass() to avoid
       // CallerSensitive annotation requirement (only works from bootstrap CL)
       StackTraceElement[] stack = Thread.currentThread().getStackTrace();
@@ -144,9 +147,13 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
       Class<?> cl = unsafe.defineClass(getClassName(), code, 0, code.length, loader, null);
       unsafe.ensureClassInitialized(cl);
       return cl;
+    } catch (Throwable failure) {
+      throw definitionFailureForTest(failure);
     }
+  }
 
-    return null;
+  static IllegalStateException definitionFailureForTest(Throwable failure) {
+    return DefineClassSupport.failure("Java 8 runtime", failure);
   }
 
   @Override

@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.management.Attribute;
@@ -72,32 +73,90 @@ import org.slf4j.LoggerFactory;
 public class BTraceMBean implements DynamicMBean {
   private static final Logger log = LoggerFactory.getLogger(BTraceMBean.class);
 
+  /** Internal descriptor field used to prove that a registration belongs to this runtime. */
+  private static final String REGISTRATION_TOKEN_DESCRIPTOR = "io.btrace.registrationToken";
+
   private final Class<?> clazz;
   private final Map<String, Field> attributes;
   private final String beanName;
+  private final String registrationToken;
   private MBeanInfo cachedBeanInfo;
 
   public BTraceMBean(Class<?> clazz) {
+    this(clazz, UUID.randomUUID().toString());
+  }
+
+  private BTraceMBean(Class<?> clazz, String registrationToken) {
     this.clazz = clazz;
     attributes = getJMXAttributes(clazz);
     beanName = getBeanName(clazz);
+    this.registrationToken = registrationToken;
   }
 
-  public static void registerMBean(Class<?> clazz) {
-    if (isMBean(clazz)) {
+  static final class Registration implements AutoCloseable {
+    private final ObjectName objectName;
+    private final String token;
+    private boolean closed;
+    private String closeOutcome = "absent";
+
+    private Registration(ObjectName objectName, String token) {
+      this.objectName = objectName;
+      this.token = token;
+    }
+
+    @Override
+    public synchronized void close() {
+      closeAndReport();
+    }
+
+    synchronized String closeAndReport() {
+      if (closed || objectName == null) return closeOutcome;
+      closed = true;
       MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-      BTraceMBean bean = new BTraceMBean(clazz);
       try {
-        ObjectName on = new ObjectName("btrace:name=" + bean.beanName);
-        if (server.isRegistered(on)) {
-          server.unregisterMBean(on);
+        Object tokenValue =
+            server
+                .getMBeanInfo(objectName)
+                .getDescriptor()
+                .getFieldValue(REGISTRATION_TOKEN_DESCRIPTOR);
+        if (!token.equals(tokenValue)) {
+          log.warn("Leaving non-owned BTrace MBean {} registered", objectName);
+          closeOutcome = "foreign";
+          return closeOutcome;
         }
-        server.registerMBean(bean, on);
-      } catch (RuntimeException re) {
-        throw re;
-      } catch (Exception exp) {
-        throw new RuntimeException(exp);
+        server.unregisterMBean(objectName);
+        closeOutcome = "closed";
+      } catch (javax.management.InstanceNotFoundException ignored) {
+        // It was already removed, which is equivalent to a successful close.
+        closeOutcome = "absent";
+      } catch (Exception e) {
+        log.warn("Unable to unregister BTrace MBean {}", objectName, e);
+        closeOutcome = "failed";
       }
+      return closeOutcome;
+    }
+  }
+
+  static Registration registerMBean(Class<?> clazz) {
+    if (!isMBean(clazz)) return null;
+    MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+    BTraceMBean bean = new BTraceMBean(clazz);
+    try {
+      ObjectName on = objectName(clazz);
+      if (server.isRegistered(on)) {
+        log.warn("BTrace MBean name {} is already registered; leaving it untouched", on);
+        return null;
+      }
+      server.registerMBean(bean, on);
+      return new Registration(on, bean.registrationToken);
+    } catch (javax.management.InstanceAlreadyExistsException collision) {
+      log.warn(
+          "BTrace MBean name {} was registered concurrently; leaving it untouched", getName(clazz));
+      return null;
+    } catch (RuntimeException re) {
+      throw re;
+    } catch (Exception exp) {
+      throw new RuntimeException(exp);
     }
   }
 
@@ -109,6 +168,14 @@ public class BTraceMBean implements DynamicMBean {
       beanName = clazz.getName();
     }
     return beanName;
+  }
+
+  private static ObjectName objectName(Class<?> clazz) throws Exception {
+    return new ObjectName("btrace:name=" + getBeanName(clazz));
+  }
+
+  private static String getName(Class<?> clazz) {
+    return "btrace:name=" + getBeanName(clazz);
   }
 
   public static boolean isMBean(Class<?> clazz) {
@@ -249,6 +316,8 @@ public class BTraceMBean implements DynamicMBean {
     if (description.isEmpty()) {
       description = "BTrace MBean : " + beanName;
     }
+    Descriptor descriptor = new DescriptorSupport();
+    descriptor.setField(REGISTRATION_TOKEN_DESCRIPTOR, registrationToken);
     cachedBeanInfo =
         new MBeanInfo(
             beanName,
@@ -256,7 +325,8 @@ public class BTraceMBean implements DynamicMBean {
             attrs,
             null, // constructors
             null,
-            null); // notifications
+            null,
+            descriptor); // notifications
     return cachedBeanInfo;
   }
 

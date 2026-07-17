@@ -38,6 +38,19 @@ public class BTraceDslVerifierTest {
           + "    }\n"
           + "}\n";
 
+  private static final String HANDLER_FAILURE_SCRIPT =
+      "import io.btrace.core.BTraceUtils;\n"
+          + "import io.btrace.core.annotations.BTrace;\n"
+          + "import io.btrace.core.annotations.OnError;\n"
+          + "import io.btrace.core.annotations.OnEvent;\n"
+          + "import io.btrace.core.annotations.OnMethod;\n"
+          + "@BTrace public class HandlerFailureProbe {\n"
+          + "  @OnEvent public static void event() { BTraceUtils.substr(\"x\", 2); }\n"
+          + "  @OnMethod(clazz=\"resources.Main\", method=\"callA\")\n"
+          + "  public static void method() { BTraceUtils.substr(\"x\", 2); }\n"
+          + "  @OnError public static void error(Throwable t) { BTraceUtils.substr(\"x\", 2); }\n"
+          + "}\n";
+
   @Test
   void flatPrintln_passesSourceVerifier() {
     StringWriter err = new StringWriter();
@@ -50,6 +63,21 @@ public class BTraceDslVerifierTest {
                 null,
                 System.getProperty("java.class.path"));
     assertNotNull(result, "Compilation should succeed");
+    assertFalse(result.isEmpty(), "Should produce class bytes");
+  }
+
+  @Test
+  void handlerFailureTriggerPassesSourceVerifier() {
+    StringWriter err = new StringWriter();
+    Map<String, byte[]> result =
+        new Compiler()
+            .compile(
+                "HandlerFailureProbe.java",
+                HANDLER_FAILURE_SCRIPT,
+                new PrintWriter(err),
+                null,
+                System.getProperty("java.class.path"));
+    assertNotNull(result, "Compilation should succeed: " + err);
     assertFalse(result.isEmpty(), "Should produce class bytes");
   }
 }

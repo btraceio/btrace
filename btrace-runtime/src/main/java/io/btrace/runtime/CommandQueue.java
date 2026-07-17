@@ -94,4 +94,8 @@ final class CommandQueue {
     queue.clear();
     droppedCommands.set(0);
   }
+
+  int sizeForTest() {
+    return queue.size();
+  }
 }
