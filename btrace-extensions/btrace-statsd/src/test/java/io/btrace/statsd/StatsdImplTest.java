@@ -72,6 +72,7 @@ class StatsdImplTest {
     byte[] bytes = new byte[1024];
     DatagramPacket packet = new DatagramPacket(bytes, bytes.length);
     receiver.receive(packet);
-    return new String(packet.getData(), packet.getOffset(), packet.getLength(), StandardCharsets.US_ASCII);
+    return new String(
+        packet.getData(), packet.getOffset(), packet.getLength(), StandardCharsets.US_ASCII);
   }
 }

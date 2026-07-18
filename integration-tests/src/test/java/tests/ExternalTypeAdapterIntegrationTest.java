@@ -60,10 +60,15 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
     Path integrationBuild =
         Paths.get(System.getProperty("project.dir"), "build").toAbsolutePath().normalize();
     Path stagedClientLibs =
-        Paths.get(System.getProperty("btrace.externalType.client.libs")).toAbsolutePath().normalize();
+        Paths.get(System.getProperty("btrace.externalType.client.libs"))
+            .toAbsolutePath()
+            .normalize();
     Path stagedExtensions =
-        Paths.get(System.getProperty("btrace.externalType.extensions")).toAbsolutePath().normalize();
-    assertTrue(stagedClientLibs.startsWith(integrationBuild), "staged client libs must be isolated");
+        Paths.get(System.getProperty("btrace.externalType.extensions"))
+            .toAbsolutePath()
+            .normalize();
+    assertTrue(
+        stagedClientLibs.startsWith(integrationBuild), "staged client libs must be isolated");
     assertTrue(stagedExtensions.startsWith(integrationBuild), "staged extensions must be isolated");
     assertTrue(Files.isRegularFile(stagedClientLibs.resolve("btrace.jar")));
     assertTrue(Files.isDirectory(stagedExtensions.resolve("btrace-ext-test")));
