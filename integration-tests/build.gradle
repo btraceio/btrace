@@ -43,7 +43,7 @@ def releaseBtraceJar = project(':btrace-dist').layout.buildDirectory.file("resou
 def externalTypeArchive = project(':btrace-extensions:btrace-ext-test').layout.buildDirectory.file("distributions/btrace-ext-test-${project.version}-extension.zip")
 
 task stageExternalTypeClientHome {
-    dependsOn ':btrace-dist:btraceJar', ':btrace-extensions:btrace-ext-test:packageExtension'
+    dependsOn ':btrace-dist:btraceJar', ':btrace-dist:copyDtraceLib', ':btrace-extensions:btrace-ext-test:packageExtension'
     inputs.file releaseBtraceJar
     inputs.file externalTypeArchive
     outputs.dir externalTypeClientHome
