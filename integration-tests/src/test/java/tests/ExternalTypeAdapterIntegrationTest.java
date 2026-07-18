@@ -21,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,6 +57,23 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
 
   @Test
   public void testExternalTypeAdapterTagAndValue() throws Exception {
+    Path integrationBuild =
+        Paths.get(System.getProperty("project.dir"), "build").toAbsolutePath().normalize();
+    Path stagedClientLibs =
+        Paths.get(System.getProperty("btrace.externalType.client.libs")).toAbsolutePath().normalize();
+    Path stagedExtensions =
+        Paths.get(System.getProperty("btrace.externalType.extensions")).toAbsolutePath().normalize();
+    assertTrue(stagedClientLibs.startsWith(integrationBuild), "staged client libs must be isolated");
+    assertTrue(stagedExtensions.startsWith(integrationBuild), "staged extensions must be isolated");
+    assertTrue(Files.isRegularFile(stagedClientLibs.resolve("btrace.jar")));
+    assertTrue(Files.isDirectory(stagedExtensions.resolve("btrace-ext-test")));
+    Path releaseExtensions =
+        Paths.get(System.getProperty("btrace.libs")).getParent().resolve("extensions");
+    assertFalse(
+        Files.exists(releaseExtensions.resolve("btrace-ext-test")),
+        "test extension must not be staged in the release distribution");
+    targetExtensionPath = stagedExtensions.toString();
+    clientBtraceLibs = stagedClientLibs.toString();
     attachDelayMs = 500;
     testDynamic(
         "resources.Main",

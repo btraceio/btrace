@@ -36,6 +36,32 @@ task buildEventsJar(type: Jar) {
     archiveClassifier = ""
 }
 
+def externalTypeClientHome = layout.buildDirectory.dir('external-type-client-home')
+def externalTypeClientLibs = externalTypeClientHome.map { it.dir('libs') }
+def externalTypeExtensions = externalTypeClientHome.map { it.dir('extensions') }
+def releaseBtraceJar = project(':btrace-dist').layout.buildDirectory.file("resources/main/v${project.version}/libs/btrace.jar")
+def externalTypeArchive = project(':btrace-extensions:btrace-ext-test').layout.buildDirectory.file("distributions/btrace-ext-test-${project.version}-extension.zip")
+
+task stageExternalTypeClientHome {
+    dependsOn ':btrace-dist:btraceJar', ':btrace-extensions:btrace-ext-test:packageExtension'
+    inputs.file releaseBtraceJar
+    inputs.file externalTypeArchive
+    outputs.dir externalTypeClientHome
+
+    doLast {
+        File clientHome = externalTypeClientHome.get().asFile
+        project.delete(clientHome)
+        project.copy {
+            from releaseBtraceJar
+            into new File(clientHome, 'libs')
+        }
+        project.copy {
+            from project.zipTree(externalTypeArchive.get().asFile)
+            into new File(clientHome, 'extensions/btrace-ext-test')
+        }
+    }
+}
+
 task compileTestProbes {
     dependsOn compileTestJava, ':btrace-agent:jar', ':btrace-compiler:jar'
     // Wire all extension buildApiJar tasks dynamically (parent aggregator dissolved)
@@ -103,7 +129,8 @@ test {
     }
     dependsOn cleanTest, buildEventsJar, compileTestProbes,
              ':btrace-dist:btraceJar',
-             ':btrace-dist:explodeExtensions'
+             ':btrace-dist:explodeExtensions',
+             stageExternalTypeClientHome
 
     testLogging.showStandardStreams = true
 
@@ -182,6 +209,8 @@ test {
         props.load(Files.newInputStream(releaseFile))
     }
     def libsPath = "${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/"
+    systemProperty 'btrace.externalType.client.libs', externalTypeClientLibs.get().asFile.absolutePath
+    systemProperty 'btrace.externalType.extensions', externalTypeExtensions.get().asFile.absolutePath
     def isJava8 = props.getProperty("JAVA_VERSION")?.contains("1.8")
     if (isJava8) {
         jvmArgs "-Dproject.dir=${projectDir}", "-Dproject.version=${project.version}", "-Dbtrace.libs=${libsPath}"

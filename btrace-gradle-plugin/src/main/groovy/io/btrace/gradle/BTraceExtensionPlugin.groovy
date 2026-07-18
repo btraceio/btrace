@@ -790,7 +790,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                             'BTrace-Extension-Version': extension.version,
                             'BTrace-Extension-Name': extension.name,
                             'BTrace-Extension-Description': extension.description,
-                            'BTrace-API-Version': '2.3+',
+                            'BTrace-API-Version': '3.0+',
                             'BTrace-Java-Version': '8+',
                             'BTrace-Extension-Services': {
                                 if (servicesStr && !servicesStr.isEmpty()) return servicesStr

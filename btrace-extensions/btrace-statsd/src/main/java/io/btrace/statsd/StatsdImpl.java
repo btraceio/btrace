@@ -18,12 +18,40 @@ package io.btrace.statsd;
 
 import io.btrace.core.SharedSettings;
 import io.btrace.core.extensions.Extension;
+import io.btrace.core.extensions.ExtensionContext;
+import io.btrace.core.extensions.ExtensionException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 
 public final class StatsdImpl extends Extension implements Statsd {
+  private final Object socketLock = new Object();
+  private DatagramSocket socket;
+  private InetAddress address;
+  private int port;
+
+  @Override
+  public void initialize(ExtensionContext context) throws ExtensionException {
+    super.initialize(context);
+    try {
+      InetAddress configuredAddress = InetAddress.getByName(SharedSettings.GLOBAL.getStatsdHost());
+      int configuredPort = SharedSettings.GLOBAL.getStatsdPort();
+      DatagramSocket configuredSocket = new DatagramSocket();
+      synchronized (socketLock) {
+        closeSocket();
+        address = configuredAddress;
+        port = configuredPort;
+        socket = configuredSocket;
+      }
+    } catch (Throwable ignored) {
+      synchronized (socketLock) {
+        closeSocket();
+        address = null;
+      }
+    }
+  }
+
   @Override
   public void increment(String name) {
     increment(name, null);
@@ -38,14 +66,30 @@ public final class StatsdImpl extends Extension implements Statsd {
         sb.append("|#").append(tags);
       }
       byte[] data = sb.toString().getBytes(StandardCharsets.US_ASCII);
-      DatagramPacket pkt = new DatagramPacket(data, data.length);
-      pkt.setAddress(InetAddress.getByName(SharedSettings.GLOBAL.getStatsdHost()));
-      pkt.setPort(SharedSettings.GLOBAL.getStatsdPort());
-      try (DatagramSocket socket = new DatagramSocket()) {
+      synchronized (socketLock) {
+        if (socket == null || socket.isClosed() || address == null) {
+          return;
+        }
+        DatagramPacket pkt = new DatagramPacket(data, data.length, address, port);
         socket.send(pkt);
       }
     } catch (Throwable ignore) {
       // Best-effort, ignore errors in script path
+    }
+  }
+
+  @Override
+  public void close() {
+    synchronized (socketLock) {
+      closeSocket();
+      address = null;
+    }
+  }
+
+  private void closeSocket() {
+    if (socket != null) {
+      socket.close();
+      socket = null;
     }
   }
 }
