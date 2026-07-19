@@ -63,7 +63,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
+import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
@@ -82,13 +82,13 @@ public class BTraceProbePersisted implements BTraceProbe {
   final BTraceProbeSupport delegate;
   private final BTraceProbeFactory factory;
   private final DebugSupport debug;
-  private final AtomicBoolean triedVerify = new AtomicBoolean(false);
+  private volatile VerifierException verificationFailure;
   private final Map<String, Set<String>> calleeMap = new HashMap<>();
   private volatile BTraceRuntime.Impl rt = null;
   private BTraceTransformer transformer;
   private byte[] fullData = null;
   private byte[] dataHolder = null;
-  private boolean preverified;
+  private volatile boolean preverified;
 
   BTraceProbePersisted(BTraceProbeFactory f) {
     this(f, null);
@@ -522,18 +522,29 @@ public class BTraceProbePersisted implements BTraceProbe {
     if (factory.getSettings().isTrusted()) {
       return true;
     }
-    if (triedVerify.compareAndSet(false, true)) {
+    if (preverified) {
+      return true;
+    }
+    synchronized (this) {
+      if (preverified) {
+        return true;
+      }
+      if (verificationFailure != null) {
+        return false;
+      }
       try {
         verifyBytecode();
+        preverified = true;
         return true;
       } catch (VerifierException e) {
+        verificationFailure = e;
         if (Boolean.getBoolean("btrace.verifier.dump")) {
           System.err.println("[BTRACE VERIFY] " + e.getMessage());
         }
         log.debug("Class '{}' verification failed", getClassName(), e);
+        return false;
       }
     }
-    return false;
   }
 
   @Override
@@ -608,8 +619,8 @@ public class BTraceProbePersisted implements BTraceProbe {
 
   @Override
   public void checkVerified() {
-    if (!preverified) {
-      isVerified();
+    if (!isVerified()) {
+      throw verificationFailure;
     }
   }
 
@@ -694,6 +705,7 @@ public class BTraceProbePersisted implements BTraceProbe {
     cr.accept(
         new ClassVisitor(ASM9) {
           private String className;
+          private final CallGraph graph = new CallGraph();
 
           @Override
           public void visit(
@@ -765,6 +777,16 @@ public class BTraceProbePersisted implements BTraceProbe {
             return new MethodVisitor(
                 ASM9, super.visitMethod(access, methodName, desc, sig, exceptions)) {
               private final Map<Label, Label> labels = new HashMap<>();
+              private final String methodId = CallGraph.methodId(methodName, desc);
+              private boolean handler;
+
+              @Override
+              public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+                if (descriptor.startsWith("Lio/btrace/core/annotations/")) {
+                  handler = true;
+                }
+                return super.visitAnnotation(descriptor, visible);
+              }
 
               @Override
               public void visitFieldInsn(int opcode, String owner, String name, String desc) {
@@ -823,6 +845,9 @@ public class BTraceProbePersisted implements BTraceProbe {
               @Override
               public void visitMethodInsn(
                   int opcode, String owner, String name, String desc, boolean itfc) {
+                if (opcode == INVOKESTATIC && owner.equals(className)) {
+                  graph.addEdge(methodId, CallGraph.methodId(name, desc));
+                }
                 switch (opcode) {
                   case INVOKEVIRTUAL:
                     if (MethodVerifier.isPrimitiveWrapper(owner)
@@ -907,7 +932,23 @@ public class BTraceProbePersisted implements BTraceProbe {
                 }
                 super.visitVarInsn(opcode, var);
               }
+
+              @Override
+              public void visitEnd() {
+                if (handler) {
+                  graph.addStarting(methodId);
+                }
+                super.visitEnd();
+              }
             };
+          }
+
+          @Override
+          public void visitEnd() {
+            if (graph.hasCycle()) {
+              Verifier.reportError("execution.loop.danger");
+            }
+            super.visitEnd();
           }
         },
         ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);

@@ -18,6 +18,8 @@ package io.btrace.compiler;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -79,5 +81,63 @@ public class BTraceDslVerifierTest {
                 System.getProperty("java.class.path"));
     assertNotNull(result, "Compilation should succeed: " + err);
     assertFalse(result.isEmpty(), "Should produce class bytes");
+  }
+
+  @Test
+  void directHandlerRecursionFailsSourceVerifier() {
+    assertRecursionFails(
+        "DirectRecursionProbe.java",
+        "import io.btrace.core.annotations.*;\n"
+            + "@BTrace public class DirectRecursionProbe {\n"
+            + "  @OnMethod(clazz=\"java.lang.String\", method=\"length\")\n"
+            + "  public static void handler() { handler(); }\n"
+            + "}\n");
+  }
+
+  @Test
+  void mutualHandlerRecursionFailsSourceVerifier() {
+    assertRecursionFails(
+        "MutualRecursionProbe.java",
+        "import io.btrace.core.annotations.*;\n"
+            + "@BTrace public class MutualRecursionProbe {\n"
+            + "  @OnMethod(clazz=\"java.lang.String\", method=\"length\")\n"
+            + "  public static void handler() { helper(); }\n"
+            + "  static void helper() { handler(); }\n"
+            + "}\n");
+  }
+
+  @Test
+  void acyclicOverloadedHelpersPassSourceVerifier() {
+    StringWriter err = new StringWriter();
+    Map<String, byte[]> result =
+        new Compiler()
+            .compile(
+                "AcyclicOverloadProbe.java",
+                "import io.btrace.core.annotations.*;\n"
+                    + "@BTrace public class AcyclicOverloadProbe {\n"
+                    + "  @OnMethod(clazz=\"java.lang.String\", method=\"length\")\n"
+                    + "  public static void handler() { helper(); }\n"
+                    + "  static void helper() { helper(1); }\n"
+                    + "  static void helper(int value) {}\n"
+                    + "}\n",
+                new PrintWriter(err),
+                null,
+                System.getProperty("java.class.path"));
+    assertNotNull(result, "Compilation should succeed: " + err);
+    assertFalse(result.isEmpty(), "Should produce class bytes");
+  }
+
+  private static void assertRecursionFails(String fileName, String source) {
+    StringWriter err = new StringWriter();
+    Map<String, byte[]> result =
+        new Compiler()
+            .compile(
+                fileName,
+                source,
+                new PrintWriter(err),
+                null,
+                System.getProperty("java.class.path"));
+    assertNull(result, "Compilation should fail: " + err);
+    assertTrue(err.toString().contains("endless loop"), "Expected recursion diagnostic: " + err);
   }
 }

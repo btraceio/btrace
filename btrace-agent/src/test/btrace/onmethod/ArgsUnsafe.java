@@ -42,7 +42,7 @@ public class ArgsUnsafe {
       println(la + " # " + t);
     } catch (Throwable e) {
       println("FAILED");
-      println(e.getMessage());
+      println(e);
     }
   }
 }

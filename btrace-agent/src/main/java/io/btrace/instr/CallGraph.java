@@ -127,7 +127,7 @@ public final class CallGraph {
   }
 
   private Set<Node> findCycles() {
-    if (nodes.size() < 2) return Collections.emptySet();
+    if (nodes.isEmpty()) return Collections.emptySet();
 
     Map<String, Node> checkingNodes = new HashMap<>();
     for (Node n : nodes.values()) {

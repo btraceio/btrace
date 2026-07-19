@@ -55,9 +55,12 @@ import io.btrace.core.extensions.Permission;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.jar.Attributes;
@@ -87,6 +90,11 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
   private String className;
   private String fqn;
   private boolean insideMethod;
+  private TypeElement btraceClass;
+  private ExecutableElement currentMethod;
+
+  private final Map<ExecutableElement, Set<ExecutableElement>> callGraph = new HashMap<>();
+  private final Set<ExecutableElement> handlerMethods = new HashSet<>();
 
   private boolean shortSyntax = false;
   // Legacy service type mirrors removed. Only Extension-based checks remain.
@@ -155,6 +163,11 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
         String typeName = tm.toString();
 
         if (isSameClass(typeName)) {
+          if (currentMethod != null && btraceClass != null && parent.equals(btraceClass)) {
+            callGraph
+                .computeIfAbsent(currentMethod, key -> new HashSet<>())
+                .add((ExecutableElement) e);
+          }
           return super.visitMethodInvocation(node, v);
         }
         if (isBTraceClass(typeName)) {
@@ -299,12 +312,20 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
         String oldClassName = className;
         try {
           className = node.getSimpleName().toString();
-          fqn = getElement(node).asType().toString();
+          btraceClass = (TypeElement) getElement(node);
+          fqn = btraceClass.asType().toString();
+          callGraph.clear();
+          handlerMethods.clear();
           Void result = super.visitClass(node, v);
+          if (hasHandlerReachableCycle()) {
+            reportError("execution.loop.danger", node);
+          }
           // Permissions are enforced against agent grants at runtime.
           return result;
         } finally {
           className = oldClassName;
+          btraceClass = null;
+          currentMethod = null;
         }
       }
     }
@@ -333,12 +354,18 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
   @Override
   public Void visitMethod(MethodTree node, Void v) {
     boolean oldInsideMethod = insideMethod;
+    ExecutableElement oldCurrentMethod = currentMethod;
     insideMethod = true;
     try {
       Name name = node.getName();
       if (name.contentEquals("<init>")) {
         return super.visitMethod(node, v);
       } else {
+        currentMethod = (ExecutableElement) getElement(node);
+        callGraph.computeIfAbsent(currentMethod, key -> new HashSet<>());
+        if (isAnnotated(node)) {
+          handlerMethods.add(currentMethod);
+        }
         checkSampling(node);
 
         if (isExitHandler(node)) {
@@ -404,7 +431,36 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
       }
     } finally {
       insideMethod = oldInsideMethod;
+      currentMethod = oldCurrentMethod;
     }
+  }
+
+  private boolean hasHandlerReachableCycle() {
+    for (ExecutableElement handler : handlerMethods) {
+      if (hasCycle(handler, new HashSet<>(), new HashSet<>())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean hasCycle(
+      ExecutableElement method, Set<ExecutableElement> visiting, Set<ExecutableElement> visited) {
+    if (!visiting.add(method)) {
+      return true;
+    }
+    if (visited.contains(method)) {
+      visiting.remove(method);
+      return false;
+    }
+    for (ExecutableElement callee : callGraph.getOrDefault(method, Collections.emptySet())) {
+      if (hasCycle(callee, visiting, visited)) {
+        return true;
+      }
+    }
+    visiting.remove(method);
+    visited.add(method);
+    return false;
   }
 
   private void addEventFieldNames(AnnotationTree at) {
