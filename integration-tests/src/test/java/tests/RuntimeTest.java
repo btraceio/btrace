@@ -109,6 +109,8 @@ public abstract class RuntimeTest {
   private static final List<String> extraJvmArgs = new ArrayList<>();
 
   protected boolean attachDebugger = false;
+  protected String targetExtensionPath;
+  protected String clientBtraceLibs;
 
   public static void classSetup() {
     if (System.getProperty("btrace.comm.protocol") == null) {
@@ -217,6 +219,8 @@ public abstract class RuntimeTest {
     btracePort = 0;
     startupRetransform = true;
     timeout = defaultTimeoutMs;
+    targetExtensionPath = null;
+    clientBtraceLibs = null;
   }
 
   @SuppressWarnings("DefaultCharset")
@@ -303,7 +307,7 @@ public abstract class RuntimeTest {
     args.add(testApp);
 
     ProcessBuilder pb = new ProcessBuilder(args);
-    pb.environment().remove("JAVA_TOOL_OPTIONS");
+    configureTargetEnvironment(pb);
 
     Process p = pb.start();
     PrintWriter pw = new PrintWriter(p.getOutputStream());
@@ -501,7 +505,7 @@ public abstract class RuntimeTest {
     args.add(testApp);
 
     ProcessBuilder pb = new ProcessBuilder(args);
-    pb.environment().remove("JAVA_TOOL_OPTIONS");
+    configureTargetEnvironment(pb);
 
     Process p = pb.start();
     PrintWriter pw = new PrintWriter(p.getOutputStream());
@@ -713,7 +717,7 @@ public abstract class RuntimeTest {
     args.add(testApp);
 
     ProcessBuilder pb = new ProcessBuilder(args);
-    pb.environment().remove("JAVA_TOOL_OPTIONS");
+    configureTargetEnvironment(pb);
 
     Process p = pb.start();
     PrintWriter pw = new PrintWriter(p.getOutputStream());
@@ -1042,7 +1046,7 @@ public abstract class RuntimeTest {
     args.addAll(Arrays.asList(cmdArgs));
 
     ProcessBuilder pb = new ProcessBuilder(args);
-    pb.environment().remove("JAVA_TOOL_OPTIONS");
+    configureTargetEnvironment(pb);
 
     return new TestApp(pb.start(), debugTestApp);
   }
@@ -1354,6 +1358,7 @@ public abstract class RuntimeTest {
           1,
           Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
     }
+    replaceClientBtraceLibs(argVals);
     ProcessBuilder pb = new ProcessBuilder(argVals);
 
     pb.environment().remove("JAVA_TOOL_OPTIONS");
@@ -1380,6 +1385,26 @@ public abstract class RuntimeTest {
     }
 
     return p;
+  }
+
+  private void configureTargetEnvironment(ProcessBuilder processBuilder) {
+    processBuilder.environment().remove("JAVA_TOOL_OPTIONS");
+    if (targetExtensionPath != null) {
+      processBuilder.environment().put("BTRACE_EXT_PATH", targetExtensionPath);
+    }
+  }
+
+  private void replaceClientBtraceLibs(List<String> arguments) {
+    if (clientBtraceLibs == null) {
+      return;
+    }
+    for (int i = 0; i < arguments.size(); i++) {
+      if (arguments.get(i).startsWith("-Dbtrace.libs=")) {
+        arguments.set(i, "-Dbtrace.libs=" + clientBtraceLibs);
+        return;
+      }
+    }
+    throw new IllegalStateException("Client invocation is missing -Dbtrace.libs");
   }
 
   private Process attachOneliner(
