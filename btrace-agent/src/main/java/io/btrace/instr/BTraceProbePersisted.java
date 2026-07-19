@@ -63,7 +63,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -83,14 +82,13 @@ public class BTraceProbePersisted implements BTraceProbe {
   final BTraceProbeSupport delegate;
   private final BTraceProbeFactory factory;
   private final DebugSupport debug;
-  private final AtomicBoolean triedVerify = new AtomicBoolean(false);
   private volatile VerifierException verificationFailure;
   private final Map<String, Set<String>> calleeMap = new HashMap<>();
   private volatile BTraceRuntime.Impl rt = null;
   private BTraceTransformer transformer;
   private byte[] fullData = null;
   private byte[] dataHolder = null;
-  private boolean preverified;
+  private volatile boolean preverified;
 
   BTraceProbePersisted(BTraceProbeFactory f) {
     this(f, null);
@@ -527,7 +525,13 @@ public class BTraceProbePersisted implements BTraceProbe {
     if (preverified) {
       return true;
     }
-    if (triedVerify.compareAndSet(false, true)) {
+    synchronized (this) {
+      if (preverified) {
+        return true;
+      }
+      if (verificationFailure != null) {
+        return false;
+      }
       try {
         verifyBytecode();
         preverified = true;
@@ -538,9 +542,9 @@ public class BTraceProbePersisted implements BTraceProbe {
           System.err.println("[BTRACE VERIFY] " + e.getMessage());
         }
         log.debug("Class '{}' verification failed", getClassName(), e);
+        return false;
       }
     }
-    return false;
   }
 
   @Override
