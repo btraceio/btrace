@@ -26,30 +26,33 @@ import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 
 public final class StatsdImpl extends Extension implements Statsd {
-  private final Object socketLock = new Object();
-  private DatagramSocket socket;
-  private InetAddress address;
-  private int port;
+  private static final class Endpoint {
+    final InetAddress address;
+    final int port;
+    final DatagramSocket socket;
+
+    Endpoint(InetAddress address, int port, DatagramSocket socket) {
+      this.address = address;
+      this.port = port;
+      this.socket = socket;
+    }
+  }
+
+  private final Object lifecycleLock = new Object();
+  private volatile Endpoint endpoint;
 
   @Override
   public void initialize(ExtensionContext context) throws ExtensionException {
     super.initialize(context);
+    Endpoint configured;
     try {
       InetAddress configuredAddress = InetAddress.getByName(SharedSettings.GLOBAL.getStatsdHost());
       int configuredPort = SharedSettings.GLOBAL.getStatsdPort();
-      DatagramSocket configuredSocket = new DatagramSocket();
-      synchronized (socketLock) {
-        closeSocket();
-        address = configuredAddress;
-        port = configuredPort;
-        socket = configuredSocket;
-      }
+      configured = new Endpoint(configuredAddress, configuredPort, new DatagramSocket());
     } catch (Throwable ignored) {
-      synchronized (socketLock) {
-        closeSocket();
-        address = null;
-      }
+      configured = null;
     }
+    swapEndpoint(configured);
   }
 
   @Override
@@ -59,6 +62,10 @@ public final class StatsdImpl extends Extension implements Statsd {
 
   @Override
   public void increment(String name, String tags) {
+    Endpoint ep = endpoint;
+    if (ep == null) {
+      return;
+    }
     try {
       StringBuilder sb = new StringBuilder();
       sb.append(name).append(":1|c");
@@ -66,13 +73,8 @@ public final class StatsdImpl extends Extension implements Statsd {
         sb.append("|#").append(tags);
       }
       byte[] data = sb.toString().getBytes(StandardCharsets.US_ASCII);
-      synchronized (socketLock) {
-        if (socket == null || socket.isClosed() || address == null) {
-          return;
-        }
-        DatagramPacket pkt = new DatagramPacket(data, data.length, address, port);
-        socket.send(pkt);
-      }
+      DatagramPacket pkt = new DatagramPacket(data, data.length, ep.address, ep.port);
+      ep.socket.send(pkt);
     } catch (Throwable ignore) {
       // Best-effort, ignore errors in script path
     }
@@ -80,16 +82,17 @@ public final class StatsdImpl extends Extension implements Statsd {
 
   @Override
   public void close() {
-    synchronized (socketLock) {
-      closeSocket();
-      address = null;
-    }
+    swapEndpoint(null);
   }
 
-  private void closeSocket() {
-    if (socket != null) {
-      socket.close();
-      socket = null;
+  private void swapEndpoint(Endpoint next) {
+    Endpoint previous;
+    synchronized (lifecycleLock) {
+      previous = endpoint;
+      endpoint = next;
+    }
+    if (previous != null) {
+      previous.socket.close();
     }
   }
 }
