@@ -56,6 +56,10 @@ class BTraceExtensionPluginTest {
         File apiJar = projectDir.resolve("ext/build/libs/ext-1.0-api.jar").toFile();
         assertTrue(apiJar.isFile(), "API jar should exist");
         try (JarFile jar = new JarFile(apiJar)) {
+            assertEquals(
+                    "3.0+",
+                    jar.getManifest().getMainAttributes().getValue("BTrace-API-Version"),
+                    "API manifest should advertise the 3.0 API baseline");
             assertNotNull(
                     jar.getEntry("META-INF/btrace/test-resource.txt"),
                     "API jar should keep main resources");

@@ -22,4 +22,9 @@ dependencies {
     apiCompileOnly project(':btrace-core')
     implImplementation project(':btrace-core')
     implementation libs.slf4j
+    testImplementation libs.junit.jupiter
+}
+
+test {
+    useJUnitPlatform()
 }

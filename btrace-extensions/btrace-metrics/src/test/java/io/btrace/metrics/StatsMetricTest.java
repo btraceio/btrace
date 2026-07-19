@@ -19,13 +19,14 @@ package io.btrace.metrics;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.btrace.metrics.stats.StatsMetric;
+import io.btrace.metrics.stats.StatsMetricImpl;
 import io.btrace.metrics.stats.StatsSnapshot;
 import org.junit.jupiter.api.Test;
 
 class StatsMetricTest {
   @Test
   void accumulatesAndSnapshots() {
-    StatsMetric m = new io.btrace.metrics.stats.StatsMetricImpl("s");
+    StatsMetric m = new StatsMetricImpl("s");
     m.record(1);
     m.record(3);
     StatsSnapshot snap = m.snapshot();
@@ -34,5 +35,17 @@ class StatsMetricTest {
     assertEquals(4, snap.sum());
     assertEquals(1, snap.min());
     assertEquals(3, snap.max());
+  }
+
+  @Test
+  void computesStandardDeviationWithoutSquareOverflow() {
+    StatsMetric metric = new StatsMetricImpl("overflow");
+    metric.record(0);
+    metric.record(4_000_000_000L);
+
+    StatsSnapshot snapshot = metric.snapshot();
+
+    assertTrue(Double.isFinite(snapshot.stddev()));
+    assertEquals(2_000_000_000D, snapshot.stddev(), 0.001D);
   }
 }

@@ -515,21 +515,23 @@ task copyExtensions(type: Copy) {
     into "${distTarget}/extensions/"
 }
 
-// Copy the btracex CLI shaded jar into libs
+def releaseExtensionProjects = [
+    ':btrace-extensions:btrace-contracts',
+    ':btrace-extensions:btrace-gpu-bridge',
+    ':btrace-extensions:btrace-llm-trace',
+    ':btrace-extensions:btrace-metrics',
+    ':btrace-extensions:btrace-rag-quality',
+    ':btrace-extensions:btrace-statsd',
+    ':btrace-extensions:btrace-utils'
+]
 
-// Discover all extension subprojects and wire copyExtensions dynamically to avoid hard-coded paths
 gradle.projectsEvaluated {
-    def extProjects = rootProject.subprojects.findAll { it.plugins.hasPlugin('io.btrace.extension') }
-    if (extProjects.isEmpty()) {
-        logger.lifecycle("[btrace-dist] No BTrace extension projects found. Skipping extension packaging.")
-    } else {
-        tasks.named('copyExtensions').configure { t ->
-            extProjects.each { sp ->
-                // Depend on packaging task and copy any *-extension.zip from its distributions folder
-                t.dependsOn("${sp.path}:packageExtension")
-                t.from(sp.layout.buildDirectory.dir('distributions')) {
-                    include "*-extension.zip"
-                }
+    tasks.named('copyExtensions').configure { t ->
+        releaseExtensionProjects.each { extensionProjectPath ->
+            def extensionProject = project(extensionProjectPath)
+            t.dependsOn("${extensionProjectPath}:packageExtension")
+            t.from(extensionProject.layout.buildDirectory.dir('distributions')) {
+                include "*-extension.zip"
             }
         }
     }
@@ -563,6 +565,10 @@ task explodeExtensions {
             }
         }
     }
+}
+
+tasks.named('test').configure {
+    dependsOn explodeExtensions
 }
 
 task buildZip(type: Zip) {

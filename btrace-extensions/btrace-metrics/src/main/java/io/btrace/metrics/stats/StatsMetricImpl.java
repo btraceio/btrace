@@ -18,6 +18,7 @@ package io.btrace.metrics.stats;
 
 import io.btrace.metrics.Metric;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.DoubleAdder;
 import java.util.concurrent.atomic.LongAdder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -35,7 +36,7 @@ public final class StatsMetricImpl implements StatsMetric, Metric {
   private final String name;
   private final LongAdder count = new LongAdder();
   private final LongAdder sum = new LongAdder();
-  private final LongAdder sumOfSquares = new LongAdder();
+  private final DoubleAdder sumOfSquares = new DoubleAdder();
   private final AtomicLong min = new AtomicLong(Long.MAX_VALUE);
   private final AtomicLong max = new AtomicLong(Long.MIN_VALUE);
 
@@ -51,7 +52,7 @@ public final class StatsMetricImpl implements StatsMetric, Metric {
   public void record(long value) {
     count.increment();
     sum.add(value);
-    sumOfSquares.add(value * value);
+    sumOfSquares.add((double) value * value);
 
     // Update min (CAS loop)
     long currentMin;
@@ -80,7 +81,7 @@ public final class StatsMetricImpl implements StatsMetric, Metric {
   @Nullable public StatsSnapshot snapshot() {
     long cnt = count.sum();
     long sm = sum.sum();
-    long sumSq = sumOfSquares.sum();
+    double sumSq = sumOfSquares.sum();
     long mn = min.get();
     long mx = max.get();
 
@@ -91,7 +92,7 @@ public final class StatsMetricImpl implements StatsMetric, Metric {
     double avg = (double) sm / cnt;
 
     // Variance = E[X^2] - E[X]^2
-    double variance = ((double) sumSq / cnt) - (avg * avg);
+    double variance = (sumSq / cnt) - (avg * avg);
     double stddev = Math.sqrt(Math.max(0, variance));
 
     return new StatsSnapshotImpl(name, cnt, sm, mn, mx, avg, stddev);
