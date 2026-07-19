@@ -68,6 +68,7 @@ public abstract class RuntimeTest {
   private static boolean forceDebug = false;
   private static String permissionsFile = null;
   private static long defaultTimeoutMs = Long.getLong("btrace.test.timeoutMs", 60000L);
+  private static final ProtocolSettings FORCED_V2_PROTOCOL = new ProtocolSettings(2, false, true);
 
   /** Try starting JFR recording if available */
   private boolean startJfr = false;
@@ -111,6 +112,8 @@ public abstract class RuntimeTest {
   protected boolean attachDebugger = false;
   protected String targetExtensionPath;
   protected String clientBtraceLibs;
+  private ProtocolSettings clientProtocolSettings = FORCED_V2_PROTOCOL;
+  private ProtocolSettings agentProtocolSettings = FORCED_V2_PROTOCOL;
 
   public static void classSetup() {
     if (System.getProperty("btrace.comm.protocol") == null) {
@@ -221,6 +224,34 @@ public abstract class RuntimeTest {
     timeout = defaultTimeoutMs;
     targetExtensionPath = null;
     clientBtraceLibs = null;
+    clientProtocolSettings = FORCED_V2_PROTOCOL;
+    agentProtocolSettings = FORCED_V2_PROTOCOL;
+  }
+
+  protected void setClientProtocolSettings(
+      int protocol, boolean autoNegotiate, boolean forceVersion) {
+    clientProtocolSettings = new ProtocolSettings(protocol, autoNegotiate, forceVersion);
+  }
+
+  protected void setAgentProtocolSettings(
+      int protocol, boolean autoNegotiate, boolean forceVersion) {
+    agentProtocolSettings = new ProtocolSettings(protocol, autoNegotiate, forceVersion);
+  }
+
+  protected boolean hasJaxbProbeDescriptorSupport() throws IOException, InterruptedException {
+    ProcessBuilder processBuilder =
+        new ProcessBuilder(javaHome + "/bin/java", "-cp", cp, "resources.JaxbCapability");
+    processBuilder.environment().remove("JAVA_TOOL_OPTIONS");
+    Process process = processBuilder.start();
+    if (!process.waitFor(10, TimeUnit.SECONDS)) {
+      process.destroyForcibly();
+      return false;
+    }
+    try (BufferedReader output =
+        new BufferedReader(
+            new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+      return process.exitValue() == 0 && "JAXB_CAPABLE".equals(output.readLine());
+    }
   }
 
   @SuppressWarnings("DefaultCharset")
@@ -497,6 +528,7 @@ public abstract class RuntimeTest {
     // uncomment the following line to get extra JFR logs
     //    args.add("-Xlog:jfr*=trace");
     args.addAll(extraJvmArgs);
+    args.addAll(agentProtocolSettings.arguments());
     if (startJfr) {
       jfrFile = Files.createTempFile("btrace-", ".jfr").toString();
       args.add("-XX:StartFlightRecording=settings=default,dumponexit=true,filename=" + jfrFile);
@@ -1320,9 +1352,6 @@ public abstract class RuntimeTest {
                 "-Dcom.sun.btrace.unsafe=" + isUnsafe,
                 "-Dcom.sun.btrace.debug=" + debugBTrace,
                 "-Dcom.sun.btrace.trackRetransforms=" + trackRetransforms,
-                "-Dbtrace.comm.protocol=2",
-                "-Dbtrace.comm.autoNegotiate=false",
-                "-Dbtrace.comm.forceVersion=true",
                 "-Dbtrace.port=" + getBTracePort(),
                 "-Dbtrace.libs=" + System.getProperty("btrace.libs"),
                 "-Dbtrace.suppressJavaDeprecationWarning=true",
@@ -1337,6 +1366,7 @@ public abstract class RuntimeTest {
                 Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString(),
                 "-pd",
                 traceFile.getParentFile().getAbsolutePath()));
+    argVals.addAll(4, clientProtocolSettings.arguments());
     if (debugBTrace) {
       argVals.add("-v");
     }
@@ -1492,6 +1522,25 @@ public abstract class RuntimeTest {
     }
 
     return p;
+  }
+
+  private static final class ProtocolSettings {
+    private final int protocol;
+    private final boolean autoNegotiate;
+    private final boolean forceVersion;
+
+    private ProtocolSettings(int protocol, boolean autoNegotiate, boolean forceVersion) {
+      this.protocol = protocol;
+      this.autoNegotiate = autoNegotiate;
+      this.forceVersion = forceVersion;
+    }
+
+    private List<String> arguments() {
+      return Arrays.asList(
+          "-Dbtrace.comm.protocol=" + protocol,
+          "-Dbtrace.comm.autoNegotiate=" + autoNegotiate,
+          "-Dbtrace.comm.forceVersion=" + forceVersion);
+    }
   }
 
   protected void ensureBTracePort() {
