@@ -272,7 +272,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem, 25.0.3-tem, 27.ea.25-open]
+        java: [8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem, 25.0.3-tem, 27.ea.31-open]
     env:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
     steps:
