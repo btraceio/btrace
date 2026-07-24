@@ -1345,6 +1345,7 @@ public abstract class RuntimeTest {
       StringBuilder stderr)
       throws Exception {
     File traceFile = locateTrace(trace);
+    String clientClasspath = clientClasspath();
     List<String> argVals =
         new ArrayList<>(
             Arrays.asList(
@@ -1356,7 +1357,7 @@ public abstract class RuntimeTest {
                 "-Dbtrace.libs=" + System.getProperty("btrace.libs"),
                 "-Dbtrace.suppressJavaDeprecationWarning=true",
                 "-cp",
-                cp,
+                clientClasspath,
                 "io.btrace.boot.Loader",
                 "-p",
                 String.valueOf(getBTracePort()),
@@ -1435,6 +1436,18 @@ public abstract class RuntimeTest {
       }
     }
     throw new IllegalStateException("Client invocation is missing -Dbtrace.libs");
+  }
+
+  private static String clientClasspath() {
+    String explicitClientJar = System.getProperty("btrace.client.jar");
+    if (explicitClientJar == null || explicitClientJar.trim().isEmpty()) {
+      return cp;
+    }
+    int firstSeparator = cp.indexOf(File.pathSeparator);
+    if (firstSeparator < 0) {
+      return explicitClientJar;
+    }
+    return explicitClientJar + cp.substring(firstSeparator);
   }
 
   private Process attachOneliner(

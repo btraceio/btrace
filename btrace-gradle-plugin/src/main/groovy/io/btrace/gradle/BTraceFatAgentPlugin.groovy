@@ -9,6 +9,7 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.file.DuplicatesStrategy
 import javax.lang.model.SourceVersion
 import java.util.jar.JarFile
+import java.util.jar.Manifest
 
 /**
  * Gradle plugin for building fat agent JARs with embedded extensions.
@@ -26,7 +27,7 @@ import java.util.jar.JarFile
  * btraceFatAgent {
  *     embedExtensions {
  *         project(':btrace-spark')
- *         maven('io.btrace:btrace-kafka:2.3.0')
+ *         file('/path/to/btrace-kafka-extension.zip')
  *     }
  * }
  * </pre>
@@ -50,8 +51,43 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
         // Create DSL extension
         def extension = project.extensions.create('btraceFatAgent', BTraceFatAgentExtension, project)
 
+        // External consumers use this single, pinned masked distribution. It deliberately has no
+        // relationship to the extension author's project version or to withdrawn module artifacts.
+        def btraceEngine = project.configurations.maybeCreate('btraceEngine')
+        btraceEngine.canBeConsumed = false
+        btraceEngine.canBeResolved = true
+        btraceEngine.defaultDependencies { dependencies ->
+            String btraceVersion = BTraceVersion.resolve(
+                project,
+                extension.btraceVersion,
+                BTraceFatAgentPlugin,
+                'btraceFatAgent.btraceVersion')
+            dependencies.add(project.dependencies.create("io.btrace:btrace:${btraceVersion}"))
+        }
+
         // Create staging directory
         def stagingDir = project.layout.buildDirectory.dir('fat-agent-staging').get().asFile
+        def engineStagingDir = project.layout.buildDirectory.dir('btrace-engine-staging').get().asFile
+
+        def stageBTraceEngine = project.tasks.register('stageBTraceEngine') {
+            group = 'BTrace Fat Agent'
+            description = 'Resolves and stages the masked BTrace engine for an external fat agent'
+            inputs.files(project.provider { btraceEngine.singleFile })
+                .withPropertyName('btraceEngine')
+                .withPathSensitivity(PathSensitivity.RELATIVE)
+            outputs.dir(engineStagingDir)
+            doLast {
+                File engineJar = btraceEngine.singleFile
+                validateMaskedEngine(engineJar)
+                project.delete(engineStagingDir)
+                project.copy {
+                    from project.zipTree(engineJar)
+                    into engineStagingDir
+                    exclude 'META-INF/MANIFEST.MF'
+                }
+                project.logger.lifecycle("[fat-agent] Staged masked BTrace engine: ${engineJar}")
+            }
+        }
 
         // Task: Resolve and stage extensions
         def stageExtensions = project.tasks.register('stageExtensions') {
@@ -206,19 +242,10 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
                 exclude 'embedded-extensions.txt'
             }
 
-            // Configure manifest
+            // The source engine manifest is installed lazily in the external path below. This task
+            // then changes only the fat-agent-specific Boot-Class-Path and embedded-extension data.
             manifest {
-                attributes(
-                    'Premain-Class': 'io.btrace.boot.Loader',
-                    'Agent-Class': 'io.btrace.boot.Loader',
-                    'Main-Class': 'io.btrace.boot.Loader',
-                    'Can-Redefine-Classes': 'true',
-                    'Can-Retransform-Classes': 'true',
-                    'Boot-Class-Path': "${extension.baseName}.jar",
-                    'BTrace-Version': project.version,
-                    'BTrace-Agent-Main': 'io.btrace.agent.Main',
-                    'BTrace-Client-Main': 'io.btrace.client.Main'
-                )
+                attributes('Boot-Class-Path': "${extension.baseName}.jar")
             }
 
             doFirst {
@@ -248,17 +275,26 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
                 discoverExtensions(project, extension)
             }
 
-            // Include base agent/boot JARs if specified
+            // An in-tree producer remains supported when it produces the same masked engine
+            // contract as btrace-dist:btraceJar.
             if (extension.agentJarTask != null) {
                 def agentTask = project.tasks.named(extension.agentJarTask.toString()).get()
                 fatAgentTask.dependsOn(agentTask)
                 fatAgentTask.from(project.zipTree(agentTask.archiveFile))
+                fatAgentTask.doFirst {
+                    seedManifestFromEngine(fatAgentTask, agentTask.archiveFile.get().asFile)
+                }
+            } else {
+                fatAgentTask.dependsOn(stageBTraceEngine)
+                fatAgentTask.from(engineStagingDir)
+                fatAgentTask.doFirst {
+                    seedManifestFromEngine(fatAgentTask, btraceEngine.singleFile)
+                }
             }
 
             if (extension.bootJarTask != null) {
-                def bootTask = project.tasks.named(extension.bootJarTask.toString()).get()
-                fatAgentTask.dependsOn(bootTask)
-                fatAgentTask.from(project.zipTree(bootTask.archiveFile))
+                throw new GradleException(
+                    '[fat-agent] bootJarTask is unsupported. Supply one masked agentJarTask or configure btraceFatAgent.btraceVersion.')
             }
 
             // Wire extension project dependencies
@@ -335,6 +371,34 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
         }
     }
 
+    private static void validateMaskedEngine(File engineJar) {
+        new JarFile(engineJar).withCloseable { jar ->
+            def attributes = jar.manifest?.mainAttributes
+            if (attributes == null) {
+                throw invalidFatAgent(engineJar, 'missing META-INF/MANIFEST.MF')
+            }
+            requireJarEntry(jar, engineJar, LOADER_ENTRY)
+            requireJarEntry(jar, engineJar, MASKED_AGENT_MAIN_ENTRY)
+            requireManifestAttribute(attributes, engineJar, 'Premain-Class', LOADER_CLASS)
+            requireManifestAttribute(attributes, engineJar, 'Agent-Class', LOADER_CLASS)
+            requireManifestAttribute(attributes, engineJar, 'Main-Class', LOADER_CLASS)
+            requireManifestAttribute(attributes, engineJar, 'BTrace-Agent-Main', AGENT_MAIN_CLASS)
+        }
+    }
+
+    private static void seedManifestFromEngine(def fatAgentTask, File engineJar) {
+        validateMaskedEngine(engineJar)
+        new JarFile(engineJar).withCloseable { jar ->
+            Manifest manifest = jar.manifest
+            manifest.mainAttributes.each { key, value ->
+                fatAgentTask.manifest.attributes([(key.toString()): value.toString()])
+            }
+        }
+        // A fat agent is self-contained, so this is the one source-manifest attribute adjusted.
+        fatAgentTask.manifest.attributes(
+            ['Boot-Class-Path': fatAgentTask.archiveFile.get().asFile.name])
+    }
+
     private static void requireJarEntry(JarFile jar, File fatJar, String entry) {
         if (jar.getJarEntry(entry) == null) {
             throw invalidFatAgent(fatJar, "missing ${entry}")
@@ -353,7 +417,7 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
     private static GradleException invalidFatAgent(File fatJar, String problem) {
         return new GradleException(
             "[fat-agent] Invalid masked BTrace fat JAR ${fatJar}: ${problem}. " +
-                "Configure agentJarTask to reference the btraceJar task.")
+                "Configure agentJarTask to reference the btraceJar task or set btraceFatAgent.btraceVersion for an external build.")
     }
 
     /**
@@ -456,10 +520,12 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
 
             project.logger.info("[fat-agent] Compiling probes from: ${sourceDir}")
 
-            // Use Gradle's JavaExec to run btracec
+            // The public BTrace artifact is a masked distribution. Run its loader and select the
+            // compiler client entry point rather than assuming a conventional btrace-client JAR.
             project.javaexec {
                 classpath = project.files(compilerJar)
-                mainClass = 'io.btrace.compiler.Compiler'
+                mainClass = LOADER_CLASS
+                jvmArgs '-Dbtrace.client.main=io.btrace.compiler.Compiler'
                 args = ['-d', outputDir.absolutePath]
 
                 // Add all .java files
@@ -473,15 +539,15 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
     }
 
     /**
-     * Find btrace-compiler JAR in project dependencies.
+     * Find the public BTrace distribution used to launch the compiler.
      */
     private File findBTraceCompiler(Project project) {
         // Try to find from btrace-dist or similar project
         def distProject = project.rootProject.subprojects.find { it.name == 'btrace-dist' }
         if (distProject != null) {
-            def clientJar = distProject.tasks.findByName('clientJar')?.archiveFile?.get()?.asFile
-            if (clientJar?.exists()) {
-                return clientJar
+            def btraceJar = distProject.tasks.findByName('btraceJar')?.archiveFile?.get()?.asFile
+            if (btraceJar?.exists()) {
+                return btraceJar
             }
         }
 
@@ -490,11 +556,14 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             def config = project.configurations.findByName('btracec') ?:
                 project.configurations.create('btracec')
             if (config.dependencies.isEmpty()) {
-                config.dependencies.add(project.dependencies.create('io.btrace:btrace-client:+'))
+                def extension = project.extensions.getByName('btraceFatAgent') as BTraceFatAgentExtension
+                String btraceVersion = BTraceVersion.resolve(
+                    project, extension.btraceVersion, BTraceFatAgentPlugin, 'btraceFatAgent.btraceVersion')
+                config.dependencies.add(project.dependencies.create("io.btrace:btrace:${btraceVersion}"))
             }
-            return config.resolve().find { it.name.contains('btrace-client') }
+            return config.resolve().find { it.name.startsWith('btrace-') }
         } catch (Exception e) {
-            project.logger.debug("[fat-agent] Could not resolve btrace-client: ${e.message}")
+            project.logger.debug("[fat-agent] Could not resolve BTrace distribution: ${e.message}")
         }
 
         return null

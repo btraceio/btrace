@@ -71,7 +71,7 @@ sdk install jbang                   # SDKMAN
 **Use BTrace with JBang** (no separate BTrace installation needed):
 ```bash
 # Attach to running application (replace <version> with desired version, e.g., 3.0.0)
-jbang io.btrace:btrace-client:<version> <PID> <script.java>
+jbang io.btrace:btrace:<version> <PID> <script.java>
 
 # Add the BTrace JBang catalog (one time), then use the shorter alias
 jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
@@ -296,7 +296,7 @@ BTrace offers multiple deployment modes to suit different use cases:
 Use JBang to run BTrace without installation:
 
 ```bash
-jbang io.btrace:btrace-client:<version> <PID> <script.java>
+jbang io.btrace:btrace:<version> <PID> <script.java>
 
 # One-time catalog setup for the short alias
 jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
@@ -791,6 +791,10 @@ ENTRYPOINT ["java", "-javaagent:/opt/btrace/btrace-agent-fat.jar", "-jar", "/app
 
 For custom extension combinations, use the Gradle plugin:
 
+Built-in extensions are supplied as packages in the BTrace distribution's `extensions/` directory.
+Use `file(...)` for those packages or `project(...)` for an in-tree/custom extension. The
+`maven(...)` source is only for separately published third-party extensions.
+
 ```groovy
 plugins {
     id 'io.btrace.fat-agent'
@@ -800,11 +804,11 @@ btraceFatAgent {
     baseName = 'my-btrace-agent'
 
     embedExtensions {
-        // From Maven Central
-        maven('io.btrace:btrace-metrics:3.0.0')
-        maven('io.btrace:btrace-statsd:3.0.0')
+        // BTrace-built extension packages from the distribution's extensions/ directory
+        file('/path/to/btrace-metrics-3.0.0-extension.zip')
+        file('/path/to/btrace-statsd-3.0.0-extension.zip')
 
-        // Local extension
+        // Custom/local extension package
         file('libs/my-custom-extension.zip')
     }
 }

@@ -33,7 +33,6 @@ import java.nio.file.Path;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
-import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
@@ -108,6 +107,37 @@ class BTraceFatAgentPluginTest {
             .build();
 
         assertTrue(result.getOutput().contains("BASE_NAME=my-custom-agent"));
+    }
+
+    @Test
+    @DisplayName("external builds assemble a fat agent from one pinned masked engine")
+    void externalBuildUsesPinnedMaskedEngine() throws IOException {
+        writeMaskedEngineFixture("3.0.0");
+        writeFile(
+                buildFile,
+                "plugins { id 'io.btrace.fat-agent' }\n"
+                        + "repositories { maven { url = uri('repo') } }\n"
+                        + "version = '99.0.0-extension'\n"
+                        + "btraceFatAgent { btraceVersion = '3.0.0' }\n"
+                        + "tasks.register('printEngine') { doLast {\n"
+                        + "  configurations.btraceEngine.dependencies.each { println \"ENGINE=${it.group}:${it.name}:${it.version}\" }\n"
+                        + "} }\n");
+
+        BuildResult result = createRunner().withArguments("fatAgentJar", "printEngine").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":stageBTraceEngine").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, result.task(":fatAgentJar").getOutcome());
+        assertTrue(result.getOutput().contains("ENGINE=io.btrace:btrace:3.0.0"));
+        try (JarFile jar =
+                new JarFile(projectDir.resolve("build/libs/btrace-agent-fat.jar").toFile())) {
+            assertNotNull(jar.getEntry("io/btrace/boot/Loader.class"));
+            assertNotNull(
+                    jar.getEntry("META-INF/btrace/agent/io/btrace/agent/Main.classdata"));
+            assertEquals("io.btrace.boot.Loader", jar.getManifest().getMainAttributes().getValue("Main-Class"));
+            assertEquals("io.btrace.boot.Loader", jar.getManifest().getMainAttributes().getValue("Premain-Class"));
+            assertEquals("io.btrace.boot.Loader", jar.getManifest().getMainAttributes().getValue("Agent-Class"));
+            assertEquals("btrace-agent-fat.jar", jar.getManifest().getMainAttributes().getValue("Boot-Class-Path"));
+        }
     }
 
     @Test
@@ -248,7 +278,8 @@ class BTraceFatAgentPluginTest {
                         + "    from 'probes'\n"
                         + "    include 'com.example.NestedProbe'\n"
                         + "  }\n"
-                        + "}\n");
+                        + "}\n"
+                        + "jar { manifest { attributes('Main-Class': 'io.btrace.boot.Loader', 'Premain-Class': 'io.btrace.boot.Loader', 'Agent-Class': 'io.btrace.boot.Loader', 'BTrace-Agent-Main': 'io.btrace.agent.Main', 'Boot-Class-Path': 'test-project.jar') } }\n");
 
         BuildResult result = createRunner().withArguments("fatAgentJar").build();
 
@@ -377,7 +408,8 @@ class BTraceFatAgentPluginTest {
                         + "    from layout.buildDirectory.dir('compiled-probes').get().asFile\n"
                         + "    include 'com.example.NestedProbe'\n"
                         + "  }\n"
-                        + "}\n");
+                        + "}\n"
+                        + "jar { manifest { attributes('Main-Class': 'io.btrace.boot.Loader', 'Premain-Class': 'io.btrace.boot.Loader', 'Agent-Class': 'io.btrace.boot.Loader', 'BTrace-Agent-Main': 'io.btrace.agent.Main', 'Boot-Class-Path': 'test-project.jar') } }\n");
 
         createRunner().withArguments("fatAgentJar", "classes").build();
 
@@ -704,6 +736,40 @@ class BTraceFatAgentPluginTest {
                 "package io.btrace.boot; public final class Loader {}\n",
                 StandardCharsets.UTF_8);
         Files.write(maskedAgentMain, new byte[] {0});
+    }
+
+    private void writeMaskedEngineFixture(String version) throws IOException {
+        Path engine =
+                projectDir.resolve("repo/io/btrace/btrace/").resolve(version).resolve("btrace-" + version + ".jar");
+        Files.createDirectories(engine.getParent());
+        Manifest manifest = new Manifest();
+        Attributes attributes = manifest.getMainAttributes();
+        attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        attributes.putValue("Main-Class", "io.btrace.boot.Loader");
+        attributes.putValue("Premain-Class", "io.btrace.boot.Loader");
+        attributes.putValue("Agent-Class", "io.btrace.boot.Loader");
+        attributes.putValue("Boot-Class-Path", "btrace.jar");
+        attributes.putValue("BTrace-Agent-Main", "io.btrace.agent.Main");
+        attributes.putValue("BTrace-Client-Main", "io.btrace.client.Main");
+        try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(engine), manifest)) {
+            output.putNextEntry(new JarEntry("io/btrace/boot/Loader.class"));
+            output.write(new byte[] {0});
+            output.closeEntry();
+            output.putNextEntry(
+                    new JarEntry("META-INF/btrace/agent/io/btrace/agent/Main.classdata"));
+            output.write(new byte[] {0});
+            output.closeEntry();
+            output.putNextEntry(new JarEntry("META-INF/btrace/client/fixture.classdata"));
+            output.write(new byte[] {0});
+            output.closeEntry();
+        }
+        Files.writeString(
+                engine.resolveSibling("btrace-" + version + ".pom"),
+                "<project><modelVersion>4.0.0</modelVersion><groupId>io.btrace</groupId>"
+                        + "<artifactId>btrace</artifactId><version>"
+                        + version
+                        + "</version></project>",
+                StandardCharsets.UTF_8);
     }
 
     private Path writeExtensionFixture(String permissions) throws IOException {

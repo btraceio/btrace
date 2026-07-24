@@ -25,6 +25,7 @@ shell-escaped command, exit code, filtered result lines, and complete command ou
 |------|------------------|-----------------|
 | Core, agent, client | `./gradlew --continue :btrace-core:test :btrace-agent:test :btrace-client:test` | All module tests pass |
 | Gradle plugins | `cd btrace-gradle-plugin && ../gradlew test` | All extension and fat-agent tests pass |
+| Plugin Portal validation | `./gradlew -p btrace-gradle-plugin -PbtraceVersion=<release> publishPlugins --validate-only` | Both plugin IDs and marker publications validate at the exact release version |
 | Maven fat-agent removal | `test ! -e btrace-maven-plugin/build.gradle` | The unpublished module remains absent |
 | Formatting | `./gradlew spotlessCheck` | Pass |
 | Clean masked JAR | `./gradlew clean :btrace-dist:btraceJar` | Pass; `libs/btrace.jar` exists |
@@ -90,6 +91,7 @@ extracted candidate distribution and retains target, client, compiler, migration
 | Surface | Required evidence |
 |---------|-------------------|
 | Maven Central | Candidate POM and masked JAR resolve; version and Apache-2.0 metadata match |
+| Gradle Plugin Portal | `io.btrace.extension` and `io.btrace.fat-agent` validate, publish, and resolve at the candidate version; neither is staged to Maven Central |
 | JBang | Exact Maven coordinate and `btrace@btraceio` catalog alias report the candidate version |
 | SDKMAN | Archive has `bin/` and `libs/` at its root; no extra version directory |
 | Docker | OCI version/license labels match and `/opt/btrace/libs/btrace.jar` is the intended layout |

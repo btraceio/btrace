@@ -520,7 +520,7 @@ btracex inspect [<path|dir|zip|id>] [--json]   # no args opens the interactive r
 btracex list [--json]
 btracex policy print [--policy-file <path>|--home|--classpath <outDir>] [--json]
 btracex policy set [--allowExtensions <ids>] [--denyExtensions <ids>] [--allowPrivileged <bool>] [--policy-file <path>|--home|--classpath <outDir>]
-btracex install <groupId:artifactId:version> [--repo <url> ...] [--id <extId>] [--dry-run]
+btracex install <groupId:artifactId:version|zip|url> [--repo <url> ...] [--id <extId>] [--dry-run]
 ```
 
 **Examples:**
@@ -531,8 +531,8 @@ btracex inspect my-extension.zip
 # List installed extensions
 btracex list
 
-# Install an extension from Maven coordinates
-btracex install io.btrace:btrace-statsd:3.0.0
+# Install a BTrace-built extension package from the distribution's extensions/ directory
+btracex install /path/to/btrace-statsd-3.0.0-extension.zip
 ```
 
 ### btracep

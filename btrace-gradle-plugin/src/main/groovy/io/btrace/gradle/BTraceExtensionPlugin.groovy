@@ -156,13 +156,16 @@ class BTraceExtensionPlugin implements Plugin<Project> {
 
         // Auto-register @ExternalType annotation processor on the main source set.
         // In-tree builds reference the sibling subproject directly; external consumers resolve
-        // the published artifact by version.
+        // the single public BTrace distribution at the explicitly configured BTrace version.
         def processorProject = project.rootProject.findProject(':btrace-core')
         if (processorProject != null) {
             project.dependencies.add('annotationProcessor', processorProject)
         } else {
-            project.dependencies.add('annotationProcessor',
-                "io.btrace:btrace-core:${project.version}")
+            project.afterEvaluate {
+                String btraceVersion = BTraceVersion.resolve(
+                    project, extension.btraceVersion, BTraceExtensionPlugin, 'btraceExtension.btraceVersion')
+                project.dependencies.add('annotationProcessor', "io.btrace:btrace:${btraceVersion}")
+            }
         }
 
         // Configure duplicate handling for resource tasks
@@ -1382,6 +1385,8 @@ class BTraceExtensionMetadata {
     String version
     String name
     String description
+    /** Version of the public io.btrace:btrace distribution used by external builds. */
+    String btraceVersion
     List<String> services = []
     List<String> additionalExports = []
     List<String> excludedExports = []

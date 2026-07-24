@@ -46,8 +46,8 @@ java {
 }
 
 dependencies {
-    apiCompileOnly 'io.btrace:btrace-core:3.0.0'
-    implCompileOnly 'io.btrace:btrace-core:3.0.0'
+    apiCompileOnly 'io.btrace:btrace:3.0.0'
+    implCompileOnly 'io.btrace:btrace:3.0.0'
 }
 
 btraceExtension {
@@ -355,15 +355,12 @@ rm -rf "$BTRACE_HOME/extensions/order-counter" ~/.btrace/permissions.properties
   interfaces annotated with `io.btrace.core.extensions.ServiceDescriptor`. Confirm the annotation
   is on the compiled service interface (not only its implementation). An explicit `services` list
   remains available when an extension cannot annotate the interface it exports.
-- **`Could not find io.btrace:btrace-core:<your-project-version>`** — the plugin auto-registers
-  the `@ExternalType` annotation processor, and outside the BTrace monorepo (no sibling
-  `:btrace-core` project) it resolves that processor as
-  `"io.btrace:btrace-core:${project.version}"` — your extension project's *own* `version`, not the
-  BTrace release you're building against (`BTraceExtensionPlugin.groovy`, the
-  `processorProject == null` branch). This is why this tutorial's `build.gradle` sets
-  `version = '3.0.0'` to match the BTrace release instead of, say, `1.0`: if your extension's own
-  versioning scheme diverges from BTrace's, this auto-registration will request a `btrace-core`
-  coordinate that doesn't exist on Maven Central.
+- **`btraceExtension.btraceVersion` is required** — when the plugin runs from a development or
+  TestKit classpath it cannot read a published plugin manifest. Set
+  `btraceExtension { btraceVersion = '3.0.0' }` explicitly. Published Plugin Portal builds carry
+  that version in their implementation manifest. External builds resolve only
+  `io.btrace:btrace:<btraceVersion>` for the `@ExternalType` processor; an extension's own
+  `version` may therefore follow its independent release scheme.
 - **The probe fails to link instead of running** — you deployed it before Step 6's permission
   grant, or against a demo app process that was already running (and had already loaded an older
   policy) before you wrote the policy file. Start a fresh `java DemoApp.java` after Step 6.

@@ -131,6 +131,7 @@ test {
              ':btrace-dist:btraceJar',
              ':btrace-dist:explodeExtensions',
              stageExternalTypeClientHome
+    dependsOn gradle.includedBuild('btrace-gradle-plugin').task(':jar')
 
     testLogging.showStandardStreams = true
 

@@ -142,7 +142,7 @@ Use [JBang](https://www.jbang.dev/) to run BTrace without manual installation:
 curl -Ls https://sh.jbang.dev | bash -s - app setup
 
 # Use BTrace immediately (replace <version> with desired version, e.g., 3.0.0)
-jbang io.btrace:btrace-client:<version> <PID> <script.java>
+jbang io.btrace:btrace:<version> <PID> <script.java>
 
 # After first run, use shorter alias
 jbang btrace <PID> <script.java>
@@ -265,7 +265,8 @@ plugins {
 
 btraceFatAgent {
     embedExtensions {
-        maven('io.btrace:btrace-metrics:3.0.0')
+        // BTrace bundles extension packages in its distribution's extensions/ directory.
+        file('/path/to/btrace-metrics-3.0.0-extension.zip')
         project(':my-custom-extension')
     }
 }
@@ -330,7 +331,9 @@ See the [Tutorial](docs/BTraceTutorial.md) for detailed documentation.
 Extensions CLI: use `btracex` to inspect and manage extensions and the simplified permission policy:
 - `btracex inspect <zip|dir>` prints extension id, version, services, and whether it’s privileged.
 - `btracex policy print|set [--policy-file <path>|--home|--classpath <outDir>]` edits `allowExtensions`, `denyExtensions`, `allowPrivileged`.
-- `btracex list` shows installed extensions; `btracex install` installs from Maven coordinates.
+- `btracex list` shows installed extensions; `btracex install` accepts a local extension package or
+  separately published third-party Maven coordinates. BTrace-built packages are supplied in the
+  distribution's `extensions/` directory, not as individual Maven artifacts.
 
 Note: Extension “required permissions” are informational and help operators assess risk. Implementation linking is controlled by per‑extension allow/deny lists and the `allowPrivileged` flag; when blocked, APIs remain available and SHIMs are used so probes continue safely.
 
