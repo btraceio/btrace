@@ -21,6 +21,9 @@ final class BTraceVersion {
         return version
     }
 
+    // Resolve-time validation: rejects dynamic selectors and ranges only. Pre-release qualifiers
+    // (e.g. '3.0.0-rc1', '3.0.0-SNAPSHOT') are deliberately allowed so a consumer may pin one.
+    // The stricter X.Y.Z gate for *publishing* the plugins lives in btrace-gradle-plugin/build.gradle.
     static void validate(String version, String propertyName) {
         if (version == null || version.trim().isEmpty() ||
                 version ==~ /.*[+\[\]\(\),].*/ ||

@@ -624,7 +624,7 @@ jobs:
           echo "Verified Plugin Portal IDs io.btrace.extension and io.btrace.fat-agent at ${{ inputs.release_version }}"
 
   # ============================================================
-  # Job 5c: Update JBang catalog
+  # Job 5d: Update JBang catalog
   # ============================================================
   update-jbang-catalog:
     name: Update JBang Catalog
