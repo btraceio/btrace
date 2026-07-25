@@ -320,6 +320,12 @@ repositories = [ "${btrace.home}/extensions", "${user.home}/.btrace/extensions" 
 
 For environments where installing extensions separately is impractical (Spark, Hadoop, Kubernetes), extensions can be embedded directly in a fat agent JAR.
 
+BTrace's built-in extensions are extension packages in a BTrace distribution's `extensions/`
+directory (or from the matching `packageExtension` task in a source checkout). Use `file(...)` to
+embed one, or `project(...)` for an in-tree/custom extension. `maven(...)` is reserved for a
+separately published third-party extension; BTrace does not publish its bundled extensions as Maven
+artifacts.
+
 ### Building a Fat Agent with Your Extension
 
 Use the BTrace Fat Agent Plugin to create a self-contained agent JAR:
@@ -336,8 +342,8 @@ btraceFatAgent {
         // Your extension project (if in same multi-project build)
         project(':my-extension')
 
-        // Published extensions from Maven
-        maven('io.btrace:btrace-metrics:3.0.0')
+        // BTrace-built packages from the distribution's extensions/ directory
+        file('/path/to/btrace-metrics-3.0.0-extension.zip')
 
         // Local extension ZIPs
         file('libs/other-extension.zip')

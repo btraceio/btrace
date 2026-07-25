@@ -40,8 +40,9 @@ btrace-metrics-3.0.0-extension.zip
 
 > **What just happened?** `packageExtension` is a real task registered by the `io.btrace.extension`
 > Gradle plugin for every extension module (`BTraceExtensionPlugin.groovy`) — it zips the API jar
-> and the shaded implementation jar together under classifier `extension`. That's the artifact
-> shape the fat-agent plugin's `file()` and `maven()` sources expect to unpack.
+> and the shaded implementation jar together under classifier `extension`. Use that package with
+> the fat-agent plugin's `file()` source. `maven()` remains for separately published third-party
+> extensions; BTrace's bundled extensions are not Maven artifacts.
 
 Copy it into a scratch directory, renamed to match the extension's real id (`btrace-metrics`) —
 you'll see exactly why that naming matters in Step 3:
@@ -71,6 +72,7 @@ plugins {
 
 btraceFatAgent {
     baseName = 'demo-btrace-agent'
+    btraceVersion = '3.0.0'
 
     embedExtensions {
         file('btrace-metrics.zip')
@@ -78,15 +80,12 @@ btraceFatAgent {
 }
 ```
 
-`baseName` and the `embedExtensions { file(...) }` / `maven(...)` / `project(...)` source builders
+`baseName`, `btraceVersion`, and the `embedExtensions { file(...) }` / `maven(...)` / `project(...)` source builders
 are exactly the DSL surface the plugin exposes — verified against
 `BTraceFatAgentExtension.groovy` (fields `baseName`, `outputDir`, `manifestAttributes`,
 `relocations`, `autoDiscover`; the `ExtensionSourceSpec` builders `project()`, `maven()`, `file()`,
-`files()`). Don't reach for a `registry(...)` source, even though `BTraceFatAgentExtension` has a
-`registryUrl` field whose doc comment says it's "for resolving `registry(\"id\")` sources", and
-`BTraceFatAgentPluginTest.registrySourceFailsForUnknownId()` calls exactly that — there is no
-`registry(...)` method anywhere on `ExtensionSourceSpec` in this checkout, so that test (and any
-build using `registry(...)`) fails outright rather than doing what its name implies.
+`files()`). Registry sources are not part of the 3.0 DSL; unknown source builders and configuration
+properties fail during Gradle configuration instead of being accepted as no-ops.
 
 ## Step 3 — Build it and look inside
 

@@ -99,7 +99,7 @@ Build self-contained fat agent JARs with embedded extensions for single-JAR depl
 ### Features
 - Embeds extensions directly into the agent JAR
 - Auto-discovers extension projects in multi-project builds
-- Supports project references, Maven coordinates, and local files
+- Supports project references, separately published third-party Maven coordinates, and local files
 - API classes as `.class` files (bootstrap), impl as `.classdata` (runtime loaded)
 - Integrates with ShadowJar for package relocation
 
@@ -125,9 +125,9 @@ btraceFatAgent {
         project(':btrace-spark')
         projects(':btrace-metrics', ':btrace-utils')
 
-        // Maven coordinates
-        maven('io.btrace:btrace-kafka-extension:3.0.0')
-        maven(group: 'io.btrace', name: 'btrace-flink-extension', version: '3.0.0')
+        // BTrace-built packages from the distribution's extensions/ directory
+        file('/path/to/btrace-kafka-extension-3.0.0-extension.zip')
+        file('/path/to/btrace-flink-extension-3.0.0-extension.zip')
 
         // Local extension ZIPs or directories
         file('/path/to/extension.zip')
@@ -232,12 +232,12 @@ plugins {
 btraceFatAgent {
     baseName = 'my-custom-agent'
 
-    // Reference base BTrace JAR (required for standalone builds)
-    agentJarTask = 'btraceJar'  // or provide path
+    // Task producing the masked BTrace JAR (required for standalone builds)
+    agentJarTask = 'btraceJar'
 
     embedExtensions {
-        maven('io.btrace:btrace-metrics:3.0.0')
-        maven('io.btrace:btrace-statsd:3.0.0')
+        file('/path/to/btrace-metrics-3.0.0-extension.zip')
+        file('/path/to/btrace-statsd-3.0.0-extension.zip')
         file('libs/my-custom-extension.zip')
     }
 }
@@ -256,8 +256,9 @@ The fat agent JAR contains:
 btrace-agent-fat.jar
 ├── META-INF/
 │   ├── MANIFEST.MF
-│   │   ├── Premain-Class: io.btrace.agent.Main
-│   │   ├── Agent-Class: io.btrace.agent.Main
+│   │   ├── Premain-Class: io.btrace.boot.Loader
+│   │   ├── Agent-Class: io.btrace.boot.Loader
+│   │   ├── BTrace-Agent-Main: io.btrace.agent.Main
 │   │   ├── Boot-Class-Path: btrace-agent-fat.jar
 │   │   └── BTrace-Embedded-Extensions: ext1,ext2,ext3
 │   └── btrace-extensions/
@@ -271,6 +272,9 @@ btrace-agent-fat.jar
 ├── org/example/ext/api/...         # Extension API classes (.class)
 └── org/example/ext/impl/...        # Extension impl classes (.classdata)
 ```
+
+`fatAgentJar` validates this masked-JAR structure after assembly and fails if the loader, masked
+agent entry point, or mandatory loader manifest attributes are missing.
 
 ### Using the Fat Agent
 
@@ -320,7 +324,9 @@ jar -tf btrace-dist/build/resources/main/v*/libs/btrace-agent-fat.jar | grep btr
 
 ### Fat Agent Plugin
 - Use auto-discovery for monorepo setups
-- Use Maven coordinates for external/published extensions
+- Use Maven coordinates only for separately published third-party extensions. BTrace-built
+  extensions are packages in the BTrace distribution's `extensions/` directory and should be
+  embedded with `file(...)`.
 - Test the fat agent in isolation before production deployment
 - Package relocations help avoid classpath conflicts in target JVMs
 

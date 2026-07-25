@@ -17,10 +17,9 @@
 package io.btrace.runtime.profiling;
 
 import io.btrace.core.Profiler;
-import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 
@@ -42,7 +41,8 @@ class MethodInvocationRecorder {
   private final Map<String, Integer> indexMap = new HashMap<>();
   // 0 - available; 1 - processing invocation; 2 - generating snapshot; 3 - resetting
   private final AtomicInteger writerStatus = new AtomicInteger(0);
-  private final Deque<DelayedRecord> delayedRecords = new LinkedList<>();
+  private final ConcurrentLinkedQueue<DelayedRecord> delayedRecords = new ConcurrentLinkedQueue<>();
+  private volatile TestHook testHook;
   private int stackSize = 200;
   private int stackPtr = -1;
   private int stackBndr = 150;
@@ -60,43 +60,7 @@ class MethodInvocationRecorder {
   }
 
   void recordEntry(String blockName) {
-    while (true) {
-      processDelayedRecords();
-      if (writerStatus.compareAndSet(0, 1)) {
-        // System.out.println("== 0->1");
-        try {
-          processEntry(blockName);
-          return;
-        } finally {
-          // System.out.println("== 1->0");
-          writerStatus.compareAndSet(1, 0);
-        }
-      } else {
-        while (writerStatus.get() == 3) {
-          LockSupport.parkNanos(this, 600);
-        }
-        if (writerStatus.compareAndSet(1, 3)) {
-          // System.out.println("== 1->3");
-          try {
-            delayedRecords.add(new DelayedRecord(blockName, -1L));
-            return;
-          } finally {
-            // System.out.println("== 3->1");
-            writerStatus.compareAndSet(3, 1);
-          }
-        } else if (writerStatus.compareAndSet(2, 3)) {
-          // System.out.println("== 2->3");
-          try {
-            delayedRecords.add(new DelayedRecord(blockName, -1L));
-            return;
-          } finally {
-            // System.out.println("== 3->2");
-            writerStatus.compareAndSet(3, 2);
-          }
-        }
-      }
-      LockSupport.parkNanos(this, 600);
-    }
+    record(new DelayedRecord(blockName, -1L));
   }
 
   private void processEntry(String blockName) {
@@ -107,37 +71,20 @@ class MethodInvocationRecorder {
   }
 
   void recordExit(String blockName, long duration) {
-    while (true) {
-      processDelayedRecords();
-      if (writerStatus.compareAndSet(0, 1)) {
-        // System.out.println("== 0->1");
-        try {
-          processExit(blockName, duration);
-          return;
-        } finally {
-          writerStatus.compareAndSet(1, 0);
-        }
-      } else {
-        while (writerStatus.get() == 3) {
-          LockSupport.parkNanos(this, 600);
-        }
-        if (writerStatus.compareAndSet(1, 3)) {
-          try {
-            delayedRecords.add(new DelayedRecord(blockName, duration));
-            return;
-          } finally {
-            writerStatus.compareAndSet(3, 1);
-          }
-        } else if (writerStatus.compareAndSet(2, 3)) {
-          try {
-            delayedRecords.add(new DelayedRecord(blockName, duration));
-            return;
-          } finally {
-            writerStatus.compareAndSet(3, 2);
-          }
-        }
-      }
-      LockSupport.parkNanos(this, 600);
+    record(new DelayedRecord(blockName, duration));
+  }
+
+  private void record(DelayedRecord record) {
+    if (!writerStatus.compareAndSet(0, 3)) {
+      delayedRecords.offer(record);
+      return;
+    }
+    try {
+      drainDelayedRecords();
+      writerStatus.set(1);
+      process(record);
+    } finally {
+      writerStatus.set(0);
     }
   }
 
@@ -168,34 +115,37 @@ class MethodInvocationRecorder {
     }
   }
 
-  private void processDelayedRecords() {
-    DelayedRecord dr = null;
-
-    while (!writerStatus.compareAndSet(0, 3)) {
-      LockSupport.parkNanos(this, 600);
+  private void drainDelayedRecords() {
+    DelayedRecord record;
+    while ((record = delayedRecords.poll()) != null) {
+      process(record);
     }
+  }
 
-    try {
-      while ((dr = delayedRecords.poll()) != null) {
-        if (dr.duration == -1) {
-          processEntry(dr.blockName);
-        } else {
-          processExit(dr.blockName, dr.duration);
-        }
-      }
-    } finally {
-      writerStatus.compareAndSet(3, 0);
+  private void process(DelayedRecord record) {
+    if (record.duration == -1L) {
+      processEntry(record.blockName);
+    } else {
+      processExit(record.blockName, record.duration);
     }
   }
 
   Profiler.Record[] getRecords(boolean reset) {
     Profiler.Record[] recs = null;
+    boolean acquired = false;
     try {
-      processDelayedRecords();
-
+      TestHook hook = testHook;
+      if (hook != null) {
+        hook.beforeSnapshotAcquire();
+      }
       while (!writerStatus.compareAndSet(0, 2)) {
         LockSupport.parkNanos(this, 600);
       }
+      acquired = true;
+      if (hook != null) {
+        hook.afterSnapshotAcquire();
+      }
+      drainDelayedRecords();
       compactMeasured();
 
       recs = new Profiler.Record[lastIndex];
@@ -219,8 +169,8 @@ class MethodInvocationRecorder {
 
       return recs;
     } finally {
-      while (!writerStatus.compareAndSet(2, 0)) {
-        LockSupport.parkNanos(this, 600);
+      if (acquired) {
+        writerStatus.compareAndSet(2, 0);
       }
     }
   }
@@ -261,10 +211,25 @@ class MethodInvocationRecorder {
       while (!writerStatus.compareAndSet(0, 4)) {
         LockSupport.parkNanos(this, 600);
       }
+      drainDelayedRecords();
       resetState();
     } finally {
       writerStatus.compareAndSet(4, 0);
     }
+  }
+
+  interface TestHook {
+    void beforeSnapshotAcquire();
+
+    void afterSnapshotAcquire();
+  }
+
+  void setTestHook(TestHook testHook) {
+    this.testHook = testHook;
+  }
+
+  int delayedRecordCountForTest() {
+    return delayedRecords.size();
   }
 
   /**

@@ -1,6 +1,9 @@
 package io.btrace.gradle
 
+import java.util.jar.JarFile
+
 import org.gradle.api.Action
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
 
@@ -14,7 +17,7 @@ import org.gradle.api.file.FileCollection
  *
  *     embedExtensions {
  *         project(':btrace-spark')
- *         maven('io.btrace:btrace-kafka:2.3.0')
+ *         file('/path/to/btrace-kafka-extension.zip')
  *         file('/path/to/extension.zip')
  *     }
  *
@@ -25,14 +28,15 @@ import org.gradle.api.file.FileCollection
  * </pre>
  */
 class BTraceFatAgentExtension {
-    static final String DEFAULT_REGISTRY_URL = 'https://btraceio.github.io/btrace-extensions/registry/extensions.json'
-
     private final Project project
     private final List<ExtensionSource> extensionSources = []
     private final ProbeBundleSpec probeBundle
 
     /** Output JAR base name (default: 'btrace-agent-fat') */
     String baseName = 'btrace-agent-fat'
+
+    /** Version of the public io.btrace:btrace distribution used to compile source probes. */
+    String btraceVersion
 
     /** Output directory (default: project.layout.buildDirectory.dir('libs')) */
     File outputDir
@@ -43,10 +47,13 @@ class BTraceFatAgentExtension {
     /** Package relocations (from -> to) */
     Map<String, String> relocations = [:]
 
-    /** Reference to agent JAR task (required for standalone builds) */
+    /** Reference to the task producing the masked BTrace JAR (normally btraceJar). */
     Object agentJarTask
 
-    /** Reference to boot JAR task (required for standalone builds) */
+    /**
+     * Legacy reference to a separate boot JAR task. This is unsupported because a fat agent must
+     * be assembled from one masked BTrace engine; use {@link #agentJarTask} or btraceEngine.
+     */
     Object bootJarTask
 
     /** Whether to auto-discover extensions from subprojects (default: false) */
@@ -55,16 +62,9 @@ class BTraceFatAgentExtension {
     /** Property name for filtering extensions when autoDiscover is true */
     String filterProperty = 'embedExtensions'
 
-    /** Extension registry URL for resolving registry("id") sources. */
-    String registryUrl = System.getProperty('btrace.extensions.registry', DEFAULT_REGISTRY_URL)
-
-    /** Local cache file for the extension registry document. */
-    File registryCacheFile
-
     BTraceFatAgentExtension(Project project) {
         this.project = project
         this.outputDir = project.layout.buildDirectory.dir('libs').get().asFile
-        this.registryCacheFile = project.layout.buildDirectory.file('registry/extensions.json').get().asFile
         this.probeBundle = new ProbeBundleSpec(project)
     }
 
@@ -484,6 +484,55 @@ class ResolvedExtension {
     Properties metadata = new Properties()
     Project sourceProject  // non-null if from project source
     List<File> probes = []
+
+    /**
+     * Completes distribution metadata from the canonical API JAR manifest. Manifest values are
+     * authoritative, so stale extension ZIP properties cannot weaken the embedded permission
+     * policy. Project sources receive the same metadata as published extensions.
+     */
+    void hydrateFromApiManifest() {
+        if (apiJar == null || !apiJar.isFile()) {
+            throw new GradleException(
+                "[fat-agent] Cannot embed extension '${id}': API JAR is missing, so permission metadata cannot be transferred")
+        }
+
+        def attributeToProperty = [
+            'BTrace-Extension-Id': 'id',
+            'BTrace-Extension-Version': 'version',
+            'BTrace-Extension-Name': 'name',
+            'BTrace-Extension-Description': 'description',
+            'BTrace-API-Version': 'btrace.api.version',
+            'BTrace-Java-Version': 'java.version',
+            'BTrace-Extension-Services': 'services',
+            'BTrace-Extension-Requires': 'requires.extensions',
+            'BTrace-Extension-Permissions': 'permissions',
+            'BTrace-Extension-Exports': 'exports'
+        ]
+
+        try {
+            new JarFile(apiJar).withCloseable { jar ->
+                def attributes = jar.manifest?.mainAttributes
+                def permissions = attributes?.getValue('BTrace-Extension-Permissions')
+                if (permissions == null) {
+                    throw new GradleException(
+                        "[fat-agent] Cannot embed extension '${id}': ${apiJar.name} is missing BTrace-Extension-Permissions; refusing to default permissions to an empty set")
+                }
+                attributeToProperty.each { manifestName, propertyName ->
+                    def value = attributes.getValue(manifestName)
+                    if (value != null) metadata.setProperty(propertyName, value)
+                }
+            }
+        } catch (GradleException e) {
+            throw e
+        } catch (Exception e) {
+            throw new GradleException(
+                "[fat-agent] Cannot read extension metadata for '${id}' from ${apiJar}: ${e.message}",
+                e)
+        }
+
+        id = metadata.getProperty('id', id)
+        version = metadata.getProperty('version', version)
+    }
 
     @Override
     String toString() {

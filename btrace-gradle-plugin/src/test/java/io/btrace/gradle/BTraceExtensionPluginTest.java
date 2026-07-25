@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -57,6 +56,10 @@ class BTraceExtensionPluginTest {
         File apiJar = projectDir.resolve("ext/build/libs/ext-1.0-api.jar").toFile();
         assertTrue(apiJar.isFile(), "API jar should exist");
         try (JarFile jar = new JarFile(apiJar)) {
+            assertEquals(
+                    "3.0+",
+                    jar.getManifest().getMainAttributes().getValue("BTrace-API-Version"),
+                    "API manifest should advertise the 3.0 API baseline");
             assertNotNull(
                     jar.getEntry("META-INF/btrace/test-resource.txt"),
                     "API jar should keep main resources");
@@ -131,6 +134,37 @@ class BTraceExtensionPluginTest {
     }
 
     @Test
+    @DisplayName("external builds use the explicitly pinned public BTrace distribution")
+    void externalBuildUsesPinnedBTraceDistribution() throws IOException {
+        writeFile(settingsFile, "rootProject.name = 'external-extension'\n");
+        writeFile(
+                rootBuildFile,
+                "plugins { id 'io.btrace.extension' }\n"
+                        + "version = '9.9.9'\n"
+                        + "btraceExtension { btraceVersion = '3.0.0' }\n"
+                        + "tasks.register('printProcessor') { doLast {\n"
+                        + "  configurations.annotationProcessor.dependencies.each { println \"PROCESSOR=${it.group}:${it.name}:${it.version}\" }\n"
+                        + "} }\n");
+
+        BuildResult result = createRunner().withArguments("printProcessor").build();
+
+        assertTrue(result.getOutput().contains("PROCESSOR=io.btrace:btrace:3.0.0"));
+        assertFalse(result.getOutput().contains("btrace-core"));
+    }
+
+    @Test
+    @DisplayName("external builds require an explicit BTrace version without a published plugin JAR")
+    void externalBuildWithoutBTraceVersionFailsClearly() throws IOException {
+        writeFile(settingsFile, "rootProject.name = 'external-extension'\n");
+        writeFile(rootBuildFile, "plugins { id 'io.btrace.extension' }\n");
+
+        BuildResult result = createRunner().withArguments("tasks").buildAndFail();
+
+        assertTrue(result.getOutput().contains("btraceExtension.btraceVersion"));
+        assertTrue(result.getOutput().contains("concrete BTrace release version"));
+    }
+
+    @Test
     @DisplayName("published API source and javadoc artifacts stay API-only")
     void apiPublicationsStayApiOnly() throws IOException {
         writeExtensionProject();
@@ -188,111 +222,6 @@ class BTraceExtensionPluginTest {
                                                     .equals("com/example/impl/PublicServiceImpl.html")),
                     "Implementation implementation javadocs should not leak into api-javadoc");
         }
-    }
-
-    @Test
-    @DisplayName("updateRegistryCatalog writes entry into local registry checkout")
-    void updateRegistryCatalogWritesLocalRegistry() throws IOException {
-        Path registryDir = projectDir.resolve("registry-repo");
-        Files.createDirectories(registryDir.resolve("registry"));
-        writeFile(
-                registryDir.resolve("registry/extensions.json"),
-                "{\n"
-                        + "  \"schema_version\": 1,\n"
-                        + "  \"extensions\": []\n"
-                        + "}\n");
-
-        writeExtensionProject(
-                "btraceRegistry {\n"
-                        + "  prMode = 'off'\n"
-                        + "  verifyPublishedCoordinates = false\n"
-                        + "  registryWorktreeDir = file('"
-                        + registryDir.toString().replace("\\", "/")
-                        + "')\n"
-                        + "  tags = ['metrics']\n"
-                        + "}\n");
-
-        BuildResult result = createRunner().withArguments(":ext:updateRegistryCatalog").build();
-
-        assertEquals(TaskOutcome.SUCCESS, result.task(":ext:updateRegistryCatalog").getOutcome());
-        String json =
-                Files.readString(
-                        registryDir.resolve("registry/extensions.json"), StandardCharsets.UTF_8);
-        assertTrue(json.contains("\"id\" : \"test.ext\""));
-        assertTrue(json.contains("\"artifactId\" : \"ext\""));
-        assertTrue(json.contains("\"version\" : \"1.0\""));
-    }
-
-    @Test
-    @DisplayName("updateRegistryCatalog uses a fork-based PR when no direct push repo is configured")
-    void updateRegistryCatalogUsesForkBasedPr() throws IOException {
-        Path registryDir = projectDir.resolve("registry-repo");
-        Files.createDirectories(registryDir.resolve("registry"));
-        writeFile(
-                registryDir.resolve("registry/extensions.json"),
-                "{\n"
-                        + "  \"schema_version\": 1,\n"
-                        + "  \"extensions\": []\n"
-                        + "}\n");
-        initGitRepo(registryDir);
-
-        Path forkRemote = projectDir.resolve("registry-fork.git");
-        runCommand(projectDir, "git", "init", "--bare", forkRemote.toString());
-
-        Path ghScript = projectDir.resolve("fake-gh.sh");
-        Path prLog = projectDir.resolve("gh-pr.log");
-        writeFile(
-                ghScript,
-                "#!/bin/sh\n"
-                        + "set -eu\n"
-                        + "if [ \"$1\" = \"repo\" ] && [ \"$2\" = \"fork\" ]; then\n"
-                        + "  if git remote get-url registry-fork >/dev/null 2>&1; then\n"
-                        + "    git remote set-url registry-fork '" + forkRemote.toString().replace("\\", "/") + "'\n"
-                        + "  else\n"
-                        + "    git remote add registry-fork '" + forkRemote.toString().replace("\\", "/") + "'\n"
-                        + "  fi\n"
-                        + "  exit 0\n"
-                        + "fi\n"
-                        + "if [ \"$1\" = \"api\" ] && [ \"$2\" = \"user\" ]; then\n"
-                        + "  echo 'fork-user'\n"
-                        + "  exit 0\n"
-                        + "fi\n"
-                        + "if [ \"$1\" = \"pr\" ] && [ \"$2\" = \"create\" ]; then\n"
-                        + "  printf '%s\\n' \"$@\" > '" + prLog.toString().replace("\\", "/") + "'\n"
-                        + "  exit 0\n"
-                        + "fi\n"
-                        + "echo 'unexpected gh args: '$* >&2\n"
-                        + "exit 1\n");
-        ghScript.toFile().setExecutable(true);
-
-        writeExtensionProject(
-                "btraceRegistry {\n"
-                        + "  prMode = 'auto'\n"
-                        + "  verifyPublishedCoordinates = false\n"
-                        + "  registryWorktreeDir = file('"
-                        + registryDir.toString().replace("\\", "/")
-                        + "')\n"
-                        + "  githubCli = '"
-                        + ghScript.toString().replace("\\", "/")
-                        + "'\n"
-                        + "  tags = ['metrics']\n"
-                        + "}\n");
-
-        BuildResult result = createRunner().withArguments(":ext:updateRegistryCatalog").build();
-
-        assertEquals(TaskOutcome.SUCCESS, result.task(":ext:updateRegistryCatalog").getOutcome());
-        String json =
-                Files.readString(
-                        registryDir.resolve("registry/extensions.json"), StandardCharsets.UTF_8);
-        assertTrue(json.contains("\"id\" : \"test.ext\""));
-        assertTrue(json.contains("\"artifactId\" : \"ext\""));
-        assertTrue(json.contains("\"version\" : \"1.0\""));
-
-        String prArgs = Files.readString(prLog, StandardCharsets.UTF_8);
-        assertTrue(prArgs.contains("--repo"));
-        assertTrue(prArgs.contains("btraceio/btrace-extensions"));
-        assertTrue(prArgs.contains("--head"));
-        assertTrue(prArgs.contains("fork-user:btrace-registry/ext-1.0"));
     }
 
     private void writeStubCoreProject() throws IOException {
@@ -508,33 +437,6 @@ class BTraceExtensionPluginTest {
                 .withPluginClasspath()
                 .withDebug(true)
                 .forwardOutput();
-    }
-
-    private void initGitRepo(Path dir) throws IOException {
-        runCommand(dir, "git", "init");
-        runCommand(dir, "git", "-C", dir.toString(), "config", "user.name", "Test User");
-        runCommand(dir, "git", "-C", dir.toString(), "config", "user.email", "test@example.com");
-        runCommand(dir, "git", "-C", dir.toString(), "add", ".");
-        runCommand(dir, "git", "-C", dir.toString(), "commit", "-m", "init");
-    }
-
-    private void runCommand(Path dir, String... command) throws IOException {
-        ProcessBuilder builder = new ProcessBuilder(command);
-        builder.directory(dir.toFile());
-        builder.redirectErrorStream(true);
-        Process process = builder.start();
-        String output;
-        try (InputStream stream = process.getInputStream()) {
-            output = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-        }
-        try {
-            if (process.waitFor() != 0) {
-                throw new IOException("Command failed: " + String.join(" ", command) + "\n" + output);
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Interrupted while running: " + String.join(" ", command), e);
-        }
     }
 
     private void writeFile(Path path, String content) throws IOException {

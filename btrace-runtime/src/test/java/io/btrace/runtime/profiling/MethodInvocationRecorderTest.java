@@ -19,8 +19,15 @@ package io.btrace.runtime.profiling;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.btrace.core.Profiler;
+import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 /** Regression tests for {@link MethodInvocationRecorder} timing, reset, and recursion handling. */
@@ -108,5 +115,89 @@ class MethodInvocationRecorderTest {
     Profiler.Record x = find(r.getRecords(false), "X");
     assertNotNull(x);
     assertEquals(2L, x.invocations, "invocations accumulate without reset");
+  }
+
+  @Test
+  void recordDoesNotWaitForSnapshot() {
+    MethodInvocationRecorder r = new MethodInvocationRecorder(16);
+    r.recordEntry("A");
+    assertTimeoutPreemptively(
+        Duration.ofSeconds(1),
+        () -> {
+          r.recordExit("A", 1);
+          r.getRecords(false);
+        });
+  }
+
+  @Test
+  void snapshotFailureBeforeStateAcquisitionDoesNotReleaseForeignState() {
+    MethodInvocationRecorder r = new MethodInvocationRecorder(16);
+    r.setTestHook(
+        new MethodInvocationRecorder.TestHook() {
+          @Override
+          public void beforeSnapshotAcquire() {
+            throw new IllegalStateException("forced before acquisition");
+          }
+
+          @Override
+          public void afterSnapshotAcquire() {}
+        });
+    assertThrows(IllegalStateException.class, () -> r.getRecords(false));
+
+    r.setTestHook(null);
+    r.recordEntry("recovered");
+    r.recordExit("recovered", 3);
+    assertNotNull(find(r.getRecords(false), "recovered"));
+  }
+
+  @Test
+  void delayedEntryAndExitDoNotWaitForSnapshotAndDrainInFifoOrder() throws Exception {
+    MethodInvocationRecorder r = new MethodInvocationRecorder(16);
+    CountDownLatch snapshotOwnsState = new CountDownLatch(1);
+    CountDownLatch releaseSnapshot = new CountDownLatch(1);
+    CountDownLatch delayedCallsReturned = new CountDownLatch(1);
+    AtomicReference<Profiler.Record[]> snapshot = new AtomicReference<>();
+    r.recordEntry("outer");
+    r.setTestHook(
+        new MethodInvocationRecorder.TestHook() {
+          @Override
+          public void beforeSnapshotAcquire() {}
+
+          @Override
+          public void afterSnapshotAcquire() {
+            snapshotOwnsState.countDown();
+            try {
+              releaseSnapshot.await(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              throw new AssertionError(e);
+            }
+          }
+        });
+    Thread snapshotThread =
+        new Thread(() -> snapshot.set(r.getRecords(false)), "issue-888-snapshot");
+    snapshotThread.start();
+    assertTrue(snapshotOwnsState.await(5, TimeUnit.SECONDS));
+
+    Thread application =
+        new Thread(
+            () -> {
+              r.recordEntry("deferred");
+              r.recordExit("deferred", 9);
+              delayedCallsReturned.countDown();
+            },
+            "issue-888-application");
+    application.start();
+    assertTrue(delayedCallsReturned.await(1, TimeUnit.SECONDS));
+    assertEquals(2, r.delayedRecordCountForTest());
+    releaseSnapshot.countDown();
+    snapshotThread.join(5000L);
+    application.join(5000L);
+    r.setTestHook(null);
+
+    Profiler.Record deferred = find(snapshot.get(), "deferred");
+    assertNotNull(deferred);
+    assertEquals(1L, deferred.invocations);
+    assertEquals(9L, deferred.wallTime);
   }
 }

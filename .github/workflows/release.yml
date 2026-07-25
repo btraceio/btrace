@@ -158,18 +158,10 @@ jobs:
         with:
           ref: ${{ inputs.commit_sha }}
 
-      - name: Cache Java binaries
-        id: cache-java
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      - name: Set up JDK 21
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
         with:
-          path: ${{ runner.tool_cache }}/Java_*
-          key: java-${{ runner.os }}-temurin-11
-
-      - name: Set up Java
-        if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
-        with:
-          java-version: 11
+          java-version: 21
           distribution: temurin
 
       - name: Grant execute permission for gradlew
@@ -194,8 +186,55 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Build
-        run: ./gradlew --no-daemon --parallel --build-cache build
+      - name: Focused core, agent, and client tests
+        run: |
+          scripts/run-release-gate.sh focused-modules release-gate-logs -- \
+            ./gradlew --no-daemon --parallel --build-cache --continue \
+            :btrace-core:test :btrace-agent:test :btrace-client:test
+
+      - name: Focused Gradle plugin tests
+        run: |
+          scripts/run-release-gate.sh gradle-plugin release-gate-logs \
+            --working-directory btrace-gradle-plugin -- \
+            ../gradlew --no-daemon test
+
+      - name: Assert unpublished Maven fat-agent module remains removed
+        run: |
+          scripts/run-release-gate.sh maven-fat-agent-removed release-gate-logs -- \
+            bash -c 'test ! -e btrace-maven-plugin/build.gradle'
+
+      - name: Spotless
+        run: |
+          scripts/run-release-gate.sh spotless release-gate-logs -- \
+            ./gradlew --no-daemon --parallel --build-cache spotlessCheck
+
+      - name: Clean masked JAR
+        run: |
+          scripts/run-release-gate.sh clean-masked-jar release-gate-logs -- \
+            ./gradlew --no-daemon --parallel --build-cache clean :btrace-dist:btraceJar
+          find btrace-dist/build/resources/main -path '*/libs/btrace.jar' -type f | grep -q .
+
+      - name: Full distribution build
+        run: |
+          scripts/run-release-gate.sh full-distribution release-gate-logs -- \
+            ./gradlew --no-daemon --parallel --build-cache :btrace-dist:build
+
+      - name: Add filtered release-gate logs to summary
+        if: always()
+        run: |
+          shopt -s nullglob
+          for summary in release-gate-logs/*-summary.md; do
+            cat "$summary" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Upload release-gate logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-gate-build-logs
+          retention-days: 7
+          if-no-files-found: ignore
+          path: release-gate-logs/
 
       - name: Upload dist build data
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -233,9 +272,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem]
+        java: [8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem, 25.0.3-tem, 27.ea.31-open]
     env:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
+      # Runners are ephemeral, so the Testcontainers Ryuk reaper is unnecessary. Disabling it
+      # removes a Docker Hub image pull that intermittently times out and fails Docker-based tests.
+      TESTCONTAINERS_RYUK_DISABLED: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -245,6 +287,12 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Set up JDK 21 for Gradle
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
+        with:
+          java-version: 21
+          distribution: temurin
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
@@ -253,13 +301,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y curl zip unzip
 
-      - name: Prepare JDK ${{ matrix.java }}
+      - name: Prepare target JDK ${{ matrix.java }}
         run: |
           curl -s "https://get.sdkman.io" | bash
           source "$HOME/.sdkman/bin/sdkman-init.sh"
           echo 'n' | sdk install java ${{ matrix.java }}
-          which java
-          echo 'y' | sdk install java 11.0.31-tem
+          "${TEST_JAVA_HOME}/bin/java" -version
 
       - name: Cache Gradle
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
@@ -287,9 +334,39 @@ jobs:
         run: |
           ./gradlew --no-daemon --parallel --build-cache :btrace-agent:jar
 
+      - name: Verify target-JDK deprecation warning policy
+        run: |
+          DIST_DIR=$(find btrace-dist/build/resources/main -mindepth 1 -maxdepth 1 \
+            -type d -print -quit)
+          test -n "$DIST_DIR"
+          scripts/run-release-gate.sh jdk-warning-${{ matrix.java }} release-gate-logs -- \
+            scripts/verify-jdk-warning.sh \
+            --java-home "${TEST_JAVA_HOME}" \
+            --distribution "$DIST_DIR"
+
       - name: Run integration tests
         run: |
-          ./gradlew --no-daemon --parallel --build-cache -Pintegration :integration-tests:test
+          find btrace-dist/build/resources/main -path '*/libs/btrace.jar' -type f | grep -q .
+          scripts/run-release-gate.sh integration-${{ matrix.java }} release-gate-logs -- \
+            ./gradlew --no-daemon --parallel --build-cache \
+            -Pintegration :integration-tests:test
+
+      - name: Add filtered JDK-lane logs to summary
+        if: always()
+        run: |
+          shopt -s nullglob
+          for summary in release-gate-logs/*-summary.md; do
+            cat "$summary" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Upload JDK-lane release-gate logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-gate-jdk-${{ matrix.java }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: release-gate-logs/
 
       - name: Integration test reports
         if: always()
@@ -392,7 +469,7 @@ jobs:
 
       - name: Set up Java
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
         with:
           java-version: 11
           distribution: temurin
@@ -493,7 +570,64 @@ jobs:
           exit 1
 
   # ============================================================
-  # Job 5c: Update JBang catalog
+  # Job 5c: Publish Gradle plugins to the Gradle Plugin Portal
+  # ============================================================
+  publish-gradle-plugins:
+    name: Publish Gradle Plugins
+    needs: [prepare-release, wait-for-maven]
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run != true }}
+    steps:
+      - name: Checkout RC tag
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ env.RC_TAG }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Validate Plugin Portal publications
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+        run: |
+          ./gradlew -p btrace-gradle-plugin -PbtraceVersion=${{ inputs.release_version }} \
+            publishPlugins --validate-only --no-daemon
+
+      - name: Publish Plugin Portal artifacts
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+        run: |
+          ./gradlew -p btrace-gradle-plugin -PbtraceVersion=${{ inputs.release_version }} \
+            publishPlugins --no-daemon
+
+      - name: Verify Plugin Portal availability
+        run: |
+          mkdir -p plugin-portal-smoke
+          cat > plugin-portal-smoke/settings.gradle <<'EOF'
+          pluginManagement {
+            repositories { gradlePluginPortal() }
+          }
+          rootProject.name = 'btrace-plugin-portal-smoke'
+          EOF
+          cat > plugin-portal-smoke/build.gradle <<EOF
+          plugins {
+            id 'io.btrace.extension' version '${{ inputs.release_version }}'
+            id 'io.btrace.fat-agent' version '${{ inputs.release_version }}'
+          }
+          EOF
+          ./gradlew -p plugin-portal-smoke tasks --no-daemon
+          echo "Verified Plugin Portal IDs io.btrace.extension and io.btrace.fat-agent at ${{ inputs.release_version }}"
+
+  # ============================================================
+  # Job 5d: Update JBang catalog
   # ============================================================
   update-jbang-catalog:
     name: Update JBang Catalog
@@ -560,7 +694,7 @@ jobs:
   # ============================================================
   finalize-tag:
     name: Finalize Release Tag
-    needs: [prepare-release, wait-for-maven]
+    needs: [prepare-release, release-smoke]
     runs-on: ubuntu-latest
     if: ${{ inputs.dry_run != true }}
     steps:
@@ -617,7 +751,7 @@ jobs:
 
       - name: Set up Java
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
         with:
           java-version: 11
           distribution: temurin
@@ -634,9 +768,9 @@ jobs:
           VERSION="${{ inputs.release_version }}"
           sed -i "s/project.version = '.*'/project.version = '${VERSION}'/" common.gradle
 
-      - name: Build distribution packages
+      - name: Build distribution packages from a clean tree
         run: |
-          ./gradlew :btrace-dist:build --no-daemon
+          ./gradlew clean :btrace-dist:build --no-daemon
 
       - name: List artifacts
         run: |
@@ -654,6 +788,101 @@ jobs:
             btrace-dist/build/distributions/btrace-v${{ inputs.release_version }}-sdkman-bin.zip
             btrace-dist/build/distributions/*.deb
             btrace-dist/build/distributions/*.rpm
+
+  # ============================================================
+  # Job 6b: Acquisition paths and first-trace release smoke tests
+  # ============================================================
+  release-smoke:
+    name: Release Acquisition and First Trace
+    needs: [prepare-release, wait-for-maven, publish-gradle-plugins, update-jbang-catalog, build-distributions]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: ${{ inputs.dry_run != true }}
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ needs.prepare-release.outputs.release_sha }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Download release distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: release-distributions
+          path: release-distributions
+
+      - name: Extract binary distribution
+        run: |
+          mkdir -p release-candidate
+          unzip -q "release-distributions/btrace-v${RELEASE_VERSION}-bin.zip" -d release-candidate
+
+      - name: Build fat agent from the release commit
+        run: |
+          ./gradlew clean :btrace-dist:fatAgentJar :btrace-dist:explodeExtensions --no-daemon
+
+      - name: Download Maven release metadata
+        run: |
+          mkdir -p release-metadata
+          curl --fail --show-error --silent --retry 6 --retry-delay 10 \
+            "https://repo1.maven.org/maven2/io/btrace/btrace/${RELEASE_VERSION}/btrace-${RELEASE_VERSION}.pom" \
+            --output release-metadata/btrace.pom
+
+      - name: Build release container from the candidate distribution
+        run: |
+          mkdir -p release-container/btrace
+          cp -R release-candidate/. release-container/btrace/
+          cp docker/docker-entrypoint.sh release-container/
+          docker build \
+            --build-arg "BTRACE_VERSION=${RELEASE_VERSION}" \
+            --tag "btrace-release-smoke:${RELEASE_VERSION}" \
+            --file docker/Dockerfile \
+            release-container
+
+      - name: Verify archive, Maven, manifest, version, and container metadata
+        run: |
+          scripts/verify-release-artifacts.sh \
+            --distribution release-candidate \
+            --sdkman-archive "release-distributions/btrace-v${RELEASE_VERSION}-sdkman-bin.zip" \
+            --maven-pom release-metadata/btrace.pom \
+            --container-image "btrace-release-smoke:${RELEASE_VERSION}" \
+            --version "${RELEASE_VERSION}"
+
+      - name: Run built-distribution smoke matrix
+        run: |
+          TMPDIR="${RUNNER_TEMP}" scripts/release-smoke.sh \
+            --distribution release-candidate \
+            --fat-agent btrace-dist/build/resources/main/v${RELEASE_VERSION}/libs/btrace-agent-fat.jar \
+            --version "${RELEASE_VERSION}" \
+            --keep-work
+
+      - name: Verify Maven coordinate and JBang catalog alias
+        run: |
+          curl -Ls https://sh.jbang.dev | bash -s - app setup
+          export PATH="$HOME/.jbang/bin:$PATH"
+          jbang "io.btrace:btrace:${RELEASE_VERSION}" --version | tee jbang-coordinate.log
+          grep -F "${RELEASE_VERSION}" jbang-coordinate.log
+          jbang catalog add --name btraceio \
+            https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
+          jbang btrace@btraceio --version | tee jbang-catalog.log
+          grep -F "${RELEASE_VERSION}" jbang-catalog.log
+
+      - name: Upload release-smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-smoke-diagnostics
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/btrace-release-smoke.*/logs
+            jbang-*.log
 
   # ============================================================
   # Job 7: Create GitHub Release
@@ -677,7 +906,6 @@ jobs:
           path: distributions
 
       - name: Download Maven artifact
-        continue-on-error: true
         run: |
           VERSION="${{ inputs.release_version }}"
           BASE_URL="https://repo1.maven.org/maven2/io/btrace/btrace/${VERSION}"
@@ -693,7 +921,8 @@ jobs:
             echo "Attempt ${i}/${MAX_ATTEMPTS} failed, retrying in 30s..."
             sleep 30
           done
-          echo "::warning::Failed to download Maven JAR after ${MAX_ATTEMPTS} attempts (~20 minutes). GitHub release will proceed without it."
+          echo "::error::Failed to download Maven JAR after ${MAX_ATTEMPTS} attempts (~20 minutes)."
+          exit 1
 
       - name: Check for no-release-notes label
         id: check-label
@@ -705,7 +934,7 @@ jobs:
           echo "skip_notes=${SKIP_NOTES}" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -721,6 +950,23 @@ jobs:
             distributions/*.deb
             distributions/*.rpm
             maven-artifacts/*
+
+      - name: Verify GitHub release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name' \
+            | sort > github-release-assets.log
+          cat github-release-assets.log
+          for asset in \
+            "btrace-v${RELEASE_VERSION}-bin.tar.gz" \
+            "btrace-v${RELEASE_VERSION}-bin.zip" \
+            "btrace-v${RELEASE_VERSION}-sdkman-bin.zip" \
+            "btrace-${RELEASE_VERSION}.jar"; do
+            grep -Fx "$asset" github-release-assets.log
+          done
+          grep -E '\.deb$' github-release-assets.log
+          grep -E '\.rpm$' github-release-assets.log
 
   # ============================================================
   # Job 8: Update SDKMan
@@ -745,7 +991,7 @@ jobs:
 
       - name: Set up Java
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
         with:
           java-version: 11
           distribution: temurin
@@ -924,7 +1170,7 @@ jobs:
   # ============================================================
   summary:
     name: Release Summary
-    needs: [create-github-release, update-sdkman, update-milestones, update-jbang-catalog, finalize-tag]
+    needs: [validate, build-and-test, integration-tests, prepare-release, stage-maven, wait-for-maven, publish-gradle-plugins, update-jbang-catalog, build-distributions, release-smoke, finalize-tag, create-github-release, update-sdkman, update-milestones]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -978,6 +1224,9 @@ jobs:
           echo "| Prepare Release | ${{ needs.prepare-release.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Stage Maven | ${{ needs.stage-maven.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Wait for Maven | ${{ needs.wait-for-maven.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Publish Gradle Plugins | ${{ needs.publish-gradle-plugins.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Distributions | ${{ needs.build-distributions.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Release Smoke | ${{ needs.release-smoke.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Finalize Tag | ${{ needs.finalize-tag.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| GitHub Release | ${{ needs.create-github-release.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| SDKMan | ${{ needs.update-sdkman.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY

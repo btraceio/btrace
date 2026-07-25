@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.btrace.client.Client;
 import io.btrace.core.comm.Command;
@@ -97,27 +98,44 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnProbe() throws Exception {
-    if (Files.exists(Paths.get(javaHome, "jre"))) {
-      testDynamic(
-          "resources.Main",
-          "btrace/OnProbeTest.java",
-          Completion.untilContains("[this, noargs]", "[this, args]"),
-          new ResultValidator() {
-            @Override
-            public void validate(String stdout, String stderr, int retcode, String jfrFile) {
-              assertFalse(stdout.contains("FAILED"), "Script should not have failed");
-              assertTrue(stderr.isEmpty(), "Non-empty stderr");
-              assertTrue(stdout.contains("[this, noargs]"));
-              assertTrue(stdout.contains("[this, args]"));
-            }
-          });
-    } else {
-      System.err.println("XML libraries not available. Skipping @OnProbe tests");
-    }
+    assumeTrue(
+        hasJaxbProbeDescriptorSupport(),
+        "@OnProbe XML probe descriptors require javax.xml.bind.JAXBException/JAXB support, which is unavailable");
+    testDynamic(
+        "resources.Main",
+        "btrace/OnProbeTest.java",
+        Completion.untilContains("[this, noargs]", "[this, args]"),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+            assertTrue(stdout.contains("[this, noargs]"));
+            assertTrue(stdout.contains("[this, args]"));
+          }
+        });
+  }
+
+  @Test
+  public void testDynamicAttachWithShippedProtocolDefaults() throws Exception {
+    setClientProtocolSettings(2, true, false);
+    setAgentProtocolSettings(2, true, false);
+    testTimerProbe();
+  }
+
+  @Test
+  public void testDynamicAttachWithV1ClientAgainstV2Agent() throws Exception {
+    setClientProtocolSettings(1, false, true);
+    setAgentProtocolSettings(2, true, false);
+    testTimerProbe();
   }
 
   @Test
   public void testOnTimer() throws Exception {
+    testTimerProbe();
+  }
+
+  private void testTimerProbe() throws Exception {
     testDynamic(
         "resources.Main",
         "btrace/OnTimerTest.java",
@@ -125,6 +143,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertEquals(0, retcode, "Client should exit successfully");
             assertFalse(stdout.contains("FAILED"), "Script should not have failed");
             assertTrue(stderr.isEmpty(), "Non-empty stderr");
             assertTrue(stdout.contains("vm version"));

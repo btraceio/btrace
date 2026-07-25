@@ -303,9 +303,6 @@ abstract class Client implements CommandListener {
         log.debug("removing instrumentation");
         retransformLoaded();
         log.debug("closing all I/O");
-        // Send EXIT command to notify remote client before closing
-        sendCommand(new ExitCommand(exitCode));
-        Thread.sleep(300);
         try {
           closeAll();
         } catch (IOException e) {
@@ -319,7 +316,6 @@ abstract class Client implements CommandListener {
           BTraceRuntime.handleException(th);
         }
       } finally {
-        runtime.shutdownCmdLine();
         CLIENTS.remove(id);
       }
     }
@@ -530,6 +526,12 @@ abstract class Client implements CommandListener {
 
   final BTraceRuntime.Impl getRuntime() {
     return runtime;
+  }
+
+  // Package-private test seam. Remote transport tests need to drive the actual reader loop with a
+  // small runtime proxy, without loading/instrumenting a probe just to exercise wire ordering.
+  final void setRuntimeForTest(BTraceRuntime.Impl runtime) {
+    this.runtime = runtime;
   }
 
   final String getClassName() {

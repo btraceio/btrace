@@ -254,19 +254,13 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
       // initialize the class by creating a dummy instance
       clz.getConstructor().newInstance();
       return clz;
-    } catch (IllegalAccessException
-        | ClassNotFoundException
-        | NoSuchMethodException
-        | SecurityException
-        | InstantiationException
-        | InvocationTargetException e) {
-      Throwable root =
-          e instanceof InvocationTargetException
-              ? ((InvocationTargetException) e).getTargetException()
-              : e;
-      throw new IllegalStateException(
-          "BTrace probe defineClass failed on JDK " + Runtime.version().feature(), root);
+    } catch (Throwable failure) {
+      throw definitionFailureForTest(failure);
     }
+  }
+
+  static IllegalStateException definitionFailureForTest(Throwable failure) {
+    return DefineClassSupport.failure("Java 11 runtime", failure);
   }
 
   @Override

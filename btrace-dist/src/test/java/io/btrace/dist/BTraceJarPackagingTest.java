@@ -22,6 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import org.junit.jupiter.api.Test;
@@ -49,5 +52,51 @@ class BTraceJarPackagingTest {
       Attributes attributes = jarFile.getManifest().getMainAttributes();
       assertEquals("io.btrace.boot.Loader", attributes.getValue("Main-Class"));
     }
+  }
+
+  @Test
+  void packagesOnlyMaintainedExtensions() {
+    Set<String> expected =
+        new HashSet<>(
+            Arrays.asList(
+                "btrace-contracts",
+                "btrace-gpu-bridge",
+                "btrace-llm-trace",
+                "btrace-metrics",
+                "btrace-rag-quality",
+                "btrace-statsd",
+                "btrace-utils"));
+    File extensionsDir = getExtensionsDir();
+
+    File[] archives = extensionsDir.listFiles(file -> file.getName().endsWith("-extension.zip"));
+    assertNotNull(archives, "Expected packaged extension archives");
+    assertEquals(expected.size(), archives.length, "Unexpected number of packaged extensions");
+    Set<String> packaged = new HashSet<>();
+    for (File archive : archives) {
+      for (String extension : expected) {
+        if (archive.getName().startsWith(extension + "-")) {
+          packaged.add(extension);
+        }
+      }
+    }
+    assertEquals(expected, packaged, "Unexpected packaged extension archives");
+
+    File[] exploded = extensionsDir.listFiles(File::isDirectory);
+    assertNotNull(exploded, "Expected exploded extension directories");
+    Set<String> explodedNames = new HashSet<>();
+    for (File extension : exploded) {
+      explodedNames.add(extension.getName());
+    }
+    assertEquals(expected, explodedNames, "Unexpected exploded extensions");
+  }
+
+  private static File getExtensionsDir() {
+    File resourcesDir = new File("build/resources/main");
+    File[] versionDirs = resourcesDir.listFiles(File::isDirectory);
+    assertNotNull(versionDirs, "Expected versioned dist directory under build/resources/main");
+    assertEquals(1, versionDirs.length, "Expected exactly one versioned dist directory");
+    File extensionsDir = new File(versionDirs[0], "extensions");
+    assertTrue(extensionsDir.isDirectory(), "Expected assembled extensions directory to exist");
+    return extensionsDir;
   }
 }

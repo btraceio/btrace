@@ -1,7 +1,11 @@
+import org.gradle.api.tasks.bundling.Jar
+
 plugins {
     id 'groovy'
     id 'java-gradle-plugin'
     id 'maven-publish'
+    id 'signing'
+    id 'com.gradle.plugin-publish' version '2.0.0'
 }
 
 java {
@@ -11,7 +15,8 @@ java {
 }
 
 group = project.findProperty('GROUP') ?: (rootProject.group ?: 'io.btrace')
-version = rootProject.version
+def requestedBTraceVersion = providers.gradleProperty('btraceVersion').orNull
+version = requestedBTraceVersion ?: '0.0.0-local'
 
 repositories {
     gradlePluginPortal()
@@ -25,18 +30,28 @@ dependencies {
     implementation 'org.ow2.asm:asm:9.9.1'
     implementation 'org.ow2.asm:asm-tree:9.9.1'
 
-    // Testing — version pinned here to match the root project's version catalog (settings.gradle).
-    // Note: this is an included build and cannot access the root project's 'libs' version catalog.
+    // This is an included build and cannot access the root version catalog. Keep its tests on the
+    // last Java 8-compatible JUnit line; the production plugin remains Java 11-compatible.
     testImplementation gradleTestKit()
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.14.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 test {
+    // Gradle 9 TestKit cannot start its nested build from a Java 11 test worker.
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
     useJUnitPlatform()
+    // Gradle 9 TestKit launches nested builds and requires a Java 17+ runtime.
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 gradlePlugin {
+    website = 'https://github.com/btraceio/btrace'
+    vcsUrl = 'https://github.com/btraceio/btrace.git'
     plugins {
         btraceExtension {
             id = 'io.btrace.extension'
@@ -53,7 +68,47 @@ gradlePlugin {
     }
 }
 
+tasks.named('jar', Jar) {
+    manifest {
+        attributes('Implementation-Version': project.version)
+    }
+}
+
+def validatePublicationVersion = {
+    if (requestedBTraceVersion == null ||
+            !(requestedBTraceVersion ==~ /[0-9]+\.[0-9]+\.[0-9]+/)) {
+        throw new GradleException(
+                'Publishing BTrace Gradle plugins requires -PbtraceVersion=<concrete X.Y.Z release version>.')
+    }
+}
+
+def signingKey = System.getenv('GPG_SIGNING_KEY')
+def signingPassword = System.getenv('GPG_SIGNING_PWD')
+if (signingKey != null && !signingKey.trim().isEmpty()) {
+    signing {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+        sign publishing.publications
+    }
+} else {
+    tasks.matching { it.name.startsWith('sign') }.configureEach {
+        onlyIf { false }
+    }
+}
+
+tasks.matching { it.name.startsWith('publish') }.configureEach {
+    doFirst(validatePublicationVersion)
+}
+
 publishing {
+    def publicationRepository = providers.gradleProperty('publicationRepository').orNull
+    if (publicationRepository != null) {
+        repositories {
+            maven {
+                name = 'external'
+                url = uri(publicationRepository)
+            }
+        }
+    }
     publications {
         // java-gradle-plugin will add pluginMaven and marker publications automatically.
         // This block allows publishing to local/remote Maven repositories.

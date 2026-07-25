@@ -71,3 +71,10 @@ jar {
         from sourceSets.java11.output
     }
 }
+
+tasks.named('test') {
+    dependsOn tasks.named('compileJava9Java'), tasks.named('compileJava11Java')
+    classpath = classpath.plus(files(
+        sourceSets.java9.output.classesDirs,
+        sourceSets.java11.output.classesDirs))
+}

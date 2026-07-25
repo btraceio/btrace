@@ -9,8 +9,14 @@ plugins {
     id 'io.btrace.fat-agent' version '3.0.0'
 }
 
+repositories {
+    mavenCentral()
+}
+
 btraceFatAgent {
     baseName = 'demo-btrace-agent'
+    // The public masked engine used when this is not an in-tree BTrace build.
+    btraceVersion = '3.0.0'
 
     embedExtensions {
         // Points at the btrace-metrics extension zip you built in Step 1.

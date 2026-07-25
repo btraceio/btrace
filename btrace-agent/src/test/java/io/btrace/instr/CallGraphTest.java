@@ -74,4 +74,13 @@ class CallGraphTest {
 
     assertTrue(callGraph.hasCycle());
   }
+
+  @Test
+  void hasCycleForHandlerSelfLoop() {
+    CallGraph callGraph = new CallGraph();
+    callGraph.addStarting("handler");
+    callGraph.addEdge("handler", "handler");
+
+    assertTrue(callGraph.hasCycle());
+  }
 }

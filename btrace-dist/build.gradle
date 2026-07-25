@@ -226,14 +226,18 @@ task prepareClientClassdata(type: Copy) {
         include 'io/btrace/client/**/*.class'
         include 'io/btrace/extcli/**/*.class'
         include 'io/btrace/compiler/**/*.class'
+        // btracec emits persisted probe packs through InstrPackGenerator. Keep its implementation
+        // and non-bootstrap dependencies visible to the client masked classloader.
+        include 'io/btrace/instr/**/*.class'
+        include 'io/btrace/runtime/**/*.class'
+        include 'io/btrace/extension/**/*.class'
         include 'io/btrace/libs/org/objectweb/asm/**/*.class'
         include 'io/btrace/libs/org/jctools/**/*.class'
         include 'io/btrace/libs/org/slf4j/**/*.class'
         include 'com/googlecode/lanterna/**/*.class'
-        // Exclude classes that are in bootstrap or shared
+        // Core classes are supplied by the bootstrap/shared sections. Runtime and extension
+        // classes are intentionally retained here for the compiler-side probe-pack generator.
         exclude 'io/btrace/core/**'
-        exclude 'io/btrace/runtime/**'
-        exclude 'io/btrace/extension/**'
         exclude 'META-INF/**'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
@@ -511,21 +515,23 @@ task copyExtensions(type: Copy) {
     into "${distTarget}/extensions/"
 }
 
-// Copy the btracex CLI shaded jar into libs
+def releaseExtensionProjects = [
+    ':btrace-extensions:btrace-contracts',
+    ':btrace-extensions:btrace-gpu-bridge',
+    ':btrace-extensions:btrace-llm-trace',
+    ':btrace-extensions:btrace-metrics',
+    ':btrace-extensions:btrace-rag-quality',
+    ':btrace-extensions:btrace-statsd',
+    ':btrace-extensions:btrace-utils'
+]
 
-// Discover all extension subprojects and wire copyExtensions dynamically to avoid hard-coded paths
 gradle.projectsEvaluated {
-    def extProjects = rootProject.subprojects.findAll { it.plugins.hasPlugin('io.btrace.extension') }
-    if (extProjects.isEmpty()) {
-        logger.lifecycle("[btrace-dist] No BTrace extension projects found. Skipping extension packaging.")
-    } else {
-        tasks.named('copyExtensions').configure { t ->
-            extProjects.each { sp ->
-                // Depend on packaging task and copy any *-extension.zip from its distributions folder
-                t.dependsOn("${sp.path}:packageExtension")
-                t.from(sp.layout.buildDirectory.dir('distributions')) {
-                    include "*-extension.zip"
-                }
+    tasks.named('copyExtensions').configure { t ->
+        releaseExtensionProjects.each { extensionProjectPath ->
+            def extensionProject = project(extensionProjectPath)
+            t.dependsOn("${extensionProjectPath}:packageExtension")
+            t.from(extensionProject.layout.buildDirectory.dir('distributions')) {
+                include "*-extension.zip"
             }
         }
     }
@@ -561,6 +567,10 @@ task explodeExtensions {
     }
 }
 
+tasks.named('test').configure {
+    dependsOn explodeExtensions
+}
+
 task buildZip(type: Zip) {
     dependsOn btraceJar, fixPermissions, explodeExtensions
     from "${distTarget}"
@@ -573,7 +583,9 @@ task buildZip(type: Zip) {
 }
 
 task buildSdkmanZip(type: Zip) {
-    from "${distBase}"
+    // SDKMAN installs the extracted archive as the candidate home. Keep bin/ and libs/ at the
+    // archive root; an extra v<version>/ directory makes the installed candidate unusable.
+    from "${distTarget}"
     include "**/*"
 
     archiveBaseName.set('btrace')
@@ -631,6 +643,8 @@ buildDeb {
 }
 
 copyDtraceLib.dependsOn project(':btrace-dtrace').build
+fatAgentJar.mustRunAfter copyDtraceLib
+buildSdkmanZip.mustRunAfter fatAgentJar
 shadowJar.dependsOn btraceJar, copyDtraceLib, copyExtensions
 buildTgz.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
 buildZip.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
@@ -638,6 +652,19 @@ buildSdkmanZip.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResour
 buildDeb.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
 buildRpm.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
 build.dependsOn buildSdkmanZip, buildZip, buildTgz, buildDeb, buildRpm
+
+task releaseSmoke(type: Exec) {
+    group = 'Verification'
+    description = 'Run acquisition and first-trace smoke tests against the built distribution'
+    dependsOn btraceJar, fatAgentJar, fixPermissions, explodeExtensions
+
+    workingDir rootProject.projectDir
+    commandLine 'bash',
+            rootProject.file('scripts/release-smoke.sh'),
+            '--distribution', distTarget,
+            '--fat-agent', new File(libsDir, 'btrace-agent-fat.jar'),
+            '--version', project.version
+}
 
 // Docker build tasks
 task buildDockerContext(type: Copy, dependsOn: [btraceJar, copyDtraceLib, processResources, fixPermissions]) {
