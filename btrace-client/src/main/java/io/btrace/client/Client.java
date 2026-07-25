@@ -803,7 +803,7 @@ public class Client {
       agentArgs += "," + Args.SYSTEM_CLASS_PATH + "=" + sysCp;
       String cmdQueueLimit = System.getProperty(BTraceRuntime.CMD_QUEUE_LIMIT_KEY, null);
       if (cmdQueueLimit != null) {
-        agentArgs += ",=" + Args.CMD_QUEUE_LIMIT + cmdQueueLimit;
+        agentArgs += "," + Args.CMD_QUEUE_LIMIT + "=" + cmdQueueLimit;
       }
       agentArgs += "," + Args.PROBE_DESC_PATH + "=" + probeDescPath;
 
