@@ -34,6 +34,15 @@ class ClientContext {
 
   ClientContext(
       Instrumentation instr, BTraceTransformer transformer, ArgsMap args, SharedSettings settings) {
+    // A client's SET_PARAMS command mutates these settings in place, so a context must never be
+    // built on the agent-wide instance: that would let one client's debug/dumpDir/outputFile,
+    // granted permissions and non-downgradable `trusted` flag leak into every other client and
+    // into the global transformer. Seed a per-client copy with Main#newClientSettings instead.
+    if (settings == SharedSettings.GLOBAL) {
+      throw new IllegalArgumentException(
+          "ClientContext must not share SharedSettings.GLOBAL; use Main#newClientSettings(..)"
+              + " to seed an isolated per-client copy");
+    }
     this.instr = instr;
     this.transformer = transformer;
     this.args = args;
