@@ -37,6 +37,9 @@ import tests.harness.Completion;
 class Issue884PublishedFatAgentE2ETest {
   private static final String VERSION = "3.0.0";
 
+  /** Must match the ASM version the Gradle plugin declares in {@code btrace-gradle-plugin}. */
+  private static final String ASM_VERSION = "9.9.1";
+
   @TempDir Path temporaryDirectory;
 
   @BeforeAll
@@ -103,10 +106,8 @@ class Issue884PublishedFatAgentE2ETest {
 
     publishPluginArtifacts(root, repository);
     publishArtifact(repository, "io/btrace", "btrace", VERSION, engineJar);
-    publishDependency(
-        repository, "org.ow2.asm", "asm", root, "2ceea6ab43bcae1979b2a6d85fc0ca429877e5ab");
-    publishDependency(
-        repository, "org.ow2.asm", "asm-tree", root, "b6b1b3366296163b4b1f540731aad0a2baa484d8");
+    publishDependency(repository, "org.ow2.asm", "asm", ASM_VERSION);
+    publishDependency(repository, "org.ow2.asm", "asm-tree", ASM_VERSION);
   }
 
   private void publishPluginArtifacts(Path root, Path repository) throws Exception {
@@ -138,26 +139,11 @@ class Issue884PublishedFatAgentE2ETest {
         StandardCharsets.UTF_8);
   }
 
-  private void publishDependency(
-      Path repository, String group, String artifact, Path root, String cacheHash)
+  private void publishDependency(Path repository, String group, String artifact, String version)
       throws IOException {
-    String version = "9.9.1";
-    Path source =
-        root.resolve(
-            ".gradle-user/caches/modules-2/files-2.1/"
-                + group
-                + "/"
-                + artifact
-                + "/"
-                + version
-                + "/"
-                + cacheHash
-                + "/"
-                + artifact
-                + "-"
-                + version
-                + ".jar");
-    assertTrue(Files.isRegularFile(source), "missing cached dependency: " + source);
+    Path source = locateCachedArtifact(group, artifact, version);
+    assertTrue(
+        source != null, "missing cached dependency: " + group + ":" + artifact + ":" + version);
     Path directory = repository.resolve(group.replace('.', '/')).resolve(artifact).resolve(version);
     Files.createDirectories(directory);
     Files.copy(source, directory.resolve(artifact + "-" + version + ".jar"));
@@ -165,6 +151,36 @@ class Issue884PublishedFatAgentE2ETest {
         directory.resolve(artifact + "-" + version + ".pom"),
         pom(group, artifact, version, ""),
         StandardCharsets.UTF_8);
+  }
+
+  /**
+   * Locates a resolved dependency JAR inside the active Gradle dependency cache. The cache lives
+   * under {@code GRADLE_USER_HOME} (falling back to {@code ~/.gradle}); the per-artifact SHA-1
+   * subdirectory is discovered rather than hard-coded so the lookup survives cache-layout details.
+   */
+  private Path locateCachedArtifact(String group, String artifact, String version)
+      throws IOException {
+    String gradleUserHome = System.getenv("GRADLE_USER_HOME");
+    Path base =
+        (gradleUserHome != null && !gradleUserHome.isEmpty())
+            ? Paths.get(gradleUserHome)
+            : Paths.get(System.getProperty("user.home"), ".gradle");
+    Path moduleDirectory =
+        base.resolve("caches/modules-2/files-2.1")
+            .resolve(group)
+            .resolve(artifact)
+            .resolve(version);
+    if (!Files.isDirectory(moduleDirectory)) {
+      return null;
+    }
+    String fileName = artifact + "-" + version + ".jar";
+    try (java.util.stream.Stream<Path> entries = Files.walk(moduleDirectory)) {
+      return entries
+          .filter(path -> path.getFileName().toString().equals(fileName))
+          .filter(Files::isRegularFile)
+          .findFirst()
+          .orElse(null);
+    }
   }
 
   private String pom(String group, String artifact, String version, String extra) {
