@@ -103,6 +103,9 @@ jobs:
         java: [ 8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem, 25.0.3-tem, 27.ea.31-open ]
     env:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
+      # Runners are ephemeral, so the Testcontainers Ryuk reaper is unnecessary. Disabling it
+      # removes a Docker Hub image pull that intermittently times out and fails Docker-based tests.
+      TESTCONTAINERS_RYUK_DISABLED: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7

@@ -275,6 +275,9 @@ jobs:
         java: [8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem, 25.0.3-tem, 27.ea.31-open]
     env:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
+      # Runners are ephemeral, so the Testcontainers Ryuk reaper is unnecessary. Disabling it
+      # removes a Docker Hub image pull that intermittently times out and fails Docker-based tests.
+      TESTCONTAINERS_RYUK_DISABLED: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -567,7 +570,64 @@ jobs:
           exit 1
 
   # ============================================================
-  # Job 5c: Update JBang catalog
+  # Job 5c: Publish Gradle plugins to the Gradle Plugin Portal
+  # ============================================================
+  publish-gradle-plugins:
+    name: Publish Gradle Plugins
+    needs: [prepare-release, wait-for-maven]
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run != true }}
+    steps:
+      - name: Checkout RC tag
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ env.RC_TAG }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Validate Plugin Portal publications
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+        run: |
+          ./gradlew -p btrace-gradle-plugin -PbtraceVersion=${{ inputs.release_version }} \
+            publishPlugins --validate-only --no-daemon
+
+      - name: Publish Plugin Portal artifacts
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+        run: |
+          ./gradlew -p btrace-gradle-plugin -PbtraceVersion=${{ inputs.release_version }} \
+            publishPlugins --no-daemon
+
+      - name: Verify Plugin Portal availability
+        run: |
+          mkdir -p plugin-portal-smoke
+          cat > plugin-portal-smoke/settings.gradle <<'EOF'
+          pluginManagement {
+            repositories { gradlePluginPortal() }
+          }
+          rootProject.name = 'btrace-plugin-portal-smoke'
+          EOF
+          cat > plugin-portal-smoke/build.gradle <<EOF
+          plugins {
+            id 'io.btrace.extension' version '${{ inputs.release_version }}'
+            id 'io.btrace.fat-agent' version '${{ inputs.release_version }}'
+          }
+          EOF
+          ./gradlew -p plugin-portal-smoke tasks --no-daemon
+          echo "Verified Plugin Portal IDs io.btrace.extension and io.btrace.fat-agent at ${{ inputs.release_version }}"
+
+  # ============================================================
+  # Job 5d: Update JBang catalog
   # ============================================================
   update-jbang-catalog:
     name: Update JBang Catalog
@@ -734,7 +794,7 @@ jobs:
   # ============================================================
   release-smoke:
     name: Release Acquisition and First Trace
-    needs: [prepare-release, wait-for-maven, update-jbang-catalog, build-distributions]
+    needs: [prepare-release, wait-for-maven, publish-gradle-plugins, update-jbang-catalog, build-distributions]
     runs-on: ubuntu-latest
     timeout-minutes: 25
     if: ${{ inputs.dry_run != true }}
@@ -1110,7 +1170,7 @@ jobs:
   # ============================================================
   summary:
     name: Release Summary
-    needs: [validate, build-and-test, integration-tests, prepare-release, stage-maven, wait-for-maven, update-jbang-catalog, build-distributions, release-smoke, finalize-tag, create-github-release, update-sdkman, update-milestones]
+    needs: [validate, build-and-test, integration-tests, prepare-release, stage-maven, wait-for-maven, publish-gradle-plugins, update-jbang-catalog, build-distributions, release-smoke, finalize-tag, create-github-release, update-sdkman, update-milestones]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -1164,6 +1224,7 @@ jobs:
           echo "| Prepare Release | ${{ needs.prepare-release.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Stage Maven | ${{ needs.stage-maven.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Wait for Maven | ${{ needs.wait-for-maven.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Publish Gradle Plugins | ${{ needs.publish-gradle-plugins.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Build Distributions | ${{ needs.build-distributions.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Release Smoke | ${{ needs.release-smoke.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Finalize Tag | ${{ needs.finalize-tag.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY

@@ -134,6 +134,37 @@ class BTraceExtensionPluginTest {
     }
 
     @Test
+    @DisplayName("external builds use the explicitly pinned public BTrace distribution")
+    void externalBuildUsesPinnedBTraceDistribution() throws IOException {
+        writeFile(settingsFile, "rootProject.name = 'external-extension'\n");
+        writeFile(
+                rootBuildFile,
+                "plugins { id 'io.btrace.extension' }\n"
+                        + "version = '9.9.9'\n"
+                        + "btraceExtension { btraceVersion = '3.0.0' }\n"
+                        + "tasks.register('printProcessor') { doLast {\n"
+                        + "  configurations.annotationProcessor.dependencies.each { println \"PROCESSOR=${it.group}:${it.name}:${it.version}\" }\n"
+                        + "} }\n");
+
+        BuildResult result = createRunner().withArguments("printProcessor").build();
+
+        assertTrue(result.getOutput().contains("PROCESSOR=io.btrace:btrace:3.0.0"));
+        assertFalse(result.getOutput().contains("btrace-core"));
+    }
+
+    @Test
+    @DisplayName("external builds require an explicit BTrace version without a published plugin JAR")
+    void externalBuildWithoutBTraceVersionFailsClearly() throws IOException {
+        writeFile(settingsFile, "rootProject.name = 'external-extension'\n");
+        writeFile(rootBuildFile, "plugins { id 'io.btrace.extension' }\n");
+
+        BuildResult result = createRunner().withArguments("tasks").buildAndFail();
+
+        assertTrue(result.getOutput().contains("btraceExtension.btraceVersion"));
+        assertTrue(result.getOutput().contains("concrete BTrace release version"));
+    }
+
+    @Test
     @DisplayName("published API source and javadoc artifacts stay API-only")
     void apiPublicationsStayApiOnly() throws IOException {
         writeExtensionProject();

@@ -17,7 +17,7 @@ import org.gradle.api.file.FileCollection
  *
  *     embedExtensions {
  *         project(':btrace-spark')
- *         maven('io.btrace:btrace-kafka:2.3.0')
+ *         file('/path/to/btrace-kafka-extension.zip')
  *         file('/path/to/extension.zip')
  *     }
  *
@@ -35,6 +35,9 @@ class BTraceFatAgentExtension {
     /** Output JAR base name (default: 'btrace-agent-fat') */
     String baseName = 'btrace-agent-fat'
 
+    /** Version of the public io.btrace:btrace distribution used to compile source probes. */
+    String btraceVersion
+
     /** Output directory (default: project.layout.buildDirectory.dir('libs')) */
     File outputDir
 
@@ -47,7 +50,10 @@ class BTraceFatAgentExtension {
     /** Reference to the task producing the masked BTrace JAR (normally btraceJar). */
     Object agentJarTask
 
-    /** Legacy reference to a separate boot JAR task. Prefer a single masked btraceJar. */
+    /**
+     * Legacy reference to a separate boot JAR task. This is unsupported because a fat agent must
+     * be assembled from one masked BTrace engine; use {@link #agentJarTask} or btraceEngine.
+     */
     Object bootJarTask
 
     /** Whether to auto-discover extensions from subprojects (default: false) */
