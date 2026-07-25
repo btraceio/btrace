@@ -23,6 +23,7 @@ import io.btrace.boot.MaskedJarUtils;
 import io.btrace.compiler.Compiler;
 import io.btrace.core.Args;
 import io.btrace.core.BTraceRuntime;
+import io.btrace.core.JavaVersionCheck;
 import io.btrace.core.SharedSettings;
 import io.btrace.core.annotations.DTrace;
 import io.btrace.core.annotations.DTraceRef;
@@ -211,21 +212,21 @@ public class Client {
    */
   private static void warnIfDeprecatedTargetJvm(String pid, String targetJavaVersion) {
     try {
-      int featureVersion = io.btrace.core.JavaVersionCheck.parseFeatureVersion(targetJavaVersion);
-      if (io.btrace.core.JavaVersionCheck.isDeprecated(featureVersion)
-          && !Boolean.getBoolean(io.btrace.core.JavaVersionCheck.SUPPRESS_PROP)) {
+      int featureVersion = JavaVersionCheck.parseFeatureVersion(targetJavaVersion);
+      if (JavaVersionCheck.isDeprecated(featureVersion)
+          && !Boolean.getBoolean(JavaVersionCheck.SUPPRESS_PROP)) {
         System.err.println(
             "[BTrace] WARNING: The target JVM (PID "
                 + pid
                 + ") is Java "
                 + featureVersion
                 + ". Running BTrace on Java versions older than "
-                + io.btrace.core.JavaVersionCheck.DEPRECATION_FLOOR
+                + JavaVersionCheck.DEPRECATION_FLOOR
                 + " is deprecated and support will be removed in the next major release. "
                 + "Please upgrade the target JVM to Java "
-                + io.btrace.core.JavaVersionCheck.DEPRECATION_FLOOR
+                + JavaVersionCheck.DEPRECATION_FLOOR
                 + " or newer. Suppress this warning with -D"
-                + io.btrace.core.JavaVersionCheck.SUPPRESS_PROP
+                + JavaVersionCheck.SUPPRESS_PROP
                 + "=true.");
       }
     } catch (Throwable ignored) {

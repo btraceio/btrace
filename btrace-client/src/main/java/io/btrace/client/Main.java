@@ -22,6 +22,7 @@ import io.btrace.compiler.oneliner.OnelinerException;
 import io.btrace.compiler.oneliner.OnelinerParser;
 import io.btrace.compiler.oneliner.OnelinerValidator;
 import io.btrace.core.DebugSupport;
+import io.btrace.core.JavaVersionCheck;
 import io.btrace.core.Messages;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.CommandListener;
@@ -32,9 +33,6 @@ import java.io.Console;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
@@ -84,28 +82,23 @@ public final class Main {
       if (log.isDebugEnabled()) log.debug("dumpDir is {}", DUMP_DIR);
     }
     PROBE_DESC_PATH = System.getProperty("com.sun.btrace.probeDescPath", ".");
-    String javaVersion = getJavaVersion();
-    // In Java 22 the console will write standard output to stderr :shrug:
-    con = javaVersion == null || !javaVersion.startsWith("22") ? System.console() : null;
+    con = suppressConsole(JavaVersionCheck.javaFeatureVersion()) ? null : System.console();
     out = getOutWriter(con);
   }
 
-  private static String getJavaVersion() {
-    String javaHome = System.getenv("JAVA_HOME");
-    if (javaHome == null || javaHome.trim().isEmpty()) {
-      // Fall back to the JVM the client itself is running on; JAVA_HOME is not required to be set.
-      javaHome = System.getProperty("java.home");
-    }
-    if (javaHome == null || javaHome.trim().isEmpty()) {
-      return null;
-    }
-    Properties props = new Properties();
-    try {
-      props.load(Files.newInputStream(Paths.get(javaHome, "release")));
-      return props.getProperty("JAVA_VERSION").replace("\"", "");
-    } catch (IOException ignored) {
-      return null;
-    }
+  /**
+   * Whether {@link System#console()} must be bypassed on the given Java feature version.
+   *
+   * <p>Java 22's console writes standard output to stderr, so the client falls back to {@link
+   * System#out} there. The version that matters is the one of the JVM running this client - not
+   * {@code JAVA_HOME}, which need not point at it - so this is decided from {@code
+   * java.specification.version} rather than by reading a {@code release} file off disk.
+   *
+   * @param featureVersion a Java feature version, or {@code -1} when it can not be determined
+   * @return {@code true} to bypass the console
+   */
+  static boolean suppressConsole(int featureVersion) {
+    return featureVersion == 22;
   }
 
   @SuppressWarnings("DefaultCharset")
