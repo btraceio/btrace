@@ -245,7 +245,7 @@ btracex inspect btrace-metrics
 Extension: btrace-metrics
 Version  : 3.0.0-SNAPSHOT
 Privileged: true
-Required : [THREADS]
+Required : [CLASSLOADER,REFLECTION,THREADS]
 Services : io.btrace.metrics.MetricsService
 ```
 

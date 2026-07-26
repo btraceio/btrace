@@ -36,7 +36,7 @@ execution time: 331 ms
 | 0:44–0:46 | `Ctrl+C` quickly (tutorial notes this repeats fast) | " " |
 | 0:46–0:56 | Run `btrace -le <NEW_PID>`; output shows `Failed Extensions: 1. btrace-metrics: Blocked by policy (denyExtensions)` | "`-le`: ask BTrace what got blocked, and why" |
 | 0:56–0:66 | Run `btracex list`; one line with `[PRIV]` appears | "`btracex list`: what's installed — no JVM needed" |
-| 0:66–0:76 | Run `btracex inspect btrace-metrics`; manifest details print (`Privileged: true`, `Required: [THREADS]`) | "`btracex inspect`: read any extension's manifest" |
+| 0:66–0:76 | Run `btracex inspect btrace-metrics`; manifest details print (`Privileged: true`, `Required: [CLASSLOADER,REFLECTION,THREADS]`) | "`btracex inspect`: read any extension's manifest" |
 | 0:76–0:84 | Run `btracex policy print`; current policy file contents print | "`btracex policy print`: what's actually allowed right now" |
 | 0:84–0:90 | Run `btracex policy set --allowExtensions btrace-metrics`; `Policy saved to ...` prints | "`btracex policy set`: flip it back, the supported way" |
 

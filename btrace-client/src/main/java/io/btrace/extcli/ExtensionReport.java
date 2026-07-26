@@ -16,8 +16,6 @@
  */
 package io.btrace.extcli;
 
-import io.btrace.core.extensions.ExtensionMeta;
-import io.btrace.core.extensions.Permission;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -34,7 +32,6 @@ final class ExtensionReport {
   final String version;
   final boolean privileged;
   final Set<String> services;
-  final List<ExtensionMeta> metas;
   final List<String> requiredPermNames;
 
   private ExtensionReport(
@@ -44,7 +41,6 @@ final class ExtensionReport {
       String version,
       boolean privileged,
       Set<String> services,
-      List<ExtensionMeta> metas,
       List<String> requiredPermNames) {
     this.ok = ok;
     this.message = message;
@@ -52,7 +48,6 @@ final class ExtensionReport {
     this.version = version;
     this.privileged = privileged;
     this.services = services;
-    this.metas = metas;
     this.requiredPermNames =
         requiredPermNames != null ? requiredPermNames : Collections.emptyList();
   }
@@ -62,34 +57,18 @@ final class ExtensionReport {
       String version,
       boolean privileged,
       Set<String> services,
-      List<ExtensionMeta> metas,
       List<String> requiredPermNames) {
-    return new ExtensionReport(
-        true, "", id, version, privileged, services, metas, requiredPermNames);
+    return new ExtensionReport(true, "", id, version, privileged, services, requiredPermNames);
   }
 
   static ExtensionReport error(String msg) {
     return new ExtensionReport(
-        false,
-        msg,
-        "",
-        "",
-        false,
-        Collections.emptySet(),
-        Collections.emptyList(),
-        Collections.emptyList());
+        false, msg, "", "", false, Collections.emptySet(), Collections.emptyList());
   }
 
   public String toString() {
     if (!ok) return "ERROR: " + message;
     LinkedHashSet<String> permNames = new LinkedHashSet<>(requiredPermNames);
-    if (metas != null) {
-      for (ExtensionMeta m : metas) {
-        for (Permission p : m.getRequiredPermissions()) {
-          permNames.add(p.name());
-        }
-      }
-    }
     String perms = permNames.stream().sorted().collect(Collectors.joining(","));
     return String.join(
         "\n",
@@ -109,13 +88,6 @@ final class ExtensionReport {
     obj.put("privileged", privileged);
     obj.put("services", new ArrayList<>(services));
     LinkedHashSet<String> pset = new LinkedHashSet<>(requiredPermNames);
-    if (metas != null) {
-      for (ExtensionMeta m : metas) {
-        for (Permission p : m.getRequiredPermissions()) {
-          pset.add(p.name());
-        }
-      }
-    }
     obj.put("requiredPermissions", new ArrayList<>(pset));
     return toJson(obj);
   }

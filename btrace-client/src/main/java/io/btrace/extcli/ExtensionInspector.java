@@ -16,8 +16,6 @@
  */
 package io.btrace.extcli;
 
-import io.btrace.core.extensions.Extension;
-import io.btrace.core.extensions.ExtensionMeta;
 import io.btrace.core.extensions.Permission;
 import java.io.IOException;
 import java.io.InputStream;
@@ -84,18 +82,7 @@ final class ExtensionInspector {
   }
 
   private static ExtensionReport inspectJars(String id, Path api, Path impl) throws IOException {
-    List<ExtensionMeta> metas = loadMetasWithoutInstantiating(api, impl);
-    boolean privileged = false;
-    for (ExtensionMeta m : metas) {
-      for (Permission pperm : m.getRequiredPermissions()) {
-        if (pperm.isPrivileged()) {
-          privileged = true;
-          break;
-        }
-      }
-      if (privileged) break;
-    }
-    Set<String> services = readServices(impl);
+    Set<String> services = readServices(api);
     String version = readVersionFromJar(api);
     if (version == null || version.isEmpty()) {
       // Fallback: parse from API jar filename, e.g., <id>-<version>-api.jar
@@ -108,14 +95,6 @@ final class ExtensionInspector {
     if (!implPerms.isEmpty()) {
       LinkedHashSet<String> merged = new LinkedHashSet<>(requiredPerms);
       merged.addAll(implPerms);
-      requiredPerms = new ArrayList<>(merged);
-    }
-    // Also merge any extension-level permissions from package-level @ExtensionDescriptor
-    if (metas != null) {
-      LinkedHashSet<String> merged = new LinkedHashSet<>(requiredPerms);
-      for (ExtensionMeta m : metas) {
-        for (Permission p : m.getRequiredPermissions()) merged.add(p.name());
-      }
       requiredPerms = new ArrayList<>(merged);
     }
     // Also merge any service-level permissions from @ServiceDescriptor on service interfaces
@@ -143,78 +122,44 @@ final class ExtensionInspector {
       } catch (Throwable ignore) {
       }
     }
-    // Recompute privileged based on the merged permission names
-    if (!privileged) {
-      for (String n : requiredPerms) {
-        try {
-          Permission p = Permission.valueOf(n.trim().toUpperCase());
-          if (p.isPrivileged()) {
-            privileged = true;
-            break;
-          }
-        } catch (IllegalArgumentException ignored) {
-          /* skip unknown names */
+    // Derive privileged from the merged permission names. Uppercase with Locale.ROOT: under a
+    // Turkish locale the default form maps the 'i' in "reflection" to a dotted capital I, which
+    // valueOf rejects - reporting a privileged extension as unprivileged.
+    boolean privileged = false;
+    for (String n : requiredPerms) {
+      try {
+        Permission p = Permission.valueOf(n.trim().toUpperCase(Locale.ROOT));
+        if (p.isPrivileged()) {
+          privileged = true;
+          break;
         }
+      } catch (IllegalArgumentException ignored) {
+        /* skip unknown names */
       }
     }
-    return ExtensionReport.ok(id, version, privileged, services, metas, requiredPerms);
+    return ExtensionReport.ok(id, version, privileged, services, requiredPerms);
   }
 
-  // Read provider class names from META-INF/services/io.btrace.core.extensions.Extension
-  // and load their Class objects without instantiating, then extract metadata.
-  private static List<ExtensionMeta> loadMetasWithoutInstantiating(Path apiJar, Path implJar) {
-    List<ExtensionMeta> result = new ArrayList<>();
-    try (JarFile jf = new JarFile(implJar.toFile())) {
-      JarEntry svc = jf.getJarEntry("META-INF/services/" + Extension.class.getName());
-      if (svc == null) return result;
-      List<String> providers = new ArrayList<>();
-      try (java.io.BufferedReader br =
-          new java.io.BufferedReader(
-              new java.io.InputStreamReader(
-                  jf.getInputStream(svc), java.nio.charset.StandardCharsets.UTF_8))) {
-        String line;
-        while ((line = br.readLine()) != null) {
-          line = line.trim();
-          if (line.isEmpty() || line.startsWith("#")) continue;
-          providers.add(line);
-        }
-      }
-      // Report what the loader will see: the API JAR manifest is the same source
-      // io.btrace.extension.impl.ExtensionMetadata parses when the extension is loaded, so
-      // inspection output cannot disagree with the runtime's own view of the extension.
-      Attributes manifestAttributes = mainAttributes(apiJar);
-      URL[] urls = new URL[] {apiJar.toUri().toURL(), implJar.toUri().toURL()};
-      try (URLClassLoader cl =
-          new URLClassLoader(urls, ExtensionInspector.class.getClassLoader())) {
-        for (String cn : providers) {
-          try {
-            Class<?> c = Class.forName(cn, false, cl);
-            if (Extension.class.isAssignableFrom(c)) {
-              @SuppressWarnings("unchecked")
-              Class<? extends Extension> ec = (Class<? extends Extension>) c;
-              result.add(ExtensionMeta.from(ec, manifestAttributes));
-            }
-          } catch (Throwable t) {
-            // skip faulty provider
-          }
-        }
-      }
-    } catch (Throwable ignored) {
-    }
-    return result;
-  }
-
-  private static Set<String> readServices(Path implJar) {
-    Set<String> services = new HashSet<>();
-    try (JarFile jf = new JarFile(implJar.toFile())) {
-      Enumeration<JarEntry> en = jf.entries();
-      while (en.hasMoreElements()) {
-        JarEntry e = en.nextElement();
-        if (e.getName().startsWith("META-INF/services/") && !e.isDirectory()) {
-          services.add(e.getName().substring("META-INF/services/".length()));
-        }
-      }
-    } catch (IOException ignored) {
+  /**
+   * Reads the declared service interfaces from the API JAR manifest.
+   *
+   * <p>The {@code BTrace-Extension-Services} attribute is what the Gradle plugin writes and what
+   * {@code ExtensionMetadata} reads when the runtime loads an extension. That reader additionally
+   * takes the contents of any {@code META-INF/services/} files in the API JAR, which name
+   * implementation classes rather than services; none of the bundled extensions ships one.
+   *
+   * @param apiJar the extension API JAR
+   * @return the declared service class names in manifest order; empty when none are declared
+   */
+  private static Set<String> readServices(Path apiJar) {
+    Set<String> services = new LinkedHashSet<>();
+    Attributes attrs = mainAttributes(apiJar);
+    if (attrs == null) return services;
+    String value = attrs.getValue("BTrace-Extension-Services");
+    if (value == null || value.trim().isEmpty()) return services;
+    for (String part : value.split(",")) {
+      String s = part.trim();
+      if (!s.isEmpty()) services.add(s);
     }
     return services;
   }
