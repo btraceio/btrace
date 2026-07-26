@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.btrace.client.Client;
@@ -62,6 +61,13 @@ import tests.harness.Completion;
  * @author Jaroslav Bachorik
  */
 public class BTraceFunctionalTests extends RuntimeTest {
+  /**
+   * The client logs this once a probe is installed and running. Tests whose expected output can
+   * only appear after the target is torn down gate on it, so the teardown never races an attach
+   * that is still in progress.
+   */
+  private static final String PROBE_STARTED_MARKER = "Successfully started BTrace probe";
+
   @BeforeAll
   public static void setup() throws Exception {
     classSetup();
@@ -71,6 +77,31 @@ public class BTraceFunctionalTests extends RuntimeTest {
   @Override
   public void reset() {
     super.reset();
+  }
+
+  /**
+   * The feature version of the JDK under test.
+   *
+   * <p>Deliberately not routed through {@link RuntimeTest#resolveTestJavaHome()}: that method's
+   * {@code java.home} fallback would make this read a {@code release} file off disk purely to
+   * rediscover the version of the JVM already executing this code, which is what {@code
+   * java.runtime.version} reports directly. Only an explicitly configured test JDK can differ.
+   *
+   * @return the version string of the JDK the target application will run under
+   */
+  private static String targetJdkVersion() throws IOException {
+    String configured = System.getenv("TEST_JAVA_HOME");
+    if (configured == null) {
+      configured = System.getenv("JAVA_TEST_HOME");
+    }
+    String rtVersion = System.getProperty("java.runtime.version", "");
+    if (configured == null) {
+      return rtVersion;
+    }
+    Properties releaseProps = new Properties();
+    releaseProps.load(
+        Files.newInputStream(new File(configured + File.separator + "release").toPath()));
+    return releaseProps.getProperty("JAVA_VERSION", rtVersion).replace("\"", "");
   }
 
   @Test
@@ -174,12 +205,20 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnExit() throws Exception {
-    timeout = 3500;
+    // @OnExit can only fire once the target JVM exits, and the harness signals that shutdown only
+    // after the completion gate returns - so waiting for "onexit" here can never be satisfied and
+    // always burns the full timeout. Worse, when the machine is loaded the client may still be
+    // attaching when that timeout expires, and the teardown then pulls the target out from under
+    // it: the client reports "No such process" on stderr and the run fails. Gate on the probe
+    // being live instead, which is both deterministic and quicker.
     testDynamic(
         "resources.Main",
         "btrace/OnExitTest.java",
-        Completion.untilContains("onexit"),
+        Completion.untilContains(PROBE_STARTED_MARKER),
         (stdout, stderr, retcode, jfrFile) -> {
+          assertTrue(
+              stdout.contains(PROBE_STARTED_MARKER),
+              "probe did not start before the target was torn down; stdout: " + stdout);
           assertFalse(stdout.contains("FAILED"), "Script should not have failed");
           assertTrue(stderr.isEmpty(), "Non-empty stderr");
           assertTrue(stdout.contains("onexit"));
@@ -272,21 +311,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testTraceAll() throws Exception {
-    String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
-    if (testJavaHome == null) testJavaHome = System.getenv().get("JAVA_TEST_HOME");
-    if (testJavaHome == null) {
-      testJavaHome = System.getenv("JAVA_HOME");
-      if (testJavaHome == null) {
-        testJavaHome = System.getProperty("java.home");
-      }
-    }
-
-    assumeFalse(testJavaHome == null);
-
-    Properties releaseProps = new Properties();
-    releaseProps.load(
-        Files.newInputStream(new File(testJavaHome + File.separator + "release").toPath()));
-    String rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
+    String rtVersion = targetJdkVersion();
     if (!isVersionSafeForTraceAll(rtVersion)) {
       System.err.println("Skipping test for JDK " + rtVersion);
       return;
@@ -444,15 +469,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testJfr() throws Exception {
-    String rtVersion = System.getProperty("java.runtime.version", "");
-    String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
-    if (testJavaHome == null) testJavaHome = System.getenv().get("JAVA_TEST_HOME");
-    if (testJavaHome != null) {
-      Properties releaseProps = new Properties();
-      releaseProps.load(
-          Files.newInputStream(new File(testJavaHome + File.separator + "release").toPath()));
-      rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
-    }
+    String rtVersion = targetJdkVersion();
     if (!isVersionSafeForJfr(rtVersion)) {
       // skip the test for 8.0.* because of missing support
       // skip all non-LTS versions (except the last one)

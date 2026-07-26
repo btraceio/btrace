@@ -115,6 +115,33 @@ public abstract class RuntimeTest {
   private ProtocolSettings clientProtocolSettings = FORCED_V2_PROTOCOL;
   private ProtocolSettings agentProtocolSettings = FORCED_V2_PROTOCOL;
 
+  /**
+   * Resolves the JDK that the target application and the BTrace client run under.
+   *
+   * <p>{@code TEST_JAVA_HOME} wins, then its {@code JAVA_TEST_HOME} alias, then {@code JAVA_HOME},
+   * and finally the JVM running the tests. Every call site used to inline this chain with a
+   * different tail - most omitted {@code java.home}, one also omitted the alias - so a bare
+   * environment failed in some code paths while succeeding in others.
+   *
+   * @return the resolved JDK home
+   */
+  protected static String resolveTestJavaHome() {
+    String[] candidates = {
+      System.getenv("TEST_JAVA_HOME"),
+      System.getenv("JAVA_TEST_HOME"),
+      System.getenv("JAVA_HOME"),
+      System.getProperty("java.home")
+    };
+    for (String candidate : candidates) {
+      if (candidate != null && !candidate.trim().isEmpty()) {
+        return candidate;
+      }
+    }
+    throw new IllegalStateException(
+        "Cannot resolve a JDK for the integration tests: none of TEST_JAVA_HOME, JAVA_TEST_HOME,"
+            + " JAVA_HOME or the java.home system property is set");
+  }
+
   public static void classSetup() {
     if (System.getProperty("btrace.comm.protocol") == null) {
       System.setProperty("btrace.comm.protocol", "2");
@@ -161,22 +188,7 @@ public abstract class RuntimeTest {
     Assertions.assertNotNull(clientClassPath);
 
     String toolsjar = null;
-    // Accept both TEST_JAVA_HOME (preferred) and JAVA_TEST_HOME as aliases
-    // TEST_JAVA_HOME has the highest precedence
-    javaHome = System.getenv("TEST_JAVA_HOME");
-    if (javaHome == null) {
-      javaHome = System.getenv("JAVA_TEST_HOME");
-    }
-    if (javaHome == null) {
-      javaHome = System.getenv("JAVA_HOME");
-    }
-    if (javaHome == null) {
-      javaHome = System.getProperty("java.home");
-    }
-    if (javaHome == null) {
-      throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
-    }
-    javaHome = javaHome.replace("/jre", "");
+    javaHome = resolveTestJavaHome().replace("/jre", "");
 
     Path toolsJarPath = Paths.get(javaHome, "lib", "tools.jar");
     if (Files.exists(toolsJarPath)) {
@@ -304,14 +316,7 @@ public abstract class RuntimeTest {
       debugBTrace = true;
       debugTestApp = true;
     }
-    String testJavaHome = System.getenv("TEST_JAVA_HOME");
-    if (testJavaHome == null) {
-      testJavaHome = System.getenv("JAVA_TEST_HOME");
-    }
-    testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
-    if (testJavaHome == null) {
-      throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
-    }
+    String testJavaHome = resolveTestJavaHome();
     System.out.println("===> test java: " + testJavaHome);
     String jfrFile = null;
     List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", cp));
@@ -500,14 +505,7 @@ public abstract class RuntimeTest {
       debugBTrace = true;
       debugTestApp = true;
     }
-    String testJavaHome = System.getenv("TEST_JAVA_HOME");
-    if (testJavaHome == null) {
-      testJavaHome = System.getenv("JAVA_TEST_HOME");
-    }
-    testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
-    if (testJavaHome == null) {
-      throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
-    }
+    String testJavaHome = resolveTestJavaHome();
     System.out.println("===> test java: " + testJavaHome);
     String jfrFile = null;
     List<String> args =
@@ -702,14 +700,7 @@ public abstract class RuntimeTest {
       debugBTrace = true;
       debugTestApp = true;
     }
-    String testJavaHome = System.getenv("TEST_JAVA_HOME");
-    if (testJavaHome == null) {
-      testJavaHome = System.getenv("JAVA_TEST_HOME");
-    }
-    testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
-    if (testJavaHome == null) {
-      throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
-    }
+    String testJavaHome = resolveTestJavaHome();
     String jfrFile = null;
     List<String> args =
         new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", targetAppCp));
@@ -1046,11 +1037,7 @@ public abstract class RuntimeTest {
       debugBTrace = true;
       debugTestApp = true;
     }
-    String testJavaHome = System.getenv("TEST_JAVA_HOME");
-    testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
-    if (testJavaHome == null) {
-      throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
-    }
+    String testJavaHome = resolveTestJavaHome();
     String jfrFile = null;
     List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", cp));
     if (attachDebugger) {

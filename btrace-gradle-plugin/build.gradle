@@ -26,9 +26,11 @@ repositories {
 dependencies {
     implementation gradleApi()
     implementation localGroovy()
-    // Match versions commonly cached in this repository to avoid extra fetches
-    implementation 'org.ow2.asm:asm:9.9.1'
-    implementation 'org.ow2.asm:asm-tree:9.9.1'
+    // This is an included build and cannot access the root version catalog, so the ASM version is
+    // duplicated here. It must stay in sync with version('asm', ...) in the root settings.gradle;
+    // AsmVersionSyncTest fails the build if the two drift apart.
+    implementation 'org.ow2.asm:asm:9.10.1'
+    implementation 'org.ow2.asm:asm-tree:9.10.1'
 
     // This is an included build and cannot access the root version catalog. Keep its tests on the
     // last Java 8-compatible JUnit line; the production plugin remains Java 11-compatible.
@@ -47,6 +49,10 @@ test {
     javaLauncher = javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(17)
     }
+    // AsmVersionSyncTest compares this build's hard-coded ASM version against the root version
+    // catalog; hand it both files rather than let it guess from the working directory.
+    systemProperty 'btrace.test.pluginBuildFile', file('build.gradle').absolutePath
+    systemProperty 'btrace.test.rootSettingsFile', rootDir.parentFile.toPath().resolve('settings.gradle').toString()
 }
 
 gradlePlugin {

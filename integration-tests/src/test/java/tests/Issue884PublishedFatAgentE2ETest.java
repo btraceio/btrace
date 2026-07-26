@@ -28,6 +28,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -37,8 +39,24 @@ import tests.harness.Completion;
 class Issue884PublishedFatAgentE2ETest {
   private static final String VERSION = "3.0.0";
 
-  /** Must match the ASM version the Gradle plugin declares in {@code btrace-gradle-plugin}. */
-  private static final String ASM_VERSION = "9.9.1";
+  /**
+   * Matches {@code version('asm', ..)} in the root {@code settings.gradle}, which is also what
+   * {@code btrace-gradle-plugin} declares. The external consumer build resolves from the staged
+   * repository alone, so an ASM version staged here that the plugin does not depend on leaves the
+   * consumer unable to resolve it. Deriving the value keeps that from drifting.
+   */
+  private static final Pattern CATALOG_ASM_VERSION =
+      Pattern.compile("version\\s*\\(\\s*'asm'\\s*,\\s*'([^']+)'\\s*\\)");
+
+  /**
+   * Budget for the nested Gradle builds this test forks.
+   *
+   * <p>Each fork resolves plugins and dependencies and may compile from a cold cache. 90 seconds
+   * was enough on a warm, idle machine but expired routinely on a loaded one, surfacing as
+   * "publication did not finish" rather than as anything diagnostic. This bounds a hung build
+   * without racing a merely slow one.
+   */
+  private static final long NESTED_BUILD_TIMEOUT_SECONDS = 300;
 
   @TempDir Path temporaryDirectory;
 
@@ -106,8 +124,25 @@ class Issue884PublishedFatAgentE2ETest {
 
     publishPluginArtifacts(root, repository);
     publishArtifact(repository, "io/btrace", "btrace", VERSION, engineJar);
-    publishDependency(repository, "org.ow2.asm", "asm", ASM_VERSION);
-    publishDependency(repository, "org.ow2.asm", "asm-tree", ASM_VERSION);
+    String asmVersion = catalogAsmVersion(root);
+    publishDependency(repository, "org.ow2.asm", "asm", asmVersion);
+    publishDependency(repository, "org.ow2.asm", "asm-tree", asmVersion);
+  }
+
+  /**
+   * Reads the ASM version from the root version catalog rather than restating it here.
+   *
+   * @param root the repository root
+   * @return the ASM version the Gradle plugin resolves against
+   */
+  private String catalogAsmVersion(Path root) throws IOException {
+    Path settings = root.resolve("settings.gradle");
+    assertTrue(Files.isRegularFile(settings), "missing root settings.gradle: " + settings);
+    Matcher matcher =
+        CATALOG_ASM_VERSION.matcher(
+            new String(Files.readAllBytes(settings), StandardCharsets.UTF_8));
+    assertTrue(matcher.find(), "version('asm', ..) not found in " + settings);
+    return matcher.group(1);
   }
 
   private void publishPluginArtifacts(Path root, Path repository) throws Exception {
@@ -122,7 +157,9 @@ class Issue884PublishedFatAgentE2ETest {
             .directory(root.toFile())
             .redirectErrorStream(true)
             .start();
-    assertTrue(process.waitFor(90, TimeUnit.SECONDS), "plugin publication did not finish");
+    assertTrue(
+        process.waitFor(NESTED_BUILD_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+        "plugin publication did not finish");
     String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
     assertTrue(process.exitValue() == 0, output);
   }
@@ -226,7 +263,9 @@ class Issue884PublishedFatAgentE2ETest {
             .directory(root.toFile())
             .redirectErrorStream(true)
             .start();
-    assertTrue(process.waitFor(90, TimeUnit.SECONDS), "external consumer did not finish");
+    assertTrue(
+        process.waitFor(NESTED_BUILD_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+        "external consumer did not finish");
     String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
     assertTrue(process.exitValue() == 0, output);
     assertTrue(output.contains("Staged masked BTrace engine"), output);
