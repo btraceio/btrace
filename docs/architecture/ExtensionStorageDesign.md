@@ -83,7 +83,7 @@ extension.name=BTrace Metrics
 extension.description=High-performance metrics with HdrHistogram
 
 # API compatibility
-btrace.api.version=2.3+
+btrace.api.version=3.0+
 java.version=8+
 
 # Service providers (optional, can also use META-INF/services)
@@ -228,7 +228,7 @@ Create `META-INF/btrace-extension.properties`:
 ```properties
 extension.id=my-extension
 extension.version=1.0.0
-btrace.api.version=2.3+
+btrace.api.version=3.0+
 ```
 
 4. **Build JAR**:

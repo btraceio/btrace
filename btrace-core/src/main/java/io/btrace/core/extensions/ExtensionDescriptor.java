@@ -35,14 +35,14 @@ public @interface ExtensionDescriptor {
    *
    * @return extension name
    */
-  String name();
+  String name() default "";
 
   /**
    * The version of this extension.
    *
    * @return version string (e.g., "1.0", "2.1.0")
    */
-  String version();
+  String version() default "";
 
   /**
    * Human-readable description of this extension.

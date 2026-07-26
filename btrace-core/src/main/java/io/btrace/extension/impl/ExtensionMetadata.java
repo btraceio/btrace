@@ -16,7 +16,6 @@
  */
 package io.btrace.extension.impl;
 
-import io.btrace.core.extensions.Permission;
 import io.btrace.core.extensions.PermissionSet;
 import io.btrace.extension.ExtensionDescriptorDTO;
 import io.btrace.extension.ExtensionRepository;
@@ -28,7 +27,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
@@ -291,21 +289,6 @@ final class ExtensionMetadata {
 
   /** Parses a comma/whitespace-separated permission list. Shared with the embedded repository. */
   static PermissionSet parsePermissions(String value) {
-    if (value == null || value.trim().isEmpty()) {
-      return PermissionSet.empty();
-    }
-    String[] parts = value.split("[,\\s]+");
-    EnumSet<Permission> set = EnumSet.noneOf(Permission.class);
-    for (String p : parts) {
-      try {
-        set.add(Permission.valueOf(p.trim()));
-      } catch (IllegalArgumentException iae) {
-        // ignore unknown permission names to be lenient
-      }
-    }
-    if (set.isEmpty()) {
-      return PermissionSet.empty();
-    }
-    return PermissionSet.of(set.toArray(new Permission[0]));
+    return PermissionSet.parse(value);
   }
 }

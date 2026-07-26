@@ -21,7 +21,7 @@ extension.id=btrace-metrics
 extension.version=3.0.0
 extension.name=BTrace Metrics
 extension.description=High-performance metrics...
-btrace.api.version=2.3+
+btrace.api.version=3.0+
 java.version=8+
 services=io.btrace.metrics.MetricsService
 requires.extensions=btrace-core
@@ -36,7 +36,7 @@ BTrace-Extension-Version: 3.0.0
 BTrace-Extension-Name: BTrace Metrics
 BTrace-Extension-Description: High-performance metrics with HdrHistogram
  for percentiles and lock-free statistics
-BTrace-API-Version: 2.3+
+BTrace-API-Version: 3.0+
 BTrace-Java-Version: 8+
 BTrace-Extension-Services: io.btrace.metrics.MetricsService
 BTrace-Extension-Requires: btrace-core
@@ -74,7 +74,7 @@ BTrace-Extension-Permissions: NETWORK,THREADS
 
 **BTrace-API-Version**
 - Format: version range (major.minor+)
-- Example: `2.3+` (requires BTrace API 2.3 or higher)
+- Example: `3.0+` (requires BTrace API 3.0 or higher)
 - Description: Required BTrace API version
 
 **BTrace-Java-Version**
@@ -158,7 +158,7 @@ jar {
       'BTrace-Extension-Version': project.version,
       'BTrace-Extension-Name': 'BTrace Metrics',
       'BTrace-Extension-Description': 'High-performance metrics...',
-      'BTrace-API-Version': '2.3+',
+      'BTrace-API-Version': '3.0+',
       'BTrace-Java-Version': '8+',
       'BTrace-Extension-Services': 'io.btrace.metrics.MetricsService',
       'BTrace-Shaded-Packages': 'org.HdrHistogram->io.btrace.metrics.shaded.hdrhistogram'

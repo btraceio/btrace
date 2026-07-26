@@ -19,14 +19,25 @@ package io.btrace.core.extensions;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.jar.Attributes;
 
 /**
- * Metadata extracted from an extension class.
+ * Metadata describing an extension, as reported by extension inspection tooling.
  *
- * <p>This class holds immutable metadata parsed from package-level {@link ExtensionDescriptor} (if
- * available).
+ * <p>Values come from the extension JAR's manifest, which the Gradle plugin writes and the
+ * extension loader reads, so what is reported matches what the runtime will enforce. A
+ * package-level {@link ExtensionDescriptor} fills any gap the manifest leaves.
  */
 public final class ExtensionMeta {
+  // Manifest attribute names, mirroring what the Gradle plugin emits and what the extension loader
+  // reads. Kept in step with io.btrace.extension.impl.ExtensionMetadata.
+  private static final String ATTR_ID = "BTrace-Extension-Id";
+  private static final String ATTR_NAME = "BTrace-Extension-Name";
+  private static final String ATTR_VERSION = "BTrace-Extension-Version";
+  private static final String ATTR_DESCRIPTION = "BTrace-Extension-Description";
+  private static final String ATTR_API_VERSION = "BTrace-API-Version";
+  private static final String ATTR_PERMISSIONS = "BTrace-Extension-Permissions";
+
   private final Class<? extends Extension> extensionClass;
   private final String name;
   private final String version;
@@ -53,37 +64,59 @@ public final class ExtensionMeta {
   }
 
   /**
-   * Extracts metadata from an extension class.
+   * Extracts metadata from an extension class alone.
+   *
+   * <p>Only the package-level {@link ExtensionDescriptor} is available through this overload, and
+   * that annotation is optional - most extensions declare their identity and permissions through
+   * the Gradle plugin, which records them in the extension JAR's manifest. Prefer {@link
+   * #from(Class, Attributes)} wherever the manifest can be reached, so that what is reported
+   * matches what the extension loader will actually enforce.
    *
    * @param extensionClass the extension class
-   * @return extracted metadata Builds metadata from package-level {@link ExtensionDescriptor} when
-   *     present.
+   * @return metadata derived from the package descriptor, with the class's simple name as the
+   *     fallback identity
    */
   public static ExtensionMeta from(Class<? extends Extension> extensionClass) {
-    // Prefer package-level descriptor for identity and extension-level permissions
+    return from(extensionClass, null);
+  }
+
+  /**
+   * Extracts metadata from an extension class and its JAR manifest.
+   *
+   * <p>The manifest wins. It is what the Gradle plugin emits and what {@code ExtensionMetadata}
+   * reads when the runtime loads and permission-checks an extension, so it is the only description
+   * that is guaranteed to match the extension's real behaviour. The package-level {@link
+   * ExtensionDescriptor} is consulted only to fill gaps: it is optional, several shipped extensions
+   * do not carry one, and those that do may state a version that the build never propagates.
+   *
+   * @param extensionClass the extension class
+   * @param manifestAttributes main attributes of the extension's API JAR manifest, or {@code null}
+   *     when unavailable
+   * @return metadata preferring manifest values over the package descriptor
+   */
+  public static ExtensionMeta from(
+      Class<? extends Extension> extensionClass, Attributes manifestAttributes) {
     Package pkg = extensionClass.getPackage();
     ExtensionDescriptor pkgDesc = pkg != null ? pkg.getAnnotation(ExtensionDescriptor.class) : null;
 
     String name =
-        (pkgDesc != null && !pkgDesc.name().isEmpty())
-            ? pkgDesc.name()
-            : extensionClass.getSimpleName();
-    String version = (pkgDesc != null) ? pkgDesc.version() : "";
-    String description = (pkgDesc != null) ? pkgDesc.description() : "";
-    String minBTraceVersion = (pkgDesc != null) ? pkgDesc.minBTraceVersion() : "";
-
-    // Extract required permissions (pkg-level)
-    Set<Permission> permissions = new HashSet<>();
-    if (pkgDesc != null) {
-      for (Permission p : pkgDesc.permissions()) {
-        if (p != null) permissions.add(p);
-      }
-    }
-
-    PermissionSet permissionSet =
-        permissions.isEmpty()
-            ? PermissionSet.empty()
-            : PermissionSet.of(permissions.toArray(new Permission[0]));
+        firstNonBlank(
+            attribute(manifestAttributes, ATTR_NAME),
+            attribute(manifestAttributes, ATTR_ID),
+            pkgDesc != null ? pkgDesc.name() : null,
+            extensionClass.getSimpleName());
+    String version =
+        firstNonBlank(
+            attribute(manifestAttributes, ATTR_VERSION),
+            pkgDesc != null ? pkgDesc.version() : null);
+    String description =
+        firstNonBlank(
+            attribute(manifestAttributes, ATTR_DESCRIPTION),
+            pkgDesc != null ? pkgDesc.description() : null);
+    String minBTraceVersion =
+        firstNonBlank(
+            attribute(manifestAttributes, ATTR_API_VERSION),
+            pkgDesc != null ? pkgDesc.minBTraceVersion() : null);
 
     return new ExtensionMeta(
         extensionClass,
@@ -91,8 +124,51 @@ public final class ExtensionMeta {
         version,
         description,
         minBTraceVersion,
-        permissionSet,
+        resolvePermissions(manifestAttributes, pkgDesc),
         Collections.emptySet());
+  }
+
+  /**
+   * Resolves the permissions to report.
+   *
+   * <p>The manifest is authoritative when it declares the attribute at all - the Gradle plugin
+   * already fails the build if a package descriptor requires a permission the manifest omits, so a
+   * present manifest entry is the merged, verified set. The annotation is used only when no
+   * manifest is available.
+   */
+  private static PermissionSet resolvePermissions(
+      Attributes manifestAttributes, ExtensionDescriptor pkgDesc) {
+    String declared = attribute(manifestAttributes, ATTR_PERMISSIONS);
+    if (declared != null) {
+      return PermissionSet.parse(declared);
+    }
+    if (pkgDesc == null) {
+      return PermissionSet.empty();
+    }
+    Set<Permission> permissions = new HashSet<>();
+    for (Permission p : pkgDesc.permissions()) {
+      if (p != null) permissions.add(p);
+    }
+    return permissions.isEmpty()
+        ? PermissionSet.empty()
+        : PermissionSet.of(permissions.toArray(new Permission[0]));
+  }
+
+  private static String attribute(Attributes attributes, String name) {
+    if (attributes == null) {
+      return null;
+    }
+    String value = attributes.getValue(name);
+    return (value == null || value.trim().isEmpty()) ? null : value;
+  }
+
+  private static String firstNonBlank(String... candidates) {
+    for (String candidate : candidates) {
+      if (candidate != null && !candidate.trim().isEmpty()) {
+        return candidate;
+      }
+    }
+    return "";
   }
 
   /**
