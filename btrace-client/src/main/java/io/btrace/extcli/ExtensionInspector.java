@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.*;
 import java.util.*;
+import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -178,6 +179,10 @@ final class ExtensionInspector {
           providers.add(line);
         }
       }
+      // Report what the loader will see: the API JAR manifest is the same source
+      // io.btrace.extension.impl.ExtensionMetadata parses when the extension is loaded, so
+      // inspection output cannot disagree with the runtime's own view of the extension.
+      Attributes manifestAttributes = mainAttributes(apiJar);
       URL[] urls = new URL[] {apiJar.toUri().toURL(), implJar.toUri().toURL()};
       try (URLClassLoader cl =
           new URLClassLoader(urls, ExtensionInspector.class.getClassLoader())) {
@@ -187,7 +192,7 @@ final class ExtensionInspector {
             if (Extension.class.isAssignableFrom(c)) {
               @SuppressWarnings("unchecked")
               Class<? extends Extension> ec = (Class<? extends Extension>) c;
-              result.add(ExtensionMeta.from(ec));
+              result.add(ExtensionMeta.from(ec, manifestAttributes));
             }
           } catch (Throwable t) {
             // skip faulty provider
@@ -291,5 +296,20 @@ final class ExtensionInspector {
     } catch (IOException ignored) {
     }
     return perms;
+  }
+
+  /**
+   * Reads the main manifest attributes of an extension JAR.
+   *
+   * @param jar the JAR to read
+   * @return the main attributes, or {@code null} when the JAR has no readable manifest
+   */
+  private static Attributes mainAttributes(Path jar) {
+    try (JarFile jf = new JarFile(jar.toFile())) {
+      Manifest manifest = jf.getManifest();
+      return manifest != null ? manifest.getMainAttributes() : null;
+    } catch (IOException e) {
+      return null;
+    }
   }
 }

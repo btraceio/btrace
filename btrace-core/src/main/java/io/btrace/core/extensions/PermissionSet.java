@@ -106,6 +106,33 @@ public final class PermissionSet implements Iterable<Permission> {
   }
 
   /**
+   * Parses a permission set from its textual form.
+   *
+   * <p>Accepts the comma- or whitespace-separated list used by the {@code
+   * BTrace-Extension-Permissions} manifest attribute and the {@code requires.permissions} property.
+   * Unknown names are ignored rather than rejected, so an extension built against a newer BTrace
+   * that names a permission this runtime does not know still loads with the permissions it does
+   * understand.
+   *
+   * @param value the textual permission list; may be {@code null} or blank
+   * @return the parsed set, empty if nothing recognisable was found
+   */
+  public static PermissionSet parse(String value) {
+    if (value == null || value.trim().isEmpty()) {
+      return EMPTY;
+    }
+    EnumSet<Permission> set = EnumSet.noneOf(Permission.class);
+    for (String part : value.split("[,\\s]+")) {
+      try {
+        set.add(Permission.valueOf(part.trim()));
+      } catch (IllegalArgumentException ignored) {
+        // lenient by design - see javadoc
+      }
+    }
+    return set.isEmpty() ? EMPTY : new PermissionSet(set);
+  }
+
+  /**
    * Checks if this set contains the specified permission.
    *
    * @param permission the permission to check

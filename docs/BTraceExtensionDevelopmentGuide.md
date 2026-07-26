@@ -102,11 +102,12 @@ btraceExtension {
 }
 ```
 
-Alternative to the DSL:
-- You can document extension details via the `@ExtensionDescriptor` annotation in your API package’s `package-info.java`.
-- Annotation source: `btrace-core/src/main/java/io/btrace/core/extensions/ExtensionDescriptor.java`.
+Optional companion to the DSL — `@ExtensionDescriptor`:
+- Declared on your API package’s `package-info.java`. Source: `btrace-core/src/main/java/io/btrace/core/extensions/ExtensionDescriptor.java`.
 - Fields: `name`, `version`, `description`, `minBTraceVersion`, `dependencies`, `permissions`.
-- The `btraceExtension` block remains the canonical source for manifest values; `@ExtensionDescriptor` mainly assists tooling and validates that declared `permissions` are covered by scanning or `requiredPermissions`.
+- **`permissions` is the field that does work.** The plugin scans it and fails the build when the annotation requires a permission the manifest does not grant, so it is a useful assertion that the code's needs and the shipped manifest agree.
+- **The other fields are not propagated.** The `btraceExtension` block is the single source of the manifest, and the manifest is what the runtime loads and what `btrace ext inspect` reports. A `version` stated only in the annotation describes nothing the build or the runtime will use — leave it unset rather than let it drift from the real artifact version.
+- The annotation is entirely optional; most of the extensions shipped with BTrace do not declare one.
 
 Outputs produced by the plugin:
 - API JAR: `build/libs/<name>-<version>-api.jar` (manifest + properties with extension metadata)

@@ -77,9 +77,10 @@ service interface and its implementation, no separate `api`/`impl` subpackages r
 
 ```sh
 cat > src/main/java/com/example/orderstats/package-info.java <<'EOF'
+// Optional. `permissions` is checked against the manifest at build time; identity and version
+// come from the btraceExtension block, so they are deliberately not restated here.
 @ExtensionDescriptor(
     name = "order-counter",
-    version = "3.0.0",
     description = "Counts order outcomes observed by BTrace probes",
     permissions = {Permission.THREADS})
 package com.example.orderstats;
