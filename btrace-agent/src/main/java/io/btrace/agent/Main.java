@@ -180,6 +180,27 @@ public final class Main {
   private static final SharedSettings settings = SharedSettings.GLOBAL;
   private static final BTraceTransformer transformer =
       new BTraceTransformer(new DebugSupport(settings));
+  // ClassFile API's StackMapGenerator can exhaust the default stack depth when processing
+  // complex methods in JDK 26+ (class-file major >= 70). Use 4 MB on those JVMs only; on
+  // older JVMs keep the default (0 = JVM-chosen) to avoid any OS-level stack-allocation
+  // overhead that was intermittently delaying test startup on JDK 8/11/21 CI machines.
+  static final long QUEUE_PROCESSOR_STACK_SIZE = resolveQueueProcessorStackSize();
+
+  static long resolveQueueProcessorStackSize() {
+    return resolveQueueProcessorStackSize(System.getProperty("java.class.version", "52.0"));
+  }
+
+  // Visible for testing.
+  static long resolveQueueProcessorStackSize(String classVersion) {
+    try {
+      int dot = classVersion.indexOf('.');
+      int major = Integer.parseInt(dot >= 0 ? classVersion.substring(0, dot) : classVersion);
+      return major >= 70 ? 4L * 1024 * 1024 : 0L;
+    } catch (RuntimeException ignored) {
+      return 0L;
+    }
+  }
+
   // #BTRACE-42: Non-daemon thread prevents traced application from exiting
   // Deliberately an anonymous class, not a lambda: this static field initializer runs in
   // Main's <clinit>, unconditionally, before -javaagent premain()'s body even starts -- see
@@ -188,7 +209,8 @@ public final class Main {
       new ThreadFactory() {
         @Override
         public Thread newThread(Runnable r) {
-          Thread result = new Thread(r, "BTrace Command Queue Processor");
+          Thread result =
+              new Thread(null, r, "BTrace Command Queue Processor", QUEUE_PROCESSOR_STACK_SIZE);
           result.setDaemon(true);
           return result;
         }
@@ -1457,8 +1479,7 @@ public final class Main {
         return false;
       }
 
-      SharedSettings clientSettings = new SharedSettings();
-      clientSettings.from(settings);
+      SharedSettings clientSettings = newClientSettings(settings);
       clientSettings.setClientName(scriptName);
       if (traceToStdOut) {
         clientSettings.setOutputFile("::stdout");
@@ -1511,7 +1532,7 @@ public final class Main {
           log.debug("client accepted from {}", sock.getRemoteSocketAddress());
         }
         authenticationToken = endpoint.copyAuthenticationToken();
-        ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
+        ClientContext ctx = newRemoteClientContext();
         Client client =
             RemoteClient.getClient(
                 ctx,
@@ -1567,6 +1588,39 @@ public final class Main {
         log.debug("Error closing BTrace server", e);
       }
     }
+  }
+
+  /**
+   * Seeds a fresh per-client settings instance from the agent baseline.
+   *
+   * <p>Every client - local and remote alike - must get its own copy. A client's {@code SET_PARAMS}
+   * command is applied by mutating its {@link ClientContext}'s settings in place, so handing out
+   * the shared {@link SharedSettings#GLOBAL} instance lets one client's {@code debug}, {@code
+   * dumpDir}, {@code outputFile}, granted permissions and - most importantly - {@code trusted} flag
+   * leak into every other client and into the global transformer. {@code trusted} is deliberately
+   * non-downgrading, so such a leak is permanent for the lifetime of the agent.
+   *
+   * @param baseline the agent-wide settings to seed from
+   * @return a new settings instance, independent of {@code baseline}
+   */
+  static SharedSettings newClientSettings(SharedSettings baseline) {
+    SharedSettings clientSettings = new SharedSettings();
+    clientSettings.from(baseline);
+    return clientSettings;
+  }
+
+  /**
+   * Builds the context for a newly accepted remote connection.
+   *
+   * <p>Extracted from the accept loop so the settings isolation it depends on is reachable from a
+   * unit test: inside the loop it sits under a {@code catch (RuntimeException | IOException)} that
+   * would turn a re-introduced sharing bug into a per-connection warning rather than a test
+   * failure.
+   *
+   * @return a context carrying settings private to this connection
+   */
+  static ClientContext newRemoteClientContext() {
+    return new ClientContext(inst, transformer, argMap, newClientSettings(settings));
   }
 
   private static Future<?> handleNewClient(Client client) {

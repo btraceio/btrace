@@ -23,6 +23,7 @@ import io.btrace.boot.MaskedJarUtils;
 import io.btrace.compiler.Compiler;
 import io.btrace.core.Args;
 import io.btrace.core.BTraceRuntime;
+import io.btrace.core.JavaVersionCheck;
 import io.btrace.core.SharedSettings;
 import io.btrace.core.annotations.DTrace;
 import io.btrace.core.annotations.DTraceRef;
@@ -211,26 +212,48 @@ public class Client {
    */
   private static void warnIfDeprecatedTargetJvm(String pid, String targetJavaVersion) {
     try {
-      int featureVersion = io.btrace.core.JavaVersionCheck.parseFeatureVersion(targetJavaVersion);
-      if (io.btrace.core.JavaVersionCheck.isDeprecated(featureVersion)
-          && !Boolean.getBoolean(io.btrace.core.JavaVersionCheck.SUPPRESS_PROP)) {
+      int featureVersion = JavaVersionCheck.parseFeatureVersion(targetJavaVersion);
+      if (JavaVersionCheck.isDeprecated(featureVersion)
+          && !Boolean.getBoolean(JavaVersionCheck.SUPPRESS_PROP)) {
         System.err.println(
             "[BTrace] WARNING: The target JVM (PID "
                 + pid
                 + ") is Java "
                 + featureVersion
                 + ". Running BTrace on Java versions older than "
-                + io.btrace.core.JavaVersionCheck.DEPRECATION_FLOOR
+                + JavaVersionCheck.DEPRECATION_FLOOR
                 + " is deprecated and support will be removed in the next major release. "
                 + "Please upgrade the target JVM to Java "
-                + io.btrace.core.JavaVersionCheck.DEPRECATION_FLOOR
+                + JavaVersionCheck.DEPRECATION_FLOOR
                 + " or newer. Suppress this warning with -D"
-                + io.btrace.core.JavaVersionCheck.SUPPRESS_PROP
+                + JavaVersionCheck.SUPPRESS_PROP
                 + "=true.");
       }
     } catch (Throwable ignored) {
       // the deprecation warning must never interfere with attach
     }
+  }
+
+  /**
+   * Appends a single {@code key=value} entry to a comma-separated agent argument string.
+   *
+   * <p>The agent splits each entry on its first {@code =} and matches on the key, so an entry whose
+   * key is empty or misplaced is not rejected - it is silently ignored, and the setting it carried
+   * is lost with no diagnostic. A hand-rolled {@code ",=" + KEY + value} typo did exactly that to
+   * {@code cmdQueueLimit} for two releases. Routing every entry through here keeps the shape
+   * uniform and lets {@code ClientAgentArgsTest} assert it.
+   *
+   * @param agentArgs the arguments accumulated so far; empty for the first entry
+   * @param key the argument name, which must be non-empty and free of {@code =} and {@code ,}
+   * @param value the argument value, rendered with {@link String#valueOf(Object)}
+   * @return {@code agentArgs} with the new entry appended
+   */
+  static String appendAgentArg(String agentArgs, String key, Object value) {
+    if (key == null || key.isEmpty() || key.indexOf('=') >= 0 || key.indexOf(',') >= 0) {
+      throw new IllegalArgumentException("invalid agent argument key: " + key);
+    }
+    String entry = key + "=" + String.valueOf(value);
+    return agentArgs.isEmpty() ? entry : agentArgs + "," + entry;
   }
 
   private static boolean isPortAvailable(int port) {
@@ -772,25 +795,25 @@ public class Client {
         log.debug("attached to {}", pid);
         log.debug("loading {}", agentPath);
       }
-      String agentArgs = Args.PORT + "=" + port;
+      String agentArgs = appendAgentArg("", Args.PORT, port);
       if (statsdDef != null) {
-        agentArgs += "," + Args.STATSD + "=" + statsdDef;
+        agentArgs = appendAgentArg(agentArgs, Args.STATSD, statsdDef);
       }
       if (debug) {
-        agentArgs += "," + Args.DEBUG + "=true";
+        agentArgs = appendAgentArg(agentArgs, Args.DEBUG, "true");
       }
       if (trusted) {
-        agentArgs += "," + Args.TRUSTED + "=true";
+        agentArgs = appendAgentArg(agentArgs, Args.TRUSTED, "true");
       }
       if (dumpClasses) {
-        agentArgs += "," + Args.DUMP_CLASSES + "=true";
-        agentArgs += "," + Args.DUMP_DIR + "=" + dumpDir;
+        agentArgs = appendAgentArg(agentArgs, Args.DUMP_CLASSES, "true");
+        agentArgs = appendAgentArg(agentArgs, Args.DUMP_DIR, dumpDir);
       }
       if (trackRetransforms) {
-        agentArgs += "," + Args.TRACK_RETRANSFORMS + "=true";
+        agentArgs = appendAgentArg(agentArgs, Args.TRACK_RETRANSFORMS, "true");
       }
       if (bootCp != null) {
-        agentArgs += "," + Args.BOOT_CLASS_PATH + "=" + bootCp;
+        agentArgs = appendAgentArg(agentArgs, Args.BOOT_CLASS_PATH, bootCp);
       }
       String toolsPath =
           getToolsJarPath(
@@ -800,12 +823,12 @@ public class Client {
       } else {
         sysCp = sysCp + File.pathSeparator + toolsPath;
       }
-      agentArgs += "," + Args.SYSTEM_CLASS_PATH + "=" + sysCp;
+      agentArgs = appendAgentArg(agentArgs, Args.SYSTEM_CLASS_PATH, sysCp);
       String cmdQueueLimit = System.getProperty(BTraceRuntime.CMD_QUEUE_LIMIT_KEY, null);
       if (cmdQueueLimit != null) {
-        agentArgs += "," + Args.CMD_QUEUE_LIMIT + "=" + cmdQueueLimit;
+        agentArgs = appendAgentArg(agentArgs, Args.CMD_QUEUE_LIMIT, cmdQueueLimit);
       }
-      agentArgs += "," + Args.PROBE_DESC_PATH + "=" + probeDescPath;
+      agentArgs = appendAgentArg(agentArgs, Args.PROBE_DESC_PATH, probeDescPath);
 
       // Pass-through selected system properties as agent system props via "$" args
       // so the agent can read them at startup. These become system properties in the target JVM.
@@ -818,28 +841,28 @@ public class Client {
           throw new IllegalArgumentException(
               "System property btrace.feature.manifestLibs must not contain ','");
         }
-        agentArgs += "," + "$btrace.feature.manifestLibs" + "=" + manifestLibs;
+        agentArgs = appendAgentArg(agentArgs, "$btrace.feature.manifestLibs", manifestLibs);
       }
       if (sysAppendJar != null && !sysAppendJar.isEmpty()) {
         if (sysAppendJar.indexOf(',') >= 0) {
           throw new IllegalArgumentException(
               "System property btrace.system.appendJar must not contain ','");
         }
-        agentArgs += "," + "$btrace.system.appendJar" + "=" + sysAppendJar;
+        agentArgs = appendAgentArg(agentArgs, "$btrace.system.appendJar", sysAppendJar);
       }
       if (allowExternalLibs != null && !allowExternalLibs.isEmpty()) {
         if (allowExternalLibs.indexOf(',') >= 0) {
           throw new IllegalArgumentException(
               "System property btrace.allowExternalLibs must not contain ','");
         }
-        agentArgs += "," + "$btrace.allowExternalLibs" + "=" + allowExternalLibs;
+        agentArgs = appendAgentArg(agentArgs, "$btrace.allowExternalLibs", allowExternalLibs);
       }
       if (testSkipLibs != null && !testSkipLibs.isEmpty()) {
         if (testSkipLibs.indexOf(',') >= 0) {
           throw new IllegalArgumentException(
               "System property btrace.test.skipLibs must not contain ','");
         }
-        agentArgs += "," + "$btrace.test.skipLibs" + "=" + testSkipLibs;
+        agentArgs = appendAgentArg(agentArgs, "$btrace.test.skipLibs", testSkipLibs);
       }
       if (log.isDebugEnabled()) {
         log.debug("agent args: {}", agentArgs);
