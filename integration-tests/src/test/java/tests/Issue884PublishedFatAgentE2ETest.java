@@ -48,6 +48,16 @@ class Issue884PublishedFatAgentE2ETest {
   private static final Pattern CATALOG_ASM_VERSION =
       Pattern.compile("version\\s*\\(\\s*'asm'\\s*,\\s*'([^']+)'\\s*\\)");
 
+  /**
+   * Budget for the nested Gradle builds this test forks.
+   *
+   * <p>Each fork resolves plugins and dependencies and may compile from a cold cache. 90 seconds
+   * was enough on a warm, idle machine but expired routinely on a loaded one, surfacing as
+   * "publication did not finish" rather than as anything diagnostic. This bounds a hung build
+   * without racing a merely slow one.
+   */
+  private static final long NESTED_BUILD_TIMEOUT_SECONDS = 300;
+
   @TempDir Path temporaryDirectory;
 
   @BeforeAll
@@ -147,7 +157,9 @@ class Issue884PublishedFatAgentE2ETest {
             .directory(root.toFile())
             .redirectErrorStream(true)
             .start();
-    assertTrue(process.waitFor(90, TimeUnit.SECONDS), "plugin publication did not finish");
+    assertTrue(
+        process.waitFor(NESTED_BUILD_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+        "plugin publication did not finish");
     String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
     assertTrue(process.exitValue() == 0, output);
   }
@@ -251,7 +263,9 @@ class Issue884PublishedFatAgentE2ETest {
             .directory(root.toFile())
             .redirectErrorStream(true)
             .start();
-    assertTrue(process.waitFor(90, TimeUnit.SECONDS), "external consumer did not finish");
+    assertTrue(
+        process.waitFor(NESTED_BUILD_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+        "external consumer did not finish");
     String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
     assertTrue(process.exitValue() == 0, output);
     assertTrue(output.contains("Staged masked BTrace engine"), output);
