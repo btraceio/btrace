@@ -509,9 +509,14 @@ task copyDtraceLib(type: Copy) {
     into "${distTarget}/libs/"
 }
 
-task copyExtensions(type: Copy) {
+// Sync, not Copy: the allow-list below is only meaningful if the destination mirrors it exactly.
+// A Copy leaves behind archives and exploded directories belonging to extensions that have since
+// been withdrawn from the release set, so an incremental build keeps shipping them and the
+// allow-list silently stops being enforced. Sync removes anything not produced by this build,
+// including the subdirectories explodeExtensions creates, which that task then recreates.
+task copyExtensions(type: Sync) {
     group 'Build'
-    description 'Copy extension ZIP archives to extensions/ directory'
+    description 'Mirror the released extension ZIP archives into the extensions/ directory'
     into "${distTarget}/extensions/"
 }
 
