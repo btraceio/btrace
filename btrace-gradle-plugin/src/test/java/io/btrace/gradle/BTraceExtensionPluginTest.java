@@ -443,4 +443,63 @@ class BTraceExtensionPluginTest {
         Files.createDirectories(path.getParent());
         Files.writeString(path, content, StandardCharsets.UTF_8);
     }
+
+    /**
+     * Writes an extension project that does not apply Shadow itself, so auto-apply decides.
+     *
+     * @param autoApplyShadow value for the opt-out, or null to leave it at the default
+     */
+    private void writeAutoApplyProject(Boolean autoApplyShadow) throws IOException {
+        Path dir = projectDir.resolve("ext");
+        Files.createDirectories(dir.resolve("src/main/java/com/example/api"));
+        writeFile(
+                dir.resolve("build.gradle"),
+                "plugins {\n"
+                        + "  id 'java-library'\n"
+                        + "  id 'io.btrace.extension'\n"
+                        + "}\n"
+                        + "group = 'com.example'\n"
+                        + "version = '1.0'\n"
+                        + "btraceExtension {\n"
+                        + "  id = 'test.ext'\n"
+                        + "  name = 'Test Extension'\n"
+                        + (autoApplyShadow == null ? "" : "  autoApplyShadow = " + autoApplyShadow + "\n")
+                        + "}\n");
+    }
+
+    @Test
+    @DisplayName("autoApplyShadow = false suppresses the automatic Shadow apply")
+    void autoApplyShadowFalseIsHonoured() throws IOException {
+        // The flag is set from the btraceExtension block, which runs after the plugin is applied,
+        // so honouring it requires the decision to be deferred past project evaluation.
+        writeAutoApplyProject(false);
+
+        // Opting out without applying Shadow yourself is expected to fail: the plugin needs it and
+        // says so. That failure is the proof the opt-out was honoured - previously the flag was
+        // read before the extension existed, so Shadow was applied regardless and this build
+        // succeeded.
+        BuildResult result = createRunner().withArguments(":ext:tasks").buildAndFail();
+
+        assertTrue(
+                result.getOutput().contains("Shadow auto-apply disabled"),
+                "plugin should report the opt-out was honoured:\n" + result.getOutput());
+        assertFalse(
+                result.getOutput().contains("Applying Shadow plugin automatically"),
+                "Shadow must not be auto-applied when the opt-out is set:\n" + result.getOutput());
+        assertTrue(
+                result.getOutput().contains("Shadow plugin is required"),
+                "opting out should surface the documented guidance:\n" + result.getOutput());
+    }
+
+    @Test
+    @DisplayName("Shadow is auto-applied when the opt-out is not set")
+    void shadowIsAutoAppliedByDefault() throws IOException {
+        writeAutoApplyProject(null);
+
+        BuildResult result = createRunner().withArguments(":ext:tasks").build();
+
+        assertTrue(
+                result.getOutput().contains("Applying Shadow plugin automatically"),
+                "Shadow should still be auto-applied by default:\n" + result.getOutput());
+    }
 }
