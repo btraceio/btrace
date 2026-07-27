@@ -578,9 +578,23 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             ? project.property(extension.filterProperty).toString().split(',').toList()
             : null
 
+        // Spelled out rather than written as a chain of elvis operators: an empty defaultExtensions
+        // is falsy, so `filterList ?: extension.defaultExtensions` would select nothing at all and
+        // silently produce an extension-free fat agent.
+        def selection
+        if (filterList != null) {
+            selection = filterList
+        } else if (extension.defaultExtensions) {
+            selection = extension.defaultExtensions
+        } else {
+            selection = null
+        }
+
         project.rootProject.subprojects.each { sp ->
             if (sp.plugins.hasPlugin('io.btrace.extension')) {
-                if (filterList == null || filterList.contains(sp.name)) {
+                // Consumers set the filter property using project names, while an in-build default
+                // list is naturally written with project paths. Accept either.
+                if (selection == null || selection.contains(sp.name) || selection.contains(sp.path)) {
                     // Add as project source if not already present
                     def alreadyAdded = extension.extensionSources.any { source ->
                         source instanceof ProjectExtensionSource && source.projectPath == sp.path

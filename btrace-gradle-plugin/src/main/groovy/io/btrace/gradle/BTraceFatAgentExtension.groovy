@@ -62,6 +62,15 @@ class BTraceFatAgentExtension {
     /** Property name for filtering extensions when autoDiscover is true */
     String filterProperty = 'embedExtensions'
 
+    /**
+     * Extensions auto-discovery embeds when the filter property is absent. Entries match a
+     * subproject's name or its path.
+     *
+     * <p>Null selects every discovered extension, which is the historical behaviour. An empty
+     * list means the same thing, not "none" - set the filter property to restrict a build.
+     */
+    List<String> defaultExtensions = null
+
     BTraceFatAgentExtension(Project project) {
         this.project = project
         this.outputDir = project.layout.buildDirectory.dir('libs').get().asFile
