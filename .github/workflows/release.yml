@@ -859,7 +859,7 @@ jobs:
         run: |
           TMPDIR="${RUNNER_TEMP}" scripts/release-smoke.sh \
             --distribution release-candidate \
-            --fat-agent btrace-dist/build/resources/main/v${RELEASE_VERSION}/libs/btrace-agent-fat.jar \
+            --fat-agent btrace-dist/build/fat-agent/btrace-agent-fat.jar \
             --version "${RELEASE_VERSION}" \
             --keep-work
 

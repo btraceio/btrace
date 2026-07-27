@@ -161,10 +161,17 @@ project.gradle.projectsEvaluated {
 }
 ```
 
-Filtering via property:
+The selection is narrowed in two ways. `defaultExtensions` names the subset to embed when the
+filter property is absent, matching either a subproject's name or its path; the filter property
+overrides it and can select anything discoverable:
+
 ```bash
 ./gradlew fatAgentJar -PembedExtensions=btrace-metrics,btrace-statsd
 ```
+
+`btrace-dist` sets `defaultExtensions` to the released extension set, so an ordinary
+`fatAgentJar` build embeds exactly what a release ships rather than every extension in the
+repository — the test fixture and the Spark and Hadoop examples are excluded.
 
 ### ShadowJar Integration
 

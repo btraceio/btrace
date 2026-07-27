@@ -94,6 +94,15 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             group = 'BTrace Fat Agent'
             description = 'Resolves and stages extension content for fat agent JAR'
 
+            // Which extensions are staged is determined entirely by configuration - the DSL, the
+            // default set and the filter property - and none of it is a file Gradle can watch.
+            // Undeclared, this task is considered up to date whenever the staging directory
+            // exists, so a build that changes the selection silently reuses the previous
+            // extension set and produces a fat agent that does not match what was asked for.
+            inputs.property('extensionSources', project.provider {
+                extension.extensionSources.collect { it.toString() }.sort()
+            })
+
             outputs.dir(stagingDir)
 
             doLast {

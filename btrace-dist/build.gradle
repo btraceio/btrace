@@ -666,6 +666,45 @@ buildDeb.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, e
 buildRpm.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
 build.dependsOn buildSdkmanZip, buildZip, buildTgz, buildDeb, buildRpm
 
+// The published artifact is the fat agent, so what it embeds is a release decision rather than a
+// build detail. -PembedExtensions still overrides the default set, and a stray property or an
+// ORG_GRADLE_PROJECT_embedExtensions in the publishing environment would put example extensions
+// on Maven Central, or none at all, with no way to take it back.
+//
+// The expected ids are spelled out rather than derived from releaseExtensionProjects: deriving
+// them would make this assert only that the list equals itself, and the ids and the project paths
+// are different identifier spaces.
+def publishedExtensionIds = [
+    'btrace-contracts', 'btrace-gpu-bridge', 'btrace-llm-trace', 'btrace-metrics',
+    'btrace-rag-quality', 'btrace-statsd', 'btrace-utils'
+]
+
+task verifyEmbeddedExtensions {
+    group 'Verification'
+    description 'Assert the published fat agent embeds exactly the released extension set'
+    dependsOn fatAgentJar
+
+    doLast {
+        def jar = fatAgentJar.archiveFile.get().asFile
+        def declared = new java.util.jar.JarFile(jar).withCloseable { j ->
+            j.manifest?.mainAttributes?.getValue('BTrace-Embedded-Extensions')
+        }
+        def actual = (declared ?: '').split(',').collect { it.trim() }.findAll { it }.sort()
+        def expected = publishedExtensionIds.sort()
+        if (actual != expected) {
+            throw new GradleException(
+                "${jar.name} embeds ${actual} but the release set is ${expected}. " +
+                'Publishing this would ship the wrong extensions. If the release set changed, ' +
+                'update releaseExtensionProjects and publishedExtensionIds together.')
+        }
+        logger.lifecycle("[dist] Verified embedded extensions: ${actual.join(', ')}")
+    }
+}
+
+tasks.matching { it.name.startsWith('publishBtracePublicationTo') }.configureEach {
+    dependsOn verifyEmbeddedExtensions
+}
+
 task releaseSmoke(type: Exec) {
     group = 'Verification'
     description = 'Run acquisition and first-trace smoke tests against the built distribution'

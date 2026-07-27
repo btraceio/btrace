@@ -78,6 +78,11 @@ jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jba
 jbang btrace@btraceio <PID> <script.java>
 ```
 
+**Extensions:** The published artifact bundles the default extensions, so a script that injects a
+service such as `MetricsService` or `PrinterService` works under jbang without a separate
+BTrace installation. A distribution install resolves extensions from `$BTRACE_HOME/extensions/`
+instead; those take precedence over the embedded copies when both are present.
+
 **Agent JAR:** The client automatically discovers the masked agent JAR (`btrace.jar`) on its classpath — no extraction step is needed. If you want to use the agent JAR directly (e.g., with `-javaagent`), find it in the Maven local repository (default `~/.m2`) after jbang downloads BTrace:
 ```bash
 # The masked agent JAR is cached at:
@@ -743,7 +748,7 @@ The fat agent bundles everything into a single JAR that works without `$BTRACE_H
 ./gradlew :btrace-dist:fatAgentJar -PembedExtensions=btrace-metrics,btrace-statsd
 
 # Output location
-ls btrace-dist/build/resources/main/v*/libs/btrace-agent-fat.jar
+ls btrace-dist/build/fat-agent/btrace-agent-fat.jar
 ```
 
 ### Using the Fat Agent
