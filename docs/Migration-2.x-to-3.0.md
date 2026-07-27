@@ -72,9 +72,9 @@ The 2.x multi-jar layout (`btrace-agent.jar`, `btrace-boot.jar`, `btrace-client.
 
 Internally the jar uses *classdata masking*: only a small core API is visible to the bootstrap classloader, while the rest (ASM, compiler, client, instrumentation engine) stays invisible to the target application. See [Masked JAR Architecture](architecture/MaskedJarArchitecture.md) for details. If your launch scripts reference the old jar names, update them to point at `btrace.jar`.
 
-## `libs` and Profiles: Deprecated in Favor of Extensions
+## `libs` and Profiles: Removed in Favor of Extensions
 
-The `libs=<profile>` agent option is deprecated and will be removed in a future release; the agent emits a runtime warning when it is used. Extensions are the replacement — they provide isolation, permissions, and per-extension enable/disable instead of mutating the global classpath. See [Migrating from libs/profiles to Extensions](architecture/migrating-from-libs-profiles.md) for a step-by-step guide.
+The `libs=<profile>` agent option has been removed. The agent logs an error naming the profile and loads nothing, so classes that used to reach probes through `btrace-libs/<profile>/` no longer resolve — typically surfacing as a probe failing on a type it previously saw. Extensions are the replacement — they provide isolation, permissions, and per-extension enable/disable instead of mutating the global classpath. See [Migrating from libs/profiles to Extensions](architecture/migrating-from-libs-profiles.md) for a step-by-step guide.
 
 ## Wire Protocol: Mixed Versions Keep Working
 
