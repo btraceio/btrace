@@ -656,8 +656,12 @@ buildDeb {
 }
 
 copyDtraceLib.dependsOn project(':btrace-dtrace').build
-// No ordering needed against the distribution tasks: fatAgentJar writes outside distTarget and
-// only reads btraceJar's output.
+// fatAgentJar reads btraceJar's output, which sits in the same libs directory copyDtraceLib
+// writes into, so Gradle sees it consuming that task's output. Moving the fat agent's own output
+// out of the distribution tree does not change that: this ordering is about what it reads.
+// buildSdkmanZip needs no such guard any more, because nothing writes the fat agent into the
+// tree the archives copy.
+fatAgentJar.mustRunAfter copyDtraceLib
 shadowJar.dependsOn btraceJar, copyDtraceLib, copyExtensions
 buildTgz.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
 buildZip.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions

@@ -62,6 +62,43 @@ task stageExternalTypeClientHome {
     }
 }
 
+// Homes for the embedded-extension test. Each holds a single libs/btrace.jar and deliberately no
+// sibling extensions/ directory: the client derives the extension API classpath from btrace.libs'
+// parent, so staging next to the real distribution would let its extensions satisfy the probe and
+// the test would pass without ever exercising the embedded copies.
+def embeddedExtHome = layout.buildDirectory.dir('embedded-extension-home')
+def embeddedExtLibs = embeddedExtHome.map { it.dir('libs') }
+def leanEngineHome = layout.buildDirectory.dir('lean-engine-home')
+def leanEngineLibs = leanEngineHome.map { it.dir('libs') }
+def publishedFatAgent = project(':btrace-dist').layout.buildDirectory.file('fat-agent/btrace-agent-fat.jar')
+
+task stageEmbeddedExtensionHomes {
+    dependsOn ':btrace-dist:btraceJar', ':btrace-dist:fatAgentJar'
+    inputs.file releaseBtraceJar
+    inputs.file publishedFatAgent
+    outputs.dir embeddedExtHome
+    outputs.dir leanEngineHome
+
+    doLast {
+        // The published artifact is the fat agent; the client locates the engine by the
+        // btrace.jar name, so stage it under that name.
+        File withExtensions = embeddedExtHome.get().asFile
+        project.delete(withExtensions)
+        project.copy {
+            from publishedFatAgent
+            into new File(withExtensions, 'libs')
+            rename { 'btrace.jar' }
+        }
+
+        File withoutExtensions = leanEngineHome.get().asFile
+        project.delete(withoutExtensions)
+        project.copy {
+            from releaseBtraceJar
+            into new File(withoutExtensions, 'libs')
+        }
+    }
+}
+
 task compileTestProbes {
     dependsOn compileTestJava, ':btrace-agent:jar', ':btrace-compiler:jar'
     // Wire all extension buildApiJar tasks dynamically (parent aggregator dissolved)
@@ -130,7 +167,8 @@ test {
     dependsOn cleanTest, buildEventsJar, compileTestProbes,
              ':btrace-dist:btraceJar',
              ':btrace-dist:explodeExtensions',
-             stageExternalTypeClientHome
+             stageExternalTypeClientHome,
+             stageEmbeddedExtensionHomes
     dependsOn gradle.includedBuild('btrace-gradle-plugin').task(':jar')
 
     testLogging.showStandardStreams = true
@@ -212,6 +250,8 @@ test {
     def libsPath = "${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/"
     systemProperty 'btrace.externalType.client.libs', externalTypeClientLibs.get().asFile.absolutePath
     systemProperty 'btrace.externalType.extensions', externalTypeExtensions.get().asFile.absolutePath
+    systemProperty 'btrace.embedded.libs', embeddedExtLibs.get().asFile.absolutePath
+    systemProperty 'btrace.embedded.lean.libs', leanEngineLibs.get().asFile.absolutePath
     def isJava8 = props.getProperty("JAVA_VERSION")?.contains("1.8")
     if (isJava8) {
         jvmArgs "-Dproject.dir=${projectDir}", "-Dproject.version=${project.version}", "-Dbtrace.libs=${libsPath}"
