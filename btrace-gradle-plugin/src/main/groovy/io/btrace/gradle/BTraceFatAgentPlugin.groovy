@@ -249,10 +249,29 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             }
 
             doFirst {
-                // Read embedded extensions list and add to manifest
+                // Read embedded extensions list and add to manifest.
+                //
+                // Merged with whatever the engine already declared rather than replacing it. The
+                // published BTrace engine embeds the default extensions, and its class data is
+                // copied into this jar wholesale; dropping its ids from the manifest would leave
+                // those extensions present as files but invisible to the loader, which reads this
+                // attribute to decide what exists. The result would be dead weight in every
+                // downstream fat agent.
+                def embedded = new LinkedHashSet<String>()
+                def seeded = manifest.attributes['BTrace-Embedded-Extensions']
+                if (seeded) {
+                    seeded.toString().split(',').each { id ->
+                        if (id.trim()) embedded << id.trim()
+                    }
+                }
                 def extListFile = new File(stagingDir, 'embedded-extensions.txt')
                 if (extListFile.exists() && extListFile.text.trim()) {
-                    manifest.attributes['BTrace-Embedded-Extensions'] = extListFile.text.trim()
+                    extListFile.text.trim().split(',').each { id ->
+                        if (id.trim()) embedded << id.trim()
+                    }
+                }
+                if (!embedded.isEmpty()) {
+                    manifest.attributes['BTrace-Embedded-Extensions'] = embedded.join(',')
                 }
 
                 // Add user-specified manifest attributes
