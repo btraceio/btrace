@@ -73,7 +73,7 @@ jobs:
       create_branch: ${{ steps.check-branch.outputs.create }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.commit_sha }}
           fetch-depth: 0
@@ -154,7 +154,7 @@ jobs:
       cache-key: ${{ steps.cache-key.outputs.key }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.commit_sha }}
 
@@ -280,7 +280,7 @@ jobs:
       TESTCONTAINERS_RYUK_DISABLED: "true"
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.commit_sha }}
 
@@ -387,7 +387,7 @@ jobs:
       release_sha: ${{ steps.commit.outputs.sha }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.commit_sha }}
           fetch-depth: 0
@@ -456,7 +456,7 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout RC tag
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.RC_TAG }}
 
@@ -579,7 +579,7 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout RC tag
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.RC_TAG }}
 
@@ -637,7 +637,7 @@ jobs:
     steps:
       - name: Checkout jbang-catalog
         continue-on-error: true
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: btraceio/jbang-catalog
           token: ${{ secrets.JBANG_CATALOG_PAT || secrets.GITHUB_TOKEN }}
@@ -699,7 +699,7 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout at release SHA
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.prepare-release.outputs.release_sha }}
           fetch-depth: 0
@@ -738,7 +738,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.dry_run == true && inputs.commit_sha || env.RC_TAG }}
 
@@ -800,7 +800,7 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.prepare-release.outputs.release_sha }}
 
@@ -894,7 +894,7 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
@@ -978,7 +978,7 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout release tag
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ env.RELEASE_TAG }}
 
@@ -1019,7 +1019,7 @@ jobs:
     if: ${{ inputs.release_type != 'patch' && inputs.dry_run != true }}
     steps:
       - name: Checkout develop
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: develop
           fetch-depth: 0
@@ -1053,7 +1053,7 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout release branch
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.release_branch }}
           fetch-depth: 0
@@ -1099,7 +1099,7 @@ jobs:
     if: ${{ inputs.dry_run != true }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
