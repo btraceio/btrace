@@ -19,11 +19,8 @@ package io.btrace.extension.impl;
 import io.btrace.core.extensions.PermissionSet;
 import io.btrace.extension.ExtensionDescriptorDTO;
 import io.btrace.extension.ExtensionRepository;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -118,14 +115,18 @@ final class ExtensionMetadata {
       return null;
     }
 
-    // Parse services from both manifest attribute and META-INF/services
+    // The manifest attribute is what the extension plugin writes, and it names service
+    // interfaces. Scanning META-INF/services was additive to it, but that collects the file
+    // *contents*, which name implementing classes -- so an extension that declares a provider
+    // reported its implementation as one of its own services. Prefer the attribute, and fall
+    // back to the provider file names, which are the interfaces, for extensions that predate it.
     List<String> services = new ArrayList<>();
     String servicesAttr = attrs.getValue(ATTR_SERVICES);
     if (servicesAttr != null && !servicesAttr.trim().isEmpty()) {
       services.addAll(parseList(servicesAttr));
+    } else {
+      services.addAll(scanServicesDirectory(jar));
     }
-    // Also scan META-INF/services directory
-    services.addAll(scanServicesDirectory(jar));
 
     return new ExtensionDescriptorDTO.Builder()
         .id(id)
@@ -192,27 +193,22 @@ final class ExtensionMetadata {
     return props;
   }
 
-  /** Scan META-INF/services directory for service implementations. */
+  /**
+   * Collects service interface names from {@code META-INF/services} provider file names.
+   *
+   * <p>Used only when the manifest declares no services. The file <em>name</em> is the service
+   * interface, per the service-provider convention; the contents name implementing classes and are
+   * deliberately not read here.
+   */
   private static List<String> scanServicesDirectory(JarFile jar) throws IOException {
     List<String> services = new ArrayList<>();
     Enumeration<JarEntry> entries = jar.entries();
     while (entries.hasMoreElements()) {
       JarEntry entry = entries.nextElement();
       if (entry.getName().startsWith(SERVICES_DIR) && !entry.isDirectory()) {
-        try (InputStream in = jar.getInputStream(entry);
-            BufferedReader reader =
-                new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-          String line;
-          while ((line = reader.readLine()) != null) {
-            line = line.trim();
-            // Skip comments and empty lines
-            if (!line.isEmpty() && !line.startsWith("#")) {
-              // Add the implementation class
-              if (!services.contains(line)) {
-                services.add(line);
-              }
-            }
-          }
+        String service = entry.getName().substring(SERVICES_DIR.length());
+        if (!service.isEmpty() && !service.contains("/") && !services.contains(service)) {
+          services.add(service);
         }
       }
     }
