@@ -71,6 +71,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -329,10 +330,67 @@ public class Client {
           }
         }
       }
+      // 3) Fall back to extensions embedded in the agent JAR itself. A Maven or jbang user has no
+      // extensions directory at all; the published artifact carries the extensions inside it, with
+      // the API types stored as plain class entries at the root, so the JAR is its own API
+      // classpath. Without this a source probe that injects an extension service fails to compile
+      // even though the agent could load the extension perfectly well at runtime.
+      String embedded = embeddedExtensionApiClasspath();
+      if (!embedded.isEmpty()) {
+        return embedded;
+      }
     } catch (Exception e) {
       log.warn("Failed to scan extensions directory", e);
     }
     return "";
+  }
+
+  /**
+   * Returns the agent JAR as a compile classpath entry when it declares embedded extensions.
+   *
+   * @return the JAR path, or an empty string when no embedded extensions are declared
+   */
+  private String embeddedExtensionApiClasspath() {
+    // btrace.libs names the directory holding the engine, and is what a distribution or an
+    // explicitly configured client sets; findMaskedAgentJar covers the jbang case, where the
+    // engine locates itself from its own code source.
+    String libsProp = System.getProperty("btrace.libs");
+    if (libsProp != null && !libsProp.isEmpty()) {
+      File candidate = new File(libsProp, "btrace.jar");
+      if (candidate.isFile()) {
+        String cp = embeddedExtensionApiClasspath(candidate.getAbsolutePath());
+        if (!cp.isEmpty()) {
+          return cp;
+        }
+      }
+    }
+    String agentJar = findMaskedAgentJar();
+    return agentJar == null ? "" : embeddedExtensionApiClasspath(agentJar);
+  }
+
+  /**
+   * Returns {@code agentJar} when it declares embedded extensions, or an empty string otherwise.
+   *
+   * @param agentJar path to a masked BTrace engine JAR
+   */
+  private String embeddedExtensionApiClasspath(String agentJar) {
+    try (JarFile jar = new JarFile(agentJar)) {
+      Manifest manifest = jar.getManifest();
+      if (manifest == null) {
+        return "";
+      }
+      String embedded = manifest.getMainAttributes().getValue("BTrace-Embedded-Extensions");
+      if (embedded == null || embedded.trim().isEmpty()) {
+        return "";
+      }
+      if (log.isDebugEnabled()) {
+        log.debug("Using embedded extension APIs from {}: {}", agentJar, embedded);
+      }
+      return agentJar;
+    } catch (IOException e) {
+      log.debug("Could not read embedded extension metadata from {}", agentJar, e);
+      return "";
+    }
   }
 
   /**

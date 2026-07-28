@@ -31,27 +31,32 @@ class BTraceExtensionPlugin implements Plugin<Project> {
         // Optionally apply maven-publish when available so we can publish artifacts easily
         try { project.plugins.apply('maven-publish') } catch (Throwable ignore) {}
 
-        // Try to ensure Shadow is available; if resolution is blocked, we will emit a clear
-        // error later with guidance. This is best-effort and safe when already applied.
-        try {
-            if (!project.pluginManager.hasPlugin('com.gradleup.shadow')) {
-                // Respect opt-out
-                def ext = project.extensions.findByType(BTraceExtensionMetadata)
-                boolean shouldAutoApply = (ext == null) ? true : (ext.autoApplyShadow != false)
-                if (shouldAutoApply) {
-                    project.logger.lifecycle("[BTRACE-EXT] Applying Shadow plugin automatically (com.gradleup.shadow) for ${project.path}")
-                    project.pluginManager.apply('com.gradleup.shadow')
-                } else {
-                    project.logger.lifecycle("[BTRACE-EXT] Shadow auto-apply disabled (btraceExtension.autoApplyShadow=false) for ${project.path}")
-                }
-            }
-        } catch (Throwable t) {
-            project.logger.warn("[BTRACE-EXT] Unable to auto-apply Shadow plugin: ${t.message}. Apply it explicitly via plugins { id 'com.gradleup.shadow' } or alias(libs.plugins.shadow), or set btraceExtension.autoApplyShadow=true.")
-        }
-
         // Create extension for metadata
         def extension = project.extensions.create('btraceExtension', BTraceExtensionMetadata)
         extension.version = project.version
+
+        // Try to ensure Shadow is available; if resolution is blocked, we will emit a clear
+        // error later with guidance. This is best-effort and safe when already applied.
+        //
+        // Deferred until the project is evaluated because autoApplyShadow is set from the
+        // btraceExtension block, which runs after this plugin is applied. Reading it here would
+        // always see the default and silently ignore the opt-out. Tasks that need Shadow attach
+        // through pluginManager.withPlugin, which fires whenever it is applied, so deferring
+        // costs nothing.
+        project.afterEvaluate {
+            try {
+                if (!project.pluginManager.hasPlugin('com.gradleup.shadow')) {
+                    if (extension.autoApplyShadow != false) {
+                        project.logger.lifecycle("[BTRACE-EXT] Applying Shadow plugin automatically (com.gradleup.shadow) for ${project.path}")
+                        project.pluginManager.apply('com.gradleup.shadow')
+                    } else {
+                        project.logger.lifecycle("[BTRACE-EXT] Shadow auto-apply disabled (btraceExtension.autoApplyShadow=false) for ${project.path}")
+                    }
+                }
+            } catch (Throwable t) {
+                project.logger.warn("[BTRACE-EXT] Unable to auto-apply Shadow plugin: ${t.message}. Apply it explicitly via plugins { id 'com.gradleup.shadow' } or alias(libs.plugins.shadow), or set btraceExtension.autoApplyShadow=true.")
+            }
+        }
         def authoredSourceSet = {
             project.sourceSets.main
         }

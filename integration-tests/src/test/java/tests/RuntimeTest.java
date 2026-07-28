@@ -1407,6 +1407,10 @@ public abstract class RuntimeTest {
 
   private void configureTargetEnvironment(ProcessBuilder processBuilder) {
     processBuilder.environment().remove("JAVA_TOOL_OPTIONS");
+    // Filesystem extensions register at a higher priority than embedded ones, so a developer with
+    // a distribution install exported would silently have BTRACE_HOME satisfy anything a probe
+    // injects. Tests would then pass without exercising what they name.
+    processBuilder.environment().remove("BTRACE_HOME");
     if (targetExtensionPath != null) {
       processBuilder.environment().put("BTRACE_EXT_PATH", targetExtensionPath);
     }

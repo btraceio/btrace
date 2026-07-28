@@ -81,6 +81,45 @@ public interface Completion {
     };
   }
 
+  /**
+   * Satisfied once every marker substring has appeared across stdout <em>or</em> stderr.
+   *
+   * <p>Needed for conditions the client reports as diagnostics rather than probe output: compiler
+   * errors and {@code errorExit} messages go to stderr, which {@link #untilContains} ignores, so
+   * waiting for one of those with a stdout-only condition sits until the harness times out.
+   */
+  static Completion untilEitherContains(final String... markers) {
+    return new Completion() {
+      private final boolean[] found = new boolean[markers.length];
+      private int remaining = markers.length;
+
+      private boolean offer(String line) {
+        for (int i = 0; i < markers.length; i++) {
+          if (!found[i] && line.contains(markers[i])) {
+            found[i] = true;
+            remaining--;
+          }
+        }
+        return remaining <= 0;
+      }
+
+      @Override
+      public boolean onStdout(String line) {
+        return offer(line);
+      }
+
+      @Override
+      public boolean onStderr(String line) {
+        return offer(line);
+      }
+
+      @Override
+      public String describe() {
+        return "all of " + Arrays.toString(markers) + " (stdout or stderr)";
+      }
+    };
+  }
+
   /** Satisfied once {@code n} stdout lines match {@code pattern}. */
   static Completion untilMatches(final Pattern pattern, final int n) {
     return new Completion() {

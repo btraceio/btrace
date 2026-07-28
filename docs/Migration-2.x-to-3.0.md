@@ -54,7 +54,7 @@ scripts/migrate-btrace-script.sh -r scripts-dir/
 
 ## Maven and Gradle Coordinates
 
-The group id changed from `org.openjdk.btrace` to `io.btrace`, and BTrace now publishes a single artifact containing the agent, client, and compiler:
+The group id changed from `org.openjdk.btrace` to `io.btrace`, and BTrace now publishes a single artifact containing the agent, client, compiler, and the default extensions:
 
 ```xml
 <dependency>

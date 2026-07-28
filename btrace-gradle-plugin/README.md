@@ -153,6 +153,7 @@ btraceFatAgent {
     // Auto-discovery options
     autoDiscover = true              // find extensions with btrace.extension plugin
     filterProperty = 'embedExtensions'  // use -PembedExtensions=ext1,ext2 to filter
+    defaultExtensions = [':ext-a']   // embed just these when the property is absent
 }
 ```
 
@@ -219,6 +220,21 @@ Build with specific extensions:
 # Embed only specific extensions
 ./gradlew fatAgentJar -PembedExtensions=btrace-metrics,btrace-statsd
 ```
+
+To embed a fixed subset by default — useful when the build produces a published artifact and only
+some of the discovered extensions belong in it — set `defaultExtensions`:
+
+```groovy
+btraceFatAgent {
+    autoDiscover = true
+    defaultExtensions = [':btrace-extensions:btrace-metrics', ':btrace-extensions:btrace-utils']
+}
+```
+
+Entries match a subproject's name or its path. The filter property still wins when it is present,
+so `-PembedExtensions=...` can select anything discoverable, including extensions outside the
+default set. Leaving `defaultExtensions` unset embeds everything discovered; setting it to an
+empty list does the same, rather than embedding nothing.
 
 ### Standalone Project Usage
 
@@ -310,7 +326,7 @@ Then in your project, add `mavenLocal()` to repositories or pluginManagement.
 ./gradlew :btrace-dist:fatAgentJar -PembedExtensions=btrace-metrics
 
 # Verify output
-jar -tf btrace-dist/build/resources/main/v*/libs/btrace-agent-fat.jar | grep btrace-extensions
+jar -tf btrace-dist/build/fat-agent/btrace-agent-fat.jar | grep btrace-extensions
 ```
 
 ---
