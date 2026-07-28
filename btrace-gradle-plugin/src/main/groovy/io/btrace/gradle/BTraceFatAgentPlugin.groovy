@@ -94,6 +94,15 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             group = 'BTrace Fat Agent'
             description = 'Resolves and stages extension content for fat agent JAR'
 
+            // Which extensions are staged is determined entirely by configuration - the DSL, the
+            // default set and the filter property - and none of it is a file Gradle can watch.
+            // Undeclared, this task is considered up to date whenever the staging directory
+            // exists, so a build that changes the selection silently reuses the previous
+            // extension set and produces a fat agent that does not match what was asked for.
+            inputs.property('extensionSources', project.provider {
+                extension.extensionSources.collect { it.toString() }.sort()
+            })
+
             outputs.dir(stagingDir)
 
             doLast {
@@ -249,10 +258,29 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             }
 
             doFirst {
-                // Read embedded extensions list and add to manifest
+                // Read embedded extensions list and add to manifest.
+                //
+                // Merged with whatever the engine already declared rather than replacing it. The
+                // published BTrace engine embeds the default extensions, and its class data is
+                // copied into this jar wholesale; dropping its ids from the manifest would leave
+                // those extensions present as files but invisible to the loader, which reads this
+                // attribute to decide what exists. The result would be dead weight in every
+                // downstream fat agent.
+                def embedded = new LinkedHashSet<String>()
+                def seeded = manifest.attributes['BTrace-Embedded-Extensions']
+                if (seeded) {
+                    seeded.toString().split(',').each { id ->
+                        if (id.trim()) embedded << id.trim()
+                    }
+                }
                 def extListFile = new File(stagingDir, 'embedded-extensions.txt')
                 if (extListFile.exists() && extListFile.text.trim()) {
-                    manifest.attributes['BTrace-Embedded-Extensions'] = extListFile.text.trim()
+                    extListFile.text.trim().split(',').each { id ->
+                        if (id.trim()) embedded << id.trim()
+                    }
+                }
+                if (!embedded.isEmpty()) {
+                    manifest.attributes['BTrace-Embedded-Extensions'] = embedded.join(',')
                 }
 
                 // Add user-specified manifest attributes
@@ -578,9 +606,23 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             ? project.property(extension.filterProperty).toString().split(',').toList()
             : null
 
+        // Spelled out rather than written as a chain of elvis operators: an empty defaultExtensions
+        // is falsy, so `filterList ?: extension.defaultExtensions` would select nothing at all and
+        // silently produce an extension-free fat agent.
+        def selection
+        if (filterList != null) {
+            selection = filterList
+        } else if (extension.defaultExtensions) {
+            selection = extension.defaultExtensions
+        } else {
+            selection = null
+        }
+
         project.rootProject.subprojects.each { sp ->
             if (sp.plugins.hasPlugin('io.btrace.extension')) {
-                if (filterList == null || filterList.contains(sp.name)) {
+                // Consumers set the filter property using project names, while an in-build default
+                // list is naturally written with project paths. Accept either.
+                if (selection == null || selection.contains(sp.name) || selection.contains(sp.path)) {
                     // Add as project source if not already present
                     def alreadyAdded = extension.extensionSources.any { source ->
                         source instanceof ProjectExtensionSource && source.projectPath == sp.path

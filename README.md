@@ -150,6 +150,10 @@ jbang btrace <PID> <script.java>
 
 **Note:** Replace `<version>` with the desired BTrace version (e.g., `3.0.0`). See [releases](https://github.com/btraceio/btrace/releases) for available versions.
 
+**Extensions:** The published artifact bundles the default extensions, so scripts that inject
+services such as `MetricsService` or `PrinterService` work under jbang with nothing extra to
+install.
+
 **Benefits:** Zero installation, automatic version management, works everywhere (Windows/macOS/Linux/containers), perfect for CI/CD.
 
 **Agent JAR:** The client automatically discovers the masked agent JAR (`btrace.jar`) on its classpath — no extraction step is needed. If you want to use the agent JAR directly (e.g., with `-javaagent`), find it in the Maven local repository after the first jbang run:
@@ -241,7 +245,7 @@ As a last resort (discouraged), you may append a single jar to the system classp
 For environments where managing multiple JARs is impractical (Spark, Hadoop, Kubernetes), BTrace provides a fat agent JAR with embedded extensions:
 
 ```sh
-# Build fat agent with all extensions
+# Build fat agent with the default extensions
 ./gradlew :btrace-dist:fatAgentJar
 
 # Build with specific extensions only

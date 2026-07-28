@@ -475,15 +475,33 @@ test {
  * Usage:
  *   ./gradlew :btrace-dist:fatAgentJar -PembedExtensions=btrace-spark,btrace-metrics
  */
+// The extensions that ship with a release. This drives both the distribution's extensions/
+// directory and the set the fat agent embeds by default, so the two cannot disagree about what
+// "default" means. Declared here because the btraceFatAgent block below reads it.
+def releaseExtensionProjects = [
+    ':btrace-extensions:btrace-contracts',
+    ':btrace-extensions:btrace-gpu-bridge',
+    ':btrace-extensions:btrace-llm-trace',
+    ':btrace-extensions:btrace-metrics',
+    ':btrace-extensions:btrace-rag-quality',
+    ':btrace-extensions:btrace-statsd',
+    ':btrace-extensions:btrace-utils'
+]
+
 btraceFatAgent {
     baseName = 'btrace-agent-fat'
-    outputDir = libsDir
+    // Deliberately outside distTarget. The distribution archives copy that tree wholesale, so a
+    // fat agent written into it rides along into every zip, tarball, deb and rpm whenever
+    // something happens to build it first.
+    outputDir = project.layout.buildDirectory.dir('fat-agent').get().asFile
 
     // Reference the single masked JAR (agent + boot merged into btraceJar)
     agentJarTask = 'btraceJar'
 
-    // Auto-discover extensions from subprojects
+    // Auto-discover extensions from subprojects, but embed only the released set unless the
+    // build explicitly asks for something else via -PembedExtensions.
     autoDiscover = true
+    defaultExtensions = releaseExtensionProjects
     filterProperty = 'embedExtensions'
 
     // Package relocations
@@ -519,16 +537,6 @@ task copyExtensions(type: Sync) {
     description 'Mirror the released extension ZIP archives into the extensions/ directory'
     into "${distTarget}/extensions/"
 }
-
-def releaseExtensionProjects = [
-    ':btrace-extensions:btrace-contracts',
-    ':btrace-extensions:btrace-gpu-bridge',
-    ':btrace-extensions:btrace-llm-trace',
-    ':btrace-extensions:btrace-metrics',
-    ':btrace-extensions:btrace-rag-quality',
-    ':btrace-extensions:btrace-statsd',
-    ':btrace-extensions:btrace-utils'
-]
 
 gradle.projectsEvaluated {
     tasks.named('copyExtensions').configure { t ->
@@ -648,8 +656,12 @@ buildDeb {
 }
 
 copyDtraceLib.dependsOn project(':btrace-dtrace').build
+// fatAgentJar reads btraceJar's output, which sits in the same libs directory copyDtraceLib
+// writes into, so Gradle sees it consuming that task's output. Moving the fat agent's own output
+// out of the distribution tree does not change that: this ordering is about what it reads.
+// buildSdkmanZip needs no such guard any more, because nothing writes the fat agent into the
+// tree the archives copy.
 fatAgentJar.mustRunAfter copyDtraceLib
-buildSdkmanZip.mustRunAfter fatAgentJar
 shadowJar.dependsOn btraceJar, copyDtraceLib, copyExtensions
 buildTgz.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
 buildZip.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
@@ -657,6 +669,45 @@ buildSdkmanZip.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResour
 buildDeb.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
 buildRpm.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
 build.dependsOn buildSdkmanZip, buildZip, buildTgz, buildDeb, buildRpm
+
+// The published artifact is the fat agent, so what it embeds is a release decision rather than a
+// build detail. -PembedExtensions still overrides the default set, and a stray property or an
+// ORG_GRADLE_PROJECT_embedExtensions in the publishing environment would put example extensions
+// on Maven Central, or none at all, with no way to take it back.
+//
+// The expected ids are spelled out rather than derived from releaseExtensionProjects: deriving
+// them would make this assert only that the list equals itself, and the ids and the project paths
+// are different identifier spaces.
+def publishedExtensionIds = [
+    'btrace-contracts', 'btrace-gpu-bridge', 'btrace-llm-trace', 'btrace-metrics',
+    'btrace-rag-quality', 'btrace-statsd', 'btrace-utils'
+]
+
+task verifyEmbeddedExtensions {
+    group 'Verification'
+    description 'Assert the published fat agent embeds exactly the released extension set'
+    dependsOn fatAgentJar
+
+    doLast {
+        def jar = fatAgentJar.archiveFile.get().asFile
+        def declared = new java.util.jar.JarFile(jar).withCloseable { j ->
+            j.manifest?.mainAttributes?.getValue('BTrace-Embedded-Extensions')
+        }
+        def actual = (declared ?: '').split(',').collect { it.trim() }.findAll { it }.sort()
+        def expected = publishedExtensionIds.sort()
+        if (actual != expected) {
+            throw new GradleException(
+                "${jar.name} embeds ${actual} but the release set is ${expected}. " +
+                'Publishing this would ship the wrong extensions. If the release set changed, ' +
+                'update releaseExtensionProjects and publishedExtensionIds together.')
+        }
+        logger.lifecycle("[dist] Verified embedded extensions: ${actual.join(', ')}")
+    }
+}
+
+tasks.matching { it.name.startsWith('publishBtracePublicationTo') }.configureEach {
+    dependsOn verifyEmbeddedExtensions
+}
 
 task releaseSmoke(type: Exec) {
     group = 'Verification'
@@ -667,7 +718,7 @@ task releaseSmoke(type: Exec) {
     commandLine 'bash',
             rootProject.file('scripts/release-smoke.sh'),
             '--distribution', distTarget,
-            '--fat-agent', new File(libsDir, 'btrace-agent-fat.jar'),
+            '--fat-agent', fatAgentJar.archiveFile.get().asFile,
             '--version', project.version
 }
 
@@ -917,7 +968,13 @@ publishing {
         btrace(MavenPublication) {
             artifactId 'btrace'
             groupId 'io.btrace'
-            artifact btraceJar
+            // The fat agent, not the lean masked jar. A Maven or jbang user has no
+            // $BTRACE_HOME/extensions directory to discover, so publishing the lean engine left
+            // them with core tracing and none of the default extensions. Embedding costs about
+            // seven percent in size and nothing at runtime, since an extension is inert until a
+            // script injects it. The distribution is unaffected: it keeps shipping the lean
+            // libs/btrace.jar alongside its extensions directory.
+            artifact fatAgentJar
             pom.withXml {
                 addPomDetails(asNode(), 'btrace')
             }
@@ -928,7 +985,9 @@ publishing {
 def addPomDetails(node, name) {
     node.appendNode('name', name)
     node.appendNode('url', 'https://github.com/btraceio/btrace')
-    node.appendNode('description', 'BTrace: A safe, dynamic tracing tool for the Java platform')
+    node.appendNode('description',
+            'BTrace: A safe, dynamic tracing tool for the Java platform, with the default'
+                    + ' extensions embedded')
     def scmNode = node.appendNode('scm')
     scmNode.appendNode('url', 'https://github.com/btraceio/btrace')
     scmNode.appendNode('connection', 'scm:git:https://github.com/btraceio/btrace.git')

@@ -123,13 +123,22 @@ wait_for_text() {
   return 1
 }
 
+# Set NO_BTRACE_HOME=1 for a single call to launch the target with BTRACE_HOME unset. Only the
+# embedded-extension legs want this: it stops a developer's SDKMAN install from satisfying an
+# @Injected service from $BTRACE_HOME/extensions/, which would leave the embedded copy untested.
+# It is defence-in-depth for local runs rather than the CI mechanism, since this script never
+# exports BTRACE_HOME - it passes it as a per-command prefix assignment.
 start_patient() {
   local label=$1
   shift
   stop_process "$TARGET_PID"
   TARGET_PID=""
   local log="$WORK/logs/${label}-target.log"
-  "$JAVA_HOME/bin/java" "$@" "$WORK/DemoApp.java" >"$log" 2>&1 &
+  if [ "${NO_BTRACE_HOME:-}" = "1" ]; then
+    env -u BTRACE_HOME "$JAVA_HOME/bin/java" "$@" "$WORK/DemoApp.java" >"$log" 2>&1 &
+  else
+    "$JAVA_HOME/bin/java" "$@" "$WORK/DemoApp.java" >"$log" 2>&1 &
+  fi
   TARGET_PID=$!
   wait_for_text "$log" "[demo] order service running" 30 || fail "$label target did not become ready"
 }
@@ -274,14 +283,24 @@ for mode in v1 v2 auto; do
 done
 
 echo "[smoke] embedded non-privileged and privileged extensions"
+# No allowExtensions entry: the policy only consults it on the privileged branch, so listing a
+# non-privileged extension asserts nothing. allowPrivileged=false is the meaningful constraint.
 cat >"$WORK/permissions.properties" <<'EOF'
-allowExtensions=btrace-hadoop-example
 allowPrivileged=false
 EOF
-start_patient embedded-non-privileged \
+NO_BTRACE_HOME=1 start_patient embedded-non-privileged \
   "-Dbtrace.permissions=$WORK/permissions.properties" \
   "-javaagent:$FAT_AGENT=port=0,debug=true"
 run_doctor embedded-non-privileged 0 "READY"
+# Prove the extension came from the fat agent rather than $BTRACE_HOME/extensions/. Every
+# release extension is also exploded into the distribution, so without this the leg would pass
+# on the filesystem copy and never exercise the embedded one.
+wait_for_text "$WORK/logs/embedded-non-privileged-target.log" \
+  "BTRACE_HOME not set; using embedded extensions only" 30 \
+  || fail "embedded-non-privileged target resolved a BTRACE_HOME instead of embedded extensions"
+wait_for_text "$WORK/logs/embedded-non-privileged-target.log" \
+  "Scanning repository: embedded:META-INF/btrace-extensions/" 30 \
+  || fail "embedded-non-privileged target did not scan the embedded extension repository"
 start_trace embedded-non-privileged "release-smoke: non-privileged extension" "" \
   "$TARGET_PID" NonPrivilegedExtensionProbe.java
 finish_trace
@@ -292,7 +311,7 @@ cat >"$WORK/permissions.properties" <<'EOF'
 allowExtensions=btrace-metrics
 allowPrivileged=true
 EOF
-start_patient embedded-privileged \
+NO_BTRACE_HOME=1 start_patient embedded-privileged \
   "-Dbtrace.permissions=$WORK/permissions.properties" \
   "-javaagent:$FAT_AGENT=port=0,debug=true"
 run_doctor embedded-privileged 0 "READY"

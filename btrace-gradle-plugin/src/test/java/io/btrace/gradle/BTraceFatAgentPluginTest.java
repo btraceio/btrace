@@ -829,4 +829,155 @@ class BTraceFatAgentPluginTest {
             writer.write(content);
         }
     }
+
+    // ---------------------------------------------------------------------------------------
+    // Auto-discovery selection.
+    //
+    // These assert which extensions auto-discovery picks, and nothing else. Selection happens in
+    // gradle.projectsEvaluated, before any task action, so `printSources` can read it without
+    // building an API jar for anything.
+    // ---------------------------------------------------------------------------------------
+
+    /**
+     * Writes a root project applying the fat-agent plugin plus three extension subprojects, and a
+     * {@code printSources} task that reports the discovered selection.
+     *
+     * @param defaultExtensionsLiteral Groovy literal for {@code defaultExtensions}, or null to
+     *     leave the property unset
+     */
+    private void writeDiscoveryProject(String defaultExtensionsLiteral) throws IOException {
+        writeFile(
+                settingsFile,
+                "rootProject.name = 'test-project'\n" + "include 'ext-alpha', 'ext-beta', 'ext-gamma'\n");
+        // Gradle refuses to configure an included project whose directory does not exist.
+        for (String name : new String[] {"ext-alpha", "ext-beta", "ext-gamma"}) {
+            Files.createDirectories(projectDir.resolve(name));
+        }
+
+        // The extension plugin auto-applies Shadow during apply(), before it creates the extension
+        // holding autoApplyShadow, so the opt-out cannot be set from a build script in time. Supply
+        // a stub under both plugin ids instead - none of these projects is ever built, only
+        // inspected for which extensions auto-discovery selected.
+        writeBuildSrcShadowStub();
+
+        StringBuilder root = new StringBuilder();
+        root.append("plugins { id 'io.btrace.fat-agent' }\n");
+        root.append("subprojects {\n");
+        root.append("    apply plugin: 'io.btrace.extension'\n");
+        root.append("    btraceExtension { btraceVersion = '3.0.0' }\n");
+        root.append("}\n");
+        root.append("btraceFatAgent {\n");
+        root.append("    autoDiscover = true\n");
+        if (defaultExtensionsLiteral != null) {
+            root.append("    defaultExtensions = ").append(defaultExtensionsLiteral).append("\n");
+        }
+        root.append("}\n");
+        root.append("tasks.register('printSources') {\n");
+        root.append("    doLast {\n");
+        root.append("        def paths = btraceFatAgent.extensionSources.collect { it.projectPath }.sort()\n");
+        root.append("        println 'SELECTED=' + paths.join(',')\n");
+        root.append("    }\n");
+        root.append("}\n");
+        writeFile(buildFile, root.toString());
+    }
+
+    /** Minimal stand-in for the Shadow plugin, registered under both ids the extension plugin tries. */
+    private void writeBuildSrcShadowStub() throws IOException {
+        Path dir =
+                projectDir.resolve("buildSrc/src/main/groovy/com/github/jengelman/gradle/plugins/shadow");
+        Files.createDirectories(dir);
+        Path descriptors = projectDir.resolve("buildSrc/src/main/resources/META-INF/gradle-plugins");
+        Files.createDirectories(descriptors);
+        writeFile(
+                projectDir.resolve("buildSrc/build.gradle").toFile(),
+                "plugins { id 'groovy-gradle-plugin' }\nrepositories { mavenCentral() }\n");
+        writeFile(
+                dir.resolve("ShadowPlugin.groovy").toFile(),
+                "package com.github.jengelman.gradle.plugins.shadow\n"
+                        + "import org.gradle.api.Plugin\n"
+                        + "import org.gradle.api.Project\n"
+                        + "class ShadowPlugin implements Plugin<Project> {\n"
+                        + "  void apply(Project project) {\n"
+                        + "    project.tasks.register('shadowJar', ShadowJar)\n"
+                        + "  }\n"
+                        + "}\n");
+        writeFile(
+                dir.resolve("ShadowJar.groovy").toFile(),
+                "package com.github.jengelman.gradle.plugins.shadow\n"
+                        + "import org.gradle.api.tasks.Internal\n"
+                        + "import org.gradle.api.tasks.bundling.Jar\n"
+                        + "abstract class ShadowJar extends Jar {\n"
+                        + "  @Internal Object configurations\n"
+                        + "  void relocate(String from, String to) {}\n"
+                        + "  void minimize() {}\n"
+                        + "}\n");
+        String descriptor =
+                "implementation-class=com.github.jengelman.gradle.plugins.shadow.ShadowPlugin\n";
+        writeFile(descriptors.resolve("com.gradleup.shadow.properties").toFile(), descriptor);
+        writeFile(
+                descriptors.resolve("com.github.johnrengelman.shadow.properties").toFile(), descriptor);
+    }
+
+    private String selectionOf(BuildResult result) {
+        for (String line : result.getOutput().split("\\R")) {
+            if (line.startsWith("SELECTED=")) {
+                return line.substring("SELECTED=".length()).trim();
+            }
+        }
+        throw new AssertionError("printSources did not report a selection:\n" + result.getOutput());
+    }
+
+    @Test
+    @DisplayName("Auto-discovery embeds every extension when nothing constrains it")
+    void autoDiscoveryEmbedsEverythingByDefault() throws IOException {
+        writeDiscoveryProject(null);
+
+        BuildResult result = createRunner().withArguments("printSources").build();
+
+        assertEquals(":ext-alpha,:ext-beta,:ext-gamma", selectionOf(result));
+    }
+
+    @Test
+    @DisplayName("defaultExtensions restricts auto-discovery when the filter property is absent")
+    void defaultExtensionsRestrictsDiscovery() throws IOException {
+        writeDiscoveryProject("[':ext-alpha', ':ext-gamma']");
+
+        BuildResult result = createRunner().withArguments("printSources").build();
+
+        assertEquals(":ext-alpha,:ext-gamma", selectionOf(result));
+    }
+
+    @Test
+    @DisplayName("The filter property overrides defaultExtensions")
+    void filterPropertyOverridesDefaultExtensions() throws IOException {
+        writeDiscoveryProject("[':ext-alpha']");
+
+        BuildResult result =
+                createRunner().withArguments("printSources", "-PembedExtensions=ext-beta").build();
+
+        assertEquals(":ext-beta", selectionOf(result));
+    }
+
+    @Test
+    @DisplayName("defaultExtensions accepts project names as well as paths")
+    void defaultExtensionsAcceptsProjectNames() throws IOException {
+        writeDiscoveryProject("['ext-beta']");
+
+        BuildResult result = createRunner().withArguments("printSources").build();
+
+        assertEquals(":ext-beta", selectionOf(result));
+    }
+
+    @Test
+    @DisplayName("An empty defaultExtensions embeds everything rather than nothing")
+    void emptyDefaultExtensionsEmbedsEverything() throws IOException {
+        // Groovy treats an empty list as falsy. Were the selection written as a chain of elvis
+        // operators, this would silently yield an extension-free fat agent for every consumer that
+        // had not set the property.
+        writeDiscoveryProject("[]");
+
+        BuildResult result = createRunner().withArguments("printSources").build();
+
+        assertEquals(":ext-alpha,:ext-beta,:ext-gamma", selectionOf(result));
+    }
 }
