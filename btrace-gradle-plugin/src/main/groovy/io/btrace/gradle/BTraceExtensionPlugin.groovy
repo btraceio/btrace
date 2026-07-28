@@ -260,6 +260,39 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                     throw new GradleException("[BTRACE-EXT] Found ${extDescCount} package-level @ExtensionDescriptor annotations. Only one is allowed per extension project (place it in API package-info.java).")
                 }
 
+                // Enforce: every declared service must have an implementation the runtime can find.
+                // Resolution is ServiceLoader first, then the exact name <serviceFqcn>Impl, so an
+                // implementation placed in a separate package without a provider file resolves to
+                // nothing. That extension still builds, packages, installs and loads; it fails only
+                // when a probe injects the service, at the probe's call site, which is a long way
+                // from the cause.
+                def classFileExists = { String fqcn ->
+                    String rel = fqcn.replace('.', '/') + '.class'
+                    return authoredClassesDirs().any { File dir -> dir != null && new File(dir, rel).isFile() }
+                }
+                def providerNamesAnImpl = { String service ->
+                    def srcDirs = authoredSourceSet().resources.srcDirs as Set
+                    return srcDirs.any { File resDir ->
+                        File providerFile = new File(resDir, 'META-INF/services/' + service)
+                        if (!providerFile.isFile()) return false
+                        return providerFile.readLines().any { String raw ->
+                            String name = raw.replaceAll(/#.*/, '').trim()
+                            return !name.isEmpty() && classFileExists(name)
+                        }
+                    }
+                }
+                def unresolvedServices = explicitServiceTypes().findAll { String service ->
+                    service != null && !service.isEmpty() &&
+                        !classFileExists(service + 'Impl') && !providerNamesAnImpl(service)
+                }
+                if (!unresolvedServices.isEmpty()) {
+                    throw new GradleException(
+                        "[BTRACE-EXT] No implementation found for declared service(s): ${unresolvedServices}. " +
+                        "Name the implementation <service>Impl in the service's own package, or add " +
+                        "META-INF/services/<service> naming the implementing class. Without one of those the " +
+                        "extension builds and installs, then injection fails at the probe call site.")
+                }
+
                 // Prefer explicitly configured services; otherwise, detect via @ServiceDescriptor annotations
                 def services = extension.services as List<String>
                 if (!services || services.isEmpty()) {
