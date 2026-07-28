@@ -591,3 +591,14 @@ class HistoProbe {
 ## Summary
 
 Use a single module with `src/main` and the BTrace extension plugin to produce clean, isolated, and self-describing extensions. The plugin handles artifact separation, metadata, permissions, shading, packaging, and API export computation, so you can focus on a stable API and solid implementation.
+
+## Assisted Authoring
+
+The [BTrace agent plugins](https://github.com/btraceio/agent-plugins) marketplace provides skills
+for Claude Code, Codex, and Pi that apply this guide:
+
+- [`btrace-extension-authoring`](https://github.com/btraceio/agent-plugins/blob/main/plugins/btrace-development/skills/btrace-extension-authoring/SKILL.md)
+  — designing a new extension for a target library, including where `@ExternalType` stops and
+  hand-written method handles take over.
+- [`btrace-legacy-libs-migration`](https://github.com/btraceio/agent-plugins/blob/main/plugins/btrace-observability/skills/btrace-legacy-libs-migration/SKILL.md)
+  — moving an integration off the removed `libs`/profile packaging.

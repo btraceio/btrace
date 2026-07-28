@@ -112,3 +112,10 @@ See [Fat Agent Plugin Architecture](fat-agent-plugin.md) for details.
 ## Examples & Templates
 
 - See provided-style extension guide: `docs/architecture/provided-style-extensions.md` for Spark/Hadoop templates and `extensions.conf` snippets.
+
+## Assisted Migration
+
+The [BTrace agent plugins](https://github.com/btraceio/agent-plugins) marketplace provides a
+[`btrace-legacy-libs-migration`](https://github.com/btraceio/agent-plugins/blob/main/plugins/btrace-observability/skills/btrace-legacy-libs-migration/SKILL.md)
+skill for Claude Code, Codex, and Pi. It walks the inventory, the API/implementation split, the
+service and permission metadata, and the verification steps described above.
