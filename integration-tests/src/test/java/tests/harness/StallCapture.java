@@ -19,7 +19,9 @@ package tests.harness;
 import java.io.File;
 import java.io.Flushable;
 import java.io.IOException;
+import java.lang.management.LockInfo;
 import java.lang.management.ManagementFactory;
+import java.lang.management.MonitorInfo;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.nio.charset.StandardCharsets;
@@ -73,14 +75,18 @@ public final class StallCapture {
     flush(sink);
 
     writeTestJvmThreads(sink);
+    // Charged against the same budget as the targets below: the join above can take up to
+    // THREAD_DUMP_TIMEOUT_MS, and a frame that overruns its budget delays the next one.
     flush(sink);
 
     for (TargetRegistry.Snapshot target : targets) {
+      // The header goes out for every target, dumped or not, so one grep pattern finds them all.
+      line(sink, "---- target " + target.getLabel() + " (pid " + target.getPid() + ") ----");
       if (System.nanoTime() >= deadline) {
-        line(sink, "target " + target.getLabel() + ": skipped, capture budget exhausted");
-        continue;
+        line(sink, "skipped, capture budget exhausted");
+      } else {
+        writeTargetThreads(sink, target);
       }
-      writeTargetThreads(sink, target);
       flush(sink);
     }
 
@@ -135,6 +141,13 @@ public final class StallCapture {
         dump != null ? dump : "test-JVM dump timed out after " + THREAD_DUMP_TIMEOUT_MS + "ms");
   }
 
+  /**
+   * Renders a full dump.
+   *
+   * <p>Rendered frame by frame rather than with {@link ThreadInfo#toString()}, which stops after
+   * eight frames -- and the frame that explains a stall is rarely in the top eight of a
+   * test-harness stack.
+   */
   private static String renderThreadDump() {
     ThreadMXBean threads = ManagementFactory.getThreadMXBean();
     ThreadInfo[] infos = threads.dumpAllThreads(true, true);
@@ -143,7 +156,40 @@ public final class StallCapture {
       if (info == null) {
         continue;
       }
-      sb.append(info.toString());
+      sb.append('"').append(info.getThreadName()).append('"');
+      sb.append(" Id=").append(info.getThreadId());
+      sb.append(' ').append(info.getThreadState());
+      if (info.getLockName() != null) {
+        sb.append(" on ").append(info.getLockName());
+      }
+      if (info.getLockOwnerName() != null) {
+        sb.append(" owned by \"").append(info.getLockOwnerName());
+        sb.append("\" Id=").append(info.getLockOwnerId());
+      }
+      if (info.isSuspended()) {
+        sb.append(" (suspended)");
+      }
+      if (info.isInNative()) {
+        sb.append(" (in native)");
+      }
+      sb.append('\n');
+      StackTraceElement[] stack = info.getStackTrace();
+      for (int i = 0; i < stack.length; i++) {
+        sb.append("\tat ").append(stack[i]).append('\n');
+        for (MonitorInfo monitor : info.getLockedMonitors()) {
+          if (monitor.getLockedStackDepth() == i) {
+            sb.append("\t-  locked ").append(monitor).append('\n');
+          }
+        }
+      }
+      LockInfo[] synchronizers = info.getLockedSynchronizers();
+      if (synchronizers.length > 0) {
+        sb.append("\tNumber of locked synchronizers = ").append(synchronizers.length).append('\n');
+        for (LockInfo synchronizer : synchronizers) {
+          sb.append("\t-  ").append(synchronizer).append('\n');
+        }
+      }
+      sb.append('\n');
     }
     return sb.toString();
   }
@@ -157,7 +203,6 @@ public final class StallCapture {
    */
   private static void writeTargetThreads(Appendable sink, TargetRegistry.Snapshot target) {
     String pid = target.getPid();
-    line(sink, "---- target " + target.getLabel() + " (pid " + pid + ") ----");
     if (pid == null) {
       line(sink, "no pid known for this target; it never reported one");
       return;

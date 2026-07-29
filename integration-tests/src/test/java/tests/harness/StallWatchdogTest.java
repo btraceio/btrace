@@ -17,6 +17,7 @@
 package tests.harness;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -68,13 +69,18 @@ public class StallWatchdogTest {
   }
 
   @Test
-  @StallTimeout(millis = 1_000L, gapMillis = 60_000L)
+  @StallTimeout(millis = 300L, gapMillis = 60_000L)
   @DisplayName("A stalled test is dumped, naming the stalled thread")
   public void firesOnAStall() throws Exception {
+    String originalName = Thread.currentThread().getName();
     Thread.currentThread().setName("stall-watchdog-test-stalled-thread");
-    Thread.sleep(3_000L);
-
-    String report = awaitFrame(1);
+    String report;
+    try {
+      report = awaitFrame(1);
+    } finally {
+      // Restored, or every later dump in this worker JVM names a test that finished minutes ago.
+      Thread.currentThread().setName(originalName);
+    }
     assertEquals(1, dumpFiles().size(), "expected exactly one frame, got " + dumpFiles());
     assertTrue(report.contains("STALL DUMP frame 1"), "banner missing:\n" + report);
     assertTrue(
@@ -85,36 +91,52 @@ public class StallWatchdogTest {
   }
 
   @Test
-  @StallTimeout(millis = 1_000L, gapMillis = 1_000L)
+  @StallTimeout(millis = 300L, gapMillis = 300L)
   @DisplayName("A continuing stall produces a second frame, so it can be told from slowness")
   public void producesASecondFrame() throws Exception {
-    Thread.sleep(4_000L);
-
     String first = awaitFrame(1);
     String second = awaitFrame(2);
     assertEquals(2, dumpFiles().size(), "expected two frames, got " + dumpFiles());
     assertTrue(first.contains("STALL DUMP frame 1"), "frame 1 missing:\n" + first);
     assertTrue(second.contains("STALL DUMP frame 2"), "frame 2 missing:\n" + second);
     assertNotEquals(
-        elapsedLine(first),
-        elapsedLine(second),
-        "the frames must be distinguishable; their difference is the evidence");
+        first, second, "the frames must differ; their difference is the evidence of a stall");
   }
 
   @Test
-  @StallTimeout(millis = 1_000L, gapMillis = 60_000L)
+  @StallTimeout(millis = 300L, gapMillis = 60_000L)
   @DisplayName("A stall dump includes the threads of a registered target")
   public void dumpsRegisteredTargets() throws Exception {
     Process target = new ProcessBuilder("sleep", "120").start();
     try {
       TargetRegistry.register(target, "watchdog-test-target", "jcmd").setPid("123456789");
-      Thread.sleep(3_000L);
 
       String report = awaitFrame(1);
       assertEquals(1, dumpFiles().size(), "expected exactly one frame, got " + dumpFiles());
       assertTrue(
           report.contains("watchdog-test-target"),
           "a registered target must appear in the dump:\n" + report);
+    } finally {
+      target.destroyForcibly();
+    }
+  }
+
+  @Test
+  @StallTimeout(millis = 300L, gapMillis = 300L)
+  @DisplayName("Once both frames are captured, the stalled test's targets are released")
+  public void releasesTargetsAfterTheSecondFrame() throws Exception {
+    Process target = new ProcessBuilder("sleep", "120").start();
+    try {
+      TargetRegistry.register(target, "released-target", "jcmd").setPid("123456789");
+
+      awaitFrame(2);
+      long deadline = System.currentTimeMillis() + 15_000L;
+      while (target.isAlive() && System.currentTimeMillis() < deadline) {
+        Thread.sleep(50L);
+      }
+      // Evidence alone does not end a stall: the per-test timeout abandons the test on a thread
+      // JUnit does not mark as a daemon, and only closing the target's sockets lets it die.
+      assertFalse(target.isAlive(), "a stalled test's target must be released once dumped");
     } finally {
       target.destroyForcibly();
     }

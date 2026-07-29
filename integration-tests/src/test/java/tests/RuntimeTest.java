@@ -1170,6 +1170,10 @@ public abstract class RuntimeTest {
 
     pb.environment().remove("JAVA_TOOL_OPTIONS");
     Process p = pb.start();
+    // The btrace client runs in its own JVM; a stall on the client side is the shape this
+    // watchdog exists for, so its threads must be dumpable too. No ready: line to parse --
+    // TargetRegistry falls back to Process.pid().
+    TargetRegistry.register(p, "runBTrace client", jcmdFor(javaHome));
 
     AtomicBoolean done = new AtomicBoolean(false);
 
@@ -1316,6 +1320,10 @@ public abstract class RuntimeTest {
 
     pb.environment().remove("JAVA_TOOL_OPTIONS");
     Process p = pb.start();
+    // The btrace client runs in its own JVM; a stall on the client side is the shape this
+    // watchdog exists for, so its threads must be dumpable too. No ready: line to parse --
+    // TargetRegistry falls back to Process.pid().
+    TargetRegistry.register(p, "runBTrace client", jcmdFor(javaHome));
 
     OutputPump.run(
         p,
@@ -1441,6 +1449,10 @@ public abstract class RuntimeTest {
 
     pb.environment().remove("JAVA_TOOL_OPTIONS");
     Process p = pb.start();
+    // The btrace client runs in its own JVM; a stall on the client side is the shape this
+    // watchdog exists for, so its threads must be dumpable too. No ready: line to parse --
+    // TargetRegistry falls back to Process.pid().
+    TargetRegistry.register(p, "attach client", jcmdFor(javaHome));
 
     boolean completed =
         OutputPump.run(
@@ -1554,6 +1566,10 @@ public abstract class RuntimeTest {
 
     pb.environment().remove("JAVA_TOOL_OPTIONS");
     Process p = pb.start();
+    // The btrace client runs in its own JVM; a stall on the client side is the shape this
+    // watchdog exists for, so its threads must be dumpable too. No ready: line to parse --
+    // TargetRegistry falls back to Process.pid().
+    TargetRegistry.register(p, "attachOneliner client", jcmdFor(javaHome));
 
     boolean completed =
         OutputPump.run(

@@ -60,8 +60,20 @@ per-test timeout exists, and must not rely on one to bound the capture.
 
 ## Design
 
-A **stall watchdog** in the integration-test harness. Evidence only: it does not kill anything and
-does not fail a test.
+A **stall watchdog** in the integration-test harness. Evidence first, and then — only once the
+evidence is on disk — it releases the stall.
+
+The evidence-only design this document originally specified turned out not to reach the goal.
+Adversarial review of the implementation established, and `javap` on `junit-jupiter-api-5.14.4`
+confirmed, that `AssertTimeoutPreemptively$TimeoutThreadFactory` builds its thread with
+`new Thread(Runnable, String)` and never calls `setDaemon(true)`. So when the per-test timeout below
+fires, JUnit marks the test failed, interrupts the test thread — an interrupt a thread blocked in
+socket I/O ignores, which is why `SEPARATE_THREAD` was chosen in the first place — and abandons it.
+That surviving non-daemon thread keeps the Gradle worker JVM alive, and the job burns its whole
+budget regardless. Killing the stalled test's registered targets closes the sockets the thread is
+blocked on, which is what actually ends the stall; it also clears the orphaned JVMs the issue
+reports. This happens only after both frames are captured, and only to targets registered by the
+stalled test.
 
 **1. `StallWatchdog`, a JUnit 5 extension.** Registered with `@ExtendWith` on the abstract
 `RuntimeTest`; JUnit searches the superclass hierarchy, so all eight subclasses inherit it with no
@@ -81,6 +93,10 @@ only Gradle project properties beginning with `btrace.` into the test JVM.
 from "slow" — a thread parked in `SocketInputStream.read` looks identical either way. The diff
 between two frames is the evidence. Capturing twice and stopping bounds the log cost on a job that
 is already lost.
+
+**3b. The dump is rendered frame by frame,** not with `ThreadInfo.toString()`, which stops after
+eight frames — and the frame that explains a stall is rarely in the top eight of a test-harness
+stack. Measured: a 44-frame stack renders as 8 through `toString()`.
 
 **4. Each capture contains:** a banner with the test's unique id and elapsed time; the test JVM's
 threads via `ThreadMXBean.dumpAllThreads(true, true)` (lock-owner and monitor information, which

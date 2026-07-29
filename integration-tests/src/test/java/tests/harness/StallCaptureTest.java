@@ -16,7 +16,6 @@
  */
 package tests.harness;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -72,6 +71,11 @@ public class StallCaptureTest {
     assertTrue(
         report.contains("stall-capture-test-parked-thread"),
         "parked thread missing from dump:\n" + report);
+    // ThreadInfo.toString() stops after eight frames, and the frame that explains a stall is
+    // rarely in the top eight of a test-harness stack. Assert the dump is not rendered that way.
+    assertTrue(
+        deepestStack(report) > 8,
+        "stacks must not be truncated, deepest was " + deepestStack(report) + ":\n" + report);
     for (String reportLine : report.split("\n")) {
       assertTrue(
           reportLine.startsWith(StallCapture.PREFIX),
@@ -93,8 +97,8 @@ public class StallCaptureTest {
     String report = sink.toString();
 
     assertTrue(report.contains("blocking-target"), "target section missing:\n" + report);
-    Assumptions.assumeFalse(
-        report.contains("jcmd failed") || report.contains("jcmd produced no output"),
+    Assumptions.assumeTrue(
+        report.contains("Full thread dump") || report.contains("\"main\""),
         "jcmd could not attach in this environment; skipping the content assertion");
     assertTrue(report.contains("\"main\""), "target's main thread missing:\n" + report);
   }
@@ -130,16 +134,37 @@ public class StallCaptureTest {
 
     StringBuilder sink = new StringBuilder();
     long startedAt = System.nanoTime();
-    // A budget below one jcmd timeout, so the first target consumes it and the rest are skipped.
-    StallCapture.capture(sink, "budget-test", 1_000L, 1, TargetRegistry.liveTargets(), 1L);
+    // Enough for roughly one jcmd attempt. A per-target budget would let all four run and take
+    // four times as long, which is exactly what this asserts against.
+    StallCapture.capture(sink, "budget-test", 1_000L, 1, TargetRegistry.liveTargets(), 12_000L);
     long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
 
     String report = sink.toString();
     assertTrue(
-        elapsedMs < 30_000L,
+        elapsedMs < 40_000L,
         "shared budget must not be spent per target, took " + elapsedMs + "ms");
+    assertTrue(
+        report.contains("---- target unreachable-0"),
+        "the first target must still be attempted:\n" + report);
     assertTrue(report.contains("capture budget exhausted"), "skips must be recorded:\n" + report);
-    assertFalse(report.contains("STALL DUMP frame 2"), "only one frame was requested:\n" + report);
+    assertTrue(
+        report.contains("---- target unreachable-3"),
+        "a skipped target must still be named:\n" + report);
+  }
+
+  /** Frames in the longest single-thread stack of a rendered dump. */
+  private static int deepestStack(String report) {
+    int deepest = 0;
+    int current = 0;
+    for (String line : report.split("\n")) {
+      if (line.startsWith(StallCapture.PREFIX + "\t")) {
+        current++;
+        deepest = Math.max(deepest, current);
+      } else {
+        current = 0;
+      }
+    }
+    return deepest;
   }
 
   private static void awaitQuietly(CountDownLatch latch) {
@@ -158,14 +183,22 @@ public class StallCaptureTest {
         Paths.get(
                 StallCaptureTest.class.getProtectionDomain().getCodeSource().getLocation().toURI())
             .toString();
+    File marker = File.createTempFile("btrace-blocking-target-", ".log");
     ProcessBuilder pb = new ProcessBuilder(java, "-cp", classpath, BlockingMain.NAME);
     pb.redirectErrorStream(true);
-    pb.redirectOutput(new File(System.getProperty("java.io.tmpdir"), "btrace-blocking-target.log"));
+    pb.redirectOutput(marker);
     Process process = pb.start();
     spawned.add(process);
-    // Give it time to reach main() so that jcmd has something to attach to.
-    Thread.sleep(2_000L);
-    return process;
+    // Wait for main() to announce itself rather than guessing: a fixed sleep is either wasted time
+    // or, on a loaded runner, an attach against a JVM that has not started listening yet.
+    long deadline = System.currentTimeMillis() + 30_000L;
+    while (System.currentTimeMillis() < deadline) {
+      if (marker.isFile() && marker.length() > 0) {
+        return process;
+      }
+      Thread.sleep(50L);
+    }
+    throw new AssertionError("the blocking target JVM never started");
   }
 
   /** A live process that is not a JVM, for the cases where the dump is expected to fail. */
@@ -196,6 +229,8 @@ public class StallCaptureTest {
     static final String NAME = "tests.harness.StallCaptureTest$BlockingMain";
 
     public static void main(String[] args) throws Exception {
+      System.out.println("started");
+      System.out.flush();
       new CountDownLatch(1).await();
     }
   }

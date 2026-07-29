@@ -27,12 +27,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
@@ -72,13 +72,22 @@ public class StallWatchdog
    */
   private static final long DEFAULT_TIMEOUT_MULTIPLIER = 6L;
 
+  /**
+   * A ceiling on the derived deadline. {@code btrace.test.timeoutMs} is an operator knob, and
+   * raising it must not push the watchdog past the per-test timeout in {@code
+   * junit-platform.properties} -- a dump taken after the test has been abandoned is no dump at all.
+   */
+  private static final long MAX_DERIVED_TIMEOUT_MS = 6L * 60L * 1000L;
+
   private static final long DEFAULT_GAP_MS = 30_000L;
 
   /** All targets together, so accumulated targets cannot stretch a capture without bound. */
   private static final long CAPTURE_BUDGET_MS = 60_000L;
 
-  private static final ScheduledExecutorService SCHEDULER =
-      Executors.newScheduledThreadPool(
+  private static final long ECHO_TIMEOUT_MS = 10_000L;
+
+  private static final ScheduledThreadPoolExecutor SCHEDULER =
+      new ScheduledThreadPoolExecutor(
           2,
           new ThreadFactory() {
             @Override
@@ -89,6 +98,12 @@ public class StallWatchdog
             }
           });
 
+  static {
+    // arm() runs three times per test and cancels the previous task each time; without this every
+    // cancelled task would sit in the delayed queue until its deadline, which outlasts the suite.
+    SCHEDULER.setRemoveOnCancelPolicy(true);
+  }
+
   /**
    * The single armed test. Integration tests run sequentially in one worker JVM -- no {@code
    * forkEvery}, no parallel execution -- so one slot is correct and avoids threading state through
@@ -97,6 +112,9 @@ public class StallWatchdog
   private static final AtomicReference<Armed> CURRENT = new AtomicReference<>();
 
   private static final AtomicBoolean STALE_DUMPS_CLEARED = new AtomicBoolean();
+
+  /** Makes every dump path unique; two teardown stalls in one class share a label otherwise. */
+  private static final AtomicInteger SEQUENCE = new AtomicInteger();
 
   private static volatile Path dumpDirOverride;
 
@@ -145,6 +163,10 @@ public class StallWatchdog
     if (previous != null) {
       previous.disarm();
     }
+    // Drops targets that have exited. Without this the registry only ever grows, and a stall late
+    // in the run would spend its capture budget on jcmd calls against processes from earlier
+    // classes instead of the target that actually matters.
+    TargetRegistry.liveTargets();
   }
 
   private long resolveTimeoutMs(ExtensionContext context) {
@@ -156,7 +178,8 @@ public class StallWatchdog
     if (explicit != null) {
       return explicit;
     }
-    return Long.getLong("btrace.test.timeoutMs", 60_000L) * DEFAULT_TIMEOUT_MULTIPLIER;
+    long derived = Long.getLong("btrace.test.timeoutMs", 60_000L) * DEFAULT_TIMEOUT_MULTIPLIER;
+    return Math.min(derived, MAX_DERIVED_TIMEOUT_MS);
   }
 
   private long resolveGapMs(ExtensionContext context) {
@@ -177,6 +200,27 @@ public class StallWatchdog
       current = current.getParent().orElse(null);
     }
     return null;
+  }
+
+  /** Prints the captured report without letting a blocked stdout consume a scheduler thread. */
+  private static void echoToStdout(final CharSequence report) {
+    Thread printer =
+        new Thread(
+            new Runnable() {
+              @Override
+              public void run() {
+                System.out.print(report);
+                System.out.flush();
+              }
+            },
+            "btrace-stall-echo");
+    printer.setDaemon(true);
+    printer.start();
+    try {
+      printer.join(ECHO_TIMEOUT_MS);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**
@@ -267,6 +311,35 @@ public class StallWatchdog
         return;
       }
       writeFrame(2);
+      releaseTargets();
+    }
+
+    /**
+     * Kills the targets this test was talking to, once both frames have been captured.
+     *
+     * <p>The watchdog would rather only observe, but observing alone does not end the stall. The
+     * per-test timeout runs the test body on a thread JUnit does not mark as a daemon and abandons
+     * it on timeout with nothing but an interrupt -- which a thread blocked in socket I/O ignores.
+     * That surviving thread keeps the worker JVM alive, so the job burns its whole budget even
+     * though the test has been marked failed. Closing the target's sockets is what actually
+     * releases the blocked thread, and it also clears the orphaned JVMs that a stalled run used to
+     * leave behind.
+     *
+     * <p>This happens only after two frames thirty seconds apart, so the evidence is already on
+     * disk, and only to targets registered by the stalled test.
+     */
+    private void releaseTargets() {
+      for (TargetRegistry.Snapshot target : targets) {
+        try {
+          if (target.getProcess().isAlive()) {
+            target.getProcess().destroyForcibly();
+            System.out.println(
+                StallCapture.PREFIX + "released stalled target " + target.getLabel());
+          }
+        } catch (Throwable ignored) {
+          // Nothing useful is left to do about a target we cannot kill.
+        }
+      }
     }
 
     private void writeFrame(int frame) {
@@ -290,10 +363,11 @@ public class StallWatchdog
           StallCapture.line(echo, "intended path: " + file);
         }
       }
-      // Second, and best-effort: System.out is a shared synchronised stream that a stalled
-      // Gradle pipeline can itself block on.
-      System.out.print(echo);
-      System.out.flush();
+      // Second, and best-effort. This is written on a throwaway thread with a bounded join for the
+      // reason the file is written first: System.out is a shared synchronised stream, and a torn-
+      // down Gradle pipeline can block on it -- which would consume a scheduler thread and cost us
+      // the second frame.
+      echoToStdout(echo);
     }
   }
 
@@ -306,6 +380,10 @@ public class StallWatchdog
    * parameterised unique id exceeds the filename length limit.
    */
   static String fileName(String label, int frame) {
+    return fileName(label, frame, SEQUENCE.incrementAndGet());
+  }
+
+  static String fileName(String label, int frame, int sequence) {
     StringBuilder sanitised = new StringBuilder(label.length());
     for (int i = 0; i < label.length(); i++) {
       char c = label.charAt(i);
@@ -318,8 +396,20 @@ public class StallWatchdog
               ? c
               : '_');
     }
-    String trimmed = sanitised.length() > 120 ? sanitised.substring(0, 120) : sanitised.toString();
-    return trimmed + "-" + Integer.toHexString(label.hashCode()) + "-frame" + frame + ".txt";
+    // The tail, not the head: a parameterised unique id is identical up to its invocation index,
+    // so truncating from the front would give all four rows of a @ParameterizedTest one name.
+    String trimmed =
+        sanitised.length() > 120
+            ? sanitised.substring(sanitised.length() - 120)
+            : sanitised.toString();
+    return sequence
+        + "-"
+        + trimmed
+        + "-"
+        + Integer.toHexString(label.hashCode())
+        + "-frame"
+        + frame
+        + ".txt";
   }
 
   /** Writes to the file and accumulates a copy for stdout, flushing the file as sections land. */

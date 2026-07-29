@@ -224,3 +224,29 @@ Driven through the in-memory seam, scoped with `@StallTimeout`, output under `@T
 ## Order
 
 1 → 2 → 3 → 7 (tests for 1–3) → 6 → 4 → 5 → 8.
+
+
+## Revision 3 — corrections found by adversarial review of the implementation
+
+Two defects would have shipped silently, and both were confirmed by direct measurement rather than
+argument:
+
+1. **The per-test timeout was never committed.** `.gitignore`'s bare `junit*` pattern matches
+   `integration-tests/src/test/resources/junit-platform.properties` at any depth, so the file existed
+   locally, passed every local run, and was absent from the commit. `.gitignore` now carries a
+   negation, placed *after* the pattern it overrides, since the last matching pattern wins.
+2. **Test-JVM stacks were truncated to eight frames.** `ThreadInfo.toString()` caps output at
+   `MAX_FRAMES = 8`; a 44-frame stack rendered as 8. The dump is now rendered frame by frame with
+   locked monitors and synchronizers, and a test asserts the rendered depth exceeds eight.
+
+Also corrected: the stdout echo was the one unbounded wait in a class that bounds everything else,
+and it ran on one of only two scheduler threads — it now runs on a throwaway thread with a bounded
+join. The registry is pruned on disarm, so a late stall does not spend its capture budget on
+`jcmd` calls against processes from earlier classes. Dump filenames are truncated from the tail, not
+the head, because a parameterised unique id is identical up to its invocation index, and carry a
+sequence number so two teardown stalls in one class cannot collide on one path. The derived deadline
+is clamped below the per-test timeout, since `btrace.test.timeoutMs` is an operator knob that could
+otherwise push the watchdog past it. The four btrace client JVM launch sites are registered — the
+client is the side the surviving issue-932 hypothesis implicates. `budgetIsSharedAcrossTargets`
+passed against a per-target budget and now does not; `capturesTargetJvmThreads` would have failed a
+build rather than skipped when `jcmd` cannot attach on a loaded runner.
