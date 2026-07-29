@@ -53,13 +53,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.extension.ExtendWith;
 import tests.harness.Completion;
 import tests.harness.OutputPump;
+import tests.harness.StallWatchdog;
+import tests.harness.TargetRegistry;
 
 /**
  * @author Jaroslav Bachorik
  */
 @SuppressWarnings("ConstantConditions")
+@ExtendWith(StallWatchdog.class)
 public abstract class RuntimeTest {
   private static String cp = null;
   private static String targetAppCp = null;
@@ -161,6 +165,16 @@ public abstract class RuntimeTest {
           t.setDaemon(true);
           return t;
         });
+  }
+
+  /**
+   * The {@code jcmd} able to attach to a target launched from {@code javaHome}.
+   *
+   * <p>Resolved per launch site rather than once: targets do not all come from the same JDK, and a
+   * mismatched-major {@code jcmd} cannot attach to one.
+   */
+  protected static String jcmdFor(String javaHome) {
+    return javaHome != null ? Paths.get(javaHome, "bin", "jcmd").toString() : "jcmd";
   }
 
   public static void classSetup() {
@@ -367,6 +381,8 @@ public abstract class RuntimeTest {
     configureTargetEnvironment(pb);
 
     Process p = pb.start();
+    TargetRegistry.Handle stallHandle =
+        TargetRegistry.register(p, "testDynamic target", jcmdFor(testJavaHome));
     PrintWriter pw = new PrintWriter(p.getOutputStream());
 
     StringBuilder stdout = new StringBuilder();
@@ -386,6 +402,7 @@ public abstract class RuntimeTest {
                 while ((l = stdoutReader.readLine()) != null) {
                   if (l.startsWith("ready:")) {
                     pidStringRef.set(l.split(":")[1]);
+                    stallHandle.setPid(pidStringRef.get());
                     testAppLatch.countDown();
                   }
                   if (debugTestApp) {
@@ -559,6 +576,8 @@ public abstract class RuntimeTest {
     configureTargetEnvironment(pb);
 
     Process p = pb.start();
+    TargetRegistry.Handle stallHandle =
+        TargetRegistry.register(p, "testDynamicOneliner target", jcmdFor(testJavaHome));
     PrintWriter pw = new PrintWriter(p.getOutputStream());
 
     StringBuilder stdout = new StringBuilder();
@@ -578,6 +597,7 @@ public abstract class RuntimeTest {
                 while ((l = stdoutReader.readLine()) != null) {
                   if (l.startsWith("ready:")) {
                     pidStringRef.set(l.split(":")[1]);
+                    stallHandle.setPid(pidStringRef.get());
                     testAppLatch.countDown();
                   }
                   if (debugTestApp) {
@@ -764,6 +784,8 @@ public abstract class RuntimeTest {
     configureTargetEnvironment(pb);
 
     Process p = pb.start();
+    TargetRegistry.Handle stallHandle =
+        TargetRegistry.register(p, "testStartup target", jcmdFor(testJavaHome));
     PrintWriter pw = new PrintWriter(p.getOutputStream());
 
     StringBuilder stdout = new StringBuilder();
@@ -784,6 +806,7 @@ public abstract class RuntimeTest {
           public boolean onStdout(String line) {
             if (line.startsWith("ready:")) {
               pidStringRef.set(line.split(":")[1]);
+              stallHandle.setPid(pidStringRef.get());
               return false;
             }
             return completion.onStdout(line);
@@ -948,7 +971,7 @@ public abstract class RuntimeTest {
     private final Process process;
     private final StringBuilder startupStderr = new StringBuilder();
 
-    public TestApp(Process process, boolean debug) {
+    public TestApp(Process process, boolean debug, TargetRegistry.Handle stallHandle) {
       this.process = process;
 
       BufferedReader stdoutReader =
@@ -962,6 +985,7 @@ public abstract class RuntimeTest {
                   while ((l = stdoutReader.readLine()) != null) {
                     if (l.startsWith("ready:")) {
                       pid = Integer.parseInt(l.split(":")[1]);
+                      stallHandle.setPid(String.valueOf(pid));
                       testAppLatch.countDown();
                     }
                     if (debug) {
@@ -1100,7 +1124,10 @@ public abstract class RuntimeTest {
     ProcessBuilder pb = new ProcessBuilder(args);
     configureTargetEnvironment(pb);
 
-    return new TestApp(pb.start(), debugTestApp);
+    Process target = pb.start();
+    TargetRegistry.Handle stallHandle =
+        TargetRegistry.register(target, "TestApp target", jcmdFor(testJavaHome));
+    return new TestApp(target, debugTestApp, stallHandle);
   }
 
   public interface ProcessOutputProcessor {

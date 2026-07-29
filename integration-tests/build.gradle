@@ -173,6 +173,13 @@ test {
 
     testLogging.showStandardStreams = true
 
+    // Where StallWatchdog writes a thread dump when a test stops making progress. Absolute, because
+    // a relative path would resolve against the test task's working directory (the project dir),
+    // and under build/reports because that is what the workflows' `if: always()` steps upload -- the
+    // sink that survives a job cancelled at its timeout.
+    systemProperty 'btrace.test.stallDumpDir',
+            layout.buildDirectory.dir('reports/stall-dumps').get().asFile.absolutePath
+
     def dockerAvailable = false
     if (project.hasProperty("integration")) {
         String dockerHost = System.getenv("DOCKER_HOST")
