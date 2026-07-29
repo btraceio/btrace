@@ -1285,6 +1285,19 @@ public class Client {
     // Mark as disconnected to prevent shutdown hook from attempting further sends
     disconnected = true;
     IOException failure = null;
+    // Release a reader before closing the protocol. A command loop blocks in a read with no
+    // timeout -- V2 negotiation sets one and restores the previous value, which is unlimited -- so
+    // another thread may be inside a socket read when close() runs. Closing the protocol streams
+    // first means waiting on that reader to leave, which is the wrong order to depend on: shutting
+    // the input down makes the read return, and the stream closes below then have nothing to wait
+    // for.
+    try {
+      if (sock != null && !sock.isClosed() && !sock.isInputShutdown()) {
+        sock.shutdownInput();
+      }
+    } catch (IOException ignored) {
+      // Best effort: an already-reset connection is fine, the closes below still run.
+    }
     try {
       if (protocol != null) {
         protocol.close();

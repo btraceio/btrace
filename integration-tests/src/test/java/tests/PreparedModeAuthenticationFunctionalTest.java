@@ -33,7 +33,6 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -188,7 +187,7 @@ public class PreparedModeAuthenticationFunctionalTest extends RuntimeTest {
     File traceFile = locateTrace("btrace/OnTimerArgTest.java");
     assertNotNull(traceFile, "Test probe source is missing");
     Client client = createClient();
-    ExecutorService executor = Executors.newSingleThreadExecutor();
+    ExecutorService executor = newDaemonExecutor("prepared-mode-probe-submit");
     CompletableFuture<Void> started = new CompletableFuture<>();
     try {
       client.attach(String.valueOf(pid), null, getEventsClassPath());

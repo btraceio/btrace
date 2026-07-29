@@ -37,7 +37,6 @@ import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -544,7 +543,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     assertNotNull(code, "BTrace compilation failed");
 
     CompletableFuture<String> probeIdFuture = new CompletableFuture<>();
-    ExecutorService executor = Executors.newSingleThreadExecutor();
+    ExecutorService executor = newDaemonExecutor("functional-probe-submit");
     Future<?> submitFuture =
         executor.submit(
             () -> {
