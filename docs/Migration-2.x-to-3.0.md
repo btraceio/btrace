@@ -11,7 +11,7 @@ Good news first: for most users, migrating to BTrace 3.0 requires **no action at
 | Mixed 2.x/3.0 client and agent | **Nothing** — the wire protocol auto-negotiates |
 | Maven/Gradle dependencies | Update coordinates to `io.btrace:btrace` |
 | Launch scripts referencing multiple BTrace jars | Point to the single `btrace.jar` |
-| `libs=` / profiles agent options | Migrate to extensions (deprecated but still working) |
+| `libs=` / profiles agent options | **Migrate to extensions** — removed, loads nothing |
 | Target JVMs on Java 8–16 | **Nothing** — deprecated, but fully supported throughout 3.x |
 
 ## Compiled and Persisted Probes: No Action Needed
@@ -74,7 +74,7 @@ Internally the jar uses *classdata masking*: only a small core API is visible to
 
 ## `libs` and Profiles: Removed in Favor of Extensions
 
-The `libs=<profile>` agent option has been removed. The agent logs an error naming the profile and loads nothing, so classes that used to reach probes through `btrace-libs/<profile>/` no longer resolve — typically surfacing as a probe failing on a type it previously saw. Extensions are the replacement — they provide isolation, permissions, and per-extension enable/disable instead of mutating the global classpath. See [Migrating from libs/profiles to Extensions](architecture/migrating-from-libs-profiles.md) for a step-by-step guide.
+The `libs=<profile>` agent option has been removed. The agent logs an error naming the profile and loads nothing, so classes that used to reach probes through `btrace-libs/<profile>/` no longer resolve — typically surfacing as a probe failing on a type it previously saw. Extensions are the replacement — they provide isolation, permissions, and per-extension enable/disable instead of mutating the global classpath. See [Migrating from libs/profiles to Extensions](architecture/migrating-from-libs-profiles.md) for a step-by-step guide, or the [`btrace-legacy-libs-migration`](https://github.com/btraceio/agent-plugins/blob/main/plugins/btrace-observability/skills/btrace-legacy-libs-migration/SKILL.md) skill to walk it with an assistant.
 
 ## Wire Protocol: Mixed Versions Keep Working
 
