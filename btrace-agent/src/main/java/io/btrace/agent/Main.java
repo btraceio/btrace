@@ -78,12 +78,9 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.net.Socket;
 import java.net.URL;
-import java.nio.file.FileVisitResult;
-import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -900,13 +897,24 @@ public final class Main {
 
     String libs = argMap.get(LIBS);
     if (libs != null && !libs.isEmpty()) {
-      log.warn(
-          "The 'libs' profile feature is deprecated and will be removed in a future release. "
-              + "Prefer packaging integrations as BTrace extensions (API on bootstrap, impl isolated). "
-              + "See docs/architecture/agent-manifest-libs.md for migration guidance.");
+      // Reported as an error, not a warning: this used to load jars and no longer does, so a
+      // milder message would let a target start up looking healthy while every probe that relied
+      // on those classes fails later with an unrelated-looking NoClassDefFoundError.
+      log.error(
+          "The 'libs' profile feature has been removed and has no effect: '{}' will not be loaded. "
+              + "Package the integration as a BTrace extension instead. "
+              + "See docs/architecture/migrating-from-libs-profiles.md for migration guidance.",
+          libs);
+    }
+    // Read before processClasspaths, which consults it for the btrace.system.appendJar escape
+    // hatch. The main argument loop below runs later and would leave the hatch permanently
+    // unreachable.
+    String trusted = argMap.get(TRUSTED);
+    if (trusted != null && !trusted.isEmpty()) {
+      settings.setTrusted(Boolean.parseBoolean(trusted));
     }
     String config = argMap.get(CONFIG);
-    processClasspaths(libs);
+    processClasspaths();
     loadDefaultArguments(config);
 
     p = argMap.get(DEBUG);
@@ -1111,15 +1119,9 @@ public final class Main {
     }
   }
 
-  private static void processClasspaths(String libs) throws ClassNotFoundException {
+  private static void processClasspaths() throws ClassNotFoundException {
     // Experimental: prefer manifest-driven libs when enabled
     boolean useManifestLibs = Boolean.getBoolean("btrace.feature.manifestLibs");
-    boolean hasLegacyLibs = libs != null && !libs.isEmpty();
-    boolean hasManifestLibs = useManifestLibs;
-    if (hasManifestLibs && hasLegacyLibs) {
-      log.warn(
-          "Both libs= and manifest-attributes are present; libs= is deprecated and will be removed in N+2. Prefer manifest-based declaration.");
-    }
     if (useManifestLibs) {
       if (log.isDebugEnabled()) log.debug("Using manifest-driven libs resolution");
       AgentManifestLibs.ResolvedLibs libsFromMf = AgentManifestLibs.resolveFromManifest(Main.class);
@@ -1198,16 +1200,6 @@ public final class Main {
           }
         }
       }
-    }
-
-    // Skip preconfigured libs only when both the test knob is set and manifest-libs feature is
-    // enabled
-    boolean skipPreconfLibs = Boolean.getBoolean("btrace.test.skipLibs");
-    if (!(skipPreconfLibs && useManifestLibs)) {
-      addPreconfLibs(libs);
-    } else if (log.isDebugEnabled()) {
-      log.debug(
-          "Skipping addPreconfLibs due to btrace.test.skipLibs=true and manifestLibs enabled");
     }
 
     // Explicit, last-resort escape hatch: append a single jar to system CL
@@ -1346,115 +1338,6 @@ public final class Main {
       if (log.isDebugEnabled()) log.debug("Added to system: {}", rp);
     } catch (IOException e) {
       log.warn("Failed to append system jar {}: {}", jarPath, e.toString());
-    }
-  }
-
-  private static void addPreconfLibs(String libs) {
-    ClassLoader cl = Main.class.getClassLoader();
-    String resourceName = Main.class.getName().replace('.', '/') + ".class";
-    // Handle bootstrap classloader case (returns null) by using system classloader
-    URL u =
-        (cl != null) ? cl.getResource(resourceName) : ClassLoader.getSystemResource(resourceName);
-    if (u != null) {
-      String path = u.toString();
-      int delimiterPos = path.lastIndexOf('!');
-      if (delimiterPos > -1) {
-        String jar = path.substring(9, delimiterPos);
-        File jarFile = new File(jar);
-        Path libRoot = new File(jarFile.getParent() + File.separator + "btrace-libs").toPath();
-        Path libFolder = libs != null ? libRoot.resolve(libs) : libRoot;
-        if (Files.exists(libFolder)) {
-          appendToBootClassPath(libFolder);
-          appendToSysClassPath(libFolder);
-        } else {
-          if (libs != null && !libs.isEmpty()) {
-            log.warn(
-                "Invalid 'libs' configuration [{}]. Path '{}' does not exist.",
-                libs,
-                libFolder.toAbsolutePath());
-          }
-        }
-      }
-    }
-  }
-
-  private static void appendToBootClassPath(Path libFolder) {
-    Path bootLibs = libFolder.resolve("boot");
-    if (Files.exists(bootLibs)) {
-      try {
-        Files.walkFileTree(
-            bootLibs,
-            new FileVisitor<Path>() {
-              @Override
-              public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
-                  throws IOException {
-                return FileVisitResult.CONTINUE;
-              }
-
-              @Override
-              public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                  throws IOException {
-                if (file.toString().toLowerCase().endsWith(".jar")) {
-                  appendBootJar(file);
-                }
-                return FileVisitResult.CONTINUE;
-              }
-
-              @Override
-              public FileVisitResult visitFileFailed(Path file, IOException exc)
-                  throws IOException {
-                return FileVisitResult.CONTINUE;
-              }
-
-              @Override
-              public FileVisitResult postVisitDirectory(Path dir, IOException exc)
-                  throws IOException {
-                return FileVisitResult.CONTINUE;
-              }
-            });
-      } catch (IOException e) {
-        log.debug("Failed to enhance bootstrap classpath", e);
-      }
-    }
-  }
-
-  private static void appendToSysClassPath(Path libFolder) {
-    Path sysLibs = libFolder.resolve("system");
-    if (Files.exists(sysLibs)) {
-      try {
-        Files.walkFileTree(
-            sysLibs,
-            new FileVisitor<Path>() {
-              @Override
-              public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
-                  throws IOException {
-                return FileVisitResult.CONTINUE;
-              }
-
-              @Override
-              public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                  throws IOException {
-                if (file.toString().toLowerCase().endsWith(".jar")) {
-                  appendSystemJar(file);
-                }
-                return FileVisitResult.CONTINUE;
-              }
-
-              @Override
-              public FileVisitResult visitFileFailed(Path file, IOException exc)
-                  throws IOException {
-                return FileVisitResult.CONTINUE;
-              }
-
-              @Override
-              public FileVisitResult postVisitDirectory(Path dir, IOException exc)
-                  throws IOException {
-                return FileVisitResult.CONTINUE;
-              }
-            });
-      } catch (IOException e) {
-        log.debug("Failed to enhance sytem classpath", e);
-      }
     }
   }
 

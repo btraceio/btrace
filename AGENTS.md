@@ -21,6 +21,7 @@ For the developer command reference and code-navigation pointers, see [CLAUDE.md
 - Main code targets Java 8 and uses the Java 11 toolchain. Follow Spotless/Google Java Format.
 - Unit tests live in `src/test/java` and use `*Test`; integration tests live in `integration-tests/src/test/java`.
 - Changes to user-visible behavior that crosses modules or process boundaries must include end-to-end functional coverage in `integration-tests`; unit and component tests are required where useful but are not a substitute for exercising the real client, agent, target JVM, and protocol interaction.
+- Confirm that a new test or build gate **fails when it should**, not only that it passes. Run it against the unfixed code, or against input it must reject, and check the failure is the expected one. A check that cannot fail reports success regardless of what the code does, and reads as coverage while providing none. Where a revert is used to produce the failure, revert only the code under test: reverting too much fails for an unrelated reason and proves nothing about the behavior being asserted.
 
 ## Build and verification
 

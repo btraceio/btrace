@@ -8,11 +8,14 @@ This guide helps you move from `btrace-libs/<profile>` to extension-based integr
 - Operability: discovery, enable/disable, permissions, diagnostics.
 - Maintainability: versioning and conflict handling.
 
-## Deprecation Timeline
+## Status
 
-- `libs`/profiles are deprecated now. Planned removal: N+2 minor releases.
-  - Runtime warning is emitted when `libs` is used.
-  - The new escape hatch is `-Dbtrace.system.appendJar=/abs/path/lib.jar` (trusted-only, discouraged).
+`libs`/profiles are **removed**. Passing `libs=<profile>` logs an error naming the profile and
+loads nothing; the jars under `btrace-libs/<profile>/` are ignored. Migrate to an extension, or
+use the escape hatch below as a stopgap.
+
+If you are arriving here because custom classes stopped resolving after upgrading, that is the
+expected symptom: the agent starts normally and probes fail later on the missing types.
 
 ## Migration Steps
 
@@ -21,34 +24,49 @@ This guide helps you move from `btrace-libs/<profile>` to extension-based integr
    - List the APIs probes rely on; isolate to a minimal contract.
 
 2. Create an extension:
-   - API module: minimal interfaces/DTOs (no app types), packaged to bootstrap.
-   - Impl module: reflective adapters; declare app deps as compileOnly/provided.
+   - One Gradle project with a single `src/main/java`, applying `io.btrace.extension`. The plugin
+     partitions it into API and implementation artifacts from the declared services plus any
+     `additionalExports`/`excludedExports` — there is no separate API module to create.
+   - Keep application types out of the API surface: minimal interfaces and DTOs only.
+   - Declare application dependencies with `implCompileOnly` so they stay off the API artifact.
 
 3. Replace profile dependency:
    - Remove `libs=<profile>` from agent args.
-   - Enable the extension in `extensions.conf`.
+   - Enable the extension in `extensions.conf` (`extensions.enabled`, `extensions.disabled`,
+     `extensions.autoload`).
 
 4. Replace classpath assumptions:
    - Update probes to pass app objects to API methods (object hand-off) instead of importing app types.
    - In impl, resolve types via TCCL/defining loader.
+   - Recompile the probes against the new API artifact.
 
 5. Configure runtime:
    - Add role/config keys to `extensions.conf` (e.g., role=driver|executor; optional classpath hint if the app doesn’t ship libs).
-   - Request permissions (REFLECTION, THREADS, SYSTEM_PROPS; CLASSLOADER only if needed).
+   - The extension plugin scans the implementation and its dependencies and writes the merged
+     permission set into the API manifest, so permissions are usually not declared by hand.
+     Review what it wrote: a single transitive dependency can make the whole extension privileged.
+   - Permission *grants* are a separate, operator-side file — `permissions.properties`
+     (`allowExtensions`, `denyExtensions`, `allowPrivileged`), not `extensions.conf`.
 
 6. Validate:
    - Launch/attach runs; verify extension loads and links lazily/eagerly as required.
-   - Confirm failure handling (no-op shims) and logs.
+   - Injection throws by default. Marking an injection optional, or selecting shim mode, turns a
+     failed link into a no-op returning defaults — convenient in production, and the quickest way
+     to make an unfinished migration look complete.
+   - Use `btrace -le <PID>` to see why an extension failed to link.
 
 ## Escape Hatch (Optional)
 
 If immediate migration is not feasible and the app must see a jar on the system classpath:
 
 ```
--Dbtrace.system.appendJar=/abs/path/lib.jar -Dbtrace.trusted=true
+-Dbtrace.system.appendJar=/abs/path/lib.jar -javaagent:btrace.jar=trusted=true
 ```
 
-- Restricted to `BTRACE_HOME` unless `-Dbtrace.allowExternalLibs=true`.
+- `trusted` is an **agent argument**, not a system property; `-Dbtrace.trusted=true` has no effect
+  here.
+- Restricted to `BTRACE_HOME` unless `-Dbtrace.allowExternalLibs=true`. When `BTRACE_HOME` cannot
+  be determined the jar is appended anyway and a warning is logged.
 - One jar only; discouraged; subject to removal.
 
 ## Fat Agent Deployment
@@ -94,3 +112,10 @@ See [Fat Agent Plugin Architecture](fat-agent-plugin.md) for details.
 ## Examples & Templates
 
 - See provided-style extension guide: `docs/architecture/provided-style-extensions.md` for Spark/Hadoop templates and `extensions.conf` snippets.
+
+## Assisted Migration
+
+The [BTrace agent plugins](https://github.com/btraceio/agent-plugins) marketplace provides a
+[`btrace-legacy-libs-migration`](https://github.com/btraceio/agent-plugins/blob/main/plugins/btrace-observability/skills/btrace-legacy-libs-migration/SKILL.md)
+skill for Claude Code, Codex, and Pi. It walks the inventory, the API/implementation split, the
+service and permission metadata, and the verification steps described above.

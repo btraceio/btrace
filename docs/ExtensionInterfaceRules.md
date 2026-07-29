@@ -54,7 +54,7 @@ Apply the plugin in your extension project and declare services:
 ```
 plugins {
   id 'io.btrace.extension'
-  id 'com.github.johnrengelman.shadow'
+  id 'com.gradleup.shadow'
 }
 
 btraceExtension {
