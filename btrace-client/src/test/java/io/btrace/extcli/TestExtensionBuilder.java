@@ -44,10 +44,36 @@ class TestExtensionBuilder {
    */
   static void createApiJar(String id, String version, Path output, boolean privileged)
       throws IOException {
+    createApiJar(id, version, output, privileged, null);
+  }
+
+  /**
+   * Creates a valid API JAR with extension metadata, optionally declaring the services the
+   * extension provides.
+   *
+   * @param id Extension ID
+   * @param version Extension version
+   * @param output Output file path
+   * @param privileged Whether extension requires privileged permissions
+   * @param services comma-separated service class names for {@code BTrace-Extension-Services}, or
+   *     {@code null} to omit the attribute
+   * @throws IOException if JAR creation fails
+   */
+  static void createApiJar(
+      String id, String version, Path output, boolean privileged, String services)
+      throws IOException {
     Manifest manifest = new Manifest();
     manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
     manifest.getMainAttributes().putValue("BTrace-Extension-Id", id);
     manifest.getMainAttributes().putValue("BTrace-Extension-Version", version);
+    if (services != null) {
+      manifest.getMainAttributes().putValue("BTrace-Extension-Services", services);
+    }
+    if (privileged) {
+      // The manifest is where the inspector reads permissions from; without this the `privileged`
+      // flag would not reach it and privileged detection would go untested.
+      manifest.getMainAttributes().putValue("BTrace-Extension-Permissions", "NETWORK");
+    }
 
     try (JarOutputStream jos =
         new JarOutputStream(new FileOutputStream(output.toFile()), manifest)) {
@@ -146,11 +172,29 @@ class TestExtensionBuilder {
    */
   static void createExtensionDirectory(
       String id, String version, Path outputDir, boolean privileged) throws IOException {
+    createExtensionDirectory(id, version, outputDir, privileged, null);
+  }
+
+  /**
+   * Creates an extension directory structure with API and implementation JARs, optionally declaring
+   * the services the extension provides.
+   *
+   * @param id Extension ID
+   * @param version Extension version
+   * @param outputDir Output directory path
+   * @param privileged Whether extension requires privileged permissions
+   * @param services comma-separated service class names for {@code BTrace-Extension-Services}, or
+   *     {@code null} to omit the attribute
+   * @throws IOException if creation fails
+   */
+  static void createExtensionDirectory(
+      String id, String version, Path outputDir, boolean privileged, String services)
+      throws IOException {
     Files.createDirectories(outputDir);
     Path apiJar = outputDir.resolve(id + "-" + version + "-api.jar");
     Path implJar = outputDir.resolve(id + "-" + version + "-impl.jar");
 
-    createApiJar(id, version, apiJar, privileged);
+    createApiJar(id, version, apiJar, privileged, services);
     createImplJar(id, implJar);
   }
 

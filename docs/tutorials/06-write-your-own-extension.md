@@ -217,7 +217,7 @@ Extension: order-counter
 Version  : 3.0.0
 Privileged: true
 Required : [THREADS]
-Services : (none)
+Services : com.example.orderstats.OrderCounterService
 
 Hint: To enable/disable this extension for implementations, edit your policy:
   btracex policy edit --home
@@ -234,13 +234,12 @@ Note: This extension requires privileged permissions. You can allow all privileg
 > for `btrace-metrics` in Tutorial 4 (`.../extensions/btrace-metrics`, a directory, not a bare
 > jar). It then ran the same inspection `btracex inspect` runs and printed the report immediately.
 >
-> Look closely at `Services : (none)` — that's not a sign anything went wrong. Traced through
-> `ExtensionInspector.readServices()`, that field only looks at `META-INF/services/*` entries
-> inside the impl JAR, and the `io.btrace.extension` plugin never writes any (neither does
-> `btrace-metrics`, for what it's worth). The list BTrace's runtime actually uses to wire up your
-> probe's `@Injected` field is the API JAR's `BTrace-Extension-Services` manifest attribute, which
-> *is* populated correctly — `Required : [THREADS]` came from that same manifest
-> (`BTrace-Extension-Permissions`) and is accurate. You can see the real service list yourself:
+> `Services :` echoes back the `services` list you declared in Step 1, and it is the same list
+> BTrace's runtime uses to wire up your probe's `@Injected` field: the API JAR's
+> `BTrace-Extension-Services` manifest attribute. `Required : [THREADS]` comes from that same
+> manifest (`BTrace-Extension-Permissions`), which the plugin has already folded your
+> `@ServiceDescriptor` permissions into — so the manifest is the whole story for both lines. You
+> can confirm it yourself:
 > `unzip -p build/libs/order-counter-3.0.0-api.jar META-INF/MANIFEST.MF | grep BTrace-Extension-Services`.
 
 ## Step 6 — Grant the permission

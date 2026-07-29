@@ -32,8 +32,8 @@ import java.lang.annotation.Target;
  * rely on the agent-provided service declaration registry (populated from these manifests) to
  * enforce that only declared service APIs are injected.
  *
- * <p>You may also declare service-level permissions here. These combine with extension-level
- * permissions from {@link ExtensionDescriptor#permissions()} to form the effective permission set.
+ * <p>You may also declare service-level permissions here. The Gradle plugin folds them into the
+ * manifest's {@code BTrace-Extension-Permissions}, which is the set the runtime enforces.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
