@@ -69,6 +69,31 @@ public final class StallCapture {
       int frame,
       List<TargetRegistry.Snapshot> targets,
       long budgetMs) {
+    capture(sink, label, elapsedMs, frame, targets, budgetMs, JCMD);
+  }
+
+  /**
+   * How one target is dumped.
+   *
+   * <p>A seam, so that the shared-budget behaviour can be tested against a dumper of known
+   * duration. Asserting it through {@code jcmd} means asserting on how long a failing attach takes,
+   * which differs by platform -- it is slow enough on macOS to exhaust a budget and fast enough on
+   * Linux not to.
+   */
+  interface TargetDumper {
+    void dump(Appendable sink, TargetRegistry.Snapshot target);
+  }
+
+  private static final TargetDumper JCMD = StallCapture::writeTargetThreads;
+
+  static void capture(
+      Appendable sink,
+      String label,
+      long elapsedMs,
+      int frame,
+      List<TargetRegistry.Snapshot> targets,
+      long budgetMs,
+      TargetDumper dumper) {
     long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(budgetMs);
 
     writeBanner(sink, label, elapsedMs, frame, targets.size());
@@ -85,7 +110,7 @@ public final class StallCapture {
       if (System.nanoTime() >= deadline) {
         line(sink, "skipped, capture budget exhausted");
       } else {
-        writeTargetThreads(sink, target);
+        dumper.dump(sink, target);
       }
       flush(sink);
     }

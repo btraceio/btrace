@@ -16,6 +16,7 @@
  */
 package tests.harness;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -134,19 +135,30 @@ public class StallCaptureTest {
 
     StringBuilder sink = new StringBuilder();
     long startedAt = System.nanoTime();
-    // Enough for roughly one jcmd attempt. A per-target budget would let all four run and take
-    // four times as long, which is exactly what this asserts against.
-    StallCapture.capture(sink, "budget-test", 1_000L, 1, TargetRegistry.liveTargets(), 12_000L);
+    // A dumper of known duration rather than a real jcmd: how long a failing attach takes differs
+    // by platform, and this must assert on the budget, not on the platform.
+    StallCapture.TargetDumper slow =
+        (dumpSink, target) -> {
+          try {
+            Thread.sleep(2_000L);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+          StallCapture.line(dumpSink, "dumped " + target.getLabel());
+        };
+    // Enough for one dump. A per-target budget would let all four run and take four times as long.
+    StallCapture.capture(
+        sink, "budget-test", 1_000L, 1, TargetRegistry.liveTargets(), 2_500L, slow);
     long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
 
     String report = sink.toString();
     assertTrue(
-        elapsedMs < 40_000L,
-        "shared budget must not be spent per target, took " + elapsedMs + "ms");
-    assertTrue(
-        report.contains("---- target unreachable-0"),
-        "the first target must still be attempted:\n" + report);
+        elapsedMs < 6_000L, "shared budget must not be spent per target, took " + elapsedMs + "ms");
+    assertTrue(report.contains("dumped unreachable-0"), "first target not dumped:\n" + report);
     assertTrue(report.contains("capture budget exhausted"), "skips must be recorded:\n" + report);
+    assertFalse(
+        report.contains("dumped unreachable-3"),
+        "a target past the shared budget must not be dumped:\n" + report);
     assertTrue(
         report.contains("---- target unreachable-3"),
         "a skipped target must still be named:\n" + report);
