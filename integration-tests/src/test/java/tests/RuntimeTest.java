@@ -46,6 +46,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -140,6 +142,25 @@ public abstract class RuntimeTest {
     throw new IllegalStateException(
         "Cannot resolve a JDK for the integration tests: none of TEST_JAVA_HOME, JAVA_TEST_HOME,"
             + " JAVA_HOME or the java.home system property is set");
+  }
+
+  /**
+   * Creates a single-threaded executor whose thread is a daemon.
+   *
+   * <p>Tests submit probe work to a worker thread and tear it down with {@code shutdownNow}, which
+   * interrupts. A thread blocked in socket I/O does not answer an interrupt, and a non-daemon
+   * worker in that state keeps the test JVM alive after the class finishes, so the build stalls
+   * with nothing to report. A daemon thread cannot hold the JVM open.
+   *
+   * @param name thread name, to make a stuck worker identifiable in a dump
+   */
+  protected static ExecutorService newDaemonExecutor(String name) {
+    return Executors.newSingleThreadExecutor(
+        runnable -> {
+          Thread t = new Thread(runnable, name);
+          t.setDaemon(true);
+          return t;
+        });
   }
 
   public static void classSetup() {
@@ -916,6 +937,12 @@ public abstract class RuntimeTest {
   }
 
   public static final class TestApp {
+    /** How long a target gets to exit on its own after being told to stop. */
+    private static final int SHUTDOWN_TIMEOUT_SECONDS = 30;
+
+    /** How long it then gets after being destroyed forcibly. */
+    private static final int FORCED_SHUTDOWN_TIMEOUT_SECONDS = 10;
+
     private int pid;
     private final CountDownLatch testAppLatch = new CountDownLatch(1);
     private final Process process;
@@ -1000,7 +1027,13 @@ public abstract class RuntimeTest {
         PrintWriter pw = new PrintWriter(process.getOutputStream());
         pw.println("done");
         pw.flush();
-        process.waitFor();
+        // Bounded: a target that ignores "done" -- because the agent still holds it, or a probe
+        // never detached -- used to block the test here indefinitely, which surfaces as a job that
+        // burns its entire timeout with no failing assertion and leaves the JVM behind.
+        if (!process.waitFor(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+          process.destroyForcibly();
+          process.waitFor(FORCED_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        }
       }
     }
 

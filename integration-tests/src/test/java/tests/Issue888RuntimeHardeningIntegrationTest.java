@@ -39,7 +39,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -84,7 +83,7 @@ public class Issue888RuntimeHardeningIntegrationTest extends RuntimeTest {
     assertNotNull(ready, "target did not report its PID");
     String pid = ready.substring("ready:".length());
     Client client = null;
-    ExecutorService executor = Executors.newSingleThreadExecutor();
+    ExecutorService executor = newDaemonExecutor("runtime-hardening-probe-submit");
     try (PrintWriter targetInput = new PrintWriter(target.getOutputStream(), true)) {
       try {
         File trace = locateTrace("btrace/Issue888RuntimeHardeningTest.java");
