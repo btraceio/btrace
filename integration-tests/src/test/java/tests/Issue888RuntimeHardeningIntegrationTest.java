@@ -46,6 +46,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import tests.harness.Completion;
+import tests.harness.TargetRegistry;
 
 /** Real staged-JAR client/agent/target lifecycle coverage for #888. */
 public class Issue888RuntimeHardeningIntegrationTest extends RuntimeTest {
@@ -82,6 +83,7 @@ public class Issue888RuntimeHardeningIntegrationTest extends RuntimeTest {
     String ready = awaitLine(targetOutput, "ready:", 10L);
     assertNotNull(ready, "target did not report its PID");
     String pid = ready.substring("ready:".length());
+    targetHandle.setPid(pid);
     Client client = null;
     ExecutorService executor = newDaemonExecutor("runtime-hardening-probe-submit");
     try (PrintWriter targetInput = new PrintWriter(target.getOutputStream(), true)) {
@@ -166,6 +168,8 @@ public class Issue888RuntimeHardeningIntegrationTest extends RuntimeTest {
         });
   }
 
+  private TargetRegistry.Handle targetHandle;
+
   private Process startTarget() throws Exception {
     List<String> args = new ArrayList<>();
     args.add(Paths.get(javaHome, "bin", "java").toString());
@@ -184,7 +188,12 @@ public class Issue888RuntimeHardeningIntegrationTest extends RuntimeTest {
     // The child is an uninstrumented target; inherited test-only options must not alter agent
     // discovery or the target's own networking configuration.
     builder.environment().remove("JAVA_TOOL_OPTIONS");
-    return builder.start();
+    Process target = builder.start();
+    // Registered so a stalled test dumps this target's threads alongside the test JVM's.
+    // The jcmd comes from the JDK this target was launched with, which is the build JDK
+    // here rather than TEST_JAVA_HOME.
+    targetHandle = TargetRegistry.register(target, "issue-888 target", jcmdFor(javaHome));
+    return target;
   }
 
   private static byte[] readProbeClass() throws Exception {

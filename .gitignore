@@ -25,6 +25,8 @@ btrace-benchmark/target
 btrace-benchmark/build
 benchmark/*.iml
 junit*
+# ... but the JUnit platform config is source, not build output
+!**/junit-platform.properties
 /btrace-statsd/target/
 *.iml
 .gradle
