@@ -185,7 +185,7 @@ public class MyProbe {
 
 ## App-Type Adapters with `@ExternalType`
 
-When an extension's impl needs to interact with application-specific classes (Spark event objects, Hadoop types, custom framework classes), use the `@ExternalType` annotation to generate reflective adapters at build time. The extension Gradle plugin auto-registers the annotation processor.
+When an extension's impl needs to interact with application-specific classes (Spark event objects, Hadoop types, custom framework classes), use the `@ExternalType` annotation to generate reflective adapters at build time. The extension Gradle plugin auto-registers the annotation processor. This is the normative reference for the supported adapter boundary.
 
 ### How It Works
 
@@ -203,37 +203,57 @@ public interface JobStartEvent {
 }
 ```
 
-The processor generates `JobStartEvent$Ext` in the same package with a typed `public static` dispatcher per method. Each dispatcher lazily resolves the target class via `self.getClass().getClassLoader()` (virtual methods) or TCCL (static methods), then stores the `MethodHandle` in a classloader-safe `ClassValue` cache. This keeps extension calls isolated when multiple application classloaders define the same target class. If the external class is not yet loaded, resolution throws and the next call retries — no `ExceptionInInitializerError` at extension load time.
+The processor generates `JobStartEvent$Ext` in the same package with a typed `public static` dispatcher per method. A virtual dispatcher takes `Object self` first and resolves the configured owner through `self`'s defining loader. A static dispatcher resolves through the current thread context class loader (TCCL), falling back to the system loader only when the TCCL is `null`. Successful resolutions are cached per application class; failed class or member lookups are not cached, so a later call can retry.
 
 Use the generated class directly in the impl:
 
 ```java
-// No manual MethodHandle or try/catch needed
-int  id = JobStartEvent$Ext.jobId(event);
-long ts = JobStartEvent$Ext.time(event);
+try {
+    int id = JobStartEvent$Ext.jobId(event);
+    long ts = JobStartEvent$Ext.time(event);
+    // emit metrics / logs...
+} catch (ExternalTypeResolutionException unavailable) {
+    // choose the extension's logging/degradation policy for an unavailable optional API
+}
 ```
 
 ### Rules
 
 - **Target:** interfaces only (`ElementType.TYPE`). The processor emits a compile error for classes.
 - **Annotation value:** non-empty fully-qualified class name. Empty string is a compile error.
-- **Method types:** use `Object` for types that only exist at runtime and can't be on the compile classpath.
-- **Static methods:** add `@ExternalType.Static` on the interface method — the dispatcher calls `findStatic` with TCCL-based class loading.
+- **Method types:** declared erased parameter and return types must exactly match the target member's JVM signature. Use `Object` only when the target member itself uses `Object`; it is not a coercion escape hatch for target-only types.
+- **Access:** dispatch uses `MethodHandles.publicLookup()`. Only public members of public, accessible types are supported; do not add module-opening flags implicitly.
+- **Static methods:** add `@ExternalType.Static` on the interface method — the dispatcher calls `findStatic` with TCCL-based class loading and the documented null-TCCL system-loader fallback.
 - **Default methods and static interface methods:** skipped (they already have bodies).
+- **Failures:** class lookup, missing member, and inaccessible-member failures throw `ExternalTypeResolutionException` with the original cause. Exceptions thrown by the target method propagate unchanged.
 
-### Current Scope Limits (Planned for Future Versions)
+### Supported boundary and manual path
 
-The following are not yet handled by the processor. Use `ClassLoadingUtil` / `MethodHandleCache` directly as a workaround; these are all planned for a future `@ExternalType` version:
+Use generated adapters only for the supported row below. The manual path is the normal solution for version-variant or target-only APIs; it is not an error condition.
 
-| Feature | Status | Manual workaround |
+| Capability | Phase 1 support | Author action |
 |---------|--------|-------------------|
-| Field read/write | Planned | `MethodHandleCache.findGetter` / `findSetter` |
-| Constructors | Planned | `MethodHandleCache.findConstructor` |
-| `instanceof` / `checkcast` on external types | Planned | `ClassLoadingUtil.load(...)` + `Class.isInstance` |
-| Chained `@ExternalType` return types | Planned | Manual adapter per level |
-| Non-`public` methods | Planned | `MethodHandles.privateLookupIn` (Java 9+) |
+| Public, uniquely named static or virtual methods with exact erased signatures | Supported | Use `@ExternalType`; use `Object` only where the target member itself uses `Object`. |
+| A target method with target-library parameter or return types | Unsupported | Use `ClassLoadingUtil` and `MethodHandleCache` directly. |
+| Overloads | Unsupported; processor error | Use `MethodHandleCache` with the exact return and parameter `Class` values. |
+| Fields, constructors, `instanceof`, and casts | Unsupported | Use `ClassLoadingUtil` plus the appropriate direct `MethodHandles.publicLookup()` or `Class` operation. `MethodHandleCache` caches virtual and static method lookups only. |
+| Non-public or non-exported named-module members | Unsupported | Use a public supported API or explicitly configure the target JVM outside BTrace. |
 
-The hand-written pattern in [`docs/architecture/provided-style-extensions.md`](architecture/provided-style-extensions.md) works alongside `@ExternalType`-generated adapters in the same impl class until these gaps are closed.
+For a static call under an author-controlled application loader, use `ClassLoadingUtil.withTCCL(...)` to make that selection explicit and restore the old context afterward:
+
+```java
+String version = ClassLoadingUtil.withTCCL(appLoader, () -> VersionApi$Ext.version());
+```
+
+For version-variant APIs, resolve the exact public signature manually:
+
+```java
+Class<?> owner = ClassLoadingUtil.load("com.example.OptionalApi", appLoader);
+MethodHandle call = handles.findStatic(owner, "version", String.class, int.class);
+String version = (String) call.invoke(3);
+```
+
+`MethodHandleCache` caches successful public static/virtual method lookups only; a caught lookup failure remains retryable. Its current keys retain owner classes and can therefore retain application loaders strongly. It has no getter, setter, or constructor helper. See the [provided-style manual linking guide](architecture/provided-style-extensions.md) for the complete pattern.
 
 ## Metadata and Permissions (Auto-Generated)
 

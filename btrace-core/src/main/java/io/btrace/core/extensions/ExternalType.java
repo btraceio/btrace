@@ -28,9 +28,13 @@ import java.lang.annotation.Target;
  *
  * <p>When combined with the {@code @ExternalType} annotation processor, a companion adapter class
  * named {@code <InterfaceSimpleName>$Ext} is generated in the same package with static dispatchers
- * for each declared method. Dispatchers lazily resolve the target class and method via {@link
- * java.lang.invoke.MethodHandles#publicLookup()} and cache the resulting {@link
- * java.lang.invoke.MethodHandle}.
+ * for each declared method. Dispatchers lazily resolve public target methods through {@link
+ * java.lang.invoke.MethodHandles#publicLookup()} and cache successful resolutions. Declared erased
+ * parameter and return types must exactly match the target member's erased JVM signature; {@code
+ * Object} does not coerce a differently typed target signature.
+ *
+ * <p>Resolution failures are reported as {@link ExternalTypeResolutionException}. Target-method
+ * failures propagate unchanged.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)

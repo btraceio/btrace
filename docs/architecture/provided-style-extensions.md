@@ -20,7 +20,7 @@ This guide shows how to migrate profile-based integrations (e.g., Spark/Hadoop) 
   - Optional child loader: `newChildURLClassLoader(List<Path>, ClassLoader)`, `safeClose(ClassLoader)`
 
 - `io.btrace.extension.util.MethodHandleCache`
-  - Caches public `MethodHandle`s for reflective adapters.
+  - Caches successful public static and virtual method lookups only. Its strong owner-class keys can retain application loaders; it has no getter, setter, or constructor helper.
 
 ## API Sketch (Spark example)
 
@@ -66,62 +66,22 @@ public final class SparkApiImpl implements SparkApi {
 }
 ```
 
-## External Type Adapters (Recommended)
+## External Type Adapters
 
-Writing reflective adapters by hand with `ClassLoadingUtil` + `MethodHandleCache` works but has three ergonomic costs: string method names aren't refactor-safe, eager `static final MethodHandle` fields fail extension init if the target class isn't yet visible, and every reflective call expands into 5+ lines of try/catch and cache plumbing.
+`@ExternalType` is useful for public, uniquely named methods with exact erased signatures. The normative support table, failure contract, and virtual-defining-loader/static-TCCL distinction are in the [Extension Development Guide](../BTraceExtensionDevelopmentGuide.md#app-type-adapters-with-externaltype). Keep the manual pattern in this guide for target-only types, overloads, fields, constructors, and type predicates.
 
-The `@ExternalType` annotation + build-time annotation processor removes all three.
-
-### How it works
-
-Declare an interface in your extension's exported API set marked with `@ExternalType("fully.qualified.AppType")`. In practice this means an API-facing interface under `src/main/java`. The BTrace extension Gradle plugin auto-registers the annotation processor, which generates a companion `<InterfaceSimpleName>$Ext` class in the same package with typed `public static` dispatchers for each method.
+For a static target call where the application loader is known, scope the TCCL explicitly:
 
 ```java
-package com.example.spark.api;
-
-import io.btrace.core.extensions.ExternalType;
-
-@ExternalType("org.apache.spark.scheduler.SparkListenerJobStart")
-public interface JobStart {
-  int jobId();
-  long time();
-}
+String version = ClassLoadingUtil.withTCCL(appLoader, () -> VersionApi$Ext.version());
 ```
 
-The generated `JobStart$Ext` can then be called directly from the impl:
+For fields and constructors there is no `MethodHandleCache` convenience method. Use a direct public lookup after resolving the target class:
 
 ```java
-int id = JobStart$Ext.jobId(event);
-long ts = JobStart$Ext.time(event);
+Class<?> type = ClassLoadingUtil.load("com.example.AppType", appLoader);
+MethodHandle constructor = MethodHandles.publicLookup().findConstructor(type, MethodType.methodType(void.class));
 ```
-
-### What the generated code does
-
-Each dispatcher resolves the target class lazily via `self.getClass().getClassLoader()` (virtual methods) or `Thread.currentThread().getContextClassLoader()` (static methods, see below), then calls `MethodHandles.publicLookup().findVirtual` / `findStatic`. Handles are cached in a per-method `ClassValue`, keyed by the resolved application class, so one extension can safely serve applications with isolated classloaders. Subsequent calls reuse the handle without retaining unloaded application classloaders.
-
-If the external class isn't yet loaded when the dispatcher is first called, resolution throws; since the `ClassValue` does not record a value, the next call retries. No eager init, no `ExceptionInInitializerError` at extension load.
-
-### Rules
-
-- **Target:** `ElementType.TYPE`, interface only. The processor rejects classes with a compile error.
-- **Annotation value:** non-empty fully-qualified class name. Empty string is a compile error.
-- **Method return and parameter types:** anything resolvable at build time is fine. Types you can't put on the extension's compile classpath (app-private types, classes that only exist at runtime) must be typed as `Object`.
-- **Static methods:** annotate with `@ExternalType.Static` on the interface method — the generated dispatcher calls `findStatic` and uses TCCL for class loading.
-- **Default methods and static interface methods:** skipped (they already have bodies).
-
-### Scope limits (v1) — Planned for Future Versions
-
-The following are not yet handled by the processor. Use `ClassLoadingUtil` / `MethodHandleCache` directly as a workaround; all items in the table below are planned for a future `@ExternalType` version:
-
-| Feature | Status | Manual workaround |
-|---------|--------|-------------------|
-| Field access (read/write) | Planned | `MethodHandleCache.findGetter` / `findSetter` |
-| Constructors (`new ExternalType(...)`) | Planned | `MethodHandleCache.findConstructor` |
-| `instanceof` / `checkcast` on external types | Planned | `ClassLoadingUtil.load(...)` + `Class.isInstance` |
-| Chained `@ExternalType` references | Planned | Manual adapter per level |
-| Non-`public` methods | Planned | `MethodHandles.privateLookupIn` (Java 9+) |
-
-The hand-written pattern in the "Impl Sketch" section above works alongside `@ExternalType`-based adapters in the same impl class until these gaps are closed.
 
 ## Role Detection & Config
 

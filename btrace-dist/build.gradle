@@ -398,6 +398,14 @@ task btraceJar(type: Jar) {
         exclude 'META-INF/MANIFEST.MF'
     }
 
+    // External provided-style extensions use btrace.jar directly as both their compilation and
+    // processor path. The processor service and its self-contained implementation therefore need
+    // regular root entries; the rest of the extension implementation remains masked.
+    from(zipTree(allClassesShadow.archiveFile)) {
+        include 'io/btrace/extension/processor/**/*.class'
+        include 'META-INF/services/javax.annotation.processing.Processor'
+    }
+
     // 3. Include masked agent classes (as .classdata)
     into('META-INF/btrace/agent') {
         from("${maskedJarTmpDir}/agent") {
