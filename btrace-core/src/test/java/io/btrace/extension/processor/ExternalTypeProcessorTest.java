@@ -116,6 +116,12 @@ class ExternalTypeProcessorTest {
     String adapter = r.generatedSources.get("com.example.SparkUtils$Ext");
     assertTrue(adapter.contains("findStatic"), adapter);
     assertTrue(adapter.contains("Thread.currentThread().getContextClassLoader()"), adapter);
+    assertTrue(adapter.contains("public static java.lang.String version()"), adapter);
+    assertTrue(
+        adapter.contains("public static java.lang.String version(ClassLoader applicationLoader)"),
+        adapter);
+    assertTrue(adapter.contains("MethodType.methodType(java.lang.String.class)"), adapter);
+    assertTrue(adapter.contains("call.handle.invoke()"), adapter);
     assertFalse(
         adapter.contains("java.lang.Object self"),
         "static dispatcher must not take a receiver parameter: " + adapter);
@@ -223,6 +229,104 @@ class ExternalTypeProcessorTest {
     } finally {
       Thread.currentThread().setContextClassLoader(saved);
     }
+  }
+
+  @Test
+  void explicitStaticDispatcherSelectsLoaderWithoutChangingTccl() throws Exception {
+    Map<String, String> sources =
+        externalTypeSources("@ExternalType.Static int value();", "return 7;");
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+
+    MutableTargetLoader targetLoader = new MutableTargetLoader(r, true);
+    MutableTargetLoader wrongLoader = new MutableTargetLoader(r, false);
+    Class<?> adapter = r.loader.loadClass("com.example.adapter.CounterApi$Ext");
+    java.lang.reflect.Method legacy = adapter.getMethod("value");
+    java.lang.reflect.Method explicit = adapter.getMethod("value", ClassLoader.class);
+    ClassLoader saved = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(wrongLoader);
+      ExternalTypeResolutionException failure =
+          assertResolutionFailure(legacy, null, "com.example.target.Counter", "value");
+      assertInstanceOf(ClassNotFoundException.class, failure.getCause());
+      assertEquals(7, explicit.invoke(null, targetLoader));
+      assertSame(wrongLoader, Thread.currentThread().getContextClassLoader());
+    } finally {
+      Thread.currentThread().setContextClassLoader(saved);
+    }
+  }
+
+  @Test
+  void explicitStaticDispatcherRejectsNullBeforeResolution() throws Exception {
+    Map<String, String> sources =
+        externalTypeSources("@ExternalType.Static int value();", "return 7;");
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+    Class<?> adapter = r.loader.loadClass("com.example.adapter.CounterApi$Ext");
+    java.lang.reflect.Method explicit = adapter.getMethod("value", ClassLoader.class);
+
+    InvocationTargetException failure =
+        assertThrows(
+            InvocationTargetException.class, () -> explicit.invoke(null, new Object[] {null}));
+    assertInstanceOf(NullPointerException.class, failure.getCause());
+    assertEquals("applicationLoader", failure.getCause().getMessage());
+    assertEquals(0, resolutionAttempts(adapter, 0));
+    assertEquals(0, staticLoaderIndexEntries(adapter, 0));
+  }
+
+  @Test
+  void explicitStaticDispatcherSharesLegacyCacheAndRetriesFailures() throws Exception {
+    Map<String, String> sources =
+        externalTypeSources("@ExternalType.Static int value();", "return 7;");
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+    MutableTargetLoader loader = new MutableTargetLoader(r, false);
+    Class<?> adapter = r.loader.loadClass("com.example.adapter.CounterApi$Ext");
+    java.lang.reflect.Method legacy = adapter.getMethod("value");
+    java.lang.reflect.Method explicit = adapter.getMethod("value", ClassLoader.class);
+
+    ExternalTypeResolutionException failure =
+        assertResolutionFailure(explicit, loader, "com.example.target.Counter", "value");
+    assertInstanceOf(ClassNotFoundException.class, failure.getCause());
+    loader.makeVisible();
+    assertEquals(7, explicit.invoke(null, loader));
+    ClassLoader saved = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(loader);
+      assertEquals(7, legacy.invoke(null));
+    } finally {
+      Thread.currentThread().setContextClassLoader(saved);
+    }
+    assertEquals(2, loader.targetLoads, "failure retries and legacy shares the successful entry");
+    assertEquals(1, resolutionAttempts(adapter, 0));
+  }
+
+  @Test
+  void explicitStaticDispatcherForwardsRealClassLoaderArgument() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Installer",
+        "package com.example.target; public class Installer { "
+            + "public static boolean install(ClassLoader loader) { return loader != null; } }");
+    sources.put(
+        "com.example.adapter.InstallerApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Installer\") public interface InstallerApi { "
+            + "@ExternalType.Static boolean install(ClassLoader targetArgument); }");
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+    Class<?> adapter = r.loader.loadClass("com.example.adapter.InstallerApi$Ext");
+    java.lang.reflect.Method legacy = adapter.getMethod("install", ClassLoader.class);
+    java.lang.reflect.Method explicit =
+        adapter.getMethod("install", ClassLoader.class, ClassLoader.class);
+    ClassLoader saved = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(r.loader);
+      assertEquals(true, legacy.invoke(null, r.loader));
+    } finally {
+      Thread.currentThread().setContextClassLoader(saved);
+    }
+    assertEquals(true, explicit.invoke(null, r.loader, r.loader));
   }
 
   @Test
@@ -418,13 +522,15 @@ class ExternalTypeProcessorTest {
 
     MutableTargetLoader loader = new MutableTargetLoader(r, true);
     Class<?> adapter = r.loader.loadClass("com.example.adapter.CounterApi$Ext");
-    java.lang.reflect.Method value = adapter.getMethod("value");
+    java.lang.reflect.Method legacy = adapter.getMethod("value");
+    java.lang.reflect.Method explicit = adapter.getMethod("value", ClassLoader.class);
     CountDownLatch ready = new CountDownLatch(2);
     CountDownLatch start = new CountDownLatch(1);
     ExecutorService executor = Executors.newFixedThreadPool(2);
     try {
-      Future<Integer> first = executor.submit(() -> invokeStatic(value, loader, ready, start));
-      Future<Integer> second = executor.submit(() -> invokeStatic(value, loader, ready, start));
+      Future<Integer> first = executor.submit(() -> invokeStatic(legacy, loader, ready, start));
+      Future<Integer> second =
+          executor.submit(() -> invokeExplicitStatic(explicit, loader, ready, start));
       ready.await();
       start.countDown();
       assertEquals(7, first.get());
@@ -582,11 +688,28 @@ class ExternalTypeProcessorTest {
     }
   }
 
+  private static int invokeExplicitStatic(
+      java.lang.reflect.Method method,
+      ClassLoader loader,
+      CountDownLatch ready,
+      CountDownLatch start)
+      throws Exception {
+    ready.countDown();
+    start.await();
+    return (int) method.invoke(null, loader);
+  }
+
   private static int resolutionAttempts(Class<?> adapter, int ordinal) throws Exception {
     java.lang.reflect.Field attempts =
         adapter.getDeclaredField("__btraceExternalTypeResolutionAttempts$" + ordinal);
     attempts.setAccessible(true);
     return attempts.getInt(null);
+  }
+
+  private static int staticLoaderIndexEntries(Class<?> adapter, int ordinal) throws Exception {
+    java.lang.reflect.Field loaderIndex = adapter.getDeclaredField("$" + ordinal + "$loaderIndex");
+    loaderIndex.setAccessible(true);
+    return ((Map<?, ?>) loaderIndex.get(null)).size();
   }
 
   private static final class MutableTargetLoader extends ClassLoader {

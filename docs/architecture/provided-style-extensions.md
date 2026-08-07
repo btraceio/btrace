@@ -68,13 +68,15 @@ public final class SparkApiImpl implements SparkApi {
 
 ## External Type Adapters
 
-`@ExternalType` is useful for public, uniquely named methods with exact erased signatures. The normative support table, failure contract, and virtual-defining-loader/static-TCCL distinction are in the [Extension Development Guide](../BTraceExtensionDevelopmentGuide.md#app-type-adapters-with-externaltype). Keep the manual pattern in this guide for target-only types, overloads, fields, constructors, and type predicates.
+`@ExternalType` is useful for public, uniquely named methods with exact erased signatures. The normative support table, failure contract, and virtual-defining-loader/static-loader-selection distinction are in the [Extension Development Guide](../BTraceExtensionDevelopmentGuide.md#app-type-adapters-with-externaltype). Keep the manual pattern in this guide for target-only types, overloads, fields, constructors, and type predicates.
 
-For a static target call where the application loader is known, scope the TCCL explicitly:
+For a generated static target call where the application loader is known, pass it directly:
 
 ```java
-String version = ClassLoadingUtil.withTCCL(appLoader, () -> VersionApi$Ext.version());
+String version = VersionApi$Ext.version(appLoader);
 ```
+
+Reserve `ClassLoadingUtil.withTCCL` for manual APIs that require a TCCL policy.
 
 For fields and constructors there is no `MethodHandleCache` convenience method. Use a direct public lookup after resolving the target class:
 

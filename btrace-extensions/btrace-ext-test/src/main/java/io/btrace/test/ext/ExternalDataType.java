@@ -30,4 +30,8 @@ public interface ExternalDataType {
   /** Maps to ExternalData.tag() — static dispatch via TCCL. */
   @ExternalType.Static
   String tag();
+
+  /** Maps to ExternalData.explicitTag() — static dispatch with an explicit application loader. */
+  @ExternalType.Static
+  String explicitTag();
 }
