@@ -821,7 +821,7 @@ btraceFatAgent {
 
 #### Writing Extensions That Integrate With App Types (@ExternalType)
 
-When your extension needs to interact with application-specific classes (Spark events, Hadoop objects, etc.), use `@ExternalType` to generate lazy reflective dispatchers at build time — no manual `MethodHandle` boilerplate:
+When your extension needs to interact with application-specific classes (Spark events, Hadoop objects, etc.), use `@ExternalType` to generate lazy reflective dispatchers at build time:
 
 ```java
 // src/main/java/org/example/ext/api/JobEvent.java
@@ -832,7 +832,7 @@ public interface JobEvent {
 }
 ```
 
-The plugin auto-registers the annotation processor, which generates `JobEvent$Ext` with cached, lazy-resolving static methods. See [Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for details.
+The plugin auto-registers the annotation processor, which generates `JobEvent$Ext` with cached, lazy-resolving static methods. See the normative [Extension Development Guide](BTraceExtensionDevelopmentGuide.md#app-type-adapters-with-externaltype) for the exact supported boundary and required error policy.
 
 #### Zero-Config Probe Auto-Selection
 

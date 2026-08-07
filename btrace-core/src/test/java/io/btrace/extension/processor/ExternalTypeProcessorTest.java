@@ -18,8 +18,14 @@ package io.btrace.extension.processor;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.btrace.core.extensions.ExternalTypeResolutionException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 class ExternalTypeProcessorTest {
@@ -85,9 +91,9 @@ class ExternalTypeProcessorTest {
     CompileTestHarness.Result r = CompileTestHarness.compile(sources);
     assertTrue(r.success, r.errors());
     String adapter = r.generatedSources.get("com.example.JobStart$Ext");
-    assertTrue(adapter.contains("ClassValue<MethodHandle>"), adapter);
+    assertTrue(adapter.contains("ClassValue<ResolvedCall>"), adapter);
     assertTrue(adapter.contains("findVirtual"), adapter);
-    assertTrue(adapter.contains("self.getClass().getClassLoader()"), adapter);
+    assertTrue(adapter.contains("receiver.getClassLoader()"), adapter);
     assertTrue(adapter.contains("(int)"), adapter);
   }
 
@@ -347,5 +353,284 @@ class ExternalTypeProcessorTest {
     // Raw type must appear in the MethodType literal (no angle brackets).
     assertTrue(adapter.contains("MethodType.methodType(java.util.List.class"), adapter);
     assertFalse(adapter.contains("java.util.List<java.lang.String>.class"), adapter);
+  }
+
+  @Test
+  void virtualResolutionRetriesAfterSameLoaderMakesTargetVisibleAndCachesSuccess()
+      throws Exception {
+    Map<String, String> sources = externalTypeSources("int value();", "return 42;");
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+
+    MutableTargetLoader loader = new MutableTargetLoader(r, false);
+    Class<?> adapter = r.loader.loadClass("com.example.adapter.CounterApi$Ext");
+    java.lang.reflect.Method value = adapter.getMethod("value", Object.class);
+    Object context = loader.loadClass("com.example.target.Context").getConstructor().newInstance();
+    assertSame(loader, context.getClass().getClassLoader());
+    ExternalTypeResolutionException failure =
+        assertResolutionFailure(value, context, "com.example.target.Counter", "value");
+    assertInstanceOf(ClassNotFoundException.class, failure.getCause());
+    assertEquals(1, loader.targetLoads, "same loader must attempt the missing target class");
+
+    loader.makeVisible();
+    Object counter = loader.loadClass("com.example.target.Counter").getConstructor().newInstance();
+    assertEquals(42, value.invoke(null, counter));
+    assertEquals(42, value.invoke(null, counter));
+    assertEquals(2, loader.targetLoads, "same loader must retry after making the target visible");
+    assertEquals(1, resolutionAttempts(adapter, 0), "successful member resolution must be cached");
+  }
+
+  @Test
+  void staticResolutionUsesLoaderIdentityAndCachesEachTccl() throws Exception {
+    Map<String, String> sources =
+        externalTypeSources("@ExternalType.Static int value();", "return 7;");
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+
+    MutableTargetLoader first = new MutableTargetLoader(r, false);
+    MutableTargetLoader second = new MutableTargetLoader(r, true);
+    Class<?> adapter = r.loader.loadClass("com.example.adapter.CounterApi$Ext");
+    java.lang.reflect.Method value = adapter.getMethod("value");
+    ClassLoader saved = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(first);
+      assertResolutionFailure(value, null, "com.example.target.Counter", "value");
+      first.makeVisible();
+      assertEquals(7, value.invoke(null));
+      assertEquals(7, value.invoke(null));
+      Thread.currentThread().setContextClassLoader(second);
+      assertEquals(7, value.invoke(null));
+      assertEquals(7, value.invoke(null));
+    } finally {
+      Thread.currentThread().setContextClassLoader(saved);
+    }
+    assertEquals(2, first.targetLoads, "failed static resolution must not be cached");
+    assertEquals(1, second.targetLoads);
+    assertEquals(2, resolutionAttempts(adapter, 0));
+  }
+
+  @Test
+  void staticFirstUseResolvesOnceUnderTheMemberMonitor() throws Exception {
+    Map<String, String> sources =
+        externalTypeSources("@ExternalType.Static int value();", "return 7;");
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+
+    MutableTargetLoader loader = new MutableTargetLoader(r, true);
+    Class<?> adapter = r.loader.loadClass("com.example.adapter.CounterApi$Ext");
+    java.lang.reflect.Method value = adapter.getMethod("value");
+    CountDownLatch ready = new CountDownLatch(2);
+    CountDownLatch start = new CountDownLatch(1);
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      Future<Integer> first = executor.submit(() -> invokeStatic(value, loader, ready, start));
+      Future<Integer> second = executor.submit(() -> invokeStatic(value, loader, ready, start));
+      ready.await();
+      start.countDown();
+      assertEquals(7, first.get());
+      assertEquals(7, second.get());
+    } finally {
+      executor.shutdownNow();
+    }
+    assertEquals(1, loader.targetLoads, "static first use must load once");
+    assertEquals(1, resolutionAttempts(adapter, 0), "static first use must resolve once");
+  }
+
+  @Test
+  void missingMembersRetryAndTargetFailuresStayTransparent() throws Exception {
+    Map<String, String> missing = externalTypeSources("int value();", "return 1;", "different");
+    CompileTestHarness.RunnableResult missingResult = CompileTestHarness.compileAndLoad(missing);
+    assertTrue(missingResult.success, missingResult.errors());
+    Class<?> missingAdapter = missingResult.loader.loadClass("com.example.adapter.CounterApi$Ext");
+    java.lang.reflect.Method missingValue = missingAdapter.getMethod("value", Object.class);
+    MutableTargetLoader missingLoader = new MutableTargetLoader(missingResult, true);
+    Object missingTarget =
+        missingLoader.loadClass("com.example.target.Counter").getConstructor().newInstance();
+    ExternalTypeResolutionException first =
+        assertResolutionFailure(missingValue, missingTarget, "com.example.target.Counter", "value");
+    ExternalTypeResolutionException second =
+        assertResolutionFailure(missingValue, missingTarget, "com.example.target.Counter", "value");
+    assertInstanceOf(NoSuchMethodException.class, first.getCause());
+    assertInstanceOf(NoSuchMethodException.class, second.getCause());
+    assertEquals(2, resolutionAttempts(missingAdapter, 0));
+
+    Map<String, String> throwing =
+        externalTypeSources(
+            "int value();",
+            "throw new io.btrace.core.extensions.ExternalTypeResolutionException(\"target\", \"value\", new IllegalAccessException());");
+    CompileTestHarness.RunnableResult throwingResult = CompileTestHarness.compileAndLoad(throwing);
+    assertTrue(throwingResult.success, throwingResult.errors());
+    MutableTargetLoader throwingLoader = new MutableTargetLoader(throwingResult, true);
+    Object throwingTarget =
+        throwingLoader.loadClass("com.example.target.Counter").getConstructor().newInstance();
+    java.lang.reflect.Method throwingValue =
+        throwingResult
+            .loader
+            .loadClass("com.example.adapter.CounterApi$Ext")
+            .getMethod("value", Object.class);
+    InvocationTargetException thrown =
+        assertThrows(
+            InvocationTargetException.class, () -> throwingValue.invoke(null, throwingTarget));
+    assertInstanceOf(ExternalTypeResolutionException.class, thrown.getCause());
+    assertEquals("Unable to resolve @ExternalType target#value", thrown.getCause().getMessage());
+  }
+
+  @Test
+  void exactSignatureAndPublicLookupFailuresPreserveTheirCauses() throws Exception {
+    Map<String, String> mismatched = externalTypeSources("int value();", "return 42L;");
+    CompileTestHarness.RunnableResult mismatchResult =
+        CompileTestHarness.compileAndLoad(mismatched);
+    assertTrue(mismatchResult.success, mismatchResult.errors());
+    MutableTargetLoader mismatchLoader = new MutableTargetLoader(mismatchResult, true);
+    Object mismatchTarget =
+        mismatchLoader.loadClass("com.example.target.Counter").getConstructor().newInstance();
+    java.lang.reflect.Method mismatchValue =
+        mismatchResult
+            .loader
+            .loadClass("com.example.adapter.CounterApi$Ext")
+            .getMethod("value", Object.class);
+    ExternalTypeResolutionException mismatch =
+        assertResolutionFailure(
+            mismatchValue, mismatchTarget, "com.example.target.Counter", "value");
+    assertInstanceOf(NoSuchMethodException.class, mismatch.getCause());
+
+    Map<String, String> inaccessible = new LinkedHashMap<>();
+    inaccessible.put(
+        "com.example.target.Hidden",
+        "package com.example.target; class Hidden { public int value() { return 1; } }");
+    inaccessible.put(
+        "com.example.target.Factory",
+        "package com.example.target; public class Factory { "
+            + "public static Object create() { return new Hidden(); } }");
+    inaccessible.put(
+        "com.example.adapter.HiddenApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Hidden\") public interface HiddenApi { int value(); }");
+    CompileTestHarness.RunnableResult inaccessibleResult =
+        CompileTestHarness.compileAndLoad(inaccessible);
+    assertTrue(inaccessibleResult.success, inaccessibleResult.errors());
+    Class<?> factory = inaccessibleResult.loader.loadClass("com.example.target.Factory");
+    Object hidden = factory.getMethod("create").invoke(null);
+    java.lang.reflect.Method hiddenValue =
+        inaccessibleResult
+            .loader
+            .loadClass("com.example.adapter.HiddenApi$Ext")
+            .getMethod("value", Object.class);
+    ExternalTypeResolutionException access =
+        assertResolutionFailure(hiddenValue, hidden, "com.example.target.Hidden", "value");
+    assertInstanceOf(IllegalAccessException.class, access.getCause());
+  }
+
+  private static Map<String, String> externalTypeSources(String apiMethod, String implementation) {
+    return externalTypeSources(apiMethod, implementation, "value");
+  }
+
+  private static Map<String, String> externalTypeSources(
+      String apiMethod, String implementation, String targetMethod) {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Counter",
+        "package com.example.target; public class Counter { public Counter() {} public "
+            + (apiMethod.contains("@ExternalType.Static") ? "static " : "")
+            + (implementation.contains("L;") ? "long " : "int ")
+            + targetMethod
+            + "() { "
+            + implementation
+            + " } }");
+    sources.put(
+        "com.example.target.Context",
+        "package com.example.target; public class Context { public Context() {} }");
+    sources.put(
+        "com.example.adapter.CounterApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Counter\") public interface CounterApi { "
+            + apiMethod
+            + " }");
+    return sources;
+  }
+
+  private static ExternalTypeResolutionException assertResolutionFailure(
+      java.lang.reflect.Method method, Object target, String owner, String member) {
+    InvocationTargetException failure =
+        assertThrows(
+            InvocationTargetException.class,
+            () ->
+                method.invoke(
+                    null, method.getParameterCount() == 0 ? new Object[0] : new Object[] {target}));
+    assertInstanceOf(ExternalTypeResolutionException.class, failure.getCause());
+    ExternalTypeResolutionException resolution =
+        (ExternalTypeResolutionException) failure.getCause();
+    assertEquals(
+        "Unable to resolve @ExternalType " + owner + "#" + member, resolution.getMessage());
+    return resolution;
+  }
+
+  private static int invokeStatic(
+      java.lang.reflect.Method method,
+      ClassLoader loader,
+      CountDownLatch ready,
+      CountDownLatch start)
+      throws Exception {
+    ClassLoader saved = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(loader);
+      ready.countDown();
+      start.await();
+      return (int) method.invoke(null);
+    } finally {
+      Thread.currentThread().setContextClassLoader(saved);
+    }
+  }
+
+  private static int resolutionAttempts(Class<?> adapter, int ordinal) throws Exception {
+    java.lang.reflect.Field attempts =
+        adapter.getDeclaredField("__btraceExternalTypeResolutionAttempts$" + ordinal);
+    attempts.setAccessible(true);
+    return attempts.getInt(null);
+  }
+
+  private static final class MutableTargetLoader extends ClassLoader {
+    private final Map<String, byte[]> classBytes;
+    private boolean visible;
+    int targetLoads;
+
+    MutableTargetLoader(CompileTestHarness.RunnableResult result, boolean visible) {
+      super(result.loader);
+      classBytes = result.classBytes;
+      this.visible = visible;
+    }
+
+    void makeVisible() {
+      visible = true;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      throw new AssertionError("adapter cache must not call ClassLoader.equals");
+    }
+
+    @Override
+    public int hashCode() {
+      throw new AssertionError("adapter cache must not call ClassLoader.hashCode");
+    }
+
+    @Override
+    protected synchronized Class<?> loadClass(String name, boolean resolve)
+        throws ClassNotFoundException {
+      boolean counter = "com.example.target.Counter".equals(name);
+      boolean context = "com.example.target.Context".equals(name);
+      if (!counter && !context) return super.loadClass(name, resolve);
+      if (counter) {
+        targetLoads++;
+        if (!visible) throw new ClassNotFoundException(name);
+      }
+      Class<?> loaded = findLoadedClass(name);
+      if (loaded == null) {
+        byte[] bytes = classBytes.get(name);
+        loaded = defineClass(name, bytes, 0, bytes.length);
+      }
+      if (resolve) resolveClass(loaded);
+      return loaded;
+    }
   }
 }

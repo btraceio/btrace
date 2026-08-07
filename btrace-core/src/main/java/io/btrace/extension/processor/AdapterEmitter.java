@@ -31,63 +31,223 @@ final class AdapterEmitter {
     w.println("import java.lang.invoke.MethodHandle;");
     w.println("import java.lang.invoke.MethodHandles;");
     w.println("import java.lang.invoke.MethodType;");
+    w.println("import java.lang.ref.ReferenceQueue;");
+    w.println("import java.lang.ref.WeakReference;");
+    w.println("import java.util.HashMap;");
+    w.println("import java.util.Iterator;");
+    w.println("import java.util.Map;");
+    w.println("import io.btrace.core.extensions.ExternalTypeResolutionException;");
     w.println();
     w.println("public final class " + spec.adapterSimpleName() + " {");
     w.println("  private static final String OWNER = \"" + spec.externalFqn + "\";");
     w.println("  private " + spec.adapterSimpleName() + "() {}");
-    for (MethodSpec m : spec.methods) renderMethod(w, m);
+    renderResolvedCall(w);
+    renderLoaderKey(w);
+    for (int i = 0; i < spec.methods.size(); i++) renderMethod(w, spec.methods.get(i), i);
     renderSneak(w);
     w.println("}");
   }
 
-  private void renderMethod(PrintWriter w, MethodSpec m) {
-    String mhCache = "$" + m.name + "$handles";
+  private void renderResolvedCall(PrintWriter w) {
+    w.println();
+    w.println("  private static final class ResolvedCall {");
+    w.println("    final Class<?> owner;");
+    w.println("    final MethodHandle handle;");
+    w.println();
+    w.println("    ResolvedCall(Class<?> owner, MethodHandle handle) {");
+    w.println("      this.owner = owner;");
+    w.println("      this.handle = handle;");
+    w.println("    }");
+    w.println("  }");
+  }
+
+  private void renderLoaderKey(PrintWriter w) {
+    w.println();
+    w.println("  private static final class LoaderKey extends WeakReference<ClassLoader> {");
+    w.println("    private static final int BOOTSTRAP = 1;");
+    w.println("    private static final int SYSTEM = 2;");
+    w.println("    private final int hash;");
+    w.println("    private final int sentinel;");
+    w.println();
+    w.println("    LoaderKey(ClassLoader loader, ReferenceQueue<ClassLoader> queue) {");
+    w.println("      super(loader, queue);");
+    w.println("      hash = System.identityHashCode(loader);");
+    w.println("      sentinel = 0;");
+    w.println("    }");
+    w.println();
+    w.println("    LoaderKey(ClassLoader loader) {");
+    w.println("      super(loader);");
+    w.println("      hash = System.identityHashCode(loader);");
+    w.println("      sentinel = 0;");
+    w.println("    }");
+    w.println();
+    w.println("    LoaderKey(int sentinel) {");
+    w.println("      super(null);");
+    w.println("      hash = sentinel;");
+    w.println("      this.sentinel = sentinel;");
+    w.println("    }");
+    w.println();
+    w.println("    boolean isWeak() {");
+    w.println("      return sentinel == 0;");
+    w.println("    }");
+    w.println();
+    w.println("    @Override");
+    w.println("    public boolean equals(Object other) {");
+    w.println("      if (this == other) return true;");
+    w.println("      if (!(other instanceof LoaderKey)) return false;");
+    w.println("      LoaderKey that = (LoaderKey) other;");
+    w.println("      if (sentinel != 0 || that.sentinel != 0) return sentinel == that.sentinel;");
+    w.println("      ClassLoader loader = get();");
+    w.println("      return loader != null && loader == that.get();");
+    w.println("    }");
+    w.println();
+    w.println("    @Override");
+    w.println("    public int hashCode() {");
+    w.println("      return hash;");
+    w.println("    }");
+    w.println("  }");
+  }
+
+  private void renderMethod(PrintWriter w, MethodSpec m, int ordinal) {
+    String cache = "$" + ordinal + "$calls";
+    String attempts = "__btraceExternalTypeResolutionAttempts$" + ordinal;
     String[] lists = paramAndArgLists(m);
     String paramList = lists[0];
     String argList = lists[1];
-    String loaderExpr =
-        m.isStatic
-            ? "(Thread.currentThread().getContextClassLoader() != null ? Thread.currentThread().getContextClassLoader() : ClassLoader.getSystemClassLoader())"
-            : "self.getClass().getClassLoader()";
 
     w.println();
-    w.println("  private static final ClassValue<MethodHandle> " + mhCache + " =");
-    w.println("      new ClassValue<MethodHandle>() {");
+    w.println("  private static int " + attempts + ";");
+    w.println("  private static final ClassValue<ResolvedCall> " + cache + " =");
+    w.println("      new ClassValue<ResolvedCall>() {");
     w.println("        @Override");
-    w.println("        protected MethodHandle computeValue(Class<?> owner) {");
+    w.println(
+        "        protected ResolvedCall computeValue(Class<?> "
+            + (m.isStatic ? "owner" : "receiver")
+            + ") {");
     w.println("          try {");
+    if (!m.isStatic) {
+      w.println(
+          "            Class<?> owner = Class.forName(OWNER, false, receiver.getClassLoader());");
+    }
+    w.println("            " + attempts + "++;");
     if (m.isStatic) {
       w.println(
-          "            return MethodHandles.publicLookup().findStatic(owner, \""
+          "            return new ResolvedCall(owner, MethodHandles.publicLookup().findStatic(owner, \""
               + m.name
               + "\", "
               + methodTypeLiteral(m)
-              + ");");
+              + ")); ");
     } else {
       w.println(
-          "            return MethodHandles.publicLookup().findVirtual(owner, \""
+          "            return new ResolvedCall(owner, MethodHandles.publicLookup().findVirtual(owner, \""
               + m.name
               + "\", "
               + methodTypeLiteral(m)
-              + ");");
+              + ")); ");
     }
-    w.println("          } catch (NoSuchMethodException | IllegalAccessException e) {");
     w.println(
-        "            throw new IllegalStateException(\"Unable to resolve \" + OWNER + \"#"
-            + m.name
-            + "\", e);");
+        "          } catch ("
+            + (m.isStatic
+                ? "NoSuchMethodException | IllegalAccessException"
+                : "ClassNotFoundException | NoSuchMethodException | IllegalAccessException")
+            + " e) {");
+    w.println(
+        "            throw new ExternalTypeResolutionException(OWNER, \"" + m.name + "\", e);");
     w.println("          }");
     w.println("        }");
     w.println("      };");
+    if (m.isStatic) renderStaticSupport(w, m, ordinal, cache);
     w.println();
     w.println("  public static " + m.returnType + " " + m.name + "(" + paramList + ") {");
     w.println("    try {");
-    w.println("      Class<?> owner = Class.forName(OWNER, false, " + loaderExpr + ");");
-    w.println("      MethodHandle h = " + mhCache + ".get(owner);");
+    if (m.isStatic) {
+      w.println("      ResolvedCall call = $" + ordinal + "$resolveStatic();");
+    } else {
+      w.println("      ResolvedCall call = " + cache + ".get(self.getClass());");
+    }
     w.print("      ");
     if (!"void".equals(m.returnType)) w.print("return (" + m.returnType + ") ");
-    w.println("h.invoke(" + argList + ");");
+    w.println("call.handle.invoke(" + argList + ");");
     w.println("    } catch (Throwable t) { throw sneak(t); }");
+    w.println("  }");
+  }
+
+  private void renderStaticSupport(PrintWriter w, MethodSpec m, int ordinal, String cache) {
+    String prefix = "$" + ordinal + "$";
+    w.println();
+    w.println("  private static final Object " + prefix + "monitor = new Object();");
+    w.println(
+        "  private static final ReferenceQueue<ClassLoader> "
+            + prefix
+            + "loaderQueue = new ReferenceQueue<ClassLoader>();");
+    w.println(
+        "  private static final Map<LoaderKey, WeakReference<Class<?>>> "
+            + prefix
+            + "loaderIndex = new HashMap<LoaderKey, WeakReference<Class<?>>>();");
+    w.println(
+        "  private static final LoaderKey "
+            + prefix
+            + "bootstrapKey = new LoaderKey(LoaderKey.BOOTSTRAP);");
+    w.println(
+        "  private static final LoaderKey "
+            + prefix
+            + "systemKey = new LoaderKey(LoaderKey.SYSTEM);");
+    w.println();
+    w.println("  private static ResolvedCall $" + ordinal + "$resolveStatic() {");
+    w.println("    ClassLoader loader = Thread.currentThread().getContextClassLoader();");
+    w.println("    if (loader == null) loader = ClassLoader.getSystemClassLoader();");
+    w.println("    synchronized (" + prefix + "monitor) {");
+    w.println("      $" + ordinal + "$expungeStatic();");
+    w.println("      LoaderKey lookupKey = $" + ordinal + "$loaderKey(loader, false);");
+    w.println(
+        "      WeakReference<Class<?>> ownerReference = " + prefix + "loaderIndex.get(lookupKey);");
+    w.println("      Class<?> owner = ownerReference != null ? ownerReference.get() : null;");
+    w.println("      if (owner != null) return " + cache + ".get(owner);");
+    w.println("      try {");
+    w.println("        owner = Class.forName(OWNER, false, loader);");
+    w.println("      } catch (ClassNotFoundException e) {");
+    w.println("        throw new ExternalTypeResolutionException(OWNER, \"" + m.name + "\", e);");
+    w.println("      }");
+    w.println("      ResolvedCall call = " + cache + ".get(owner);");
+    w.println(
+        "      "
+            + prefix
+            + "loaderIndex.put($"
+            + ordinal
+            + "$loaderKey(loader, true), new WeakReference<Class<?>>(owner));");
+    w.println("      return call;");
+    w.println("    }");
+    w.println("  }");
+    w.println();
+    w.println(
+        "  private static LoaderKey $"
+            + ordinal
+            + "$loaderKey(ClassLoader loader, boolean stored) {");
+    w.println("    if (loader == null) return " + prefix + "bootstrapKey;");
+    w.println(
+        "    if (loader == ClassLoader.getSystemClassLoader()) return " + prefix + "systemKey;");
+    w.println(
+        "    return stored ? new LoaderKey(loader, "
+            + prefix
+            + "loaderQueue) : new LoaderKey(loader);");
+    w.println("  }");
+    w.println();
+    w.println("  private static void $" + ordinal + "$expungeStatic() {");
+    w.println("    LoaderKey stale;");
+    w.println(
+        "    while ((stale = (LoaderKey) "
+            + prefix
+            + "loaderQueue.poll()) != null) "
+            + prefix
+            + "loaderIndex.remove(stale);");
+    w.println(
+        "    for (Iterator<Map.Entry<LoaderKey, WeakReference<Class<?>>>> it = "
+            + prefix
+            + "loaderIndex.entrySet().iterator(); it.hasNext();) {");
+    w.println("      Map.Entry<LoaderKey, WeakReference<Class<?>>> entry = it.next();");
+    w.println(
+        "      if ((entry.getKey().isWeak() && entry.getKey().get() == null) || entry.getValue().get() == null) it.remove();");
+    w.println("    }");
     w.println("  }");
   }
 

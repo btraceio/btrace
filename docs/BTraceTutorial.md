@@ -973,7 +973,7 @@ Configuration (optional):
 
 ##### Building App Integration Extensions with @ExternalType
 
-When an extension needs to interact with application-specific types (Spark events, Hadoop objects, custom framework classes), use the `@ExternalType` annotation to eliminate manual reflective boilerplate. The BTrace extension plugin auto-registers the annotation processor.
+When an extension needs to interact with application-specific types (Spark events, Hadoop objects, custom framework classes), use the `@ExternalType` annotation for supported methods without manual lookup boilerplate. The BTrace extension plugin auto-registers the annotation processor.
 
 Declare an interface in `src/main/java` annotated with `@ExternalType("fully.qualified.AppType")`:
 
@@ -986,25 +986,25 @@ public interface JobStartEvent {
 }
 ```
 
-The processor generates `JobStartEvent$Ext` with lazy, cached `MethodHandle` dispatchers. Use them directly in the impl — no `try/catch` or cache setup required:
+The processor generates `JobStartEvent$Ext` with lazy, cached `MethodHandle` dispatchers. Call them from an extension-level error boundary appropriate for an optional target API:
 
 ```java
 // src/main/java/org/example/spark/impl/SparkApiImpl.java
 public final class SparkApiImpl extends Extension implements SparkApi {
     @Override
     public void onJobStart(Object event) {
-        int  id = JobStartEvent$Ext.jobId(event);
-        long ts = JobStartEvent$Ext.time(event);
-        // emit metrics / logs...
+        try {
+            int id = JobStartEvent$Ext.jobId(event);
+            long ts = JobStartEvent$Ext.time(event);
+            // emit metrics / logs...
+        } catch (ExternalTypeResolutionException unavailable) {
+            // log or degrade this optional integration
+        }
     }
 }
 ```
 
-Resolution happens lazily on the first call via the event object's own class loader; the handle is cached for subsequent calls. If the external class isn't loaded yet, the resolver retries next call — no `ExceptionInInitializerError` at extension startup.
-
-Field access, constructors, non-public methods, and chained external types are **not yet handled** by the processor — they are planned for a future `@ExternalType` version. Use `ClassLoadingUtil` / `MethodHandleCache` directly in the meantime (see [Provided-Style Extensions](architecture/provided-style-extensions.md) for the full scope-limits table and workarounds).
-
-For the full `@ExternalType` reference, see [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md).
+Resolution happens lazily; successful calls cache and failed resolution retries on a later call. For exact support limits, the static TCCL rule, and the manual path for target-only types, overloads, fields, constructors, and casts, see the normative [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md#app-type-adapters-with-externaltype).
 
 ##### Zero-Config Probe Auto-Selection (ExtensionConfigurator)
 
