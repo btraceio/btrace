@@ -24,6 +24,9 @@ public interface ExternalTypeTestService {
   /** Returns the static tag from resources.ExternalData via its @ExternalType adapter. */
   String tag();
 
+  /** Returns the static tag using the supplied target object's defining loader. */
+  String explicitTag(Object externalData);
+
   /**
    * Returns the instance value from an resources.ExternalData object via its @ExternalType adapter.
    */

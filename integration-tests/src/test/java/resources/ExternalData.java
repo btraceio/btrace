@@ -36,4 +36,10 @@ public final class ExternalData {
   public static String tag() {
     return "ext-data-ok";
   }
+
+  public static String explicitTag() {
+    return Thread.currentThread().getContextClassLoader() == ExternalData.class.getClassLoader()
+        ? "ext-data-explicit-wrong-tccl"
+        : "ext-data-explicit-ok";
+  }
 }

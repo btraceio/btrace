@@ -161,7 +161,12 @@ final class AdapterEmitter {
     w.println("  public static " + m.returnType + " " + m.name + "(" + paramList + ") {");
     w.println("    try {");
     if (m.isStatic) {
-      w.println("      ResolvedCall call = $" + ordinal + "$resolveStatic();");
+      w.println(
+          "      ResolvedCall call = $"
+              + ordinal
+              + "$resolveStatic($"
+              + ordinal
+              + "$legacyStaticLoader());");
     } else {
       w.println("      ResolvedCall call = " + cache + ".get(self.getClass());");
     }
@@ -170,6 +175,21 @@ final class AdapterEmitter {
     w.println("call.handle.invoke(" + argList + ");");
     w.println("    } catch (Throwable t) { throw sneak(t); }");
     w.println("  }");
+    if (m.isStatic) {
+      String explicitParamList = "ClassLoader applicationLoader";
+      if (!paramList.isEmpty()) explicitParamList += ", " + paramList;
+      w.println();
+      w.println("  public static " + m.returnType + " " + m.name + "(" + explicitParamList + ") {");
+      w.println(
+          "    if (applicationLoader == null) throw new NullPointerException(\"applicationLoader\");");
+      w.println("    try {");
+      w.println("      ResolvedCall call = $" + ordinal + "$resolveStatic(applicationLoader);");
+      w.print("      ");
+      if (!"void".equals(m.returnType)) w.print("return (" + m.returnType + ") ");
+      w.println("call.handle.invoke(" + argList + ");");
+      w.println("    } catch (Throwable t) { throw sneak(t); }");
+      w.println("  }");
+    }
   }
 
   private void renderStaticSupport(PrintWriter w, MethodSpec m, int ordinal, String cache) {
@@ -193,9 +213,12 @@ final class AdapterEmitter {
             + prefix
             + "systemKey = new LoaderKey(LoaderKey.SYSTEM);");
     w.println();
-    w.println("  private static ResolvedCall $" + ordinal + "$resolveStatic() {");
+    w.println("  private static ClassLoader $" + ordinal + "$legacyStaticLoader() {");
     w.println("    ClassLoader loader = Thread.currentThread().getContextClassLoader();");
-    w.println("    if (loader == null) loader = ClassLoader.getSystemClassLoader();");
+    w.println("    return loader != null ? loader : ClassLoader.getSystemClassLoader();");
+    w.println("  }");
+    w.println();
+    w.println("  private static ResolvedCall $" + ordinal + "$resolveStatic(ClassLoader loader) {");
     w.println("    synchronized (" + prefix + "monitor) {");
     w.println("      $" + ordinal + "$expungeStatic();");
     w.println("      LoaderKey lookupKey = $" + ordinal + "$loaderKey(loader, false);");

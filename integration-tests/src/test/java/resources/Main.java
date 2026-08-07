@@ -20,6 +20,7 @@ package resources;
  * @author Jaroslav Bachorik
  */
 public class Main extends TestApp {
+  private static final ClassLoader EXTERNAL_TYPE_DECOY_LOADER = new ClassLoader(null) {};
   private String id = "xxx";
   private String field;
   private static String sField;
@@ -46,11 +47,24 @@ public class Main extends TestApp {
     sField = "BBB";
     print("i=" + callB(1, "Hello World"));
     probeExternal(new ExternalData(42));
+    Thread thread = Thread.currentThread();
+    ClassLoader previous = thread.getContextClassLoader();
+    try {
+      thread.setContextClassLoader(EXTERNAL_TYPE_DECOY_LOADER);
+      probeExternalExplicit(new ExternalData(42));
+    } finally {
+      thread.setContextClassLoader(previous);
+    }
   }
 
   // Entry point for @ExternalType integration tests: provides an ExternalData
   // instance to the probe via @Self without the extension needing to compile against ExternalData.
   ExternalData probeExternal(ExternalData data) {
+    return data;
+  }
+
+  // Separate entry point: its decoy TCCL makes accidental legacy static dispatch fail.
+  ExternalData probeExternalExplicit(ExternalData data) {
     return data;
   }
 

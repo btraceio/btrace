@@ -17,12 +17,20 @@
 package io.btrace.test.ext;
 
 import io.btrace.core.extensions.Extension;
+import io.btrace.extension.util.ClassLoadingUtil;
 
 public final class ExternalTypeTestServiceImpl extends Extension
     implements ExternalTypeTestService {
   @Override
   public String tag() {
     return ExternalDataType$Ext.tag();
+  }
+
+  @Override
+  public String explicitTag(Object externalData) {
+    ClassLoader applicationLoader = ClassLoadingUtil.definingLoader(externalData);
+    if (applicationLoader == null) applicationLoader = ClassLoader.getSystemClassLoader();
+    return ExternalDataType$Ext.explicitTag(applicationLoader);
   }
 
   @Override

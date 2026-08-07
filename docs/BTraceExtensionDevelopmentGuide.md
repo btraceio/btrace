@@ -203,7 +203,7 @@ public interface JobStartEvent {
 }
 ```
 
-The processor generates `JobStartEvent$Ext` in the same package with a typed `public static` dispatcher per method. A virtual dispatcher takes `Object self` first and resolves the configured owner through `self`'s defining loader. A static dispatcher resolves through the current thread context class loader (TCCL), falling back to the system loader only when the TCCL is `null`. Successful resolutions are cached per application class; failed class or member lookups are not cached, so a later call can retry.
+The processor generates `JobStartEvent$Ext` in the same package with a typed `public static` dispatcher per method. A virtual dispatcher takes `Object self` first and resolves the configured owner through `self`'s defining loader. A static dispatcher has both the legacy target-arguments-only form, which resolves through the current thread context class loader (TCCL) and falls back to the system loader only when the TCCL is `null`, and a leading-`ClassLoader` form that resolves through the supplied loader exactly. Successful resolutions are cached per application loader with weak-identity loader keys; failed class or member lookups are not cached, so a later call can retry. The two static forms share that cache.
 
 Use the generated class directly in the impl:
 
@@ -223,7 +223,7 @@ try {
 - **Annotation value:** non-empty fully-qualified class name. Empty string is a compile error.
 - **Method types:** declared erased parameter and return types must exactly match the target member's JVM signature. Use `Object` only when the target member itself uses `Object`; it is not a coercion escape hatch for target-only types.
 - **Access:** dispatch uses `MethodHandles.publicLookup()`. Only public members of public, accessible types are supported; do not add module-opening flags implicitly.
-- **Static methods:** add `@ExternalType.Static` on the interface method — the dispatcher calls `findStatic` with TCCL-based class loading and the documented null-TCCL system-loader fallback.
+- **Static methods:** add `@ExternalType.Static` on the interface method. `version()` preserves legacy TCCL-based class loading with the documented null-TCCL system-loader fallback. `version(ClassLoader applicationLoader)` resolves with that non-null loader exactly; it rejects null immediately with `NullPointerException("applicationLoader")`. The control argument is not a target argument. Neither form changes the target's observed TCCL.
 - **Default methods and static interface methods:** skipped (they already have bodies).
 - **Failures:** class lookup, missing member, and inaccessible-member failures throw `ExternalTypeResolutionException` with the original cause. Exceptions thrown by the target method propagate unchanged.
 
@@ -239,11 +239,15 @@ Use generated adapters only for the supported row below. The manual path is the 
 | Fields, constructors, `instanceof`, and casts | Unsupported | Use `ClassLoadingUtil` plus the appropriate direct `MethodHandles.publicLookup()` or `Class` operation. `MethodHandleCache` caches virtual and static method lookups only. |
 | Non-public or non-exported named-module members | Unsupported | Use a public supported API or explicitly configure the target JVM outside BTrace. |
 
-For a static call under an author-controlled application loader, use `ClassLoadingUtil.withTCCL(...)` to make that selection explicit and restore the old context afterward:
+For a generated static call under an author-controlled application loader, select it explicitly. Normalize a bootstrap-owned context object's null defining loader to the system loader, whose normal delegation reaches bootstrap:
 
 ```java
-String version = ClassLoadingUtil.withTCCL(appLoader, () -> VersionApi$Ext.version());
+ClassLoader appLoader = ClassLoadingUtil.definingLoader(context);
+if (appLoader == null) appLoader = ClassLoader.getSystemClassLoader();
+String version = VersionApi$Ext.version(appLoader);
 ```
+
+Keep `ClassLoadingUtil.withTCCL(...)` for manual APIs that actually require ambient TCCL policy; it is not needed to call a generated static adapter. Regenerating an adapter adds this overload. A wildcard static import can therefore become ambiguous if another wildcard import provides the same new arity; use a qualified adapter call or an explicit single-member static import.
 
 For version-variant APIs, resolve the exact public signature manually:
 

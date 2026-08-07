@@ -57,6 +57,47 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
 
   @Test
   public void testExternalTypeAdapterTagAndValue() throws Exception {
+    configureExternalTypeExtension();
+    testDynamic(
+        "resources.Main",
+        "btrace/ExternalTypeAdapterTest.java",
+        Completion.untilContains("tag=ext-data-ok", "value=42"),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(
+                stdout.contains("FAILED"), "Probe should not have failed. stderr: " + stderr);
+            assertTrue(
+                stdout.contains("tag=ext-data-ok"),
+                "@ExternalType static dispatch failed. stdout: " + stdout);
+            assertTrue(
+                stdout.contains("value=42"),
+                "@ExternalType virtual dispatch failed. stdout: " + stdout);
+          }
+        });
+  }
+
+  @Test
+  public void testExternalTypeAdapterExplicitLoader() throws Exception {
+    configureExternalTypeExtension();
+    testDynamic(
+        "resources.Main",
+        "btrace/ExternalTypeAdapterExplicitTest.java",
+        Completion.untilContains("explicit-tag=ext-data-explicit-ok"),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(
+                stdout.contains("FAILED"), "Probe should not have failed. stderr: " + stderr);
+            assertTrue(
+                stdout.contains("explicit-tag=ext-data-explicit-ok"),
+                "@ExternalType explicit static dispatch changed TCCL or selected the wrong loader. stdout: "
+                    + stdout);
+          }
+        });
+  }
+
+  private void configureExternalTypeExtension() {
     Path integrationBuild =
         Paths.get(System.getProperty("project.dir"), "build").toAbsolutePath().normalize();
     Path stagedClientLibs =
@@ -80,29 +121,5 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
     targetExtensionPath = stagedExtensions.toString();
     clientBtraceLibs = stagedClientLibs.toString();
     attachDelayMs = 500;
-    testDynamic(
-        "resources.Main",
-        "btrace/ExternalTypeAdapterTest.java",
-        // Wait for the probe's actual output — the same signals the validator asserts on — so the
-        // harness never tears the target down before the async retransform of the already-loaded
-        // resources.Main class has fired the probe.
-        Completion.untilContains("tag=ext-data-ok", "value=42"),
-        new ResultValidator() {
-          @Override
-          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
-            assertFalse(
-                stdout.contains("FAILED"), "Probe should not have failed. stderr: " + stderr);
-
-            // Static dispatch via TCCL: ExternalDataType$Ext.tag() -> ExternalData.tag()
-            assertTrue(
-                stdout.contains("tag=ext-data-ok"),
-                "@ExternalType static dispatch failed. stdout: " + stdout);
-
-            // Virtual dispatch: ExternalDataType$Ext.value(data) -> ExternalData.value()
-            assertTrue(
-                stdout.contains("value=42"),
-                "@ExternalType virtual dispatch failed. stdout: " + stdout);
-          }
-        });
   }
 }
