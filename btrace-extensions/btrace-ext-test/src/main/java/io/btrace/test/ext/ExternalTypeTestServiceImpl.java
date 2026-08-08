@@ -34,6 +34,18 @@ public final class ExternalTypeTestServiceImpl extends Extension
   }
 
   @Override
+  public String childMarker(Object externalData) {
+    Object child = ExternalDataType$Ext.child(externalData);
+    return ExternalChildType$Ext.marker(child);
+  }
+
+  @Override
+  public String acceptedChildMarker(Object externalData) {
+    Object child = ExternalDataType$Ext.child(externalData);
+    return ExternalDataType$Ext.acceptChild(externalData, child);
+  }
+
+  @Override
   public int value(Object externalData) {
     return ExternalDataType$Ext.value(externalData);
   }

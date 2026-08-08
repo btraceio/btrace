@@ -25,6 +25,8 @@ public class ExternalTypeAdapterTest {
     if (data == null) return;
     println("tag=" + extSvc.tag());
     println("value=" + extSvc.value(data));
+    println("child=" + extSvc.childMarker(data));
+    println("accepted-child=" + extSvc.acceptedChildMarker(data));
     exit(0);
   }
 }

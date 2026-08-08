@@ -51,4 +51,13 @@ class ExternalTypeAnnotationTest {
     Retention r = ExternalType.class.getAnnotation(Retention.class);
     assertEquals(RetentionPolicy.RUNTIME, r.value());
   }
+
+  @Test
+  void typeMarkerIsSourceOnlyOnDeclarations() {
+    Retention retention = ExternalType.Type.class.getAnnotation(Retention.class);
+    Target target = ExternalType.Type.class.getAnnotation(Target.class);
+    assertEquals(RetentionPolicy.SOURCE, retention.value());
+    assertArrayEquals(
+        new ElementType[] {ElementType.METHOD, ElementType.PARAMETER}, target.value());
+  }
 }

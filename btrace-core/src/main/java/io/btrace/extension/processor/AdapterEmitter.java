@@ -129,28 +129,24 @@ final class AdapterEmitter {
       w.println(
           "            Class<?> owner = Class.forName(OWNER, false, receiver.getClassLoader());");
     }
+    renderMarkedTypes(w, m, ordinal);
     w.println("            " + attempts + "++;");
     if (m.isStatic) {
       w.println(
           "            return new ResolvedCall(owner, MethodHandles.publicLookup().findStatic(owner, \""
               + m.name
               + "\", "
-              + methodTypeLiteral(m)
+              + methodTypeLiteral(m, ordinal)
               + ")); ");
     } else {
       w.println(
           "            return new ResolvedCall(owner, MethodHandles.publicLookup().findVirtual(owner, \""
               + m.name
               + "\", "
-              + methodTypeLiteral(m)
+              + methodTypeLiteral(m, ordinal)
               + ")); ");
     }
-    w.println(
-        "          } catch ("
-            + (m.isStatic
-                ? "NoSuchMethodException | IllegalAccessException"
-                : "ClassNotFoundException | NoSuchMethodException | IllegalAccessException")
-            + " e) {");
+    w.println("          } catch (" + resolutionExceptions(m) + " e) {");
     w.println(
         "            throw new ExternalTypeResolutionException(OWNER, \"" + m.name + "\", e);");
     w.println("          }");
@@ -274,10 +270,54 @@ final class AdapterEmitter {
     w.println("  }");
   }
 
-  private String methodTypeLiteral(MethodSpec m) {
+  private void renderMarkedTypes(PrintWriter w, MethodSpec m, int ordinal) {
+    if (m.returnTargetFqn != null) {
+      w.println(
+          "            Class<?> $"
+              + ordinal
+              + "$returnType = Class.forName(\""
+              + m.returnTargetFqn
+              + "\", false, owner.getClassLoader());");
+    }
+    for (int i = 0; i < m.paramTargetFqns.size(); i++) {
+      String fqn = m.paramTargetFqns.get(i);
+      if (fqn == null) continue;
+      w.println(
+          "            Class<?> $"
+              + ordinal
+              + "$parameterType"
+              + i
+              + " = Class.forName(\""
+              + fqn
+              + "\", false, owner.getClassLoader());");
+    }
+  }
+
+  private String resolutionExceptions(MethodSpec m) {
+    if (!m.isStatic || m.returnTargetFqn != null || hasMarkedParameter(m)) {
+      return "ClassNotFoundException | NoSuchMethodException | IllegalAccessException";
+    }
+    return "NoSuchMethodException | IllegalAccessException";
+  }
+
+  private boolean hasMarkedParameter(MethodSpec m) {
+    for (String targetFqn : m.paramTargetFqns) {
+      if (targetFqn != null) return true;
+    }
+    return false;
+  }
+
+  private String methodTypeLiteral(MethodSpec m, int ordinal) {
     StringBuilder result = new StringBuilder("MethodType.methodType(");
-    result.append(m.returnType).append(".class");
-    for (String p : m.paramTypes) result.append(", ").append(p).append(".class");
+    result.append(
+        m.returnTargetFqn == null ? m.returnType + ".class" : "$" + ordinal + "$returnType");
+    for (int i = 0; i < m.paramTypes.size(); i++) {
+      result.append(", ");
+      result.append(
+          m.paramTargetFqns.get(i) == null
+              ? m.paramTypes.get(i) + ".class"
+              : "$" + ordinal + "$parameterType" + i);
+    }
     return result.append(")").toString();
   }
 

@@ -68,7 +68,7 @@ public final class SparkApiImpl implements SparkApi {
 
 ## External Type Adapters
 
-`@ExternalType` is useful for public, uniquely named methods with exact erased signatures. The normative support table, failure contract, and virtual-defining-loader/static-loader-selection distinction are in the [Extension Development Guide](../BTraceExtensionDevelopmentGuide.md#app-type-adapters-with-externaltype). Keep the manual pattern in this guide for target-only types, overloads, fields, constructors, and type predicates.
+`@ExternalType` supports public, uniquely named methods with exact erased signatures, including direct opaque target-type positions declared as `@ExternalType.Type(ChildApi.class) Object`. The normative support table, owner-defining-loader chain semantics, failure contract, and virtual-defining-loader/static-loader-selection distinction are in the [Extension Development Guide](../BTraceExtensionDevelopmentGuide.md#app-type-adapters-with-externaltype). Keep the manual pattern in this guide for target types in generic elements/arrays, overloads, fields, constructors, and type predicates.
 
 For a generated static target call where the application loader is known, pass it directly:
 
