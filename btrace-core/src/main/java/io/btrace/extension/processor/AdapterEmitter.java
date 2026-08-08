@@ -134,27 +134,29 @@ final class AdapterEmitter {
     if (m.isStatic) {
       w.println(
           "            return new ResolvedCall(owner, MethodHandles.publicLookup().findStatic(owner, \""
-              + m.name
+              + m.targetName
               + "\", "
               + methodTypeLiteral(m, ordinal)
               + ")); ");
     } else {
       w.println(
           "            return new ResolvedCall(owner, MethodHandles.publicLookup().findVirtual(owner, \""
-              + m.name
+              + m.targetName
               + "\", "
               + methodTypeLiteral(m, ordinal)
               + ")); ");
     }
     w.println("          } catch (" + resolutionExceptions(m) + " e) {");
     w.println(
-        "            throw new ExternalTypeResolutionException(OWNER, \"" + m.name + "\", e);");
+        "            throw new ExternalTypeResolutionException(OWNER, \""
+            + m.targetName
+            + "\", e);");
     w.println("          }");
     w.println("        }");
     w.println("      };");
     if (m.isStatic) renderStaticSupport(w, m, ordinal, cache);
     w.println();
-    w.println("  public static " + m.returnType + " " + m.name + "(" + paramList + ") {");
+    w.println("  public static " + m.returnType + " " + m.adapterName + "(" + paramList + ") {");
     w.println("    try {");
     if (m.isStatic) {
       w.println(
@@ -175,7 +177,14 @@ final class AdapterEmitter {
       String explicitParamList = "ClassLoader applicationLoader";
       if (!paramList.isEmpty()) explicitParamList += ", " + paramList;
       w.println();
-      w.println("  public static " + m.returnType + " " + m.name + "(" + explicitParamList + ") {");
+      w.println(
+          "  public static "
+              + m.returnType
+              + " "
+              + m.adapterName
+              + "("
+              + explicitParamList
+              + ") {");
       w.println(
           "    if (applicationLoader == null) throw new NullPointerException(\"applicationLoader\");");
       w.println("    try {");
@@ -225,7 +234,8 @@ final class AdapterEmitter {
     w.println("      try {");
     w.println("        owner = Class.forName(OWNER, false, loader);");
     w.println("      } catch (ClassNotFoundException e) {");
-    w.println("        throw new ExternalTypeResolutionException(OWNER, \"" + m.name + "\", e);");
+    w.println(
+        "        throw new ExternalTypeResolutionException(OWNER, \"" + m.targetName + "\", e);");
     w.println("      }");
     w.println("      ResolvedCall call = " + cache + ".get(owner);");
     w.println(

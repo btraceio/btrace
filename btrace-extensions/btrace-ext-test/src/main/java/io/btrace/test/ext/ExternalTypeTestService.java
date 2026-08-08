@@ -30,6 +30,8 @@ public interface ExternalTypeTestService {
   /** Chains the opaque ExternalData child result into the child adapter. */
   String childMarker(Object externalData);
 
+  String overloadMarkers(Object externalData);
+
   /** Passes an opaque child back through a target-type adapter parameter. */
   String acceptedChildMarker(Object externalData);
 

@@ -248,6 +248,67 @@ require rewriting every extension call site or introducing wrappers/proxies, whi
 class-loader, identity, and lifecycle problems. The marker supplies the exact lookup type while
 keeping the runtime value honest and directly usable by another generated adapter.
 
+### Overload groups: map local aliases to one target name
+
+Use an overload group only when the target class exposes two or more public methods with the same
+name. The local contract methods may need distinct Java names—especially when two target-library
+types are both represented as `Object`—so give every member the same `@ExternalType.Overload`
+value. That value is the **target method name**, not a new adapter name.
+
+For example, assume the application library has these two methods:
+
+```java
+// Application code; it is not on the extension compile class path.
+public final class Parent {
+    public String describe(String value) { ... }
+    public String describe(Child value) { ... }
+}
+```
+
+Declare the generated-adapter contract as follows:
+
+```java
+@ExternalType("vendor.Child")
+interface ChildApi {
+    String label();
+}
+
+@ExternalType("vendor.Parent")
+interface ParentApi {
+    @ExternalType.Overload("describe")
+    String describeText(String value);
+
+    @ExternalType.Overload("describe")
+    String describeChild(@ExternalType.Type(ChildApi.class) Object value);
+}
+```
+
+The local names make the generated Java API unambiguous. At runtime, each dispatcher performs one
+exact `MethodHandles` lookup; it does not inspect the value and choose a compatible candidate.
+
+| Contract declaration | Generated call | Exact target member |
+| --- | --- | --- |
+| `describeText(String)` | `ParentApi$Ext.describeText(parent, text)` | `Parent.describe(String)` |
+| `describeChild(@ExternalType.Type(ChildApi.class) Object)` | `ParentApi$Ext.describeChild(parent, child)` | `Parent.describe(vendor.Child)` |
+
+`@ExternalType.Type(ChildApi.class)` changes the lookup signature from the extension-side
+`Object` to `vendor.Child`; it does not cast or wrap `child`. As a result, a child object from a
+different application loader is not silently accepted as the other overload.
+
+An overload group has three required properties:
+
+1. It contains at least two abstract adapter methods.
+2. Every method that selects that target name has `@ExternalType.Overload("describe")`; do not mix
+   selected and unselected methods for the same target name.
+3. Each member has a distinct exact target signature (name, static/virtual kind, return type, and
+   parameter types). The normal declared types—and `@ExternalType.Type` where needed—provide that
+   signature.
+
+Do not use `@ExternalType.Overload` for a one-method rename. A uniquely named contract method
+already binds to the target method with the same name. It also cannot enable fields, constructors,
+private members, generic/array target types, coercion, or fallback lookup; use the manual
+`MethodHandleCache` path for those cases.
+
 ### Rules
 
 - **Target:** interfaces only (`ElementType.TYPE`). The processor emits a compile error for classes.
@@ -255,6 +316,7 @@ keeping the runtime value honest and directly usable by another generated adapte
 - **Method types:** declared erased parameter and return types must exactly match the target member's JVM signature. For a direct target-library position, use `@ExternalType.Type(ChildApi.class) Object`; it keeps the adapter boundary opaque while resolving the child's target class from the resolved owner's defining loader. The returned value does not implement `ChildApi`, but can flow into `ChildApi$Ext` directly. Markers are valid only on direct `Object` returns/parameters, not generic elements or arrays.
 - **Access:** dispatch uses `MethodHandles.publicLookup()`. Only public members of public, accessible types are supported; do not add module-opening flags implicitly.
 - **Static methods:** add `@ExternalType.Static` on the interface method. `version()` preserves legacy TCCL-based class loading with the documented null-TCCL system-loader fallback. `version(ClassLoader applicationLoader)` resolves with that non-null loader exactly; it rejects null immediately with `NullPointerException("applicationLoader")`. The control argument is not a target argument. Neither form changes the target's observed TCCL.
+- **Overload groups:** follow [the overload-group pattern above](#overload-groups-map-local-aliases-to-one-target-name). The selector changes only the target name; declared exact types, including `Type` markers, select the overload. It is not a single-method alias or runtime coercion/search facility.
 - **Default methods and static interface methods:** skipped (they already have bodies).
 - **Failures:** class lookup, missing member, and inaccessible-member failures throw `ExternalTypeResolutionException` with the original cause. Exceptions thrown by the target method propagate unchanged.
 
@@ -267,7 +329,7 @@ Use generated adapters only for the supported row below. The manual path is the 
 | Public, uniquely named static or virtual methods with exact erased signatures | Supported | Use `@ExternalType`; use `Object` only where the target member itself uses `Object`. |
 | A direct target-library `Object` parameter or return type | Supported | Mark it with `@ExternalType.Type(OtherContract.class) Object`; chain opaque results into another generated adapter. |
 | Target types in generic elements or arrays | Unsupported | Use `ClassLoadingUtil` and `MethodHandleCache` directly. |
-| Overloads | Unsupported; processor error | Use `MethodHandleCache` with the exact return and parameter `Class` values. |
+| Explicit target overload groups | Supported | Mark every group member with `@ExternalType.Overload("targetName")`; local names may differ. |
 | Fields, constructors, `instanceof`, and casts | Unsupported | Use `ClassLoadingUtil` plus the appropriate direct `MethodHandles.publicLookup()` or `Class` operation. `MethodHandleCache` caches virtual and static method lookups only. |
 | Non-public or non-exported named-module members | Unsupported | Use a public supported API or explicitly configure the target JVM outside BTrace. |
 

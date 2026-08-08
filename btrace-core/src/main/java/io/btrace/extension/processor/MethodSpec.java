@@ -20,7 +20,8 @@ import java.util.Collections;
 import java.util.List;
 
 final class MethodSpec {
-  final String name;
+  final String adapterName;
+  final String targetName;
   final String returnType;
   final String returnTargetFqn;
   final List<String> paramTypes;
@@ -28,13 +29,15 @@ final class MethodSpec {
   final boolean isStatic;
 
   MethodSpec(
-      String name,
+      String adapterName,
+      String targetName,
       String returnType,
       String returnTargetFqn,
       List<String> paramTypes,
       List<String> paramTargetFqns,
       boolean isStatic) {
-    this.name = name;
+    this.adapterName = adapterName;
+    this.targetName = targetName;
     this.returnType = returnType;
     this.returnTargetFqn = returnTargetFqn;
     this.paramTypes = Collections.unmodifiableList(new java.util.ArrayList<>(paramTypes));

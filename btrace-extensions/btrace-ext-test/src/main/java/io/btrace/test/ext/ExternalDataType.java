@@ -34,6 +34,12 @@ public interface ExternalDataType {
   /** Maps to ExternalData.acceptChild(ExternalChild) through an opaque Object boundary. */
   String acceptChild(@ExternalType.Type(ExternalChildType.class) Object child);
 
+  @ExternalType.Overload("describe")
+  String describeText(String text);
+
+  @ExternalType.Overload("describe")
+  String describeChild(@ExternalType.Type(ExternalChildType.class) Object child);
+
   /** Maps to ExternalData.tag() — static dispatch via TCCL. */
   @ExternalType.Static
   String tag();

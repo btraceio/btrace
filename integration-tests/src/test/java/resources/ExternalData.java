@@ -41,6 +41,14 @@ public final class ExternalData {
     return child != null ? child.marker() : "ext-child-parameter-null";
   }
 
+  public String describe(String text) {
+    return "ext-overload-text-" + text;
+  }
+
+  public String describe(ExternalChild child) {
+    return "ext-overload-child-" + child.marker();
+  }
+
   public static String tag() {
     return "ext-data-ok";
   }
