@@ -63,7 +63,13 @@ public @interface ExternalType {
     Class<?> value();
   }
 
-  /** Selects the target name for every member of an opt-in overload group. */
+  /**
+   * Selects one overloaded target member name for every method in an opt-in group.
+   *
+   * <p>Apply this annotation, with the same value, to at least two abstract methods in one
+   * contract. The methods may use distinct local names; their declared exact signatures select the
+   * target overload. This annotation does not perform runtime overload search or coercion.
+   */
   @Retention(RetentionPolicy.SOURCE)
   @Target(ElementType.METHOD)
   @interface Overload {
