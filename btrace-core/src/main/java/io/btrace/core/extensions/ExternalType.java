@@ -62,4 +62,11 @@ public @interface ExternalType {
     /** The external contract that supplies the target type name. */
     Class<?> value();
   }
+
+  /** Selects the target name for every member of an opt-in overload group. */
+  @Retention(RetentionPolicy.SOURCE)
+  @Target(ElementType.METHOD)
+  @interface Overload {
+    String value();
+  }
 }

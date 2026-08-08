@@ -40,6 +40,14 @@ public final class ExternalTypeTestServiceImpl extends Extension
   }
 
   @Override
+  public String overloadMarkers(Object externalData) {
+    Object child = ExternalDataType$Ext.child(externalData);
+    return ExternalDataType$Ext.describeText(externalData, "ok")
+        + ","
+        + ExternalDataType$Ext.describeChild(externalData, child);
+  }
+
+  @Override
   public String acceptedChildMarker(Object externalData) {
     Object child = ExternalDataType$Ext.child(externalData);
     return ExternalDataType$Ext.acceptChild(externalData, child);

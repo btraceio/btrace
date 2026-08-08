@@ -255,6 +255,7 @@ keeping the runtime value honest and directly usable by another generated adapte
 - **Method types:** declared erased parameter and return types must exactly match the target member's JVM signature. For a direct target-library position, use `@ExternalType.Type(ChildApi.class) Object`; it keeps the adapter boundary opaque while resolving the child's target class from the resolved owner's defining loader. The returned value does not implement `ChildApi`, but can flow into `ChildApi$Ext` directly. Markers are valid only on direct `Object` returns/parameters, not generic elements or arrays.
 - **Access:** dispatch uses `MethodHandles.publicLookup()`. Only public members of public, accessible types are supported; do not add module-opening flags implicitly.
 - **Static methods:** add `@ExternalType.Static` on the interface method. `version()` preserves legacy TCCL-based class loading with the documented null-TCCL system-loader fallback. `version(ClassLoader applicationLoader)` resolves with that non-null loader exactly; it rejects null immediately with `NullPointerException("applicationLoader")`. The control argument is not a target argument. Neither form changes the target's observed TCCL.
+- **Overload groups:** use `@ExternalType.Overload("targetName")` on every member of a group of at least two local methods. The selector changes only the target name; declared exact types, including `Type` markers, select the overload. It is not a single-method alias or runtime coercion/search facility.
 - **Default methods and static interface methods:** skipped (they already have bodies).
 - **Failures:** class lookup, missing member, and inaccessible-member failures throw `ExternalTypeResolutionException` with the original cause. Exceptions thrown by the target method propagate unchanged.
 
@@ -267,7 +268,7 @@ Use generated adapters only for the supported row below. The manual path is the 
 | Public, uniquely named static or virtual methods with exact erased signatures | Supported | Use `@ExternalType`; use `Object` only where the target member itself uses `Object`. |
 | A direct target-library `Object` parameter or return type | Supported | Mark it with `@ExternalType.Type(OtherContract.class) Object`; chain opaque results into another generated adapter. |
 | Target types in generic elements or arrays | Unsupported | Use `ClassLoadingUtil` and `MethodHandleCache` directly. |
-| Overloads | Unsupported; processor error | Use `MethodHandleCache` with the exact return and parameter `Class` values. |
+| Explicit target overload groups | Supported | Mark every group member with `@ExternalType.Overload("targetName")`; local names may differ. |
 | Fields, constructors, `instanceof`, and casts | Unsupported | Use `ClassLoadingUtil` plus the appropriate direct `MethodHandles.publicLookup()` or `Class` operation. `MethodHandleCache` caches virtual and static method lookups only. |
 | Non-public or non-exported named-module members | Unsupported | Use a public supported API or explicitly configure the target JVM outside BTrace. |
 

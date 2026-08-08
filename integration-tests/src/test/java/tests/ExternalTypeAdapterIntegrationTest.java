@@ -65,7 +65,8 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
             "tag=ext-data-ok",
             "value=42",
             "child=ext-child-chain-ok",
-            "accepted-child=ext-child-chain-ok"),
+            "accepted-child=ext-child-chain-ok",
+            "overloads=ext-overload-text-ok,ext-overload-child-ext-child-chain-ok"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -83,6 +84,10 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
             assertTrue(
                 stdout.contains("accepted-child=ext-child-chain-ok"),
                 "@ExternalType target-type parameter dispatch failed. stdout: " + stdout);
+            assertTrue(
+                stdout.contains(
+                    "overloads=ext-overload-text-ok,ext-overload-child-ext-child-chain-ok"),
+                "@ExternalType overload dispatch failed. stdout: " + stdout);
           }
         });
   }

@@ -66,6 +66,10 @@ public final class CompileTestHarness {
   }
 
   public static Result compile(Map<String, String> sources) throws IOException {
+    return compile(sources, null);
+  }
+
+  public static Result compile(Map<String, String> sources, Integer release) throws IOException {
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     if (compiler == null) {
       throw new IllegalStateException("No JavaCompiler available — run tests on a JDK, not JRE");
@@ -81,12 +85,21 @@ public final class CompileTestHarness {
     }
 
     String cp = System.getProperty("java.class.path");
-    List<String> options =
-        Arrays.asList("-classpath", cp, "-processor", ExternalTypeProcessor.class.getName());
+    List<String> options = new ArrayList<>();
+    if (release != null) {
+      options.add("--release");
+      options.add(release.toString());
+    }
+    options.addAll(
+        Arrays.asList("-classpath", cp, "-processor", ExternalTypeProcessor.class.getName()));
 
     JavaCompiler.CompilationTask task = compiler.getTask(null, mgr, diags, options, null, units);
     boolean ok = task.call();
     return new Result(ok, mgr.generatedSources(), diags.getDiagnostics());
+  }
+
+  public static Result compile(Map<String, String> sources, int release) throws IOException {
+    return compile(sources, Integer.valueOf(release));
   }
 
   public static final class RunnableResult {

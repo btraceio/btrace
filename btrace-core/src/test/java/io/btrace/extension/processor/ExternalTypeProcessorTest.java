@@ -43,7 +43,7 @@ class ExternalTypeProcessorTest {
             + "  int jobId();\n"
             + "}\n");
 
-    CompileTestHarness.Result r = CompileTestHarness.compile(sources);
+    CompileTestHarness.Result r = CompileTestHarness.compile(sources, 8);
     assertTrue(r.success, "compile failed:\n" + r.errors());
     assertTrue(
         r.generatedSources.containsKey("com.example.JobStart$Ext"),
@@ -216,6 +216,12 @@ class ExternalTypeProcessorTest {
             + "  long currentTimeMillis();\n"
             + "}\n");
 
+    CompileTestHarness.Result sourceResult = CompileTestHarness.compile(sources);
+    assertTrue(sourceResult.success, sourceResult.errors());
+    String generated = sourceResult.generatedSources.get("com.example.adapter.ParentApi$Ext");
+    assertTrue(generated.contains("findVirtual(owner, \"describe\""), generated);
+    assertTrue(generated.contains("Class.forName(\"com.example.target.Child\""), generated);
+    assertFalse(generated.contains("ChildApi.class"), generated);
     CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
     assertTrue(r.success, r.errors());
 
@@ -659,6 +665,170 @@ class ExternalTypeProcessorTest {
             InvocationTargetException.class,
             () -> childAdapter.getMethod("label", Object.class).invoke(null, new Object[] {null}));
     assertInstanceOf(NullPointerException.class, nullReceiver.getCause());
+  }
+
+  @Test
+  void overloadSelectorsUseExactTargetNamesAndOpaqueMarkedTypes() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Child",
+        "package com.example.target; public class Child { public String label() { return \"child\"; } }");
+    sources.put(
+        "com.example.target.Parent",
+        "package com.example.target; public class Parent { "
+            + "public String describe(String text) { return \"text-\" + text; } "
+            + "public String describe(Child child) { return \"child-\" + child.label(); } }");
+    sources.put(
+        "com.example.adapter.ChildApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Child\") public interface ChildApi { String label(); }");
+    sources.put(
+        "com.example.adapter.ParentApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Parent\") public interface ParentApi { "
+            + "@ExternalType.Overload(\"describe\") String text(String value); "
+            + "@ExternalType.Overload(\"describe\") String child(@ExternalType.Type(ChildApi.class) Object value); }");
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+    Object parent = r.loader.loadClass("com.example.target.Parent").getConstructor().newInstance();
+    Object child = r.loader.loadClass("com.example.target.Child").getConstructor().newInstance();
+    Class<?> adapter = r.loader.loadClass("com.example.adapter.ParentApi$Ext");
+    assertEquals(
+        "text-ok",
+        adapter.getMethod("text", Object.class, String.class).invoke(null, parent, "ok"));
+    assertEquals(
+        "child-child",
+        adapter.getMethod("child", Object.class, Object.class).invoke(null, parent, child));
+  }
+
+  @Test
+  void selectorValidationRetainsLegacyOverloadErrorAndRejectsIllegalGroups() throws Exception {
+    Map<String, String> legacy = new LinkedHashMap<>();
+    legacy.put(
+        "com.example.Api",
+        "package com.example; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"target.Api\") public interface Api { int read(); int read(String value); }");
+    CompileTestHarness.Result legacyResult = CompileTestHarness.compile(legacy);
+    assertFalse(legacyResult.success);
+    assertTrue(legacyResult.errors().contains("@ExternalType does not support overloaded methods"));
+
+    for (String selector : new String[] {"", "<init>", "<clinit>", "x/y"}) {
+      Map<String, String> invalid = new LinkedHashMap<>();
+      invalid.put(
+          "com.example.Api",
+          "package com.example; import io.btrace.core.extensions.ExternalType; "
+              + "@ExternalType(\"target.Api\") public interface Api { "
+              + "@ExternalType.Overload(\""
+              + selector
+              + "\") int local(); }");
+      CompileTestHarness.Result result = CompileTestHarness.compile(invalid);
+      assertFalse(result.success, selector);
+      assertTrue(
+          result.errors().contains("Invalid @ExternalType.Overload target name"), result.errors());
+    }
+  }
+
+  @Test
+  void selectorGroupsRejectMixedMembersAndStaticGeneratedDescriptorCollisions() throws Exception {
+    Map<String, String> mixed = new LinkedHashMap<>();
+    mixed.put(
+        "com.example.Api",
+        "package com.example; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"target.Api\") public interface Api { "
+            + "@ExternalType.Overload(\"read\") int one(); int read(String value); }");
+    CompileTestHarness.Result mixedResult = CompileTestHarness.compile(mixed);
+    assertFalse(mixedResult.success);
+    assertTrue(mixedResult.errors().contains("Every method selecting target 'read'"));
+
+    Map<String, String> collision = new LinkedHashMap<>();
+    collision.put(
+        "com.example.Api",
+        "package com.example; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"target.Api\") public interface Api { "
+            + "@ExternalType.Static @ExternalType.Overload(\"read\") int read(); "
+            + "@ExternalType.Static @ExternalType.Overload(\"read\") int read(ClassLoader loader); }");
+    CompileTestHarness.Result collisionResult = CompileTestHarness.compile(collision);
+    assertFalse(collisionResult.success);
+    assertTrue(collisionResult.errors().contains("collide in generated adapter descriptors"));
+  }
+
+  @Test
+  void selectedStaticOverloadKeepsLegacyAndExplicitLoaderForms() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Api",
+        "package com.example.target; public class Api { "
+            + "public static String read() { return \"none\"; } "
+            + "public static String read(String value) { return value; } }");
+    sources.put(
+        "com.example.adapter.Api",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Api\") public interface Api { "
+            + "@ExternalType.Static @ExternalType.Overload(\"read\") String noArg(); "
+            + "@ExternalType.Static @ExternalType.Overload(\"read\") String text(String value); }");
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+    Class<?> adapter = r.loader.loadClass("com.example.adapter.Api$Ext");
+    ClassLoader saved = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(r.loader);
+      assertEquals("none", adapter.getMethod("noArg").invoke(null));
+      assertEquals("ok", adapter.getMethod("text", String.class).invoke(null, "ok"));
+    } finally {
+      Thread.currentThread().setContextClassLoader(saved);
+    }
+    assertEquals("none", adapter.getMethod("noArg", ClassLoader.class).invoke(null, r.loader));
+    assertEquals(
+        "ok",
+        adapter.getMethod("text", ClassLoader.class, String.class).invoke(null, r.loader, "ok"));
+  }
+
+  @Test
+  void selectorDiagnosticsAreSourcePositionedAndRejectAllInvalidGroups() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.Outside",
+        "package com.example; import io.btrace.core.extensions.ExternalType; "
+            + "public interface Outside { @ExternalType.Overload(\"read\") int read(); }");
+    sources.put(
+        "com.example.Api",
+        "package com.example;\n"
+            + "import io.btrace.core.extensions.ExternalType;\n"
+            + "@ExternalType(\"target.Api\")\n"
+            + "public interface Api {\n"
+            + "  @ExternalType.Overload(\"one\") int one();\n"
+            + "  @ExternalType.Overload(\"same\") int first();\n"
+            + "  @ExternalType.Overload(\"same\") int second();\n"
+            + "  default @ExternalType.Overload(\"read\") int skipped() { return 0; }\n"
+            + "  static @ExternalType.Overload(\"read\") int staticSkipped() { return 0; }\n"
+            + "}\n");
+    CompileTestHarness.Result r = CompileTestHarness.compile(sources);
+    assertFalse(r.success);
+    assertTrue(r.errors().contains("only valid on an abstract method"), r.errors());
+    assertTrue(r.errors().contains("requires at least two methods selecting 'one'"), r.errors());
+    assertTrue(r.errors().contains("distinct exact target signatures"), r.errors());
+    assertTrue(
+        r.diagnostics.stream()
+            .anyMatch(
+                d ->
+                    d.getMessage(java.util.Locale.ROOT).contains("requires at least two methods")
+                        && d.getLineNumber() == 5));
+  }
+
+  @Test
+  void selectorUnderscoreIsAcceptedAsAJvmName() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Api",
+        "package com.example.target; public class Api { public String _() { return \"ok\"; } public String _(String s) { return s; } }");
+    sources.put(
+        "com.example.Api",
+        "package com.example; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Api\") public interface Api { "
+            + "@ExternalType.Overload(\"_\") String first(); "
+            + "@ExternalType.Overload(\"_\") String second(String value); }");
+    CompileTestHarness.Result r = CompileTestHarness.compile(sources, 8);
+    assertTrue(r.success, r.errors());
   }
 
   @Test
