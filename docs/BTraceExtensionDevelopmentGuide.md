@@ -241,6 +241,13 @@ The contracts are processor metadata only: `child` remains an `Object` and does 
 loader to form the exact method type. A same-name object from another loader fails normally rather
 than being coerced; null target values are passed through unchanged.
 
+This explicit `Object` boundary is intentional, even though it is a little more verbose. Declaring
+`ChildApi` as the return type would falsely promise that the target's `vendor.Child` object
+implements that extension-side interface; a Java cast would then fail. Hiding the conversion would
+require rewriting every extension call site or introducing wrappers/proxies, which would add
+class-loader, identity, and lifecycle problems. The marker supplies the exact lookup type while
+keeping the runtime value honest and directly usable by another generated adapter.
+
 ### Rules
 
 - **Target:** interfaces only (`ElementType.TYPE`). The processor emits a compile error for classes.
