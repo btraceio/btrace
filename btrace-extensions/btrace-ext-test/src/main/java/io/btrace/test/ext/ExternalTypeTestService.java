@@ -27,6 +27,12 @@ public interface ExternalTypeTestService {
   /** Returns the static tag using the supplied target object's defining loader. */
   String explicitTag(Object externalData);
 
+  /** Chains the opaque ExternalData child result into the child adapter. */
+  String childMarker(Object externalData);
+
+  /** Passes an opaque child back through a target-type adapter parameter. */
+  String acceptedChildMarker(Object externalData);
+
   /**
    * Returns the instance value from an resources.ExternalData object via its @ExternalType adapter.
    */

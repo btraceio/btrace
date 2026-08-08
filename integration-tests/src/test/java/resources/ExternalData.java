@@ -33,6 +33,14 @@ public final class ExternalData {
     return value;
   }
 
+  public ExternalChild child() {
+    return new ExternalChild();
+  }
+
+  public String acceptChild(ExternalChild child) {
+    return child != null ? child.marker() : "ext-child-parameter-null";
+  }
+
   public static String tag() {
     return "ext-data-ok";
   }

@@ -460,6 +460,196 @@ class ExternalTypeProcessorTest {
   }
 
   @Test
+  void markedObjectSignaturesResolveTargetTypesAndChainWithoutContractDescriptors()
+      throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Child",
+        "package com.example.target; public class Child { public String label() { return \"child\"; } }");
+    sources.put(
+        "com.example.target.Parent",
+        "package com.example.target; public class Parent { "
+            + "public Child child() { return new Child(); } "
+            + "public String replace(Child child) { return child.label(); } }");
+    sources.put(
+        "com.example.adapter.ChildApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Child\") public interface ChildApi { "
+            + "String label(); }");
+    sources.put(
+        "com.example.adapter.ParentApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Parent\") public interface ParentApi { "
+            + "@ExternalType.Type(ChildApi.class) Object child(); "
+            + "String replace(@ExternalType.Type(ChildApi.class) Object child); }");
+    CompileTestHarness.Result compiled = CompileTestHarness.compile(sources);
+    assertTrue(compiled.success, compiled.errors());
+    String adapterSource = compiled.generatedSources.get("com.example.adapter.ParentApi$Ext");
+    assertTrue(adapterSource.contains("Class.forName(\"com.example.target.Child\", false, owner.getClassLoader())"));
+    assertFalse(adapterSource.contains("ChildApi.class"), adapterSource);
+    assertFalse(adapterSource.contains("com.example.target.Child.class"), adapterSource);
+
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+    Object parent = r.loader.loadClass("com.example.target.Parent").getConstructor().newInstance();
+    Class<?> parentAdapter = r.loader.loadClass("com.example.adapter.ParentApi$Ext");
+    Object child = parentAdapter.getMethod("child", Object.class).invoke(null, parent);
+    Class<?> childAdapter = r.loader.loadClass("com.example.adapter.ChildApi$Ext");
+    assertEquals("child", childAdapter.getMethod("label", Object.class).invoke(null, child));
+    assertEquals(
+        "child", parentAdapter.getMethod("replace", Object.class, Object.class).invoke(null, parent, child));
+  }
+
+  @Test
+  void rejectsInvalidTargetTypeMarkerWithoutEmittingAdapter() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put("com.example.NotAContract", "package com.example; public interface NotAContract {}");
+    sources.put(
+        "com.example.BadApi",
+        "package com.example; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.Target\") public interface BadApi { "
+            + "@ExternalType.Type(NotAContract.class) Object child(); }");
+    CompileTestHarness.Result r = CompileTestHarness.compile(sources);
+    assertFalse(r.success);
+    assertTrue(r.errors().contains("must reference an interface with a non-empty @ExternalType value"));
+    assertFalse(r.generatedSources.containsKey("com.example.BadApi$Ext"));
+  }
+
+  @Test
+  void rejectsMarkersOutsideAdaptedMethodsAndNonObjectDeclarations() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.ChildApi",
+        "package com.example; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"target.Child\") public interface ChildApi { String label(); }");
+    sources.put(
+        "com.example.Outside",
+        "package com.example; import io.btrace.core.extensions.ExternalType; "
+            + "public interface Outside { @ExternalType.Type(ChildApi.class) Object child(); }");
+    sources.put(
+        "com.example.BadApi",
+        "package com.example; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"target.Parent\") public interface BadApi { "
+            + "@ExternalType.Type(ChildApi.class) String child(); "
+            + "default @ExternalType.Type(ChildApi.class) Object skipped() { return null; } }");
+    CompileTestHarness.Result r = CompileTestHarness.compile(sources);
+    assertFalse(r.success);
+    assertTrue(r.errors().contains("only valid as @ExternalType.Type(OtherContract.class) Object"));
+    assertTrue(r.errors().contains("non-static, non-default method"));
+    assertFalse(r.generatedSources.containsKey("com.example.BadApi$Ext"));
+  }
+
+  @Test
+  void markedStaticSignatureUsesOwnerDefiningLoaderForLegacyAndExplicitCalls() throws Exception {
+    Map<String, String> sources = chainSources(true);
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+    ChainLoader ownerLoader = new ChainLoader(r, "parent");
+    ClassLoader selectedChild =
+        new ClassLoader(ownerLoader) {
+          @Override
+          protected synchronized Class<?> loadClass(String name, boolean resolve)
+              throws ClassNotFoundException {
+            if (!"com.example.target.Child".equals(name)) return super.loadClass(name, resolve);
+            Class<?> loaded = findLoadedClass(name);
+            if (loaded == null) {
+              byte[] bytes = r.classBytes.get(name);
+              loaded = defineClass(name, bytes, 0, bytes.length);
+            }
+            if (resolve) resolveClass(loaded);
+            return loaded;
+          }
+        };
+    Class<?> adapter = r.loader.loadClass("com.example.adapter.ParentApi$Ext");
+    java.lang.reflect.Method legacy = adapter.getMethod("child");
+    java.lang.reflect.Method explicit = adapter.getMethod("child", ClassLoader.class);
+    ClassLoader saved = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(selectedChild);
+      Object legacyChild = legacy.invoke(null);
+      assertSame(ownerLoader, legacyChild.getClass().getClassLoader());
+    } finally {
+      Thread.currentThread().setContextClassLoader(saved);
+    }
+    Object explicitChild = explicit.invoke(null, selectedChild);
+    assertSame(ownerLoader, explicitChild.getClass().getClassLoader());
+  }
+
+  @Test
+  void markedChainsKeepLoaderIdentityAndRetryMissingSignatureType() throws Exception {
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(chainSources(false));
+    assertTrue(r.success, r.errors());
+    ChainLoader first = new ChainLoader(r, "first");
+    ChainLoader second = new ChainLoader(r, "second");
+    Class<?> parentAdapter = r.loader.loadClass("com.example.adapter.ParentApi$Ext");
+    Class<?> childAdapter = r.loader.loadClass("com.example.adapter.ChildApi$Ext");
+    Object firstParent = first.loadClass("com.example.target.Parent").getConstructor().newInstance();
+    Object secondParent = second.loadClass("com.example.target.Parent").getConstructor().newInstance();
+    Object firstChild = parentAdapter.getMethod("child", Object.class).invoke(null, firstParent);
+    Object secondChild = parentAdapter.getMethod("child", Object.class).invoke(null, secondParent);
+    assertEquals("first", childAdapter.getMethod("label", Object.class).invoke(null, firstChild));
+    assertEquals("second", childAdapter.getMethod("label", Object.class).invoke(null, secondChild));
+    InvocationTargetException wrong =
+        assertThrows(
+            InvocationTargetException.class,
+            () ->
+                parentAdapter
+                    .getMethod("replace", Object.class, Object.class)
+                    .invoke(null, firstParent, secondChild));
+    assertTrue(
+        wrong.getCause() instanceof ClassCastException
+            || wrong.getCause() instanceof java.lang.invoke.WrongMethodTypeException);
+
+    ChainLoader missing = new ChainLoader(r, "missing");
+    missing.hideChild();
+    Object missingParent = missing.loadClass("com.example.target.Parent").getConstructor().newInstance();
+    ExternalTypeResolutionException failure =
+        assertResolutionFailure(
+            parentAdapter.getMethod("child", Object.class), missingParent, "com.example.target.Parent", "child");
+    assertInstanceOf(ClassNotFoundException.class, failure.getCause());
+    missing.showChild();
+    assertNotNull(parentAdapter.getMethod("child", Object.class).invoke(null, missingParent));
+  }
+
+  @Test
+  void markedNullReturnAndParameterPreserveOpaqueAndVirtualNullSemantics() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Child",
+        "package com.example.target; public class Child { public String label() { return \"child\"; } }");
+    sources.put(
+        "com.example.target.Parent",
+        "package com.example.target; public class Parent { "
+            + "public Child nullChild() { return null; } "
+            + "public String accept(Child child) { return child == null ? \"null-ok\" : \"wrong\"; } }");
+    sources.put(
+        "com.example.adapter.ChildApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Child\") public interface ChildApi { String label(); }");
+    sources.put(
+        "com.example.adapter.ParentApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Parent\") public interface ParentApi { "
+            + "@ExternalType.Type(ChildApi.class) Object nullChild(); "
+            + "String accept(@ExternalType.Type(ChildApi.class) Object child); }");
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+
+    Object parent = r.loader.loadClass("com.example.target.Parent").getConstructor().newInstance();
+    Class<?> parentAdapter = r.loader.loadClass("com.example.adapter.ParentApi$Ext");
+    Class<?> childAdapter = r.loader.loadClass("com.example.adapter.ChildApi$Ext");
+    Object child = parentAdapter.getMethod("nullChild", Object.class).invoke(null, parent);
+    assertNull(child);
+    assertEquals(
+        "null-ok", parentAdapter.getMethod("accept", Object.class, Object.class).invoke(null, parent, null));
+    InvocationTargetException nullReceiver =
+        assertThrows(
+            InvocationTargetException.class,
+            () -> childAdapter.getMethod("label", Object.class).invoke(null, new Object[] {null}));
+    assertInstanceOf(NullPointerException.class, nullReceiver.getCause());
+  }
+
+  @Test
   void virtualResolutionRetriesAfterSameLoaderMakesTargetVisibleAndCachesSuccess()
       throws Exception {
     Map<String, String> sources = externalTypeSources("int value();", "return 42;");
@@ -631,6 +821,32 @@ class ExternalTypeProcessorTest {
     return externalTypeSources(apiMethod, implementation, "value");
   }
 
+  private static Map<String, String> chainSources(boolean staticParent) {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Child",
+        "package com.example.target; public class Child { public String label() { return "
+            + "String.valueOf(Child.class.getClassLoader()).contains(\"first\") ? \"first\" : "
+            + "String.valueOf(Child.class.getClassLoader()).contains(\"second\") ? \"second\" : \"parent\"; } }");
+    sources.put(
+        "com.example.target.Parent",
+        "package com.example.target; public class Parent { public "
+            + (staticParent ? "static " : "")
+            + "Child child() { return new Child(); } public String replace(Child child) { return child.label(); } }");
+    sources.put(
+        "com.example.adapter.ChildApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Child\") public interface ChildApi { String label(); }");
+    sources.put(
+        "com.example.adapter.ParentApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Parent\") public interface ParentApi { "
+            + (staticParent ? "@ExternalType.Static " : "")
+            + "@ExternalType.Type(ChildApi.class) Object child(); "
+            + "String replace(@ExternalType.Type(ChildApi.class) Object child); }");
+    return sources;
+  }
+
   private static Map<String, String> externalTypeSources(
       String apiMethod, String implementation, String targetMethod) {
     Map<String, String> sources = new LinkedHashMap<>();
@@ -747,6 +963,57 @@ class ExternalTypeProcessorTest {
         targetLoads++;
         if (!visible) throw new ClassNotFoundException(name);
       }
+      Class<?> loaded = findLoadedClass(name);
+      if (loaded == null) {
+        byte[] bytes = classBytes.get(name);
+        loaded = defineClass(name, bytes, 0, bytes.length);
+      }
+      if (resolve) resolveClass(loaded);
+      return loaded;
+    }
+  }
+
+  private static final class ChainLoader extends ClassLoader {
+    private final Map<String, byte[]> classBytes;
+    private final String id;
+    private boolean childVisible = true;
+
+    ChainLoader(CompileTestHarness.RunnableResult result, String id) {
+      super(result.loader);
+      classBytes = result.classBytes;
+      this.id = id;
+    }
+
+    void hideChild() {
+      childVisible = false;
+    }
+
+    void showChild() {
+      childVisible = true;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      throw new AssertionError("adapter cache must not call ClassLoader.equals");
+    }
+
+    @Override
+    public int hashCode() {
+      throw new AssertionError("adapter cache must not call ClassLoader.hashCode");
+    }
+
+    @Override
+    public String toString() {
+      return id;
+    }
+
+    @Override
+    protected synchronized Class<?> loadClass(String name, boolean resolve)
+        throws ClassNotFoundException {
+      if (!"com.example.target.Parent".equals(name) && !"com.example.target.Child".equals(name)) {
+        return super.loadClass(name, resolve);
+      }
+      if ("com.example.target.Child".equals(name) && !childVisible) throw new ClassNotFoundException(name);
       Class<?> loaded = findLoadedClass(name);
       if (loaded == null) {
         byte[] bytes = classBytes.get(name);

@@ -50,4 +50,16 @@ public @interface ExternalType {
   @Retention(RetentionPolicy.RUNTIME)
   @Target(ElementType.METHOD)
   @interface Static {}
+
+  /**
+   * Marks a direct {@code Object} method return or parameter as an external target type described
+   * by another {@link ExternalType} contract. The processor consumes this source-only metadata;
+   * the runtime value does not implement the referenced contract interface.
+   */
+  @Retention(RetentionPolicy.SOURCE)
+  @Target({ElementType.METHOD, ElementType.PARAMETER})
+  @interface Type {
+    /** The external contract that supplies the target type name. */
+    Class<?> value();
+  }
 }

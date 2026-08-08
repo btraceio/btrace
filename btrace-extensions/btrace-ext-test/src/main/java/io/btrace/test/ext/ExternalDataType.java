@@ -27,6 +27,13 @@ public interface ExternalDataType {
   /** Maps to ExternalData.value() — virtual dispatch. */
   int value();
 
+  /** Maps to ExternalData.child() while retaining an opaque Object adapter boundary. */
+  @ExternalType.Type(ExternalChildType.class)
+  Object child();
+
+  /** Maps to ExternalData.acceptChild(ExternalChild) through an opaque Object boundary. */
+  String acceptChild(@ExternalType.Type(ExternalChildType.class) Object child);
+
   /** Maps to ExternalData.tag() — static dispatch via TCCL. */
   @ExternalType.Static
   String tag();

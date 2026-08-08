@@ -61,7 +61,11 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
     testDynamic(
         "resources.Main",
         "btrace/ExternalTypeAdapterTest.java",
-        Completion.untilContains("tag=ext-data-ok", "value=42"),
+        Completion.untilContains(
+            "tag=ext-data-ok",
+            "value=42",
+            "child=ext-child-chain-ok",
+            "accepted-child=ext-child-chain-ok"),
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -73,6 +77,12 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
             assertTrue(
                 stdout.contains("value=42"),
                 "@ExternalType virtual dispatch failed. stdout: " + stdout);
+            assertTrue(
+                stdout.contains("child=ext-child-chain-ok"),
+                "@ExternalType target-type chain failed. stdout: " + stdout);
+            assertTrue(
+                stdout.contains("accepted-child=ext-child-chain-ok"),
+                "@ExternalType target-type parameter dispatch failed. stdout: " + stdout);
           }
         });
   }

@@ -217,11 +217,35 @@ try {
 }
 ```
 
+For a public target method whose direct signature contains another application type, link it to a
+second external contract while keeping the generated API opaque:
+
+```java
+@ExternalType("vendor.Child")
+interface ChildApi {
+    String label();
+}
+
+@ExternalType("vendor.Parent")
+interface ParentApi {
+    @ExternalType.Type(ChildApi.class)
+    Object child();
+}
+
+Object child = ParentApi$Ext.child(parent);
+String label = ChildApi$Ext.label(child);
+```
+
+The contracts are processor metadata only: `child` remains an `Object` and does not implement
+`ChildApi`. The adapter resolves `vendor.Child` through the already-resolved parent's defining
+loader to form the exact method type. A same-name object from another loader fails normally rather
+than being coerced; null target values are passed through unchanged.
+
 ### Rules
 
 - **Target:** interfaces only (`ElementType.TYPE`). The processor emits a compile error for classes.
 - **Annotation value:** non-empty fully-qualified class name. Empty string is a compile error.
-- **Method types:** declared erased parameter and return types must exactly match the target member's JVM signature. Use `Object` only when the target member itself uses `Object`; it is not a coercion escape hatch for target-only types.
+- **Method types:** declared erased parameter and return types must exactly match the target member's JVM signature. For a direct target-library position, use `@ExternalType.Type(ChildApi.class) Object`; it keeps the adapter boundary opaque while resolving the child's target class from the resolved owner's defining loader. The returned value does not implement `ChildApi`, but can flow into `ChildApi$Ext` directly. Markers are valid only on direct `Object` returns/parameters, not generic elements or arrays.
 - **Access:** dispatch uses `MethodHandles.publicLookup()`. Only public members of public, accessible types are supported; do not add module-opening flags implicitly.
 - **Static methods:** add `@ExternalType.Static` on the interface method. `version()` preserves legacy TCCL-based class loading with the documented null-TCCL system-loader fallback. `version(ClassLoader applicationLoader)` resolves with that non-null loader exactly; it rejects null immediately with `NullPointerException("applicationLoader")`. The control argument is not a target argument. Neither form changes the target's observed TCCL.
 - **Default methods and static interface methods:** skipped (they already have bodies).
@@ -234,7 +258,8 @@ Use generated adapters only for the supported row below. The manual path is the 
 | Capability | Phase 1 support | Author action |
 |---------|--------|-------------------|
 | Public, uniquely named static or virtual methods with exact erased signatures | Supported | Use `@ExternalType`; use `Object` only where the target member itself uses `Object`. |
-| A target method with target-library parameter or return types | Unsupported | Use `ClassLoadingUtil` and `MethodHandleCache` directly. |
+| A direct target-library `Object` parameter or return type | Supported | Mark it with `@ExternalType.Type(OtherContract.class) Object`; chain opaque results into another generated adapter. |
+| Target types in generic elements or arrays | Unsupported | Use `ClassLoadingUtil` and `MethodHandleCache` directly. |
 | Overloads | Unsupported; processor error | Use `MethodHandleCache` with the exact return and parameter `Class` values. |
 | Fields, constructors, `instanceof`, and casts | Unsupported | Use `ClassLoadingUtil` plus the appropriate direct `MethodHandles.publicLookup()` or `Class` operation. `MethodHandleCache` caches virtual and static method lookups only. |
 | Non-public or non-exported named-module members | Unsupported | Use a public supported API or explicitly configure the target JVM outside BTrace. |
