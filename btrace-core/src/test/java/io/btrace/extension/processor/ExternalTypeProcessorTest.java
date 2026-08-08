@@ -216,12 +216,6 @@ class ExternalTypeProcessorTest {
             + "  long currentTimeMillis();\n"
             + "}\n");
 
-    CompileTestHarness.Result sourceResult = CompileTestHarness.compile(sources);
-    assertTrue(sourceResult.success, sourceResult.errors());
-    String generated = sourceResult.generatedSources.get("com.example.adapter.ParentApi$Ext");
-    assertTrue(generated.contains("findVirtual(owner, \"describe\""), generated);
-    assertTrue(generated.contains("Class.forName(\"com.example.target.Child\""), generated);
-    assertFalse(generated.contains("ChildApi.class"), generated);
     CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
     assertTrue(r.success, r.errors());
 
@@ -688,6 +682,12 @@ class ExternalTypeProcessorTest {
             + "@ExternalType(\"com.example.target.Parent\") public interface ParentApi { "
             + "@ExternalType.Overload(\"describe\") String text(String value); "
             + "@ExternalType.Overload(\"describe\") String child(@ExternalType.Type(ChildApi.class) Object value); }");
+    CompileTestHarness.Result sourceResult = CompileTestHarness.compile(sources);
+    assertTrue(sourceResult.success, sourceResult.errors());
+    String generated = sourceResult.generatedSources.get("com.example.adapter.ParentApi$Ext");
+    assertTrue(generated.contains("findVirtual(owner, \"describe\""), generated);
+    assertTrue(generated.contains("Class.forName(\"com.example.target.Child\""), generated);
+    assertFalse(generated.contains("ChildApi.class"), generated);
     CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
     assertTrue(r.success, r.errors());
     Object parent = r.loader.loadClass("com.example.target.Parent").getConstructor().newInstance();
