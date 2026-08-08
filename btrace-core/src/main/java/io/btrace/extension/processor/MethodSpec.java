@@ -38,8 +38,7 @@ final class MethodSpec {
     this.returnType = returnType;
     this.returnTargetFqn = returnTargetFqn;
     this.paramTypes = Collections.unmodifiableList(new java.util.ArrayList<>(paramTypes));
-    this.paramTargetFqns =
-        Collections.unmodifiableList(new java.util.ArrayList<>(paramTargetFqns));
+    this.paramTargetFqns = Collections.unmodifiableList(new java.util.ArrayList<>(paramTargetFqns));
     this.isStatic = isStatic;
   }
 }

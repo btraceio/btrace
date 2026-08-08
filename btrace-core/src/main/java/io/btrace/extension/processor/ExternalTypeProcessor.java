@@ -50,7 +50,8 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    Set<Element> markers = new HashSet<>(roundEnv.getElementsAnnotatedWith(ExternalType.Type.class));
+    Set<Element> markers =
+        new HashSet<>(roundEnv.getElementsAnnotatedWith(ExternalType.Type.class));
     Set<Element> consumedMarkers = new HashSet<>();
     for (Element e : roundEnv.getElementsAnnotatedWith(ExternalType.class)) {
       if (e.getKind() != ElementKind.INTERFACE) {
@@ -100,10 +101,7 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
   }
 
   private AdapterSpec buildSpec(
-      TypeElement iface,
-      String externalFqn,
-      Set<Element> markers,
-      Set<Element> consumedMarkers) {
+      TypeElement iface, String externalFqn, Set<Element> markers, Set<Element> consumedMarkers) {
     String pkg = processingEnv.getElementUtils().getPackageOf(iface).getQualifiedName().toString();
     String simple = iface.getSimpleName().toString();
     List<MethodSpec> methods = new ArrayList<>();
@@ -149,7 +147,8 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
         }
         paramTargetFqns.add(targetFqn);
       }
-      methods.add(new MethodSpec(methodName, rt, returnTargetFqn, params, paramTargetFqns, isStatic));
+      methods.add(
+          new MethodSpec(methodName, rt, returnTargetFqn, params, paramTargetFqns, isStatic));
     }
     if (invalid) return null;
     return new AdapterSpec(pkg, simple, externalFqn, methods);
@@ -166,7 +165,8 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
       return null;
     }
     TypeMirror contractType = annotationTypeValue(marker);
-    if (contractType == null || !(processingEnv.getTypeUtils().asElement(contractType) instanceof TypeElement)) {
+    if (contractType == null
+        || !(processingEnv.getTypeUtils().asElement(contractType) instanceof TypeElement)) {
       return invalidContract(marker);
     }
     TypeElement contract = (TypeElement) processingEnv.getTypeUtils().asElement(contractType);

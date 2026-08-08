@@ -146,10 +146,7 @@ final class AdapterEmitter {
               + methodTypeLiteral(m, ordinal)
               + ")); ");
     }
-    w.println(
-        "          } catch ("
-            + resolutionExceptions(m)
-            + " e) {");
+    w.println("          } catch (" + resolutionExceptions(m) + " e) {");
     w.println(
         "            throw new ExternalTypeResolutionException(OWNER, \"" + m.name + "\", e);");
     w.println("          }");
@@ -313,9 +310,7 @@ final class AdapterEmitter {
   private String methodTypeLiteral(MethodSpec m, int ordinal) {
     StringBuilder result = new StringBuilder("MethodType.methodType(");
     result.append(
-        m.returnTargetFqn == null
-            ? m.returnType + ".class"
-            : "$" + ordinal + "$returnType");
+        m.returnTargetFqn == null ? m.returnType + ".class" : "$" + ordinal + "$returnType");
     for (int i = 0; i < m.paramTypes.size(); i++) {
       result.append(", ");
       result.append(

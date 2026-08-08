@@ -485,7 +485,9 @@ class ExternalTypeProcessorTest {
     CompileTestHarness.Result compiled = CompileTestHarness.compile(sources);
     assertTrue(compiled.success, compiled.errors());
     String adapterSource = compiled.generatedSources.get("com.example.adapter.ParentApi$Ext");
-    assertTrue(adapterSource.contains("Class.forName(\"com.example.target.Child\", false, owner.getClassLoader())"));
+    assertTrue(
+        adapterSource.contains(
+            "Class.forName(\"com.example.target.Child\", false, owner.getClassLoader())"));
     assertFalse(adapterSource.contains("ChildApi.class"), adapterSource);
     assertFalse(adapterSource.contains("com.example.target.Child.class"), adapterSource);
 
@@ -497,13 +499,15 @@ class ExternalTypeProcessorTest {
     Class<?> childAdapter = r.loader.loadClass("com.example.adapter.ChildApi$Ext");
     assertEquals("child", childAdapter.getMethod("label", Object.class).invoke(null, child));
     assertEquals(
-        "child", parentAdapter.getMethod("replace", Object.class, Object.class).invoke(null, parent, child));
+        "child",
+        parentAdapter.getMethod("replace", Object.class, Object.class).invoke(null, parent, child));
   }
 
   @Test
   void rejectsInvalidTargetTypeMarkerWithoutEmittingAdapter() throws Exception {
     Map<String, String> sources = new LinkedHashMap<>();
-    sources.put("com.example.NotAContract", "package com.example; public interface NotAContract {}");
+    sources.put(
+        "com.example.NotAContract", "package com.example; public interface NotAContract {}");
     sources.put(
         "com.example.BadApi",
         "package com.example; import io.btrace.core.extensions.ExternalType; "
@@ -511,7 +515,8 @@ class ExternalTypeProcessorTest {
             + "@ExternalType.Type(NotAContract.class) Object child(); }");
     CompileTestHarness.Result r = CompileTestHarness.compile(sources);
     assertFalse(r.success);
-    assertTrue(r.errors().contains("must reference an interface with a non-empty @ExternalType value"));
+    assertTrue(
+        r.errors().contains("must reference an interface with a non-empty @ExternalType value"));
     assertFalse(r.generatedSources.containsKey("com.example.BadApi$Ext"));
   }
 
@@ -583,8 +588,10 @@ class ExternalTypeProcessorTest {
     ChainLoader second = new ChainLoader(r, "second");
     Class<?> parentAdapter = r.loader.loadClass("com.example.adapter.ParentApi$Ext");
     Class<?> childAdapter = r.loader.loadClass("com.example.adapter.ChildApi$Ext");
-    Object firstParent = first.loadClass("com.example.target.Parent").getConstructor().newInstance();
-    Object secondParent = second.loadClass("com.example.target.Parent").getConstructor().newInstance();
+    Object firstParent =
+        first.loadClass("com.example.target.Parent").getConstructor().newInstance();
+    Object secondParent =
+        second.loadClass("com.example.target.Parent").getConstructor().newInstance();
     Object firstChild = parentAdapter.getMethod("child", Object.class).invoke(null, firstParent);
     Object secondChild = parentAdapter.getMethod("child", Object.class).invoke(null, secondParent);
     assertEquals("first", childAdapter.getMethod("label", Object.class).invoke(null, firstChild));
@@ -602,10 +609,14 @@ class ExternalTypeProcessorTest {
 
     ChainLoader missing = new ChainLoader(r, "missing");
     missing.hideChild();
-    Object missingParent = missing.loadClass("com.example.target.Parent").getConstructor().newInstance();
+    Object missingParent =
+        missing.loadClass("com.example.target.Parent").getConstructor().newInstance();
     ExternalTypeResolutionException failure =
         assertResolutionFailure(
-            parentAdapter.getMethod("child", Object.class), missingParent, "com.example.target.Parent", "child");
+            parentAdapter.getMethod("child", Object.class),
+            missingParent,
+            "com.example.target.Parent",
+            "child");
     assertInstanceOf(ClassNotFoundException.class, failure.getCause());
     missing.showChild();
     assertNotNull(parentAdapter.getMethod("child", Object.class).invoke(null, missingParent));
@@ -641,7 +652,8 @@ class ExternalTypeProcessorTest {
     Object child = parentAdapter.getMethod("nullChild", Object.class).invoke(null, parent);
     assertNull(child);
     assertEquals(
-        "null-ok", parentAdapter.getMethod("accept", Object.class, Object.class).invoke(null, parent, null));
+        "null-ok",
+        parentAdapter.getMethod("accept", Object.class, Object.class).invoke(null, parent, null));
     InvocationTargetException nullReceiver =
         assertThrows(
             InvocationTargetException.class,
@@ -1013,7 +1025,8 @@ class ExternalTypeProcessorTest {
       if (!"com.example.target.Parent".equals(name) && !"com.example.target.Child".equals(name)) {
         return super.loadClass(name, resolve);
       }
-      if ("com.example.target.Child".equals(name) && !childVisible) throw new ClassNotFoundException(name);
+      if ("com.example.target.Child".equals(name) && !childVisible)
+        throw new ClassNotFoundException(name);
       Class<?> loaded = findLoadedClass(name);
       if (loaded == null) {
         byte[] bytes = classBytes.get(name);

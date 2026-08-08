@@ -53,8 +53,8 @@ public @interface ExternalType {
 
   /**
    * Marks a direct {@code Object} method return or parameter as an external target type described
-   * by another {@link ExternalType} contract. The processor consumes this source-only metadata;
-   * the runtime value does not implement the referenced contract interface.
+   * by another {@link ExternalType} contract. The processor consumes this source-only metadata; the
+   * runtime value does not implement the referenced contract interface.
    */
   @Retention(RetentionPolicy.SOURCE)
   @Target({ElementType.METHOD, ElementType.PARAMETER})
