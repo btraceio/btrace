@@ -68,7 +68,12 @@ public final class SparkApiImpl implements SparkApi {
 
 ## External Type Adapters
 
-`@ExternalType` supports exact public methods, opaque target-type positions, and explicit complete overload groups declared with `@ExternalType.Overload("targetName")`. The canonical selector, owner-loader, failure, and static-loader rules are in the [Extension Development Guide](../BTraceExtensionDevelopmentGuide.md#app-type-adapters-with-externaltype). Keep the manual pattern here for target types in generic elements/arrays, fields, constructors, and type predicates.
+`@ExternalType` supports exact public methods, opaque target-type positions, complete overload
+groups, exact public field getters/setters, constructors, and `isInstance`/`cast` operations. The
+canonical signatures, owner-loader, failure, and static-loader rules are in the [Extension
+Development Guide](../BTraceExtensionDevelopmentGuide.md#app-type-adapters-with-externaltype).
+Keep the manual pattern here for generic/array target types, bulk reflection-style work, fluent
+setters, constructor selectors, runtime coercion, and non-public or JPMS-bypassing access.
 
 For a generated static target call where the application loader is known, pass it directly:
 

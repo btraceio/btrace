@@ -20,8 +20,10 @@ package io.btrace.core.extensions;
  * Signals that an {@link ExternalType} adapter could not resolve its configured public target
  * member.
  *
- * <p>The cause is the original {@link ClassNotFoundException}, {@link NoSuchMethodException}, or
- * {@link IllegalAccessException}. Target-method failures are not translated to this exception.
+ * <p>The cause is the original {@link ClassNotFoundException}, {@link NoSuchMethodException},
+ * {@link NoSuchFieldException}, or {@link IllegalAccessException}, including an access probe for an
+ * {@link ExternalType.InstanceOf} or {@link ExternalType.Cast} operation. Target invocation
+ * failures are not translated to this exception.
  */
 public final class ExternalTypeResolutionException extends IllegalStateException {
   public ExternalTypeResolutionException(String owner, String member, Throwable cause) {

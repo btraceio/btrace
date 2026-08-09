@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * Copyright (c) 2008, 2026, Jaroslav Bachorik <j.bachorik@btrace.io>.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,7 +39,7 @@ final class AdapterEmitter {
     w.println("import io.btrace.core.extensions.ExternalTypeResolutionException;");
     w.println();
     w.println("public final class " + spec.adapterSimpleName() + " {");
-    w.println("  private static final String OWNER = \"" + spec.externalFqn + "\";");
+    w.println("  private static final String OWNER = \"" + javaString(spec.externalFqn) + "\";");
     w.println("  private " + spec.adapterSimpleName() + "() {}");
     renderResolvedCall(w);
     renderLoaderKey(w);
@@ -108,13 +108,15 @@ final class AdapterEmitter {
     w.println("  }");
   }
 
-  private void renderMethod(PrintWriter w, MethodSpec m, int ordinal) {
+  private void renderMethod(PrintWriter w, MethodSpec method, int ordinal) {
+    if (method.operation == MethodSpec.OperationKind.INSTANCE_OF
+        || method.operation == MethodSpec.OperationKind.CAST) {
+      renderPredicate(w, method, ordinal);
+      return;
+    }
     String cache = "$" + ordinal + "$calls";
     String attempts = "__btraceExternalTypeResolutionAttempts$" + ordinal;
-    String[] lists = paramAndArgLists(m);
-    String paramList = lists[0];
-    String argList = lists[1];
-
+    String[] lists = paramAndArgLists(method);
     w.println();
     w.println("  private static int " + attempts + ";");
     w.println("  private static final ClassValue<ResolvedCall> " + cache + " =");
@@ -122,43 +124,31 @@ final class AdapterEmitter {
     w.println("        @Override");
     w.println(
         "        protected ResolvedCall computeValue(Class<?> "
-            + (m.isStatic ? "owner" : "receiver")
+            + (loaderOperation(method) ? "owner" : "receiver")
             + ") {");
     w.println("          try {");
-    if (!m.isStatic) {
+    if (!loaderOperation(method)) {
       w.println(
           "            Class<?> owner = Class.forName(OWNER, false, receiver.getClassLoader());");
     }
-    renderMarkedTypes(w, m, ordinal);
+    renderMarkedTypes(w, method, ordinal);
     w.println("            " + attempts + "++;");
-    if (m.isStatic) {
-      w.println(
-          "            return new ResolvedCall(owner, MethodHandles.publicLookup().findStatic(owner, \""
-              + m.targetName
-              + "\", "
-              + methodTypeLiteral(m, ordinal)
-              + ")); ");
-    } else {
-      w.println(
-          "            return new ResolvedCall(owner, MethodHandles.publicLookup().findVirtual(owner, \""
-              + m.targetName
-              + "\", "
-              + methodTypeLiteral(m, ordinal)
-              + ")); ");
-    }
-    w.println("          } catch (" + resolutionExceptions(m) + " e) {");
+    w.println(
+        "            return new ResolvedCall(owner, " + lookupExpression(method, ordinal) + ");");
+    w.println("          } catch (" + resolutionExceptions(method) + " e) {");
     w.println(
         "            throw new ExternalTypeResolutionException(OWNER, \""
-            + m.targetName
+            + javaString(method.targetName)
             + "\", e);");
     w.println("          }");
     w.println("        }");
     w.println("      };");
-    if (m.isStatic) renderStaticSupport(w, m, ordinal, cache);
+    if (loaderOperation(method)) renderStaticSupport(w, method, ordinal, cache);
     w.println();
-    w.println("  public static " + m.returnType + " " + m.adapterName + "(" + paramList + ") {");
+    w.println(
+        "  public static " + method.returnType + " " + method.adapterName + "(" + lists[0] + ") {");
     w.println("    try {");
-    if (m.isStatic) {
+    if (loaderOperation(method)) {
       w.println(
           "      ResolvedCall call = $"
               + ordinal
@@ -169,35 +159,115 @@ final class AdapterEmitter {
       w.println("      ResolvedCall call = " + cache + ".get(self.getClass());");
     }
     w.print("      ");
-    if (!"void".equals(m.returnType)) w.print("return (" + m.returnType + ") ");
-    w.println("call.handle.invoke(" + argList + ");");
+    if (!"void".equals(method.returnType)) w.print("return (" + method.returnType + ") ");
+    w.println("call.handle.invoke(" + lists[1] + ");");
     w.println("    } catch (Throwable t) { throw sneak(t); }");
     w.println("  }");
-    if (m.isStatic) {
-      String explicitParamList = "ClassLoader applicationLoader";
-      if (!paramList.isEmpty()) explicitParamList += ", " + paramList;
+    if (loaderOperation(method)) {
+      String explicitParameters = "ClassLoader applicationLoader";
+      if (!lists[0].isEmpty()) explicitParameters += ", " + lists[0];
       w.println();
       w.println(
           "  public static "
-              + m.returnType
+              + method.returnType
               + " "
-              + m.adapterName
+              + method.adapterName
               + "("
-              + explicitParamList
+              + explicitParameters
               + ") {");
       w.println(
           "    if (applicationLoader == null) throw new NullPointerException(\"applicationLoader\");");
       w.println("    try {");
       w.println("      ResolvedCall call = $" + ordinal + "$resolveStatic(applicationLoader);");
       w.print("      ");
-      if (!"void".equals(m.returnType)) w.print("return (" + m.returnType + ") ");
-      w.println("call.handle.invoke(" + argList + ");");
+      if (!"void".equals(method.returnType)) w.print("return (" + method.returnType + ") ");
+      w.println("call.handle.invoke(" + lists[1] + ");");
       w.println("    } catch (Throwable t) { throw sneak(t); }");
       w.println("  }");
     }
   }
 
-  private void renderStaticSupport(PrintWriter w, MethodSpec m, int ordinal, String cache) {
+  private void renderPredicate(PrintWriter w, MethodSpec method, int ordinal) {
+    String cache = "$" + ordinal + "$owners";
+    String attempts = "__btraceExternalTypeResolutionAttempts$" + ordinal;
+    w.println();
+    w.println("  private static int " + attempts + ";");
+    w.println("  private static final ClassValue<Class<?>> " + cache + " =");
+    w.println("      new ClassValue<Class<?>>() {");
+    w.println("        @Override");
+    w.println("        protected Class<?> computeValue(Class<?> valueType) {");
+    w.println("          try {");
+    w.println("            " + attempts + "++;");
+    w.println(
+        "            Class<?> owner = Class.forName(OWNER, false, valueType.getClassLoader());");
+    w.println(
+        "            MethodHandles.publicLookup().findVirtual(owner, \"getClass\", MethodType.methodType(Class.class));");
+    w.println("            return owner;");
+    w.println(
+        "          } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {");
+    w.println(
+        "            throw new ExternalTypeResolutionException(OWNER, \""
+            + javaString(method.targetName)
+            + "\", e);");
+    w.println("          }");
+    w.println("        }");
+    w.println("      };");
+    w.println();
+    w.println(
+        "  public static "
+            + method.returnType
+            + " "
+            + method.adapterName
+            + "(java.lang.Object p0) {");
+    if (method.operation == MethodSpec.OperationKind.INSTANCE_OF) {
+      w.println("    if (p0 == null) return false;");
+      w.println("    return " + cache + ".get(p0.getClass()).isInstance(p0);");
+    } else {
+      w.println("    if (p0 == null) return null;");
+      w.println("    return " + cache + ".get(p0.getClass()).cast(p0);");
+    }
+    w.println("  }");
+  }
+
+  private String lookupExpression(MethodSpec method, int ordinal) {
+    String name = "\"" + javaString(method.targetName) + "\"";
+    if (method.operation == MethodSpec.OperationKind.GETTER) {
+      return "MethodHandles.publicLookup()."
+          + (method.isStatic ? "findStaticGetter" : "findGetter")
+          + "(owner, "
+          + name
+          + ", "
+          + fieldTypeLiteral(method, ordinal)
+          + ")";
+    }
+    if (method.operation == MethodSpec.OperationKind.SETTER) {
+      return "MethodHandles.publicLookup()."
+          + (method.isStatic ? "findStaticSetter" : "findSetter")
+          + "(owner, "
+          + name
+          + ", "
+          + fieldTypeLiteral(method, ordinal)
+          + ")";
+    }
+    if (method.operation == MethodSpec.OperationKind.CONSTRUCTOR) {
+      return "MethodHandles.publicLookup().findConstructor(owner, "
+          + constructorTypeLiteral(method, ordinal)
+          + ")";
+    }
+    return "MethodHandles.publicLookup()."
+        + (method.isStatic ? "findStatic" : "findVirtual")
+        + "(owner, "
+        + name
+        + ", "
+        + methodTypeLiteral(method, ordinal)
+        + ")";
+  }
+
+  private boolean loaderOperation(MethodSpec method) {
+    return method.isStatic || method.operation == MethodSpec.OperationKind.CONSTRUCTOR;
+  }
+
+  private void renderStaticSupport(PrintWriter w, MethodSpec method, int ordinal, String cache) {
     String prefix = "$" + ordinal + "$";
     w.println();
     w.println("  private static final Object " + prefix + "monitor = new Object();");
@@ -235,7 +305,9 @@ final class AdapterEmitter {
     w.println("        owner = Class.forName(OWNER, false, loader);");
     w.println("      } catch (ClassNotFoundException e) {");
     w.println(
-        "        throw new ExternalTypeResolutionException(OWNER, \"" + m.targetName + "\", e);");
+        "        throw new ExternalTypeResolutionException(OWNER, \""
+            + javaString(method.targetName)
+            + "\", e);");
     w.println("      }");
     w.println("      ResolvedCall call = " + cache + ".get(owner);");
     w.println(
@@ -280,55 +352,98 @@ final class AdapterEmitter {
     w.println("  }");
   }
 
-  private void renderMarkedTypes(PrintWriter w, MethodSpec m, int ordinal) {
-    if (m.returnTargetFqn != null) {
+  private void renderMarkedTypes(PrintWriter w, MethodSpec method, int ordinal) {
+    if (method.returnTargetFqn != null) {
       w.println(
           "            Class<?> $"
               + ordinal
               + "$returnType = Class.forName(\""
-              + m.returnTargetFqn
+              + javaString(method.returnTargetFqn)
               + "\", false, owner.getClassLoader());");
     }
-    for (int i = 0; i < m.paramTargetFqns.size(); i++) {
-      String fqn = m.paramTargetFqns.get(i);
-      if (fqn == null) continue;
-      w.println(
-          "            Class<?> $"
-              + ordinal
-              + "$parameterType"
-              + i
-              + " = Class.forName(\""
-              + fqn
-              + "\", false, owner.getClassLoader());");
+    for (int i = 0; i < method.paramTargetFqns.size(); i++) {
+      String fqn = method.paramTargetFqns.get(i);
+      if (fqn != null)
+        w.println(
+            "            Class<?> $"
+                + ordinal
+                + "$parameterType"
+                + i
+                + " = Class.forName(\""
+                + javaString(fqn)
+                + "\", false, owner.getClassLoader());");
     }
   }
 
-  private String resolutionExceptions(MethodSpec m) {
-    if (!m.isStatic || m.returnTargetFqn != null || hasMarkedParameter(m)) {
+  private String resolutionExceptions(MethodSpec method) {
+    if (method.operation == MethodSpec.OperationKind.GETTER
+        || method.operation == MethodSpec.OperationKind.SETTER) {
+      if (!loaderOperation(method)
+          || method.returnTargetFqn != null
+          || hasMarkedParameter(method)) {
+        return "ClassNotFoundException | NoSuchFieldException | IllegalAccessException";
+      }
+      return "NoSuchFieldException | IllegalAccessException";
+    }
+    if (!loaderOperation(method) || method.returnTargetFqn != null || hasMarkedParameter(method)) {
       return "ClassNotFoundException | NoSuchMethodException | IllegalAccessException";
     }
     return "NoSuchMethodException | IllegalAccessException";
   }
 
-  private boolean hasMarkedParameter(MethodSpec m) {
-    for (String targetFqn : m.paramTargetFqns) {
-      if (targetFqn != null) return true;
-    }
+  private boolean hasMarkedParameter(MethodSpec method) {
+    for (String fqn : method.paramTargetFqns) if (fqn != null) return true;
     return false;
   }
 
-  private String methodTypeLiteral(MethodSpec m, int ordinal) {
+  private String fieldTypeLiteral(MethodSpec method, int ordinal) {
+    if (method.operation == MethodSpec.OperationKind.GETTER)
+      return method.returnTargetFqn == null
+          ? method.returnType + ".class"
+          : "$" + ordinal + "$returnType";
+    return method.paramTargetFqns.get(0) == null
+        ? method.paramTypes.get(0) + ".class"
+        : "$" + ordinal + "$parameterType0";
+  }
+
+  private String constructorTypeLiteral(MethodSpec method, int ordinal) {
+    StringBuilder result = new StringBuilder("MethodType.methodType(void.class");
+    for (int i = 0; i < method.paramTypes.size(); i++)
+      result.append(", ").append(typeLiteral(method, ordinal, i));
+    return result.append(")").toString();
+  }
+
+  private String methodTypeLiteral(MethodSpec method, int ordinal) {
     StringBuilder result = new StringBuilder("MethodType.methodType(");
     result.append(
-        m.returnTargetFqn == null ? m.returnType + ".class" : "$" + ordinal + "$returnType");
-    for (int i = 0; i < m.paramTypes.size(); i++) {
-      result.append(", ");
-      result.append(
-          m.paramTargetFqns.get(i) == null
-              ? m.paramTypes.get(i) + ".class"
-              : "$" + ordinal + "$parameterType" + i);
-    }
+        method.returnTargetFqn == null
+            ? method.returnType + ".class"
+            : "$" + ordinal + "$returnType");
+    for (int i = 0; i < method.paramTypes.size(); i++)
+      result.append(", ").append(typeLiteral(method, ordinal, i));
     return result.append(")").toString();
+  }
+
+  private String typeLiteral(MethodSpec method, int ordinal, int parameter) {
+    return method.paramTargetFqns.get(parameter) == null
+        ? method.paramTypes.get(parameter) + ".class"
+        : "$" + ordinal + "$parameterType" + parameter;
+  }
+
+  private String[] paramAndArgLists(MethodSpec method) {
+    StringBuilder parameters = new StringBuilder();
+    StringBuilder arguments = new StringBuilder();
+    if (!loaderOperation(method)) {
+      parameters.append("java.lang.Object self");
+      arguments.append("self");
+    }
+    for (int i = 0; i < method.paramTypes.size(); i++) {
+      if (parameters.length() > 0) parameters.append(", ");
+      if (arguments.length() > 0) arguments.append(", ");
+      parameters.append(method.paramTypes.get(i)).append(" p").append(i);
+      arguments.append("p").append(i);
+    }
+    return new String[] {parameters.toString(), arguments.toString()};
   }
 
   private void renderSneak(PrintWriter w) {
@@ -340,19 +455,18 @@ final class AdapterEmitter {
     w.println("  }");
   }
 
-  private String[] paramAndArgLists(MethodSpec m) {
-    StringBuilder params = new StringBuilder();
-    StringBuilder args = new StringBuilder();
-    if (!m.isStatic) {
-      params.append("java.lang.Object self");
-      args.append("self");
+  private String javaString(String text) {
+    StringBuilder escaped = new StringBuilder();
+    for (int i = 0; i < text.length(); i++) {
+      char c = text.charAt(i);
+      if (c == '\\') escaped.append("\\\\");
+      else if (c == '\"') escaped.append("\\\"");
+      else if (c == '\n') escaped.append("\\n");
+      else if (c == '\r') escaped.append("\\r");
+      else if (c == '\t') escaped.append("\\t");
+      else if (c < 0x20 || c == 0x7f) escaped.append(String.format("\\u%04x", (int) c));
+      else escaped.append(c);
     }
-    for (int i = 0; i < m.paramTypes.size(); i++) {
-      if (params.length() > 0) params.append(", ");
-      if (args.length() > 0) args.append(", ");
-      params.append(m.paramTypes.get(i)).append(" p").append(i);
-      args.append("p").append(i);
-    }
-    return new String[] {params.toString(), args.toString()};
+    return escaped.toString();
   }
 }

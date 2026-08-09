@@ -40,6 +40,44 @@ public interface ExternalDataType {
   @ExternalType.Overload("describe")
   String describeChild(@ExternalType.Type(ExternalChildType.class) Object child);
 
+  @ExternalType.Getter("fieldValue")
+  int fieldValue();
+
+  @ExternalType.Setter("fieldValue")
+  void setFieldValue(int value);
+
+  @ExternalType.Getter("childField")
+  @ExternalType.Type(ExternalChildType.class)
+  Object childField();
+
+  @ExternalType.Setter("childField")
+  void setChildField(@ExternalType.Type(ExternalChildType.class) Object child);
+
+  @ExternalType.Constructor
+  Object createWithChild(@ExternalType.Type(ExternalChildType.class) Object child);
+
+  @ExternalType.Static
+  @ExternalType.Getter("staticField")
+  int staticField();
+
+  @ExternalType.Static
+  @ExternalType.Setter("staticField")
+  void setStaticField(int value);
+
+  @ExternalType.Static
+  @ExternalType.Getter("DEFAULT_CHILD")
+  @ExternalType.Type(ExternalChildType.class)
+  Object defaultChild();
+
+  @ExternalType.Constructor
+  Object create(int value);
+
+  @ExternalType.InstanceOf
+  boolean isExternalData(Object value);
+
+  @ExternalType.Cast
+  Object castExternalData(Object value);
+
   /** Maps to ExternalData.tag() — static dispatch via TCCL. */
   @ExternalType.Static
   String tag();

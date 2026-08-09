@@ -999,6 +999,226 @@ class ExternalTypeProcessorTest {
     assertInstanceOf(IllegalAccessException.class, access.getCause());
   }
 
+  @Test
+  void fieldsConstructorsAndTypePredicatesGenerateExactDispatchers() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Widget",
+        "package com.example.target; public class Widget { public String name; public static int COUNT = 7; public Widget(String name) { this.name = name; } }");
+    sources.put(
+        "com.example.adapter.WidgetApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Widget\") public interface WidgetApi { "
+            + "@ExternalType.Getter(\"name\") String name(); "
+            + "@ExternalType.Setter(\"name\") void setName(String value); "
+            + "@ExternalType.Static @ExternalType.Getter(\"COUNT\") int count(); "
+            + "@ExternalType.Constructor Object create(String name); "
+            + "@ExternalType.InstanceOf boolean isWidget(Object value); "
+            + "@ExternalType.Cast Object castWidget(Object value); }");
+
+    CompileTestHarness.Result result = CompileTestHarness.compile(sources, 8);
+    assertTrue(result.success, result.errors());
+    String generated = result.generatedSources.get("com.example.adapter.WidgetApi$Ext");
+    assertNotNull(generated);
+    assertTrue(generated.contains("findGetter(owner, \"name\""), generated);
+    assertTrue(generated.contains("findSetter(owner, \"name\""), generated);
+    assertTrue(generated.contains("findStaticGetter(owner, \"COUNT\""), generated);
+    assertTrue(
+        generated.contains(
+            "findConstructor(owner, MethodType.methodType(void.class, java.lang.String.class))"),
+        generated);
+    assertTrue(generated.contains(".isInstance(p0)"), generated);
+    assertTrue(generated.contains(".cast(p0)"), generated);
+  }
+
+  @Test
+  void phaseFiveOperationsDispatchAndPreserveNullPredicateSemantics() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Widget",
+        "package com.example.target; public class Widget { public String name; public Widget(String name) { this.name = name; } }");
+    sources.put("com.example.target.Other", "package com.example.target; public class Other {}");
+    sources.put(
+        "com.example.adapter.WidgetApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Widget\") public interface WidgetApi { "
+            + "@ExternalType.Getter(\"name\") String name(); "
+            + "@ExternalType.Setter(\"name\") void setName(String value); "
+            + "@ExternalType.Constructor Object create(String name); "
+            + "@ExternalType.InstanceOf boolean isWidget(Object value); "
+            + "@ExternalType.Cast Object castWidget(Object value); }");
+    CompileTestHarness.RunnableResult result = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(result.success, result.errors());
+    Class<?> adapter = result.loader.loadClass("com.example.adapter.WidgetApi$Ext");
+    Object widget =
+        adapter
+            .getMethod("create", ClassLoader.class, String.class)
+            .invoke(null, result.loader, "first");
+    assertEquals("first", adapter.getMethod("name", Object.class).invoke(null, widget));
+    adapter.getMethod("setName", Object.class, String.class).invoke(null, widget, "second");
+    assertEquals("second", adapter.getMethod("name", Object.class).invoke(null, widget));
+    assertEquals(Boolean.TRUE, adapter.getMethod("isWidget", Object.class).invoke(null, widget));
+    Object other =
+        result.loader.loadClass("com.example.target.Other").getConstructor().newInstance();
+    assertEquals(Boolean.FALSE, adapter.getMethod("isWidget", Object.class).invoke(null, other));
+    assertEquals(
+        Boolean.FALSE,
+        adapter.getMethod("isWidget", Object.class).invoke(null, new Object[] {null}));
+    assertNull(adapter.getMethod("castWidget", Object.class).invoke(null, new Object[] {null}));
+    assertSame(widget, adapter.getMethod("castWidget", Object.class).invoke(null, widget));
+  }
+
+  @Test
+  void rejectsInvalidFieldAndConstructorFormsWithoutGeneratingAnAdapter() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.adapter.BadApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Widget\") public interface BadApi { "
+            + "@ExternalType.Getter(\"a/b\") void badField(); "
+            + "@ExternalType.Constructor String badConstructor(); }");
+    CompileTestHarness.Result result = CompileTestHarness.compile(sources);
+    assertFalse(result.success);
+    assertTrue(result.errors().contains("Invalid @ExternalType field name"), result.errors());
+    assertTrue(result.errors().contains("requires direct Object return"), result.errors());
+    assertFalse(result.generatedSources.containsKey("com.example.adapter.BadApi$Ext"));
+  }
+
+  @Test
+  void malformedFieldPairsRetainTheirSpecificDiagnostics() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.adapter.BadApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Widget\") public interface BadApi { "
+            + "@ExternalType.Getter(\"value\") int getValue(); "
+            + "@ExternalType.Setter(\"value\") void setValue(); }");
+
+    CompileTestHarness.Result result = CompileTestHarness.compile(sources);
+    assertFalse(result.success);
+    assertTrue(
+        result.errors().contains("Setter requires void return and exactly one target argument"));
+    assertFalse(result.errors().contains("Failed to emit adapter"), result.errors());
+    assertFalse(result.generatedSources.containsKey("com.example.adapter.BadApi$Ext"));
+  }
+
+  @Test
+  void rejectsCrossKindGeneratedDescriptorCollisionWithPredicate() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.adapter.BadApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Widget\") public interface BadApi { "
+            + "@ExternalType.Getter(\"name\") String same(); "
+            + "@ExternalType.InstanceOf boolean same(Object value); }");
+
+    CompileTestHarness.Result result = CompileTestHarness.compile(sources);
+    assertFalse(result.success);
+    assertTrue(
+        result.errors().contains("collide in generated adapter descriptors"), result.errors());
+    assertFalse(result.generatedSources.containsKey("com.example.adapter.BadApi$Ext"));
+  }
+
+  @Test
+  void staticSetterUsesLegacyAndExplicitLoadersWithoutPassingControlArgument() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Counter",
+        "package com.example.target; public class Counter { public static int count; }");
+    sources.put(
+        "com.example.adapter.CounterApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Counter\") public interface CounterApi { "
+            + "@ExternalType.Static @ExternalType.Setter(\"count\") void setCount(int value); }");
+    CompileTestHarness.RunnableResult result = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(result.success, result.errors());
+    Class<?> adapter = result.loader.loadClass("com.example.adapter.CounterApi$Ext");
+    java.lang.reflect.Method legacy = adapter.getMethod("setCount", int.class);
+    java.lang.reflect.Method explicit = adapter.getMethod("setCount", ClassLoader.class, int.class);
+    assertThrows(
+        InvocationTargetException.class,
+        () -> explicit.invoke(null, new Object[] {null, Integer.valueOf(1)}));
+    assertEquals(0, resolutionAttempts(adapter, 0));
+    assertEquals(0, staticLoaderIndexEntries(adapter, 0));
+
+    ClassLoader saved = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(result.loader);
+      legacy.invoke(null, Integer.valueOf(7));
+      assertSame(result.loader, Thread.currentThread().getContextClassLoader());
+    } finally {
+      Thread.currentThread().setContextClassLoader(saved);
+    }
+    Class<?> counter = result.loader.loadClass("com.example.target.Counter");
+    assertEquals(7, counter.getField("count").getInt(null));
+    ClassLoader explicitSaved = Thread.currentThread().getContextClassLoader();
+    explicit.invoke(null, result.loader, Integer.valueOf(9));
+    assertSame(explicitSaved, Thread.currentThread().getContextClassLoader());
+    assertEquals(9, counter.getField("count").getInt(null));
+    assertEquals(1, resolutionAttempts(adapter, 0));
+    assertEquals(1, staticLoaderIndexEntries(adapter, 0));
+  }
+
+  @Test
+  void quotesBackslashesAndControlsInFieldNamesAreEscapedForJavaEightSource() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.adapter.QuotedApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Quoted\") public interface QuotedApi { "
+            + "@ExternalType.Getter(\"a\\\"b\\\\c\\001\") String quoted(); }");
+
+    CompileTestHarness.Result result = CompileTestHarness.compile(sources, 8);
+    assertTrue(result.success, result.errors());
+    String generated = result.generatedSources.get("com.example.adapter.QuotedApi$Ext");
+    assertNotNull(generated);
+    String expected = "findGetter(owner, \"a\\\"b\\\\c" + "\\u0001" + "\", java.lang.String.class)";
+    assertTrue(generated.contains(expected), generated);
+  }
+
+  @Test
+  void markedTypesResolveFromTheOwnerLoaderForPhaseFiveFieldsAndConstructors() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put(
+        "com.example.target.Child",
+        "package com.example.target; public class Child { "
+            + "private final String label; public Child(String label) { this.label = label; } "
+            + "public String label() { return label; } }");
+    sources.put(
+        "com.example.target.Parent",
+        "package com.example.target; public class Parent { public Child child; "
+            + "public Parent(Child child) { this.child = child; } }");
+    sources.put(
+        "com.example.adapter.ChildApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Child\") public interface ChildApi { "
+            + "@ExternalType.Constructor Object create(String label); String label(); }");
+    sources.put(
+        "com.example.adapter.ParentApi",
+        "package com.example.adapter; import io.btrace.core.extensions.ExternalType; "
+            + "@ExternalType(\"com.example.target.Parent\") public interface ParentApi { "
+            + "@ExternalType.Getter(\"child\") @ExternalType.Type(ChildApi.class) Object child(); "
+            + "@ExternalType.Setter(\"child\") void setChild(@ExternalType.Type(ChildApi.class) Object child); "
+            + "@ExternalType.Constructor Object create(@ExternalType.Type(ChildApi.class) Object child); }");
+
+    CompileTestHarness.RunnableResult result = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(result.success, result.errors());
+    Class<?> childAdapter = result.loader.loadClass("com.example.adapter.ChildApi$Ext");
+    Class<?> parentAdapter = result.loader.loadClass("com.example.adapter.ParentApi$Ext");
+    Object child =
+        childAdapter
+            .getMethod("create", ClassLoader.class, String.class)
+            .invoke(null, result.loader, "marked-child");
+    Object parent =
+        parentAdapter
+            .getMethod("create", ClassLoader.class, Object.class)
+            .invoke(null, result.loader, child);
+    parentAdapter.getMethod("setChild", Object.class, Object.class).invoke(null, parent, child);
+    Object returnedChild = parentAdapter.getMethod("child", Object.class).invoke(null, parent);
+    assertEquals(
+        "marked-child", childAdapter.getMethod("label", Object.class).invoke(null, returnedChild));
+  }
+
   private static Map<String, String> externalTypeSources(String apiMethod, String implementation) {
     return externalTypeSources(apiMethod, implementation, "value");
   }

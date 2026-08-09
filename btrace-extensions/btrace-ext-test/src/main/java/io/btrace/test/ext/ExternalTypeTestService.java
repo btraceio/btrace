@@ -39,4 +39,7 @@ public interface ExternalTypeTestService {
    * Returns the instance value from an resources.ExternalData object via its @ExternalType adapter.
    */
   int value(Object externalData);
+
+  /** Exercises field access, construction, and type narrowing through generated adapters. */
+  String phaseFiveMarkers(Object externalData);
 }

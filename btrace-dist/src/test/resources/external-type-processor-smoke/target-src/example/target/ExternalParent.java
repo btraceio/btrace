@@ -1,6 +1,23 @@
 package example.target;
 
 public final class ExternalParent {
+  public String name;
+  public static ExternalChild DEFAULT_CHILD = new ExternalChild();
+
+  public ExternalParent() {
+    this("external-type-field-initial");
+  }
+
+  public ExternalParent(String name) {
+    this.name = name;
+  }
+
+  public ExternalChild childField;
+
+  public ExternalParent(ExternalChild child) {
+    this.childField = child;
+  }
+
   public ExternalChild child() {
     return new ExternalChild();
   }

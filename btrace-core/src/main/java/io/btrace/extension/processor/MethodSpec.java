@@ -20,8 +20,18 @@ import java.util.Collections;
 import java.util.List;
 
 final class MethodSpec {
+  enum OperationKind {
+    METHOD,
+    GETTER,
+    SETTER,
+    CONSTRUCTOR,
+    INSTANCE_OF,
+    CAST
+  }
+
   final String adapterName;
   final String targetName;
+  final OperationKind operation;
   final String returnType;
   final String returnTargetFqn;
   final List<String> paramTypes;
@@ -31,6 +41,7 @@ final class MethodSpec {
   MethodSpec(
       String adapterName,
       String targetName,
+      OperationKind operation,
       String returnType,
       String returnTargetFqn,
       List<String> paramTypes,
@@ -38,6 +49,7 @@ final class MethodSpec {
       boolean isStatic) {
     this.adapterName = adapterName;
     this.targetName = targetName;
+    this.operation = operation;
     this.returnType = returnType;
     this.returnTargetFqn = returnTargetFqn;
     this.paramTypes = Collections.unmodifiableList(new java.util.ArrayList<>(paramTypes));

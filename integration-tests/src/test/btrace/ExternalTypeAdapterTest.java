@@ -28,6 +28,7 @@ public class ExternalTypeAdapterTest {
     println("child=" + extSvc.childMarker(data));
     println("accepted-child=" + extSvc.acceptedChildMarker(data));
     println("overloads=" + extSvc.overloadMarkers(data));
+    println("phase5=" + extSvc.phaseFiveMarkers(data));
     exit(0);
   }
 }

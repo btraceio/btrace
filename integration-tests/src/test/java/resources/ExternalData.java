@@ -24,9 +24,20 @@ package resources;
  */
 public final class ExternalData {
   private final int value;
+  public int fieldValue;
+  public static int staticField;
+  public static ExternalChild DEFAULT_CHILD = new ExternalChild();
+  public ExternalChild childField;
 
   public ExternalData(int value) {
     this.value = value;
+    this.fieldValue = value;
+  }
+
+  public ExternalData(ExternalChild child) {
+    this.value = 0;
+    this.fieldValue = 0;
+    this.childField = child;
   }
 
   public int value() {
@@ -47,6 +58,10 @@ public final class ExternalData {
 
   public String describe(ExternalChild child) {
     return "ext-overload-child-" + child.marker();
+  }
+
+  public String fieldMarker() {
+    return "ext-field-" + fieldValue;
   }
 
   public static String tag() {
