@@ -228,13 +228,7 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
 
       invalid |=
           validateSignature(
-              method,
-              operation,
-              isStatic,
-              returnType,
-              returnTargetFqn,
-              parameterTypes,
-              parameterTargetFqns);
+              method, operation, returnType, returnTargetFqn, parameterTypes, parameterTargetFqns);
       String adapterName = method.getSimpleName().toString();
       String targetName =
           operation == OperationKind.METHOD
@@ -335,7 +329,6 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
   private boolean validateSignature(
       ExecutableElement method,
       OperationKind operation,
-      boolean isStatic,
       String returnType,
       String returnTargetFqn,
       List<String> parameterTypes,
