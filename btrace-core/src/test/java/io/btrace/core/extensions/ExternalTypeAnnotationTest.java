@@ -60,4 +60,24 @@ class ExternalTypeAnnotationTest {
     assertArrayEquals(
         new ElementType[] {ElementType.METHOD, ElementType.PARAMETER}, target.value());
   }
+
+  @Test
+  void phaseFiveOperationMarkersAreSourceOnlyMethodDeclarations() {
+    assertMarker(ExternalType.Getter.class, true);
+    assertMarker(ExternalType.Setter.class, true);
+    assertMarker(ExternalType.Constructor.class, false);
+    assertMarker(ExternalType.InstanceOf.class, false);
+    assertMarker(ExternalType.Cast.class, false);
+  }
+
+  private static void assertMarker(Class<? extends Annotation> marker, boolean hasValue) {
+    assertEquals(RetentionPolicy.SOURCE, marker.getAnnotation(Retention.class).value());
+    assertArrayEquals(
+        new ElementType[] {ElementType.METHOD}, marker.getAnnotation(Target.class).value());
+    assertEquals(hasValue ? 1 : 0, marker.getDeclaredMethods().length);
+    if (hasValue) {
+      assertEquals(String.class, marker.getDeclaredMethods()[0].getReturnType());
+      assertEquals("value", marker.getDeclaredMethods()[0].getName());
+    }
+  }
 }

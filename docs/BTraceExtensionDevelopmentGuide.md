@@ -305,9 +305,63 @@ An overload group has three required properties:
    signature.
 
 Do not use `@ExternalType.Overload` for a one-method rename. A uniquely named contract method
-already binds to the target method with the same name. It also cannot enable fields, constructors,
-private members, generic/array target types, coercion, or fallback lookup; use the manual
-`MethodHandleCache` path for those cases.
+already binds to the target method with the same name. It cannot enable private members,
+generic/array target types, coercion, or fallback lookup; use the manual path for those cases.
+
+### Fields, construction, and type narrowing
+
+Five narrow operation markers cover the common public application-state cases. They are all
+source-only processor input: generated adapters never inspect annotations at runtime.
+
+```java
+@ExternalType("vendor.Child")
+interface ChildApi { String label(); }
+
+@ExternalType("vendor.Widget")
+interface WidgetApi {
+    @ExternalType.Getter("name")
+    String name();                         // WidgetApi$Ext.name(Object self)
+
+    @ExternalType.Setter("name")
+    void setName(String value);             // WidgetApi$Ext.setName(Object self, String)
+
+    @ExternalType.Static
+    @ExternalType.Getter("DEFAULT_CHILD")
+    @ExternalType.Type(ChildApi.class)
+    Object defaultChild();                  // defaultChild(), defaultChild(ClassLoader)
+
+    @ExternalType.Constructor
+    Object create(String name);             // create(String), create(ClassLoader, String)
+
+    @ExternalType.InstanceOf
+    boolean isWidget(Object value);
+
+    @ExternalType.Cast
+    Object castWidget(Object value);
+}
+```
+
+Getters have a non-`void` return and no target arguments; setters return `void` and take exactly
+one target argument. Both use one exact public field type, so a getter/setter pair for the same
+field must agree on static state and type. Use `@Type(ChildApi.class) Object` only for a direct
+target-library field return or setter parameter. `@Static` is legal only for fields (and ordinary
+methods), producing the same legacy-TCCL and explicit non-null-loader forms as static methods.
+
+`@Constructor` returns direct `Object`; its declared parameters are the exact public constructor
+signature and may have direct `@Type` markers. It has no receiver and therefore also exposes the
+legacy and explicit-loader forms. The explicit `ClassLoader` is adapter control data, never a
+constructor argument or part of the constructor `MethodType`.
+
+`@InstanceOf` is exactly `boolean operation(Object)` and `@Cast` exactly `Object operation(Object)`.
+For a non-null candidate, both resolve the owner through the candidate value's defining loader,
+then follow `Class.isInstance`/`Class.cast`: `isInstance(null)` is `false`, `cast(null)` is `null`,
+and a wrong non-null cast throws normal `ClassCastException`. They do not use the TCCL.
+
+All field/constructor resolution uses public exact lookup and is retryable after an unavailable
+class or member appears. Resolution does not initialize the target; ordinary static-field access
+and constructor invocation may initialize it under normal JVM rules. Missing/inaccessible public
+members and the predicate/cast public-access probe throw `ExternalTypeResolutionException` with
+the original cause. Target initializer and constructor failures remain transparent.
 
 ### Rules
 
@@ -317,6 +371,8 @@ private members, generic/array target types, coercion, or fallback lookup; use t
 - **Access:** dispatch uses `MethodHandles.publicLookup()`. Only public members of public, accessible types are supported; do not add module-opening flags implicitly.
 - **Static methods:** add `@ExternalType.Static` on the interface method. `version()` preserves legacy TCCL-based class loading with the documented null-TCCL system-loader fallback. `version(ClassLoader applicationLoader)` resolves with that non-null loader exactly; it rejects null immediately with `NullPointerException("applicationLoader")`. The control argument is not a target argument. Neither form changes the target's observed TCCL.
 - **Overload groups:** follow [the overload-group pattern above](#overload-groups-map-local-aliases-to-one-target-name). The selector changes only the target name; declared exact types, including `Type` markers, select the overload. It is not a single-method alias or runtime coercion/search facility.
+- **Fields and constructors:** `Getter`, `Setter`, and `Constructor` use exact public lookup types; fields require a legal raw JVM field name and constructors have no overload selector. `Static` is legal only for ordinary methods and fields.
+- **Predicates and casts:** `InstanceOf` and `Cast` operate on the owner named by the contract, using the non-null candidate's defining loader. They do not initialize the owner during resolution or bypass public/exported access.
 - **Default methods and static interface methods:** skipped (they already have bodies).
 - **Failures:** class lookup, missing member, and inaccessible-member failures throw `ExternalTypeResolutionException` with the original cause. Exceptions thrown by the target method propagate unchanged.
 
@@ -330,7 +386,8 @@ Use generated adapters only for the supported row below. The manual path is the 
 | A direct target-library `Object` parameter or return type | Supported | Mark it with `@ExternalType.Type(OtherContract.class) Object`; chain opaque results into another generated adapter. |
 | Target types in generic elements or arrays | Unsupported | Use `ClassLoadingUtil` and `MethodHandleCache` directly. |
 | Explicit target overload groups | Supported | Mark every group member with `@ExternalType.Overload("targetName")`; local names may differ. |
-| Fields, constructors, `instanceof`, and casts | Unsupported | Use `ClassLoadingUtil` plus the appropriate direct `MethodHandles.publicLookup()` or `Class` operation. `MethodHandleCache` caches virtual and static method lookups only. |
+| Public exact field get/set, public construction, `isInstance`, and `cast` | Supported | Use the five operation markers above. Keep target-library values opaque with direct `@Type(... ) Object` positions. |
+| Generic/array target types, bulk/reflection-style operations, fluent setters, constructor selectors, runtime overload choice/coercion | Unsupported | Use `ClassLoadingUtil` plus direct `MethodHandles.publicLookup()` or `Class` operations. |
 | Non-public or non-exported named-module members | Unsupported | Use a public supported API or explicitly configure the target JVM outside BTrace. |
 
 For a generated static call under an author-controlled application loader, select it explicitly. Normalize a bootstrap-owned context object's null defining loader to the system loader, whose normal delegation reaches bootstrap:

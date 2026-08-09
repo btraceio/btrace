@@ -75,4 +75,59 @@ public @interface ExternalType {
   @interface Overload {
     String value();
   }
+
+  /**
+   * Selects a public target field read. The annotated method must have no target arguments and a
+   * non-{@code void} exact field type; {@link Static} selects a static field.
+   *
+   * <p>The processor consumes this source-only marker. Generated adapters do not inspect it at
+   * runtime.
+   */
+  @Retention(RetentionPolicy.SOURCE)
+  @Target(ElementType.METHOD)
+  @interface Getter {
+    String value();
+  }
+
+  /**
+   * Selects a public target field write. The annotated method must return {@code void} and have one
+   * exact field-type argument; {@link Static} selects a static field.
+   *
+   * <p>The processor consumes this source-only marker. Generated adapters do not inspect it at
+   * runtime.
+   */
+  @Retention(RetentionPolicy.SOURCE)
+  @Target(ElementType.METHOD)
+  @interface Setter {
+    String value();
+  }
+
+  /**
+   * Selects a public constructor on the adapted type. The annotated method must return direct
+   * {@code Object}; its parameters describe the exact constructor signature.
+   *
+   * <p>The processor consumes this source-only marker. Generated adapters do not inspect it at
+   * runtime.
+   */
+  @Retention(RetentionPolicy.SOURCE)
+  @Target(ElementType.METHOD)
+  @interface Constructor {}
+
+  /**
+   * Selects {@link Class#isInstance(Object)} for the adapted type. The annotated method must return
+   * {@code boolean} and accept one direct {@code Object}; resolution uses the non-null value's
+   * defining loader.
+   */
+  @Retention(RetentionPolicy.SOURCE)
+  @Target(ElementType.METHOD)
+  @interface InstanceOf {}
+
+  /**
+   * Selects {@link Class#cast(Object)} for the adapted type. The annotated method must return
+   * direct {@code Object} and accept one direct {@code Object}; resolution uses the non-null
+   * value's defining loader.
+   */
+  @Retention(RetentionPolicy.SOURCE)
+  @Target(ElementType.METHOD)
+  @interface Cast {}
 }

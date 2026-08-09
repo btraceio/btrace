@@ -57,4 +57,32 @@ public final class ExternalTypeTestServiceImpl extends Extension
   public int value(Object externalData) {
     return ExternalDataType$Ext.value(externalData);
   }
+
+  @Override
+  public String phaseFiveMarkers(Object externalData) {
+    int initial = ExternalDataType$Ext.fieldValue(externalData);
+    ExternalDataType$Ext.setFieldValue(externalData, initial + 1);
+    ClassLoader applicationLoader = ClassLoadingUtil.definingLoader(externalData);
+    if (applicationLoader == null) applicationLoader = ClassLoader.getSystemClassLoader();
+    ExternalDataType$Ext.setStaticField(applicationLoader, initial + 3);
+    Object defaultChild = ExternalDataType$Ext.defaultChild();
+    Object created = ExternalDataType$Ext.create(initial + 2);
+    Object child = ExternalDataType$Ext.child(externalData);
+    ExternalDataType$Ext.setChildField(externalData, child);
+    Object childCreated = ExternalDataType$Ext.createWithChild(applicationLoader, child);
+    if (!ExternalDataType$Ext.isExternalData(created)) return "ext-predicate-failed";
+    Object narrowed = ExternalDataType$Ext.castExternalData(created);
+    return "ext-field-"
+        + ExternalDataType$Ext.fieldValue(externalData)
+        + ","
+        + ExternalChildType$Ext.marker(defaultChild)
+        + ","
+        + ExternalDataType$Ext.value(narrowed)
+        + ","
+        + ExternalDataType$Ext.staticField()
+        + ","
+        + ExternalChildType$Ext.marker(ExternalDataType$Ext.childField(externalData))
+        + ","
+        + ExternalChildType$Ext.marker(ExternalDataType$Ext.childField(childCreated));
+  }
 }
