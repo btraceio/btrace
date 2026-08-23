@@ -149,6 +149,189 @@ class ClassFileApiBackendTest {
     assertNull(result, "Expected mismatched type-constrained ENTRY probe to be skipped");
   }
 
+  // --- Task 1: ENTRY ordinary enclosing-method arguments ---
+
+  @Test
+  void entryProbePassesTypedMethodArgs() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            Kind.ENTRY,
+            "(Ljava/lang/String;J)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected ENTRY probe capturing typed method args to be injected");
+    byte[] readable = patchVersion(result, 65);
+    assertLoadsWithoutVerifyError(readable, "com.example.Target");
+    String desc = getInvokeDynamicDescriptor(readable, "callTopLevel", "$btrace$");
+    assertEquals("(Ljava/lang/String;J)V", desc);
+  }
+
+  @Test
+  void entryProbePassesTypedMethodArgsStatic() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithStaticCall(70, "com/example/Target", "callTopLevel");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            Kind.ENTRY,
+            "(Ljava/lang/String;J)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected ENTRY probe on static method with typed args to be injected");
+    byte[] readable = patchVersion(result, 65);
+    assertLoadsWithoutVerifyError(readable, "com.example.Target");
+    String desc = getInvokeDynamicDescriptor(readable, "callTopLevel", "$btrace$");
+    assertEquals("(Ljava/lang/String;J)V", desc);
+  }
+
+  // --- Task 3 (ENTRY/RETURN share): AnyType[] aggregate packaging ---
+
+  @Test
+  void entryProbePackagesAnyTypeArrayArgs() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            Kind.ENTRY,
+            "([Lio/btrace/core/types/AnyType;)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected ENTRY AnyType[] probe to be injected");
+    byte[] readable = patchVersion(result, 65);
+    assertLoadsWithoutVerifyError(readable, "com.example.Target");
+    String desc = getInvokeDynamicDescriptor(readable, "callTopLevel", "$btrace$");
+    assertEquals("([Ljava/lang/Object;)V", desc);
+    assertTrue(
+        countOpcode(readable, "callTopLevel", Opcodes.ANEWARRAY) >= 1,
+        "Expected anewarray for AnyType[] aggregate packaging");
+  }
+
+  // --- Task 2: RETURN ordinary enclosing-method arguments ---
+
+  @Test
+  void returnProbePassesTypedMethodArgs() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTarget",
+            Kind.RETURN,
+            "(Ljava/lang/String;J)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected RETURN probe capturing typed method args to be injected");
+    byte[] readable = patchVersion(result, 65);
+    assertLoadsWithoutVerifyError(readable, "com.example.Target");
+    String desc = getInvokeDynamicDescriptor(readable, "callTarget", "$btrace$");
+    assertEquals("(Ljava/lang/String;J)V", desc);
+  }
+
+  @Test
+  void returnProbePackagesAnyTypeArrayArgs() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTarget",
+            Kind.RETURN,
+            "([Lio/btrace/core/types/AnyType;)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected RETURN AnyType[] probe to be injected");
+    byte[] readable = patchVersion(result, 65);
+    assertLoadsWithoutVerifyError(readable, "com.example.Target");
+    String desc = getInvokeDynamicDescriptor(readable, "callTarget", "$btrace$");
+    assertEquals("([Ljava/lang/Object;)V", desc);
+    assertTrue(
+        countOpcode(readable, "callTarget", Opcodes.ANEWARRAY) >= 1,
+        "Expected anewarray for AnyType[] aggregate packaging");
+  }
+
+  // --- Task 3 (CALL): AnyType[] aggregate packaging of call arguments ---
+
+  @Test
+  void callProbePackagesAnyTypeArrayArgs() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    Location location = new Location();
+    location.setValue(Kind.CALL);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("com.example.Target");
+    location.setMethod("callTarget");
+    location.setType("(Ljava/lang/String;J)J");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            location,
+            "([Lio/btrace/core/types/AnyType;)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected CALL AnyType[] probe to be injected");
+    byte[] readable = patchVersion(result, 65);
+    assertLoadsWithoutVerifyError(readable, "com.example.Target");
+    String desc = getInvokeDynamicDescriptor(readable, "callTopLevel", "$btrace$");
+    assertEquals("([Ljava/lang/Object;)V", desc);
+    assertTrue(
+        countOpcode(readable, "callTopLevel", Opcodes.ANEWARRAY) >= 1,
+        "Expected anewarray for AnyType[] aggregate packaging of call args");
+  }
+
+  @Test
+  void callProbePackagesAnyTypeArrayArgsEmpty() {
+    requireJdk26ForVersion70();
+    byte[] classBytes = buildClassWithVoidCall(70, "com/example/Target", "callTopLevel");
+    Location location = new Location();
+    location.setValue(Kind.CALL);
+    location.setWhere(Where.BEFORE);
+    location.setClazz("com.example.Target");
+    location.setMethod("callTargetVoid");
+    location.setType("()V");
+    BTraceProbe probe =
+        buildStubProbe(
+            "com/example/MyTrace",
+            "com.example.Target",
+            "callTopLevel",
+            location,
+            "([Lio/btrace/core/types/AnyType;)V");
+
+    byte[] result =
+        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+
+    assertNotNull(result, "Expected CALL AnyType[] probe on a no-arg call to be injected");
+    byte[] readable = patchVersion(result, 65);
+    assertLoadsWithoutVerifyError(readable, "com.example.Target");
+    String desc = getInvokeDynamicDescriptor(readable, "callTopLevel", "$btrace$");
+    assertEquals("([Ljava/lang/Object;)V", desc);
+  }
+
   @Test
   void returnProbeInjectedBeforeReturn() {
     requireJdk26ForVersion70();
@@ -2524,6 +2707,28 @@ class ClassFileApiBackendTest {
     copy[6] = (byte) (majorVersion >> 8);
     copy[7] = (byte) (majorVersion & 0xFF);
     return copy;
+  }
+
+  // Define the (version-65-patched) instrumented bytes via an isolated ClassLoader so the
+  // JVM verifier runs over the generated bytecode — catches stack/frame corruption that
+  // descriptor/opcode presence checks miss. The invokedynamic bootstrap (IndyDispatcher) is
+  // not resolved during verification, so it need not be on the null-parent classloader.
+  private static void assertLoadsWithoutVerifyError(byte[] readable, String className) {
+    assertDoesNotThrow(
+        () -> {
+          ClassLoader cl =
+              new ClassLoader(null) {
+                @Override
+                protected Class<?> findClass(String name) throws ClassNotFoundException {
+                  if (name.equals(className)) {
+                    return defineClass(name, readable, 0, readable.length);
+                  }
+                  throw new ClassNotFoundException(name);
+                }
+              };
+          cl.loadClass(className);
+        },
+        "Instrumented class must load without VerifyError");
   }
 
   /**
