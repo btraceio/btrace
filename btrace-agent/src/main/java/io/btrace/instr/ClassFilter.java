@@ -174,15 +174,13 @@ public class ClassFilter {
       return true;
     }
     ClassCache cache = ClassCache.getInstance();
-    if (cache == null) {
-      // Reentrant class loading can observe the holder before INSTANCE assignment completes.
-      return false;
-    }
-    ClassInfo ci = cache.get(loader, typeA);
+    // ClassCache.getInstance() uses the holder idiom (static final in a nested class), so
+    // cache is never null under normal JLS class-initialization semantics. Fold the
+    // defensive cache-unavailable case together with the not-cached case: either way we
+    // cannot resolve the supertypes, so conservatively report "not a subtype" and let the
+    // caller fall back to a no-op transform or a different check.
+    ClassInfo ci = cache != null ? cache.get(loader, typeA) : null;
     if (ci == null) {
-      // ClassInfo not present in the cache (or cache temporarily unavailable due to a
-      // classloader-init race). Conservatively report "not a subtype" rather than NPE;
-      // the caller can fall back to a no-op transform or a different check.
       return false;
     }
     Collection<ClassInfo> sTypesInfo = ci.getSupertypes(false);
