@@ -53,7 +53,7 @@ jobs:
       # (see btrace-core/build.gradle).
       - name: Set up JDK 21 (Gradle runner)
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6
         with:
           java-version: 21
           distribution: temurin
@@ -121,7 +121,7 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6
         with:
           java-version: 21
           distribution: temurin
@@ -174,7 +174,7 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6
         with:
           java-version: 21
           distribution: temurin
@@ -226,7 +226,7 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6
         with:
           java-version: 21
           distribution: temurin
@@ -288,7 +288,7 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6
         with:
           java-version: 21
           distribution: temurin
@@ -380,7 +380,7 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6
         with:
           java-version: 21
           distribution: temurin
