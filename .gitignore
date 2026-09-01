@@ -47,3 +47,10 @@ gradle-wrapper.properties
 /.java.versions
 compile.log
 .worktrees/
+
+# OS / editor / tool noise
+.DS_Store
+.cachebro/
+gradle/gradle-daemon-jvm.properties
+# JVM thread-dump artifacts from stalled integration tests
+javacore.*.txt

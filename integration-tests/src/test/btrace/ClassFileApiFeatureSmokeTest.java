@@ -17,6 +17,7 @@
 package btrace;
 
 import static io.btrace.core.BTraceUtils.println;
+import static io.btrace.core.BTraceUtils.str;
 
 import io.btrace.core.annotations.BTrace;
 import io.btrace.core.annotations.Duration;
@@ -85,7 +86,7 @@ public class ClassFileApiFeatureSmokeTest {
   public static void onArrayGet(@Return Object value, int index) {
     if (!arrayGetPrinted) {
       arrayGetPrinted = true;
-      println("cfapi ARRAY_GET index=" + index);
+      println("cfapi ARRAY_GET index=" + index + ", value=" + str(value));
     }
   }
 
@@ -113,7 +114,13 @@ public class ClassFileApiFeatureSmokeTest {
   public static void onNewArray(String type, int dimensions, @Return int[] array) {
     if (!newArrayPrinted) {
       newArrayPrinted = true;
-      println("cfapi NEWARRAY type=" + type + ", dimensions=" + dimensions);
+      println(
+          "cfapi NEWARRAY type="
+              + type
+              + ", dimensions="
+              + dimensions
+              + ", arrayLength="
+              + array.length);
     }
   }
 
@@ -124,7 +131,7 @@ public class ClassFileApiFeatureSmokeTest {
   public static void onSyncEntry(@TargetInstance Object lock) {
     if (!syncEntryPrinted) {
       syncEntryPrinted = true;
-      println("cfapi SYNC_ENTRY");
+      println("cfapi SYNC_ENTRY lock=" + str(lock));
     }
   }
 
@@ -135,7 +142,7 @@ public class ClassFileApiFeatureSmokeTest {
   public static void onSyncExit(@TargetInstance Object lock) {
     if (!syncExitPrinted) {
       syncExitPrinted = true;
-      println("cfapi SYNC_EXIT");
+      println("cfapi SYNC_EXIT lock=" + str(lock));
     }
   }
 
@@ -146,7 +153,7 @@ public class ClassFileApiFeatureSmokeTest {
   public static void onCall(@TargetMethodOrField(fqn = true) String target, Object key) {
     if (!callPrinted) {
       callPrinted = true;
-      println("cfapi CALL " + target);
+      println("cfapi CALL " + target + ", key=" + str(key));
     }
   }
 
@@ -161,7 +168,7 @@ public class ClassFileApiFeatureSmokeTest {
   public static void onNewObject(String type, @Return Object set) {
     if (!newObjectPrinted) {
       newObjectPrinted = true;
-      println("cfapi NEW " + type);
+      println("cfapi NEW " + type + ", set=" + str(set));
     }
   }
 
@@ -172,7 +179,7 @@ public class ClassFileApiFeatureSmokeTest {
   public static void onCatch(@TargetInstance IllegalArgumentException exception) {
     if (!catchPrinted) {
       catchPrinted = true;
-      println("cfapi CATCH");
+      println("cfapi CATCH exception=" + str(exception));
     }
   }
 
@@ -183,7 +190,7 @@ public class ClassFileApiFeatureSmokeTest {
   public static void onError(@Duration long duration, @TargetInstance Throwable exception) {
     if (!errorPrinted) {
       errorPrinted = true;
-      println("cfapi ERROR duration=" + duration);
+      println("cfapi ERROR duration=" + duration + ", exception=" + str(exception));
     }
   }
 }

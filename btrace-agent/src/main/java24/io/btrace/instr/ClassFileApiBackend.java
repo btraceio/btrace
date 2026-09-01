@@ -113,6 +113,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           ClassDesc.of("java.lang.String"));
 
   private static final ClassDesc INDY_DISPATCHER = ClassDesc.of("io.btrace.runtime.IndyDispatcher");
+  private static final ClassDesc CD_OBJECT = ClassDesc.of("java.lang.Object");
   private static final ClassDesc CD_METHOD_TRACKER =
       ClassDesc.ofInternalName("io/btrace/instr/MethodTracker");
   private static final MethodTypeDesc HIT_DESC = MethodTypeDesc.ofDescriptor("(I)Z");
@@ -705,6 +706,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       Map<Label, List<String>> catchHandlerTypes,
       boolean[] anyMatch) {
 
+    Type[] methodArgTypes = Type.getArgumentTypes(methodDesc);
+
     // hasDurationReturn: RETURN probes need duration → compute nanoTime on each RETURN path
     boolean hasDurationReturn =
         returnHandlers.stream().anyMatch(ph -> ph.om.getDurationParameter() != -1);
@@ -819,12 +822,12 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
               Label skipLabel = cb.newLabel();
               cb.iload(sHitSlot[0]);
               cb.ifeq(skipLabel);
-              emitProbeCall(cb, ph, javaClassName, methodName, isStatic, true, -1, TypeKind.VOID, -1);
+              emitProbeCall(cb, ph, javaClassName, methodName, isStatic, true, methodArgTypes, -1, TypeKind.VOID, -1);
               cb.labelBinding(skipLabel);
             } else {
               emitWithSamplingGuard(
                   cb, ph, samplingMethodId,
-                  () -> emitProbeCall(cb, ph, javaClassName, methodName, isStatic, true, -1, TypeKind.VOID, -1));
+                  () -> emitProbeCall(cb, ph, javaClassName, methodName, isStatic, true, methodArgTypes, -1, TypeKind.VOID, -1));
             }
           }
           if (isSynchronizedMethod) {
@@ -893,8 +896,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
               emitWithSamplingGuard(
                   cb, ph, samplingMethodId,
                   () -> emitProbeCall(
-                      cb, ph, javaClassName, methodName, isStatic, false,
-                      fLocalRetValSlot, methodReturnType, fReturnKind, fLocalDurationSlot, null));
+                      cb, ph, javaClassName, methodName, isStatic, false, methodArgTypes,
+                      fLocalRetValSlot, methodReturnType, fReturnKind, fLocalDurationSlot));
             }
           }
           if (adaptiveReturnHandlers != null) {
@@ -905,8 +908,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             cb.invokestatic(CD_METHOD_TRACKER, "updateEndTs", UPDATE_END_TS_DESC);
             for (ProbeHandler ph : adaptiveReturnHandlers) {
               emitProbeCall(
-                  cb, ph, javaClassName, methodName, isStatic, false,
-                  fLocalRetValSlot, methodReturnType, fReturnKind, fLocalDurationSlot, null);
+                  cb, ph, javaClassName, methodName, isStatic, false, methodArgTypes,
+                  fLocalRetValSlot, methodReturnType, fReturnKind, fLocalDurationSlot);
             }
             cb.labelBinding(skipAdaptive);
           }
@@ -2655,6 +2658,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         methodName,
         isStatic,
         false,
+        null,
         ctx.returnSlot,
         ctx.arrayType,
         TypeKind.REFERENCE,
@@ -2675,8 +2679,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     String rawDesc =
         om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
     Type[] handlerArgTypes = Type.getArgumentTypes(rawDesc);
+    // Original (pre-replacement) descriptor: needed to recognise AnyType[] aggregate params,
+    // which the replaced descriptor flattens to Object[].
+    Type[] originalHandlerArgTypes = Type.getArgumentTypes(om.getTargetDescriptor());
     Type[] callArgTypes = Type.getArgumentTypes(ii.type().stringValue());
-    boolean staticCall = ii.opcode() == Opcode.INVOKESTATIC;
     Type ownerType = Type.getObjectType(ii.owner().asInternalName());
     for (int i = 0; i < handlerArgTypes.length; i++) {
       if (i == om.getSelfParameter()
@@ -2723,6 +2729,11 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             || !Type.LONG_TYPE.equals(handlerArgTypes[i])) {
           return false;
         }
+        continue;
+      }
+      // AnyType[] aggregate: packages all call args into Object[] regardless of their
+      // individual types (mirrors ASM MethodCallInstrumentor + AnyTypeArgProvider).
+      if (TypeUtils.isAnyTypeArray(originalHandlerArgTypes[i])) {
         continue;
       }
       int callArgIndex = callArgumentIndex(om, i);
@@ -3300,6 +3311,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         methodName,
         isStatic,
         isEntry,
+        null,
         retValSlot,
         returnType,
         returnKind,
@@ -3315,6 +3327,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         null);
   }
 
+  // ENTRY convenience: enclosing-method args available, no return value, no call context.
   private static boolean emitProbeCall(
       CodeBuilder cb,
       ProbeHandler ph,
@@ -3322,6 +3335,77 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       String methodName,
       boolean isStatic,
       boolean isEntry,
+      Type[] methodArgTypes,
+      int retValSlot,
+      TypeKind returnKind,
+      int durationSlot) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        isEntry,
+        methodArgTypes,
+        retValSlot,
+        null,
+        returnKind,
+        durationSlot,
+        null,
+        -1,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
+  }
+
+  // RETURN convenience: enclosing-method args available, with return value + duration slots.
+  private static boolean emitProbeCall(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      boolean isEntry,
+      Type[] methodArgTypes,
+      int retValSlot,
+      Type returnType,
+      TypeKind returnKind,
+      int durationSlot) {
+    return emitProbeCall(
+        cb,
+        ph,
+        javaClassName,
+        methodName,
+        isStatic,
+        isEntry,
+        methodArgTypes,
+        retValSlot,
+        returnType,
+        returnKind,
+        durationSlot,
+        null,
+        -1,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
+  }
+
+  private static boolean emitProbeCall(
+      CodeBuilder cb,
+      ProbeHandler ph,
+      String javaClassName,
+      String methodName,
+      boolean isStatic,
+      boolean isEntry,
+      Type[] methodArgTypes,
       int retValSlot,
       Type returnType,
       TypeKind returnKind,
@@ -3340,6 +3424,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     String rawDesc =
         om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
     Type[] argTypes = Type.getArgumentTypes(rawDesc);
+    // Original (pre-replacement) handler arg types: needed to detect AnyType[] aggregate
+    // params, which the replaced descriptor flattens to Object[]. ENTRY/RETURN ordinary method
+    // args and CALL ordinary call args are only loaded when methodArgTypes / callContext is set.
+    Type[] originalArgTypes = Type.getArgumentTypes(om.getTargetDescriptor());
 
     // Pre-validate: every argument must be satisfiable before we push anything onto the stack.
     // An early return mid-loop would leave orphaned stack values, causing a VerifyError.
@@ -3373,7 +3461,15 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
               || (typeCheckContext != null && ordinaryArgumentIndex(om, i) == 0)
               || (newArrayContext != null && ordinaryArgumentIndex(om, i) == 0)
               || (newArrayContext != null && ordinaryArgumentIndex(om, i) == 1)
-              || (callArgIndex >= 0 && callArgIndex < callContext.argumentTypes.length);
+              || (callArgIndex >= 0 && callArgIndex < callContext.argumentTypes.length)
+              // ENTRY/RETURN ordinary enclosing-method args (typed or AnyType[] aggregate).
+              || (methodArgTypes != null
+                  && TypeUtils.isAnyTypeArray(originalArgTypes[i]))
+              || (methodArgTypes != null
+                  && ordinaryArgumentIndex(om, i) >= 0
+                  && ordinaryArgumentIndex(om, i) < methodArgTypes.length)
+              // CALL AnyType[] aggregate packages all call args into Object[].
+              || (callContext != null && TypeUtils.isAnyTypeArray(originalArgTypes[i]));
       if (!satisfiable) {
         log.debug(
             "ClassFileApiBackend: skipping handler {}.{} — arg {} cannot be satisfied",
@@ -3467,6 +3563,17 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         cb.ldc(newArrayContext.extName);
       } else if (newArrayContext != null && ordinaryArgumentIndex(om, i) == 1) {
         cb.ldc(newArrayContext.dims);
+      } else if (TypeUtils.isAnyTypeArray(originalArgTypes[i])
+          && (methodArgTypes != null || callContext != null)) {
+        // AnyType[] aggregate: package all enclosing-method args (ENTRY/RETURN) or all call
+        // args (CALL) into an Object[], boxing primitives. Mirrors ASM AnyTypeArgProvider.
+        emitAnyTypeArray(cb, isStatic, methodArgTypes, callContext);
+      } else if (methodArgTypes != null) {
+        // Typed ordinary enclosing-method argument (ENTRY/RETURN). Loaded from its fixed
+        // method-local slot; no boxing — the handler type must match the method arg type
+        // (validated upstream), matching the existing CALL typed-arg path.
+        int ordIdx = ordinaryArgumentIndex(om, i);
+        cb.loadLocal(typeKind(methodArgTypes[ordIdx]), methodArgSlot(isStatic, methodArgTypes, ordIdx));
       } else if (callContext != null) {
         int callArgIndex = callArgumentIndex(om, i);
         cb.loadLocal(
@@ -3488,6 +3595,47 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
             ph.probe.getClassName(true)));
     cb.labelBinding(linkerSkip);
     return true;
+  }
+
+  // Fixed local-variable slot for the ordinary enclosing-method argument at
+  // ordinaryIndex (0-based). `this` occupies slot 0 for instance methods.
+  private static int methodArgSlot(boolean isStatic, Type[] methodArgTypes, int ordinaryIndex) {
+    int slot = isStatic ? 0 : 1;
+    for (int j = 0; j < ordinaryIndex; j++) {
+      slot += methodArgTypes[j].getSize();
+    }
+    return slot;
+  }
+
+  // Package all enclosing-method args (ENTRY/RETURN, methodArgTypes != null) or all call args
+  // (CALL, callContext != null) into an Object[], boxing primitives. Mirrors ASM
+  // MethodInstrumentor.AnyTypeArgProvider.doProvide.
+  private static void emitAnyTypeArray(
+      CodeBuilder cb, boolean isStatic, Type[] methodArgTypes, CallContext callContext) {
+    boolean useMethod = methodArgTypes != null;
+    Type[] srcTypes = useMethod ? methodArgTypes : callContext.argumentTypes;
+    cb.ldc(srcTypes.length);
+    cb.anewarray(CD_OBJECT);
+    for (int j = 0; j < srcTypes.length; j++) {
+      TypeKind tk = typeKind(srcTypes[j]);
+      int slot = useMethod ? methodArgSlot(isStatic, methodArgTypes, j) : callContext.argumentSlots[j];
+      cb.dup();
+      cb.ldc(j);
+      cb.loadLocal(tk, slot);
+      boxIfPrimitive(cb, srcTypes[j], tk);
+      cb.arrayStore(TypeKind.REFERENCE);
+    }
+  }
+
+  // Box a primitive on the stack to its wrapper; no-op for references. The JVMS verifier
+  // collapses byte/short/char/boolean to int, so valueOf(B/S/C/Z) accepts the int on stack.
+  private static void boxIfPrimitive(CodeBuilder cb, Type t, TypeKind tk) {
+    if (tk == TypeKind.INT
+        || tk == TypeKind.LONG
+        || tk == TypeKind.FLOAT
+        || tk == TypeKind.DOUBLE) {
+      boxPrimitiveReturn(cb, t, tk);
+    }
   }
 
   private static void boxPrimitiveReturn(CodeBuilder cb, Type returnType, TypeKind returnKind) {
