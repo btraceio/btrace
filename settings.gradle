@@ -63,11 +63,11 @@ dependencyResolutionManagement {
             version('testcontainers', '2.0.5')
 
             // *** Gradle plugins ***
-            plugin ('spotless', 'com.diffplug.spotless').version('8.6.0')
+            plugin ('spotless', 'com.diffplug.spotless').version('8.8.0')
             plugin ('versioning', 'net.nemerosa.versioning').version('4.0.1')
             plugin ('ospackage', 'com.netflix.nebula.ospackage').version('12.3.0')
             plugin ('publish', 'io.github.gradle-nexus.publish-plugin').version('2.0.0')
-            plugin ('shadow', 'com.gradleup.shadow').version('9.4.2')
+            plugin ('shadow', 'com.gradleup.shadow').version('9.5.0')
             plugin ('sdkman-vendors', 'io.sdkman.vendors').version('3.0.0')
             plugin ('foojay-resolver', 'org.gradle.toolchains.foojay-resolver-convention').version('1.0.0')
 
