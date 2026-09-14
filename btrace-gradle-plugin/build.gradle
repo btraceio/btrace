@@ -35,7 +35,7 @@ dependencies {
     // This is an included build and cannot access the root version catalog. Keep its tests on the
     // last Java 8-compatible JUnit line; the production plugin remains Java 11-compatible.
     testImplementation gradleTestKit()
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.14.4'
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
