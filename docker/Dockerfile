@@ -1,6 +1,6 @@
 # BTrace Docker Image - Debian-based variant
 # Full distribution with all tools and shell access
-FROM bellsoft/liberica-openjdk-debian:11.0.30-cds
+FROM bellsoft/liberica-openjdk-debian:11.0.32.1-cds
 
 ARG BTRACE_VERSION=3.0.0-SNAPSHOT
 
