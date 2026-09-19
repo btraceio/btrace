@@ -119,7 +119,7 @@ public final class Main {
   // by the bare token `THREADS`; parseAgentArgs re-attaches such tokens to the preceding list.
   private static final Set<String> LIST_VALUED_KEYS =
       Collections.unmodifiableSet(
-          new HashSet<>(Arrays.asList(GRANT, DENY, ALLOW_EXTENSIONS, DENY_EXTENSIONS)));
+          new HashSet<>(Arrays.asList(GRANT, DENY, ALLOW_EXTENSIONS, DENY_EXTENSIONS, PROBES)));
   private static final Pattern BUNDLED_PROBE_NAME =
       Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*");
   private static final Set<String> JAVA_KEYWORDS =

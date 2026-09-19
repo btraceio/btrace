@@ -42,11 +42,14 @@ class MainTest {
   void everyListValuedKeyContinuesAcrossCommas() {
     ArgsMap args =
         Main.parseAgentArgs(
-            "deny=FILE_WRITE,PROCESS,allowExtensions=a.b,c.d,denyExtensions=e,f,debug=true");
+            "deny=FILE_WRITE,PROCESS,allowExtensions=a.b,c.d,denyExtensions=e,f,"
+                + "probes=DriverTracer,ExecutorTracer,debug=true");
 
     assertEquals("FILE_WRITE,PROCESS", args.get("deny"));
     assertEquals("a.b,c.d", args.get("allowExtensions"));
     assertEquals("e,f", args.get("denyExtensions"));
+    assertEquals("DriverTracer,ExecutorTracer", args.get("probes"));
+    assertNull(args.get("ExecutorTracer"));
     assertEquals("true", args.get("debug"));
   }
 
