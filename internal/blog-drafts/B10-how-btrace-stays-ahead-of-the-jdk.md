@@ -12,9 +12,10 @@ under how far back it keeps investing on the other end of the version spectrum.
 ## The ASM ceiling
 
 ASM parses class files by major version, and each ASM release only knows about class file versions
-that existed when it shipped. The version BTrace 3.0 uses, 9.9.x, tops out at class file major
-version **69**, which corresponds to Java 25. Hand it a class file compiled for Java 26 or newer —
-major version 70 and up — and it throws, full stop. That's not a bug to fix; it's an inherent
+that existed when it shipped. BTrace 3.0 pins ASM 9.10.1, and the ceiling it codes against
+(`AsmInstrumentationBackend.MAX_ASM_MAJOR_VERSION`) is class file major version **69**, which
+corresponds to Java 25. Hand ASM a class file it doesn't know — Java 26 or newer, major version 70
+and up — and it throws, full stop. That's not a bug to fix; it's an inherent
 property of how ASM is built, and it means that without some alternative, an application compiled
 for a future JDK would simply be unparseable, and therefore un-instrumentable, by BTrace.
 
@@ -51,18 +52,20 @@ the class directly — the whole mechanism leans on reflection to keep the Java 
 ## What it can't do yet
 
 We want to be plain about where this backend actually stands today, because "ClassFile API backend"
-is easy to over-read as "full ASM replacement," and it isn't one. Right now it only supports two
-kinds of probes — method entry and method return (`Kind.ENTRY` and `Kind.RETURN`); any handler
-written for a call site, a line, a field get/set, or an error exit is skipped, with the rest of the
-probe's applicable handlers still applied. Method matching only covers exact names and `/regex/`
-patterns — type-constrained matching, where a handler names a specific parameter type, isn't
-supported and those handlers are skipped too. Parameter injection is narrower as well: only
-`@ProbeClassName`, `@ProbeMethodName`, and `@Self` are wired up; anything wanting `@Return`,
-`@TargetInstance`, `@Duration`, or a probed method's own arguments doesn't get them through this
-backend. Classes the ClassFile API itself can't parse are skipped with a warning rather than
-crashing the target JVM. Call this what it is: a forward-compatibility safety net for the specific
-case where ASM would otherwise refuse to touch a class at all — not a second, equally capable
-instrumentation engine you can rely on for everything.
+is easy to over-read as "drop-in ASM replacement," and the honest answer is: closer than you might
+expect, with one documented gap. Every probe kind BTrace defines is supported — `ENTRY`, `RETURN`,
+`CALL`, `LINE`, `FIELD_GET`, `FIELD_SET`, `ARRAY_GET`, `ARRAY_SET`, `CHECKCAST`, `INSTANCEOF`,
+`THROW`, `CATCH`, `ERROR`, `NEWARRAY`, `NEW`, `SYNC_ENTRY`, and `SYNC_EXIT`. Method matching covers
+exact names, `/regex/` patterns, and type-constrained matching (a non-empty `type` in `@OnMethod`).
+Handler parameters are wired up too: `@ProbeClassName`, `@ProbeMethodName`, `@Self`, the probed
+method's own arguments (including `AnyType[]`), `@Return`, `@TargetInstance` (the caught or
+escaping throwable for `CATCH`/`ERROR`, the lock object for `SYNC_*`), and `@Duration` wherever the
+probe kind defines it. The remaining limitation is narrow and specific: `@Duration` is not supported
+on `SYNC_ENTRY`/`SYNC_EXIT` handlers. Classes the ClassFile API itself can't parse are skipped with
+a warning rather than crashing the target JVM. And it's still worth calling this what it is in the
+selection logic: a forward-compatibility safety net that only engages for the specific case where
+ASM would otherwise refuse to touch a class at all — for everything ASM can parse, ASM is still the
+engine doing the work.
 
 ## The other half of the story: the Java 17 floor
 
@@ -75,12 +78,12 @@ that states this plainly for the first time:
 > removed in the next major release (4.0).
 
 These two things are more connected than they look. Nothing in 3.0 technically *requires* Java 17 —
-the runtime still selects between tiers for 8, 9–10, 11+, and 15+ targets exactly as before, and
-none of that machinery is going away this release. But look at where the actual new engineering
+the runtime still selects between its three tiers (`BTraceRuntimeImpl_8`, `_9`, and `_11`, for Java
+8, 9–10, and 11+ targets) exactly as before, and none of that machinery is going away this release. But look at where the actual new engineering
 investment landed this cycle: a second instrumentation backend that only matters on JDK 24+, and a
-round of JDK 25 compatibility fixes. That's the signal. Maintaining five separate pre-17 runtime
-tiers indefinitely, while also building forward-compatibility machinery for JDKs that don't exist
-yet, is a cost that only grows — so 3.0 draws the line now, with plenty of runway before anything is
+round of JDK 25 compatibility fixes. That's the signal. Maintaining separate Java 8 and Java 9–10
+runtime tiers indefinitely, while also building forward-compatibility machinery for JDKs that don't
+exist yet, is a cost that only grows — so 3.0 draws the line now, with plenty of runway before anything is
 actually removed. The warning is deliberately inert: it prints once, to stderr, on a JVM older than
 17, tells you support is going away in the *next* major release, and points at
 `-Dbtrace.suppressJavaDeprecationWarning=true` if you need it quiet for a while longer. Nothing it
@@ -96,4 +99,5 @@ attach to production JVMs should be making out loud.
 
 - Hands-on tutorial: [docs/tutorials/03-upgrade-from-2x.md](../../docs/tutorials/03-upgrade-from-2x.md)
 - Getting started: [../../docs/GettingStarted.md](../../docs/GettingStarted.md)
+<!-- TODO: replace with the per-post Discussions thread before publishing -->
 - Questions, or "here's a class file ASM still can't handle": [GitHub Discussions](https://github.com/btraceio/btrace/discussions)

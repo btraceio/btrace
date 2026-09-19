@@ -59,30 +59,27 @@ for the BTR2 echo before giving up and falling back to V1. The negotiation logic
 encoders live under `io.btrace.core.comm.v2` — worth a look if you're curious what a
 `BinaryInstrumentCommand` actually looks like on the wire.
 
-For anyone who read the architecture doc for this feature and remembers a different set of
-property names (`btrace.protocol.version`, `-Dbtrace.wireprotocol=`): those don't exist in the
-shipped code. The three `btrace.comm.*` properties above, plus the negotiation timeout, are what's
-actually wired up — treat the code as the source of truth here.
-
 ## What we're deliberately not telling you
 
 Here's the part of this post we want to be straightforward about. The architecture doc for this
 protocol includes tables of specific performance numbers — serialize/deserialize timings, wire-size
 comparisons, throughput figures, all framed as measurements. We're not reproducing any of those
-numbers in this post, and that's a deliberate choice, not an oversight. That document's own
-"post-release technical debt" list still includes adding a V2-only end-to-end integration suite and
-running stress tests under sustained high-frequency tracing — which tells us the rigorous,
-reproducible benchmarking that would back specific multipliers hasn't been run against this codebase
-yet, whatever the illustrative tables in that doc suggest. Combine that with the property names in
-the same document turning out to be stale, and the responsible thing is to not put a number in front
-of you that we can't stand behind.
+numbers in this post, and that's a deliberate choice, not an oversight. There *is* a reproducible
+harness: a JMH benchmark (`BinaryProtocolBenchmark`, under `btrace-core/src/jmh`) that times binary
+versus Java serialization, deserialization, and round trips for the same commands, runnable with
+`./gradlew :btrace-core:jmh` and wired into the V2 protocol CI workflow as an on-demand job. What
+the repository doesn't contain is a committed set of results from running it on a fixed, described
+environment — and the doc's own "post-release technical debt" list still includes a V2-only
+end-to-end integration suite and stress tests under sustained high-frequency tracing. The
+responsible thing is to not put a multiplier in front of you that isn't backed by a run of that
+harness you could repeat.
 
 What we can tell you honestly, from the design itself: a binary format with no reflection and no
 class metadata will be smaller and cheaper to encode/decode than Java serialization for the same
 data, and compression on payloads over 1KB will shrink anything text-heavy further. Those are true
-by construction. The specific "how much" is a benchmark we still owe you, and when we run it
-properly — with a harness, a fixed environment, and numbers we can reproduce — that's the post that
-gets the table. This one gets the honest version instead.
+by construction. The specific "how much" is a number we still owe you, and when we publish it —
+from the JMH harness above, on a fixed environment, with the command line to reproduce it — that's
+the post that gets the table. This one gets the honest version instead.
 
 ## Why it's worth knowing about even though it's invisible
 
@@ -97,6 +94,8 @@ before you need it, not while you're debugging it at 2am.
 
 ---
 
-- Hands-on tutorial: [docs/tutorials/README.md](../../docs/tutorials/README.md)
+- Hands-on tutorials (there's no dedicated protocol lab — the protocol is exercised by every one of them): [docs/tutorials/README.md](../../docs/tutorials/README.md)
+- Architecture reference: [docs/architecture/Version2ProtocolArchitecture.md](../../docs/architecture/Version2ProtocolArchitecture.md)
 - Getting started: [../../docs/GettingStarted.md](../../docs/GettingStarted.md)
-- Questions, or "here's a benchmark harness you should run": [GitHub Discussions](https://github.com/btraceio/btrace/discussions)
+<!-- TODO: replace with the per-post Discussions thread before publishing -->
+- Questions, or "here are the numbers I got from the JMH harness": [GitHub Discussions](https://github.com/btraceio/btrace/discussions)

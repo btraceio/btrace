@@ -42,31 +42,34 @@ demo app's own uninformative output:
 
 ## CTA
 
-Full walkthrough, including the built-in `profile_method`/`diagnose_slow_endpoint`/
-`find_exception_source` diagnostic prompts and the `.mcp.json` setup:
-`docs/tutorials/05-mcp-server.md`.
+Full walkthrough, including installing the `btrace-observability` plugin from
+`btraceio/agent-plugins`: `docs/tutorials/05-mcp-server.md`.
+<!-- VERIFY against btraceio/agent-plugins: the profile_method / diagnose_slow_endpoint / find_exception_source prompt templates came from the in-repo MCP server; only mention them in the CTA if the plugin still ships them. -->
 
 ---
 
 ## Production notes (not spoken/shown on camera)
 
-- Every chat line and tool call above is transcribed verbatim from the tutorial's Step 5
-  ("Ask, don't type") transcript and Step 7 (cleanup) — including the exact tool names
+- Every chat line and tool call above was transcribed verbatim from an earlier revision of the
+  tutorial's "Ask, don't type" transcript and cleanup step — including the tool names
   (`list_jvms`, `deploy_oneliner`, `detach_probe`, `list_probes`, `exit_probe`), the exact
   oneliner strings, and the exact sample output lines. Do not paraphrase the assistant's dialogue.
-- This shot list deliberately skips Step 1 (building the MCP server with `./gradlew
-  :btrace-mcp-server:build`), Step 3 (`.mcp.json` setup), and Step 4 (`claude mcp list`) — those
-  are one-time setup, not part of the "watch a diagnosis happen" happy path this short is selling;
-  they belong in the linked tutorial, not the video. Do not add a "here's how to set it up" shot
+  <!-- VERIFY against btraceio/agent-plugins: the MCP server moved out of this repo (ae2918d5 / #864) and docs/tutorials/05-mcp-server.md no longer carries the transcript; re-record the tool names and output text against the current plugins/btrace-observability server before shooting. -->
+- This shot list deliberately skips the one-time setup — installing the `btrace-observability`
+  plugin from `btraceio/agent-plugins` in the AI host (it launches the `btrace` stdio MCP server
+  with JBang and needs JDK 11+ on the host that can attach to the target JVM). That's not part of
+  the "watch a diagnosis happen" happy path this short is selling; it belongs in the linked
+  tutorial and the plugin README, not the video. Do not add a "here's how to set it up" shot
   under the 60–90s budget — there isn't room to do it justice without cutting the diagnosis itself.
 - The required caveat — per the parent brief — is placed in the outro/CTA beat (1:22–1:30), phrased
-  exactly as instructed: "one thing to know before you rely on this." This matches the tutorial's
-  own "What just happened?" callout after Step 5: `list_probes` only shows probes a client has
-  *detached* from (not everything currently streaming), and the server exposes no `reconnect` tool,
-  so `detach_probe` is effectively one-way from the assistant's own perspective — reconnecting
-  requires the plain `btrace -r` CLI, outside the assistant's reach. `exit_probe` (shown at
+  exactly as instructed: "one thing to know before you rely on this." This matched the earlier
+  tutorial's own "What just happened?" callout: `list_probes` only showed probes a client had
+  *detached* from (not everything currently streaming), and the server exposed no `reconnect` tool,
+  so `detach_probe` was effectively one-way from the assistant's own perspective — reconnecting
+  required the plain `btrace -r` CLI, outside the assistant's reach. `exit_probe` (shown at
   1:14–1:22) is the tool that actually cleans up completely, which is why the transcript's own
   final action uses it rather than `detach_probe`.
-- Do not show `profile_method` or the other two diagnostic prompts (Step 6) — this is the
-  "improvised" transcript from Step 5 only; the prompt-template material is a distinct beat in the
-  tutorial and doesn't fit this format's runtime without cutting the caveat above.
+  <!-- VERIFY against btraceio/agent-plugins: confirm the current server still has no reconnect tool and that list_probes still lists detached probes only; if either changed, rewrite the 1:22–1:30 outro text. -->
+- Do not show `profile_method` or the other diagnostic prompt templates — this is the
+  "improvised" transcript only; the prompt-template material is a distinct beat that doesn't fit
+  this format's runtime without cutting the caveat above.

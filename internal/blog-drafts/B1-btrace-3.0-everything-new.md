@@ -45,7 +45,7 @@ is a short, mechanical list:
 | Mixed 2.x/3.0 client and agent | **Nothing** — the wire protocol auto-negotiates |
 | Maven/Gradle dependencies | Update coordinates to `io.btrace:btrace` |
 | Launch scripts referencing multiple BTrace jars | Point to the single `btrace.jar` |
-| `libs=` / profiles agent options | Migrate to extensions (deprecated but still working) |
+| `libs=` / profiles agent options | **Migrate to extensions** — removed in 3.0.0; `libs=` logs an error and loads nothing |
 | Target JVMs on Java 8–16 | **Nothing** — deprecated, but fully supported throughout 3.x |
 
 For script sources, the entire migration surface is the package prefix: `org.openjdk.btrace`
@@ -55,10 +55,13 @@ already import them, most scripts can drop their BTrace imports entirely rather 
 And if you'd rather not do it by hand, `scripts/migrate-btrace-script.sh` rewrites the prefix for
 you (with a `--dry-run` preview and a `.bak` backup), single file or recursively over a directory.
 
-If you're still using `libs=`/profile agent options, that path is deprecated in favor of the
-extension framework — isolation, permissions, and per-extension enable/disable instead of mutating
-the global classpath. It keeps working in 3.x, with a runtime warning, while you migrate at your own
-pace.
+If you're still using `libs=`/profile agent options, this is the one item on the list that is not
+gentle: the mechanism is **removed** in 3.0.0, not deprecated. Passing `libs=<profile>` makes the
+agent log an error naming the profile and load nothing, so classes that used to reach your probes
+through `btrace-libs/<profile>/` no longer resolve — typically surfacing as a probe failing on a type
+it previously saw. The extension framework is the replacement — isolation, permissions, and
+per-extension enable/disable instead of mutating the global classpath — and
+`docs/architecture/migrating-from-libs-profiles.md` walks through the port.
 
 ## The Java version deprecation
 
@@ -70,12 +73,13 @@ everywhere:
 > continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be
 > removed in the next major release (4.0).
 
-Nothing in 3.0 actually *requires* Java 17 — under the hood BTrace still selects between runtime
-tiers for 8, 9–10, 11+, and 15+ targets, exactly as it always has. This is a forward-looking
+Nothing in 3.0 actually *requires* Java 17 — under the hood BTrace still selects between its three
+runtime tiers (`BTraceRuntimeImpl_8`, `_9`, and `_11`, for Java 8, 9–10, and 11+ targets), exactly
+as it always has. This is a forward-looking
 maintenance decision, not a technical one: the newest investment (a second instrumentation backend
 built on the JDK's own ClassFile API, JDK 25 compatibility work) all lands on the modern-JDK side,
-and carrying five separate pre-17 code tiers indefinitely has a real cost. So 3.x keeps everything
-working, and 4.0 is where the pre-17 tiers get retired.
+and carrying separate runtime tiers for Java 8 and Java 9–10 indefinitely has a real cost. So 3.x
+keeps everything working, and 4.0 is where those pre-17 tiers get retired.
 
 In practice, here's what you'll see. If you attach BTrace to a target JVM older than Java 17, the
 agent prints this once, to stderr, the first time it starts on that JVM:
@@ -89,9 +93,26 @@ enforces anything — no probe is refused, no attach is blocked — and if you'r
 a fleet on older JDKs during a gradual migration, set `-Dbtrace.suppressJavaDeprecationWarning=true`
 on the target JVM and it stays quiet.
 
-Java < 17 isn't the only thing on a removal timeline in 3.0 — the `libs=`/profiles agent option
-carries the same "deprecated now, gone later" shape, on its own separate schedule. We're calling
-both out together in these release notes rather than letting either one be a surprise later.
+Java < 17 is the only thing in 3.0 that gets the "deprecated now, gone later" treatment. The
+`libs=`/profiles agent option, by contrast, is already gone (see above) — we're calling both out
+together in these release notes so that neither one is a surprise later.
+
+## Smaller things worth knowing
+
+A few changes that don't get their own post but will show up if you look closely:
+
+- **No probe-level permission annotations.** The `@RequestPermission`/`@RequestPermissions` and
+  `@RequiresPermission`/`@RequiresPermissions` annotations that appeared during 3.0 development were
+  removed before the release shipped. Permissions are declared by extensions (in their descriptor
+  and manifest) and granted through the agent's policy (`allowExtensions`/`allowPrivileged`) — a
+  probe never asks for them itself.
+- **Aggregation math fixes.** `Average` no longer truncates its result through an `int` cast, and
+  `Minimum`/`Maximum` reset to `Long.MAX_VALUE`/`Long.MIN_VALUE` on `clear()` instead of the
+  `Integer` bounds, so values outside the `int` range are tracked correctly after a reset.
+- **Detach-safe probe dispatch.** Probe handlers are now reached through `invokedynamic` call
+  sites backed by `MutableCallSite`s. When a probe is retracted, the agent re-points every one of
+  its sites to a no-op — so instrumented methods keep running, without ever calling into a probe
+  whose runtime has been torn down.
 
 ## The road to 4.0
 
@@ -111,4 +132,5 @@ tutorial walks through both in about ten minutes.
 - Hands-on tutorial: [docs/tutorials/03-upgrade-from-2x.md](../../docs/tutorials/03-upgrade-from-2x.md)
 - Full migration guide: [docs/Migration-2.x-to-3.0.md](../../docs/Migration-2.x-to-3.0.md)
 - Getting started: [../../docs/GettingStarted.md](../../docs/GettingStarted.md)
+<!-- TODO: replace with the per-post Discussions thread before publishing -->
 - Questions, war stories, or "here's what broke for me" reports: [GitHub Discussions](https://github.com/btraceio/btrace/discussions)
