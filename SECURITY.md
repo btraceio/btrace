@@ -18,4 +18,10 @@ The maintainers will acknowledge the report, investigate it, and coordinate disc
 
 ## Supported versions
 
+| Version | Status |
+| --- | --- |
+| 3.0.x | Supported; security fixes land here first |
+| 2.2.x | Security fixes only for the newest 2.2.x release, on a best-effort basis until 3.1.0 |
+| < 2.2 | Not supported |
+
 Security fixes are prioritized for the latest maintained release. When possible, upgrade to the latest BTrace release before reporting a suspected vulnerability.

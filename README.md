@@ -21,7 +21,7 @@ BTrace dynamically instruments running Java applications to inject tracing code 
 
 ### Supported Java Versions
 
-BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). See the [migration guide](docs/Migration-2.x-to-3.0.md) for details on upgrading from BTrace 2.x.
+BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). See the [migration guide](docs/Migration-2.x-to-3.0.md) for details on upgrading from BTrace 2.x and the [3.0.0 release notes](.github/release-notes/v3.0.0.md) for everything that changed.
 
 ---
 
