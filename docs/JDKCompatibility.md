@@ -8,19 +8,22 @@ across diverse runtime environments.
 The CI pipeline runs integration tests against the following JDK versions on every pull request
 and push to `develop`:
 
-| JDK Version | SDKMan Identifier | Distribution | Status |
-|-------------|-------------------|--------------|--------|
-| 8 | `8.0.492-tem` | Eclipse Temurin | Supported (LTS) — deprecated target, removed in 4.0 |
-| 11 | `11.0.31-tem` | Eclipse Temurin | Supported (LTS) — minimum build JDK; deprecated target, removed in 4.0 |
-| 17 | `17.0.19-tem` | Eclipse Temurin | Supported (LTS) |
-| 21 | `21.0.11-tem` | Eclipse Temurin | Supported (LTS) |
-| 25 | `25.0.3-tem` | Eclipse Temurin | Supported (LTS) |
+| JDK Version | How CI installs it | Distribution | Status |
+|-------------|--------------------|--------------|--------|
+| 8 | lane spec `8` → newest 8 GA build at run time (Temurin preferred; `scripts/resolve-sdkman-java.sh`) | Eclipse Temurin | Supported (LTS) — deprecated target, removed in 4.0 |
+| 11 | lane spec `11` → newest 11 GA build at run time (Temurin preferred; `scripts/resolve-sdkman-java.sh`) | Eclipse Temurin | Supported (LTS) — minimum build JDK; deprecated target, removed in 4.0 |
+| 17 | lane spec `17` → newest 17 GA build at run time (Temurin preferred; `scripts/resolve-sdkman-java.sh`) | Eclipse Temurin | Supported (LTS) |
+| 21 | lane spec `21` → newest 21 GA build at run time (Temurin preferred; `scripts/resolve-sdkman-java.sh`) | Eclipse Temurin | Supported (LTS) |
+| 25 | lane spec `25` → newest 25 GA build at run time (Temurin preferred; `scripts/resolve-sdkman-java.sh`) | Eclipse Temurin | Supported (LTS) |
 | 27 | lane spec `27` → newest 27 GA build at run time (Temurin, else java.net, else Oracle; `scripts/resolve-sdkman-java.sh`) | GA 2026-09-15 | Supported — the newest GA release |
 | 28 (EA) | lane spec `28-ea` → Temurin early-access build via `actions/setup-java` (SDKMAN publishes java.net EA builds late and retires them at GA) | Temurin Early Access | Experimental — tracked for future readiness; exercises the ClassFile API instrumentation backend (class-file major 72) |
 
-Version identifiers are checked every Monday via
-[`.github/workflows/update-jdk-versions.yml`](../.github/workflows/update-jdk-versions.yml)
-using the SDKMan API; a pull request is opened automatically when a newer version is available.
+No lane pins a build. SDKMan drops superseded builds (`sdk list java` shows only `25.0.4-tem`
+for 25 once it ships, and `27.ea.31-open` was retired at 27 GA), so a pinned identifier fails
+`sdk install` until someone bumps it; resolving the newest GA build of each major at run time
+removes that failure mode. [`.github/workflows/update-jdk-versions.yml`](../.github/workflows/update-jdk-versions.yml)
+still runs every Monday but only rewrites pinned `-tem` and `N.ea.M-open` entries, of which there
+are none left.
 
 ## Distribution Support Policy
 

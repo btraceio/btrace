@@ -29,13 +29,9 @@ jobs:
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'test:v2-protocol'))
     strategy:
       matrix:
-        include:
-          - java: 11
-            sdk: 11.0.31-tem
-          - java: 17
-            sdk: 17.0.19-tem
-          - java: 21
-            sdk: 21.0.11-tem
+        # Installed as the newest GA build of the major on SDKMAN (scripts/resolve-sdkman-java.sh);
+        # pinned builds are retired by SDKMAN when the next patch release ships.
+        java: [ 11, 17, 21 ]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -80,7 +76,9 @@ jobs:
         run: |
           curl -s "https://get.sdkman.io" | bash
           source "$HOME/.sdkman/bin/sdkman-init.sh"
-          echo 'n' | sdk install java ${{ matrix.sdk }}
+          JAVA_ID=$(scripts/resolve-sdkman-java.sh "${{ matrix.java }}")
+          echo "JDK ${{ matrix.java }} -> SDKMAN java ${JAVA_ID}"
+          echo 'n' | sdk install java "${JAVA_ID}"
 
       - name: Run V2 Protocol Tests
         run: |

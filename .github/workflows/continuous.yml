@@ -100,11 +100,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Full SDKMAN identifiers are installed as is and `<major>` resolves to the newest GA build of
-        # that major at run time (scripts/resolve-sdkman-java.sh), so the newest-GA lane never pins a
-        # build that SDKMAN later retires. `<major>-ea` lanes are Temurin early-access builds from
-        # actions/setup-java: SDKMAN publishes java.net EA builds late and retires them at GA.
-        java: [ 8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem, 25.0.3-tem, '27', '28-ea' ]
+        # `<major>` resolves to the newest GA build of that major on SDKMAN at run time
+        # (scripts/resolve-sdkman-java.sh, Temurin preferred). Lanes are never pinned to a build:
+        # SDKMAN drops superseded builds (`sdk list java` shows only 25.0.4-tem for 25 once it ships;
+        # 27.ea.31-open was retired at 27 GA), so a pin fails `sdk install` until someone bumps it.
+        # `<major>-ea` lanes are Temurin early-access builds from actions/setup-java: SDKMAN
+        # publishes java.net EA builds late and retires them at GA.
+        java: [ '8', '11', '17', '21', '25', '27', '28-ea' ]
     env:
       # TEST_JAVA_HOME is exported by the "Prepare JDK" step once the target JDK is installed.
       # Runners are ephemeral, so the Testcontainers Ryuk reaper is unnecessary. Disabling it
@@ -144,7 +146,7 @@ jobs:
           fi
           echo "TEST_JAVA_HOME=${TARGET_JAVA_HOME}" >> "$GITHUB_ENV"
           "${TARGET_JAVA_HOME}/bin/java" -version
-          echo 'y' | sdk install java 11.0.31-tem
+          echo 'y' | sdk install java "$(scripts/resolve-sdkman-java.sh 11)"
       - name: Cache Gradle
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
