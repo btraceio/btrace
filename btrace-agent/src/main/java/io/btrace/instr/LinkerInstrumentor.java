@@ -32,15 +32,15 @@ import org.slf4j.LoggerFactory;
  * while invokedynamic is being linked.
  *
  * <p>For class-file versions above {@link AsmInstrumentationBackend#MAX_ASM_MAJOR_VERSION} (Java
- * 26+) ASM cannot parse the bytes; the guard is applied instead via {@code
+ * 28+) ASM cannot parse the bytes; the guard is applied instead via {@code
  * ClassFileApiLinkerGuard}, loaded reflectively to avoid a compile-time dependency on the {@code
  * java.lang.classfile} API in the Java-8-compiled main source set.
  */
 public final class LinkerInstrumentor {
   private static final Logger log = LoggerFactory.getLogger(LinkerInstrumentor.class);
 
-  // Lazily-loaded ClassFileApiLinkerGuard.addGuard(byte[]) for JDK 26+ class files.
-  // Not initialized at static-init time: on JDK 8-25 this path is never reached (linkCallSite
+  // Lazily-loaded ClassFileApiLinkerGuard.addGuard(byte[]) for JDK 28+ class files.
+  // Not initialized at static-init time: on JDK 8-27 this path is never reached (linkCallSite
   // class-file major is always <= MAX_ASM_MAJOR_VERSION), so we avoid an unnecessary JAR read
   // and defineClass() failure that would delay the first class transformation on slow CI machines.
   private static volatile Method classFileAddGuard;

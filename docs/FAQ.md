@@ -826,12 +826,12 @@ Service mesh telemetry and BTrace serve different purposes:
 Use both together for comprehensive observability.
 
 ### How do I contribute to BTrace?
-1. Sign the [Oracle Contributor Agreement](https://oca.opensource.oracle.com/)
-2. Fork the [repository](https://github.com/btraceio/btrace)
-3. Create a feature branch
-4. Submit a pull request
+1. Fork the [repository](https://github.com/btraceio/btrace)
+2. Create a feature branch
+3. Submit a pull request
 
-See [Contributing Guide](../README.md#contributing) for details.
+Contributions are accepted under the Apache License 2.0; no contributor agreement is required.
+See the [Contributing Guide](../CONTRIBUTING.md) for details.
 
 ### Where can I find more examples?
 - **Sample scripts**: `btrace-dist/src/main/resources/samples/` (50+ examples)

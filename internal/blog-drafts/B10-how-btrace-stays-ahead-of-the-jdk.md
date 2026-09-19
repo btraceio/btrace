@@ -13,15 +13,15 @@ under how far back it keeps investing on the other end of the version spectrum.
 
 ASM parses class files by major version, and each ASM release only knows about class file versions
 that existed when it shipped. BTrace 3.0 pins ASM 9.10.1, and the ceiling it codes against
-(`AsmInstrumentationBackend.MAX_ASM_MAJOR_VERSION`) is class file major version **69**, which
-corresponds to Java 25. Hand ASM a class file it doesn't know — Java 26 or newer, major version 70
-and up — and it throws, full stop. That's not a bug to fix; it's an inherent
+(`AsmInstrumentationBackend.MAX_ASM_MAJOR_VERSION`) is class file major version **71**, which
+corresponds to Java 27, the newest version that ASM release knows. Hand ASM a class file it doesn't
+know — Java 28 or newer, major version 72 and up — and it throws, full stop. That's not a bug to fix; it's an inherent
 property of how ASM is built, and it means that without some alternative, an application compiled
 for a future JDK would simply be unparseable, and therefore un-instrumentable, by BTrace.
 
 The fix BTrace 3.0 ships is a small internal SPI called `InstrumentationBackend`, with two
 implementations behind it. `AsmInstrumentationBackend` is what's always been there — the default,
-full-featured path, handling everything up to class file version 69. Sitting alongside it is
+full-featured path, handling everything up to class file version 71. Sitting alongside it is
 `ClassFileApiBackend`, built on `java.lang.classfile.*`, the class file API the JDK itself
 standardized starting in JDK 24. Because that API ships as part of the JDK, it always understands
 the class file format of whatever JDK it's running on — which makes it exactly the kind of

@@ -173,7 +173,7 @@ test {
 
 tasks.register('classFileApiBackendTest', Test) {
     group = 'verification'
-    description = 'Runs ClassFileApiBackendTest on JDK 26 so version-70 fixtures execute.'
+    description = 'Runs ClassFileApiBackendTest on JDK 28 (EA) so version-72 fixtures execute.'
     dependsOn testClasses, compileTestProbes
     useJUnitPlatform()
     testClassesDirs = sourceSets.test.output.classesDirs
@@ -181,7 +181,7 @@ tasks.register('classFileApiBackendTest', Test) {
     shouldRunAfter test
     outputs.upToDateWhen { false }
     javaLauncher = javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(26))
+        languageVersion.set(JavaLanguageVersion.of(28))
     }
     filter {
         includeTestsMatching 'io.btrace.instr.ClassFileApiBackendTest'

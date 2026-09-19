@@ -158,6 +158,12 @@ jobs:
         with:
           ref: ${{ inputs.commit_sha }}
 
+      - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          java-version: 24
+          distribution: temurin
+
       - name: Set up JDK 21
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
@@ -272,7 +278,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem, 25.0.3-tem, 27.ea.31-open]
+        java: [8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem, 25.0.3-tem, 27-open, 27.ea.31-open]
     env:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
       # Runners are ephemeral, so the Testcontainers Ryuk reaper is unnecessary. Disabling it
@@ -286,6 +292,12 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          java-version: 24
+          distribution: temurin
 
       - name: Set up JDK 21 for Gradle
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
@@ -460,18 +472,16 @@ jobs:
         with:
           ref: ${{ env.RC_TAG }}
 
-      - name: Cache Java binaries
-        id: cache-java
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ${{ runner.tool_cache }}/Java_*
-          key: java-${{ runner.os }}-temurin-11
-
-      - name: Set up Java
-        if: steps.cache-java.outputs.cache-hit != 'true'
+      - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
-          java-version: 11
+          java-version: 24
+          distribution: temurin
+
+      - name: Set up JDK 21 (Gradle 9 requires Java 17+)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          java-version: 21
           distribution: temurin
 
       - name: Grant execute permission for gradlew
@@ -742,18 +752,16 @@ jobs:
         with:
           ref: ${{ inputs.dry_run == true && inputs.commit_sha || env.RC_TAG }}
 
-      - name: Cache Java binaries
-        id: cache-java
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ${{ runner.tool_cache }}/Java_*
-          key: java-${{ runner.os }}-temurin-11
-
-      - name: Set up Java
-        if: steps.cache-java.outputs.cache-hit != 'true'
+      - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
-          java-version: 11
+          java-version: 24
+          distribution: temurin
+
+      - name: Set up JDK 21 (Gradle 9 requires Java 17+)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          java-version: 21
           distribution: temurin
 
       - name: Grant execute permission for gradlew
@@ -803,6 +811,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.prepare-release.outputs.release_sha }}
+
+      - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          java-version: 24
+          distribution: temurin
 
       - name: Set up JDK 21
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
@@ -996,18 +1010,16 @@ jobs:
         with:
           ref: ${{ env.RELEASE_TAG }}
 
-      - name: Cache Java binaries
-        id: cache-java
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ${{ runner.tool_cache }}/Java_*
-          key: java-${{ runner.os }}-temurin-11
-
-      - name: Set up Java
-        if: steps.cache-java.outputs.cache-hit != 'true'
+      - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
-          java-version: 11
+          java-version: 24
+          distribution: temurin
+
+      - name: Set up JDK 21 (Gradle 9 requires Java 17+)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          java-version: 21
           distribution: temurin
 
       - name: Grant execute permission for gradlew

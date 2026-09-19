@@ -23,7 +23,7 @@ import io.btrace.core.annotations.OnMethod;
 import io.btrace.core.annotations.ProbeMethodName;
 
 /**
- * ENTRY probe on {@code Math.abs(int)}. On JDK 26+ the JDK class files have major version &ge; 70,
+ * ENTRY probe on {@code Math.abs(int)}. On JDK 28+ the JDK class files have major version &ge; 72,
  * so instrumentation goes through the ClassFile API backend.
  */
 @BTrace

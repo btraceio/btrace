@@ -73,7 +73,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Instrumentation backend for class file versions that ASM cannot parse (&gt; 69, i.e. Java 26+).
+ * Instrumentation backend for class file versions that ASM cannot parse (&gt; 71, i.e. Java 28+).
  * Uses the JDK ClassFile API ({@code java.lang.classfile.*}), available since JDK 24.
  *
  * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}, {@link Kind#CALL}, {@link

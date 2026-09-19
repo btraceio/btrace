@@ -13,7 +13,7 @@ BTrace performs bytecode instrumentation through a small internal SPI, `Instrume
 | Backend | Source set | Availability | Class file versions |
 |---------|-----------|--------------|---------------------|
 | `AsmInstrumentationBackend` | `src/main/java` (Java 8) | Always | ≤ 69 (up to Java 25) |
-| `ClassFileApiBackend` | `src/main/java24` (Java 24) | Agent running on JDK 24+ | > 69 (Java 26+) |
+| `ClassFileApiBackend` | `src/main/java24` (Java 24) | Agent running on JDK 24+ | > 71 (Java 28+) |
 
 All types live in the `io.btrace.instr` package of the **btrace-agent** module:
 
@@ -25,16 +25,16 @@ All types live in the `io.btrace.instr` package of the **btrace-agent** module:
 
 ## Why: the ASM Ceiling
 
-BTrace's instrumentation pipeline is built on ASM. ASM can only parse class files up to a major version it explicitly knows about and throws when handed anything newer, so every new Java release used to need an ASM upgrade before BTrace could instrument it. BTrace fixes the ASM backend's ceiling at class file major version **69 (Java 25)** and routes anything newer to the ClassFile API backend:
+BTrace's instrumentation pipeline is built on ASM. ASM can only parse class files up to a major version it explicitly knows about and throws when handed anything newer, so every new Java release used to need an ASM upgrade before BTrace could instrument it. The ASM backend's ceiling is the highest version the bundled ASM (9.10.1, `settings.gradle`) parses, class file major version **71 (Java 27)**; anything newer is routed to the ClassFile API backend:
 
 ```java
 /** Highest class file major version handled by the ASM backend (see class javadoc). */
-static final int MAX_ASM_MAJOR_VERSION = 69; // Java 25
+static final int MAX_ASM_MAJOR_VERSION = 71; // Java 27
 ```
 
-The bundled ASM (9.10.1, `settings.gradle`) itself defines `V26 = 70` and `V27 = 71`, so the ceiling is a routing decision rather than the parser's hard limit: it keeps Java 26+ class files on the backend that does not depend on ASM keeping pace with the JDK.
+The constant is bumped together with the ASM dependency, so the ClassFile API backend always covers the JDK versions ahead of the current ASM release (at the time of writing: JDK 28 early-access builds).
 
-Without an alternative backend, an application compiled for Java 26+ (class file major version 70+) could not be instrumented at all. The JDK ClassFile API (`java.lang.classfile.*`, standardized in JDK 24) always understands the class file format of the JDK it ships with, so it provides a forward-compatible path for such classes.
+Without an alternative backend, an application compiled for a Java release newer than the bundled ASM (currently Java 28+, class file major version 72+) could not be instrumented at all. The JDK ClassFile API (`java.lang.classfile.*`, standardized in JDK 24) always understands the class file format of the JDK it ships with, so it provides a forward-compatible path for such classes.
 
 ## The SPI
 

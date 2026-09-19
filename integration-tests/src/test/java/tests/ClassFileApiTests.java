@@ -33,13 +33,13 @@ import org.junit.jupiter.api.Test;
 import tests.harness.Completion;
 
 /**
- * Integration tests for BTrace probe kinds that exercise the ClassFile API backend on JDK 26+.
+ * Integration tests for BTrace probe kinds that exercise the ClassFile API backend on JDK 28+.
  *
  * <p>The target app ({@code resources.MainJdkApi}) repeatedly calls JDK APIs with stable bytecode
- * shapes. On JDK 26+ the JDK class files have class-file major version &ge; 70, so instrumentation
+ * shapes. On JDK 28+ the JDK class files have class-file major version &ge; 72, so instrumentation
  * of those JDK classes goes through the ClassFile API backend. On older JDKs the same tests run via
  * the ASM backend for the simple Math probes. The broader smoke test asserts ClassFile API backend
- * coverage and therefore requires a JDK 26+ target runtime.
+ * coverage and therefore requires a JDK 28+ target runtime.
  */
 public class ClassFileApiTests extends RuntimeTest {
   @BeforeAll
@@ -108,7 +108,7 @@ public class ClassFileApiTests extends RuntimeTest {
   @DisplayName("ClassFile API: smoke coverage for high-risk probe families")
   public void testFeatureSmoke() throws Exception {
     assumeTrue(
-        targetJavaMajor() >= 26, "ClassFile API backend smoke requires a JDK 26+ target runtime");
+        targetJavaMajor() >= 28, "ClassFile API backend smoke requires a JDK 28+ target runtime");
     timeout = 5000L;
     testDynamic(
         "resources.MainJdkApi",

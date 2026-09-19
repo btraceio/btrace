@@ -32,7 +32,7 @@ shell-escaped command, exit code, filtered result lines, and complete command ou
 | Full distribution | `./gradlew :btrace-dist:build` | ZIP, TGZ, SDKMAN, DEB, and RPM tasks pass |
 | Integration matrix | `./gradlew -Pintegration :integration-tests:test` | Pass after the distribution build on every target JDK |
 
-The JDK matrix is Java 8, 11, 17, 21, 25, and the configured OpenJDK early-access build. In each
+The JDK matrix is Java 8, 11, 17, 21, 25, 27, and the configured OpenJDK early-access build. In each
 lane, `scripts/verify-jdk-warning.sh` runs the real BTrace warning code twice in one target JVM:
 
 - Java 8 and 11 must emit exactly one Java-version deprecation warning.

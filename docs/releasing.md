@@ -47,7 +47,7 @@ The release workflow performs these steps:
 
 1. **Validation**: Verifies inputs, checks tag doesn't exist
 2. **Build & Test**: Runs full build and unit tests
-3. **Integration Tests**: Tests on JDK 8, 11, 17, 21, 25, and the configured OpenJDK EA build
+3. **Integration Tests**: Tests on JDK 8, 11, 17, 21, 25, 27, and the configured OpenJDK EA build
 4. **Prepare Release**: Creates/updates release branch, updates version, creates tag
 5. **Stage to Maven Central**: Uploads artifacts to staging (requires manual release)
 6. **⏸️ MANUAL CHECKPOINT**: You must release artifacts via Central Portal

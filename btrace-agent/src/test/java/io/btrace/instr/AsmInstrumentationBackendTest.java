@@ -27,8 +27,9 @@ class AsmInstrumentationBackendTest {
     AsmInstrumentationBackend backend = new AsmInstrumentationBackend();
     assertTrue(backend.supports(52)); // Java 8
     assertTrue(backend.supports(65)); // Java 21
-    assertTrue(backend.supports(69)); // Java 25 — ASM ceiling
-    assertFalse(backend.supports(70)); // Java 26 — not yet
+    assertTrue(backend.supports(69)); // Java 25
+    assertTrue(backend.supports(71)); // Java 27 — ASM ceiling
+    assertFalse(backend.supports(72)); // Java 28 — ClassFile API backend
     assertFalse(backend.supports(100));
   }
 
