@@ -1,12 +1,14 @@
 # BTrace Docker Images
 
-Official Docker images for [BTrace](https://github.com/btraceio/btrace) - a safe, dynamic tracing tool for the Java platform.
+Official container images for [BTrace](https://github.com/btraceio/btrace) - a safe, dynamic tracing tool for the Java platform.
+
+Images are published to the GitHub Container Registry as `ghcr.io/btraceio/btrace` by the release workflow; pull them with `docker pull ghcr.io/btraceio/btrace:3.0.0` (no login needed for the public package).
 
 ## Quick Start
 
 ```dockerfile
 # Copy BTrace into your application image
-FROM btrace/btrace:3.0.0 AS btrace
+FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
 FROM bellsoft/liberica-openjdk-debian:11-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
@@ -17,7 +19,7 @@ ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:/opt/btrace/bin"
 
 ## Image Variants
 
-### `btrace/btrace:latest` (~25MB)
+### `ghcr.io/btraceio/btrace:latest` (~25MB)
 **Debian-based** - Full distribution with all tools and shell access
 
 - **Base:** OpenJDK 11 JDK on Debian Slim
@@ -26,10 +28,10 @@ ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:/opt/btrace/bin"
 - **Best for:** Development environments, interactive troubleshooting
 
 ```dockerfile
-FROM btrace/btrace:3.0.0
+FROM ghcr.io/btraceio/btrace:3.0.0
 ```
 
-### `btrace/btrace:latest-alpine` (~15MB)
+### `ghcr.io/btraceio/btrace:latest-alpine` (~15MB)
 **Alpine-based** - Smaller footprint for cloud environments
 
 - **Base:** Alpine Linux with OpenJDK 11
@@ -38,10 +40,10 @@ FROM btrace/btrace:3.0.0
 - **Best for:** Production sidecars, cloud deployments
 
 ```dockerfile
-FROM btrace/btrace:3.0.0-alpine
+FROM ghcr.io/btraceio/btrace:3.0.0-alpine
 ```
 
-### `btrace/btrace:latest-distroless` (~10MB)
+### `ghcr.io/btraceio/btrace:latest-distroless` (~10MB)
 **Distroless** - Minimal attack surface for security-focused deployments
 
 - **Base:** Google Distroless Java 11
@@ -50,7 +52,7 @@ FROM btrace/btrace:3.0.0-alpine
 - **Best for:** Production applications using `-javaagent`
 
 ```dockerfile
-FROM btrace/btrace:3.0.0-distroless AS btrace
+FROM ghcr.io/btraceio/btrace:3.0.0-distroless AS btrace
 FROM gcr.io/distroless/java11
 COPY --from=btrace /opt/btrace/libs /opt/btrace/libs
 ```
@@ -62,7 +64,7 @@ COPY --from=btrace /opt/btrace/libs /opt/btrace/libs
 Most common - copy BTrace into your application image:
 
 ```dockerfile
-FROM btrace/btrace:3.0.0 AS btrace
+FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
 FROM bellsoft/liberica-openjdk-debian:11-cds
 WORKDIR /app
 
@@ -98,7 +100,7 @@ spec:
     image: myapp:latest
 
   - name: btrace-sidecar
-    image: btrace/btrace:3.0.0-alpine
+    image: ghcr.io/btraceio/btrace:3.0.0-alpine
     command: ["/bin/sh", "-c", "while true; do sleep 30; done"]
     volumeMounts:
     - name: btrace-scripts
@@ -121,7 +123,7 @@ kubectl exec myapp-with-btrace -c btrace-sidecar -- \
 Extend BTrace image for development:
 
 ```dockerfile
-FROM btrace/btrace:3.0.0-alpine
+FROM ghcr.io/btraceio/btrace:3.0.0-alpine
 
 COPY target/myapp.jar /app/myapp.jar
 COPY scripts/*.btrace /scripts/
@@ -135,7 +137,7 @@ CMD ["-v", "-o", "/tmp/btrace-output.txt", "/app/myapp.jar"]
 Minimal image with BTrace agent:
 
 ```dockerfile
-FROM btrace/btrace:3.0.0-distroless AS btrace
+FROM ghcr.io/btraceio/btrace:3.0.0-distroless AS btrace
 FROM gcr.io/distroless/java11-debian11
 WORKDIR /app
 
@@ -162,7 +164,7 @@ services:
       - "8080:8080"
 
   btrace:
-    image: btrace/btrace:3.0.0-alpine
+    image: ghcr.io/btraceio/btrace:3.0.0-alpine
     network_mode: "service:myapp"
     pid: "service:myapp"
     volumes:
@@ -234,7 +236,7 @@ kubectl create configmap btrace-scripts \
 ### Performance Profiling
 
 ```dockerfile
-FROM btrace/btrace:3.0.0 AS btrace
+FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
 FROM bellsoft/liberica-openjdk-debian:11-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
@@ -253,13 +255,13 @@ ENTRYPOINT ["btracer", \
 
 1. **Use specific version tags in production:**
    ```dockerfile
-   FROM btrace/btrace:3.0.0  # Good
-   FROM btrace/btrace:latest  # Avoid in production
+   FROM ghcr.io/btraceio/btrace:3.0.0  # Good
+   FROM ghcr.io/btraceio/btrace:latest  # Avoid in production
    ```
 
 2. **Multi-stage builds minimize size:**
    ```dockerfile
-   FROM btrace/btrace:3.0.0 AS btrace
+   FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
    FROM your-app-image
    COPY --from=btrace /opt/btrace /opt/btrace
    ```
@@ -295,7 +297,7 @@ ENTRYPOINT ["btracer", \
 ### "Cannot attach to process"
 ```bash
 # Ensure process namespace sharing
-docker run --pid=container:target-container btrace/btrace:latest
+docker run --pid=container:target-container ghcr.io/btraceio/btrace:latest
 
 # Kubernetes: verify shareProcessNamespace
 kubectl get pod myapp -o yaml | grep shareProcessNamespace
@@ -330,9 +332,9 @@ ENV JAVA_OPTS="--add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAME
 # Or build manually
 VERSION=3.0.0-SNAPSHOT  # Set this to your BTrace version
 cd docker
-docker build -t btrace/btrace:local -f Dockerfile ../btrace-dist/build/resources/main/v${VERSION}
-docker build -t btrace/btrace:local-alpine -f Dockerfile.alpine ../btrace-dist/build/resources/main/v${VERSION}
-docker build -t btrace/btrace:local-distroless -f Dockerfile.distroless ../btrace-dist/build/resources/main/v${VERSION}
+docker build -t ghcr.io/btraceio/btrace:local -f Dockerfile ../btrace-dist/build/resources/main/v${VERSION}
+docker build -t ghcr.io/btraceio/btrace:local-alpine -f Dockerfile.alpine ../btrace-dist/build/resources/main/v${VERSION}
+docker build -t ghcr.io/btraceio/btrace:local-distroless -f Dockerfile.distroless ../btrace-dist/build/resources/main/v${VERSION}
 ```
 
 ## Supported Platforms
@@ -351,7 +353,7 @@ BTrace is licensed under the Apache License, Version 2.0.
 - **GitHub:** https://github.com/btraceio/btrace
 - **Documentation:** https://github.com/btraceio/btrace/tree/develop/docs
 - **Issues:** https://github.com/btraceio/btrace/issues
-- **Docker Hub:** https://hub.docker.com/r/btrace/btrace
+- **Container images (GitHub Container Registry):** https://github.com/btraceio/btrace/pkgs/container/btrace
 
 ## Support
 

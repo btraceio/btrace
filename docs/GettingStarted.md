@@ -624,7 +624,7 @@ docker exec -it <container-id> btrace <PID> script.java
 **Example Dockerfile with official BTrace images:**
 ```dockerfile
 # Option 1: Copy BTrace into your application image (recommended)
-FROM btrace/btrace:latest AS btrace
+FROM ghcr.io/btraceio/btrace:latest AS btrace
 FROM bellsoft/liberica-openjdk-debian:11-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
@@ -696,7 +696,7 @@ spec:
         image: myapp:latest
 
       - name: btrace
-        image: btrace/btrace:latest-alpine  # Official BTrace Alpine image
+        image: ghcr.io/btraceio/btrace:latest-alpine  # Official BTrace Alpine image
         command: ["/bin/sh", "-c", "while true; do sleep 30; done"]
         volumeMounts:
         - name: btrace-scripts

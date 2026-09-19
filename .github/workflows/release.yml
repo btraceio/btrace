@@ -7,6 +7,7 @@
 # 4. Stages artifacts to Maven Central (requires manual release)
 # 5. Waits for Maven Central availability (up to 30 minutes)
 # 6. Creates GitHub release with artifacts
+# 6b. Publishes the container images to ghcr.io
 # 7. Updates SDKMan
 # 8. Updates version numbers for next development cycle
 # 9. Manages milestones
@@ -997,6 +998,94 @@ jobs:
           grep -E '\.rpm$' github-release-assets.log
 
   # ============================================================
+  # Job 7b: Publish container images to GitHub Container Registry
+  # ============================================================
+  publish-container-images:
+    name: Publish Container Images
+    needs: [prepare-release, create-github-release]
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run != true }}
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/btrace
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.prepare-release.outputs.release_sha }}
+
+      - name: Download release distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: release-distributions
+          path: release-distributions
+
+      - name: Prepare the image build context from the candidate distribution
+        run: |
+          # Same layout release-smoke builds its verification image from: the extracted
+          # distribution under btrace/ (bin/, libs/, ...) plus the entrypoint script.
+          mkdir -p release-container/btrace
+          unzip -q "release-distributions/btrace-v${RELEASE_VERSION}-bin.zip" -d release-container/btrace
+          cp docker/docker-entrypoint.sh release-container/
+          test -f release-container/btrace/libs/btrace.jar
+          test -x release-container/btrace/bin/btrace
+
+      - name: Set up QEMU (linux/arm64 builds)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the three image variants
+        run: |
+          image="${IMAGE_REPOSITORY,,}"   # registry paths must be lowercase
+          for variant in "" "-alpine" "-distroless"; do
+            case "${variant}" in
+              "")          dockerfile=docker/Dockerfile ;;
+              -alpine)     dockerfile=docker/Dockerfile.alpine ;;
+              -distroless) dockerfile=docker/Dockerfile.distroless ;;
+            esac
+            docker buildx build \
+              --platform linux/amd64,linux/arm64 \
+              --build-arg "BTRACE_VERSION=${RELEASE_VERSION}" \
+              --file "${dockerfile}" \
+              --tag "${image}:${RELEASE_VERSION}${variant}" \
+              --tag "${image}:latest${variant}" \
+              --provenance=false \
+              --push \
+              release-container
+          done
+
+      - name: Verify the published manifests and OCI labels
+        run: |
+          image="${IMAGE_REPOSITORY,,}"
+          for tag in "${RELEASE_VERSION}" "${RELEASE_VERSION}-alpine" "${RELEASE_VERSION}-distroless" \
+                     latest latest-alpine latest-distroless; do
+            docker buildx imagetools inspect "${image}:${tag}" | tee "manifest-${tag}.log"
+            grep -q 'linux/amd64' "manifest-${tag}.log"
+            grep -q 'linux/arm64' "manifest-${tag}.log"
+          done
+          docker pull --quiet "${image}:${RELEASE_VERSION}"
+          version_label=$(docker image inspect \
+            --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' \
+            "${image}:${RELEASE_VERSION}")
+          license_label=$(docker image inspect \
+            --format '{{ index .Config.Labels "org.opencontainers.image.licenses" }}' \
+            "${image}:${RELEASE_VERSION}")
+          test "${version_label}" = "${RELEASE_VERSION}"
+          test "${license_label}" = "Apache-2.0"
+          echo "Published ${image}:{${RELEASE_VERSION},latest}{,-alpine,-distroless} for linux/amd64 and linux/arm64"
+
+  # ============================================================
   # Job 8: Update SDKMan
   # ============================================================
   update-sdkman:
@@ -1196,7 +1285,7 @@ jobs:
   # ============================================================
   summary:
     name: Release Summary
-    needs: [validate, build-and-test, integration-tests, prepare-release, stage-maven, wait-for-maven, publish-gradle-plugins, update-jbang-catalog, build-distributions, release-smoke, finalize-tag, create-github-release, update-sdkman, update-milestones]
+    needs: [validate, build-and-test, integration-tests, prepare-release, stage-maven, wait-for-maven, publish-gradle-plugins, update-jbang-catalog, build-distributions, release-smoke, finalize-tag, create-github-release, publish-container-images, update-sdkman, update-milestones]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -1257,6 +1346,7 @@ jobs:
           echo "| GitHub Release | ${{ needs.create-github-release.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| SDKMan | ${{ needs.update-sdkman.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| JBang Catalog | ${{ needs.update-jbang-catalog.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Container images (ghcr.io) | ${{ needs.publish-container-images.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Milestones | ${{ needs.update-milestones.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================

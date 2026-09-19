@@ -65,7 +65,7 @@ script compilation; for fat agents, the Gradle plugin is the supported path.
 
 Once you've got a jar (fat or otherwise), BTrace's official Docker images give you three variants
 tuned for three different jobs, and the size difference between them is the whole point. The full
-image (`btrace/btrace:3.0.0`, ~25MB) ships the entire toolchain — shell, samples, docs — and is
+image (`ghcr.io/btraceio/btrace:3.0.0`, ~25MB) ships the entire toolchain — shell, samples, docs — and is
 built for development and interactive debugging. The alpine variant (~15MB) trims the OS down but
 keeps the full toolchain, which makes it the right choice for a Kubernetes sidecar that needs to
 run `btrace` and `jps` interactively but doesn't need the extra samples and docs weight. The

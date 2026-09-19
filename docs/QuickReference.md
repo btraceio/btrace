@@ -10,7 +10,7 @@ A cheat sheet for experienced users. For step-by-step instructions, see [Getting
 |--------|---------|
 | JBang | `jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json && jbang btrace@btraceio <PID> script.java` |
 | SDKMan | `sdk install btrace` |
-| Docker | `docker pull btrace/btrace` |
+| Docker | `docker pull ghcr.io/btraceio/btrace` |
 | Manual | [Download latest release](https://github.com/btraceio/btrace/releases/latest) |
 
 **Java support:** BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).

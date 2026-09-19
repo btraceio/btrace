@@ -769,8 +769,8 @@ task buildDockerImage(type: Exec, dependsOn: buildDockerContext) {
     def buildArgs = [
         'docker', 'build',
         '--build-arg', "BTRACE_VERSION=${project.version}",
-        '-t', "btrace/btrace:${project.version}",
-        '-t', "btrace/btrace:latest",
+        '-t', "ghcr.io/btraceio/btrace:${project.version}",
+        '-t', "ghcr.io/btraceio/btrace:latest",
         '-f', 'Dockerfile',
         layout.buildDirectory.dir("docker-context").get().asFile.absolutePath
     ]
@@ -799,8 +799,8 @@ task buildDockerImageAlpine(type: Exec, dependsOn: buildDockerContext) {
     def buildArgs = [
         'docker', 'build',
         '--build-arg', "BTRACE_VERSION=${project.version}",
-        '-t', "btrace/btrace:${project.version}-alpine",
-        '-t', "btrace/btrace:latest-alpine",
+        '-t', "ghcr.io/btraceio/btrace:${project.version}-alpine",
+        '-t', "ghcr.io/btraceio/btrace:latest-alpine",
         '-f', 'Dockerfile.alpine',
         layout.buildDirectory.dir("docker-context").get().asFile.absolutePath
     ]
@@ -829,8 +829,8 @@ task buildDockerImageDistroless(type: Exec, dependsOn: buildDockerContext) {
     def buildArgs = [
         'docker', 'build',
         '--build-arg', "BTRACE_VERSION=${project.version}",
-        '-t', "btrace/btrace:${project.version}-distroless",
-        '-t', "btrace/btrace:latest-distroless",
+        '-t', "ghcr.io/btraceio/btrace:${project.version}-distroless",
+        '-t', "ghcr.io/btraceio/btrace:latest-distroless",
         '-f', 'Dockerfile.distroless',
         layout.buildDirectory.dir("docker-context").get().asFile.absolutePath
     ]

@@ -31,9 +31,9 @@ BTrace publishes three image variants, each for a different job
 
 | Variant | Base image (from the Dockerfile) | Size | Ships | Best for |
 |---|---|---|---|---|
-| `btrace/btrace:3.0.0` | `bellsoft/liberica-openjdk-debian:11.0.32.1-cds` | ~25MB | Full toolchain, shell, samples | Development, interactive debugging |
-| `btrace/btrace:3.0.0-alpine` | `alpine:3.24` + `openjdk11-jdk` | ~15MB | Full toolchain, smaller OS | Kubernetes sidecars, resource-constrained environments |
-| `btrace/btrace:3.0.0-distroless` | `gcr.io/distroless/java11-debian11` | ~10MB | Runtime JARs only — **no shell, no scripts** | Production apps using `-javaagent` |
+| `ghcr.io/btraceio/btrace:3.0.0` | `bellsoft/liberica-openjdk-debian:11.0.32.1-cds` | ~25MB | Full toolchain, shell, samples | Development, interactive debugging |
+| `ghcr.io/btraceio/btrace:3.0.0-alpine` | `alpine:3.24` + `openjdk11-jdk` | ~15MB | Full toolchain, smaller OS | Kubernetes sidecars, resource-constrained environments |
+| `ghcr.io/btraceio/btrace:3.0.0-distroless` | `gcr.io/distroless/java11-debian11` | ~10MB | Runtime JARs only — **no shell, no scripts** | Production apps using `-javaagent` |
 
 > **What just happened?** Those base images and sizes come straight from
 > [`docker/Dockerfile`](../../docker/Dockerfile), [`docker/Dockerfile.alpine`](../../docker/Dockerfile.alpine),
@@ -53,7 +53,7 @@ series' demo app
 ([full Dockerfile: demo/Dockerfile.k8s-sidecar-demo](demo/Dockerfile.k8s-sidecar-demo)):
 
 ```dockerfile
-FROM btrace/btrace:3.0.0 AS btrace
+FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
 FROM bellsoft/liberica-openjdk-debian:11.0.32.1-cds
 
 WORKDIR /app
@@ -138,7 +138,7 @@ spec:
       image: demo-app-with-btrace:local # <-- replace with your registry/tag
 
     - name: btrace-sidecar
-      image: btrace/btrace:3.0.0-alpine
+      image: ghcr.io/btraceio/btrace:3.0.0-alpine
       command: ["/bin/sh", "-c", "while true; do sleep 30; done"]
       securityContext:
         capabilities:
@@ -204,7 +204,7 @@ your application's own build, not BTrace's):
 ```dockerfile
 # ... an earlier "build" stage that produces /app/target/myapp.jar goes here ...
 
-FROM btrace/btrace:3.0.0-distroless AS btrace
+FROM ghcr.io/btraceio/btrace:3.0.0-distroless AS btrace
 FROM gcr.io/distroless/java11-debian11
 WORKDIR /app
 

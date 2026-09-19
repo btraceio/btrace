@@ -56,6 +56,7 @@ The release workflow performs these steps:
 9. **Release Smoke**: Exercises acquisition, first-trace, prepared, migration, extension, protocol,
    archive, container, version, and license paths against the release candidate
 10. **GitHub Release**: Creates release with artifacts and changelog
+10b. **Container images**: Builds the Debian, Alpine, and distroless variants for `linux/amd64` and `linux/arm64` from the candidate distribution and pushes them to `ghcr.io/btraceio/btrace` (tags `<version>`, `latest`, `-alpine`, `-distroless`) using the workflow's `GITHUB_TOKEN`; no registry account or secret is needed
 11. **SDKMan Update**: Announces new version to SDKMan
 12. **JBang**: Verifies both the Maven coordinate and catalog alias
 13. **Version Bumps**: Updates develop and release branch to next snapshots
@@ -149,6 +150,17 @@ The workflow uses these GitHub secrets:
 - `GPG_SIGNING_PWD`: GPG key passphrase
 
 Generate Central Portal tokens at: https://central.sonatype.com/account
+
+## Container images
+
+Images are published to the GitHub Container Registry by the `publish-container-images` job, not
+to Docker Hub (the `btrace` Docker Hub namespace belongs to an unrelated account). The job
+authenticates with the workflow's `GITHUB_TOKEN` (`packages: write`), so nothing has to be
+configured for a release. One-time setup after the first successful push: open the `btrace`
+package under https://github.com/orgs/btraceio/packages, change its visibility to **public**, and
+confirm it is linked to this repository (the `org.opencontainers.image.source` label links it
+automatically). Until the package is public, `docker pull ghcr.io/btraceio/btrace:<version>`
+requires a GitHub login.
 
 ## SDKMan
 
