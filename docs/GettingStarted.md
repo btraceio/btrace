@@ -14,7 +14,7 @@ BTrace is a safe, dynamic tracing tool for the Java platform. It allows you to d
 
 ## Prerequisites
 
-- Java 8 or higher. BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
+- Java 8 or higher. BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
 - Basic knowledge of Java programming
 - Target Java application running with appropriate permissions
 

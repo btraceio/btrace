@@ -69,7 +69,7 @@ This is the other half of the 3.0 story, and it's a first for the project: BTrac
 deprecation floor under the Java versions it targets. The policy, stated once so it can be repeated
 everywhere:
 
-> BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it
+> BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it
 > continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be
 > removed in the next major release (4.0).
 

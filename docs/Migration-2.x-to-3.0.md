@@ -100,7 +100,7 @@ BTrace 3.0 is licensed under the **Apache License, Version 2.0** (previously GPL
 
 ## Java Support Policy
 
-BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
+BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
 
 The warning is printed once per target JVM when the agent starts:
 

@@ -157,7 +157,7 @@ BTrace is an open-source project welcoming contributions. To contribute:
 ## Version Information
 
 - **Current Version**: Check [GitHub Releases](https://github.com/btraceio/btrace/releases/latest)
-- **Java Compatibility**: BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). See the [migration guide](Migration-2.x-to-3.0.md).
+- **Java Compatibility**: BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). See the [migration guide](Migration-2.x-to-3.0.md).
 - **License**: Apache License 2.0
 
 ## Documentation Feedback

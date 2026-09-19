@@ -73,7 +73,7 @@ The ClassFile API backend is BTrace investing in the newest end of the JDK spect
 of "staying ahead of the JDK" is BTrace pulling back from the oldest end, and 3.0 is the release
 that states this plainly for the first time:
 
-> BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it
+> BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it
 > continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be
 > removed in the next major release (4.0).
 

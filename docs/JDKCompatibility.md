@@ -15,7 +15,7 @@ and push to `develop`:
 | 17 | `17.0.19-tem` | Eclipse Temurin | Supported (LTS) |
 | 21 | `21.0.11-tem` | Eclipse Temurin | Supported (LTS) |
 | 25 | `25.0.3-tem` | Eclipse Temurin | Supported (LTS) |
-| 27 (EA) | `27.ea.31-open` | OpenJDK Early Access | Experimental — tracked for future readiness |
+| 27 | `27.ea.31-open` | OpenJDK Early Access build in CI; JDK 27 went GA on 2026-09-15 | Supported — the CI lane still runs the last EA build until SDKMAN publishes a Temurin 27 GA identifier (`scripts/update-jdk-versions.sh` only advances EA lanes, so add a `27.0.x-tem` lane by hand) |
 
 Version identifiers are checked every Monday via
 [`.github/workflows/update-jdk-versions.yml`](../.github/workflows/update-jdk-versions.yml)
