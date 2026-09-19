@@ -22,8 +22,8 @@ No lane pins a build. SDKMan drops superseded builds (`sdk list java` shows only
 for 25 once it ships, and `27.ea.31-open` was retired at 27 GA), so a pinned identifier fails
 `sdk install` until someone bumps it; resolving the newest GA build of each major at run time
 removes that failure mode. [`.github/workflows/update-jdk-versions.yml`](../.github/workflows/update-jdk-versions.yml)
-still runs every Monday but only rewrites pinned `-tem` and `N.ea.M-open` entries, of which there
-are none left.
+keeps running every Monday; it rewrites pinned `-tem` and `N.ea.M-open` entries, so it becomes
+active again as soon as a lane pins a build.
 
 ## Distribution Support Policy
 
