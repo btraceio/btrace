@@ -18,6 +18,7 @@ package io.btrace.agent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.btrace.core.ArgsMap;
@@ -27,6 +28,48 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class MainTest {
+  @Test
+  void commaSeparatedGrantListSurvivesArgumentSplitting() {
+    ArgsMap args = Main.parseAgentArgs("script=Foo.class,grant=NETWORK,THREADS,grantAll=false");
+
+    assertEquals("Foo.class", args.get("script"));
+    assertEquals("NETWORK,THREADS", args.get("grant"));
+    assertEquals("false", args.get("grantAll"));
+    assertNull(args.get("THREADS"));
+  }
+
+  @Test
+  void everyListValuedKeyContinuesAcrossCommas() {
+    ArgsMap args =
+        Main.parseAgentArgs(
+            "deny=FILE_WRITE,PROCESS,allowExtensions=a.b,c.d,denyExtensions=e,f,debug=true");
+
+    assertEquals("FILE_WRITE,PROCESS", args.get("deny"));
+    assertEquals("a.b,c.d", args.get("allowExtensions"));
+    assertEquals("e,f", args.get("denyExtensions"));
+    assertEquals("true", args.get("debug"));
+  }
+
+  @Test
+  void bareTokensStayKeysOutsideLists() {
+    ArgsMap plain = Main.parseAgentArgs("debug=true,help");
+    assertEquals("", plain.get("help"));
+
+    ArgsMap afterList = Main.parseAgentArgs("grant=NETWORK,help");
+    assertEquals("NETWORK", afterList.get("grant"));
+    assertEquals("", afterList.get("help"));
+
+    ArgsMap afterScalar = Main.parseAgentArgs("debug=true,THREADS");
+    assertEquals("", afterScalar.get("THREADS"));
+    assertNull(afterScalar.get("grant"));
+  }
+
+  @Test
+  void nullAndEmptyArgumentStringsParseWithoutLists() {
+    assertNull(Main.parseAgentArgs(null).get("grant"));
+    assertNull(Main.parseAgentArgs("").get("grant"));
+  }
+
   @Test
   void locateScriptsEmpty() {
     ArgsMap argsMap = new ArgsMap();

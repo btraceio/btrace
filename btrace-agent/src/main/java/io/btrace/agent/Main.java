@@ -84,6 +84,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -113,6 +114,12 @@ public final class Main {
   public static final int BTRACE_DEFAULT_PORT = 2020;
   private static final boolean AGENT_DEBUG = Boolean.getBoolean("btrace.agent.debug");
   private static final Pattern KV_PATTERN = Pattern.compile(",");
+  // Agent argument keys whose value is a comma-separated list. The javaagent argument string is
+  // itself comma-separated, so `grant=NETWORK,THREADS` arrives as the pair `grant=NETWORK` followed
+  // by the bare token `THREADS`; parseAgentArgs re-attaches such tokens to the preceding list.
+  private static final Set<String> LIST_VALUED_KEYS =
+      Collections.unmodifiableSet(
+          new HashSet<>(Arrays.asList(GRANT, DENY, ALLOW_EXTENSIONS, DENY_EXTENSIONS)));
   private static final Pattern BUNDLED_PROBE_NAME =
       Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*");
   private static final Set<String> JAVA_KEYWORDS =
@@ -869,11 +876,22 @@ public final class Main {
   }
 
   private static void loadArgs(String args) {
+    argMap = parseAgentArgs(args);
+  }
+
+  /**
+   * Parses the {@code -javaagent:btrace.jar=key=value,...} argument string. A bare token (no {@code
+   * =}) directly after a list-valued key such as {@code grant} continues that key's comma-separated
+   * list, so {@code grant=NETWORK,THREADS,grantAll=false} yields {@code grant=NETWORK,THREADS};
+   * {@code help} stays a key of its own.
+   */
+  static ArgsMap parseAgentArgs(String args) {
     if (args == null) {
       args = "";
     }
     String[] pairs = KV_PATTERN.split(args);
-    argMap = new ArgsMap();
+    ArgsMap map = new ArgsMap();
+    String listKey = null;
     for (String s : pairs) {
       int i = s.indexOf('=');
       String key, value = "";
@@ -882,11 +900,16 @@ public final class Main {
         if (i + 1 < s.length()) {
           value = s.substring(i + 1).trim();
         }
+      } else if (listKey != null && !HELP.equals(s.trim())) {
+        map.put(listKey, map.get(listKey) + "," + s.trim());
+        continue;
       } else {
         key = s;
       }
-      argMap.put(key, value);
+      map.put(key, value);
+      listKey = LIST_VALUED_KEYS.contains(key) ? key : null;
     }
+    return map;
   }
 
   private static void parseArgs() throws ClassNotFoundException {
