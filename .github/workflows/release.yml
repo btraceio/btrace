@@ -447,17 +447,22 @@ jobs:
             git checkout -b "${BRANCH}"
           fi
 
-      - name: Update version in build.gradle
+      - name: Update the project version
         run: |
           VERSION="${{ inputs.release_version }}"
-          sed -i "s/^\([[:space:]]*\)version = '.*'/\1version = '${VERSION}'/" build.gradle
-          echo "Updated version to ${VERSION}"
-          grep "version = " build.gradle
+          # `version = '...'` lives in build.gradle since c354f12b; 2.2.x release branches keep
+          # `project.version = '...'` in common.gradle. Edit whichever file the checkout carries.
+          VERSION_FILE=build.gradle
+          grep -qE "^[[:space:]]*version = '" build.gradle || VERSION_FILE=common.gradle
+          sed -i -E "s/^([[:space:]]*(project\.)?version = )'[^']*'/\1'${VERSION}'/" "${VERSION_FILE}"
+          echo "VERSION_FILE=${VERSION_FILE}" >> "$GITHUB_ENV"
+          echo "Updated version to ${VERSION} in ${VERSION_FILE}"
+          grep -E "^[[:space:]]*(project\.)?version = '" "${VERSION_FILE}"
 
       - name: Commit version change
         id: commit
         run: |
-          git add build.gradle
+          git add "${VERSION_FILE}"
           git commit -m "Release ${RELEASE_TAG}"
           SHA=$(git rev-parse HEAD)
           echo "sha=${SHA}" >> $GITHUB_OUTPUT
@@ -800,7 +805,13 @@ jobs:
         if: ${{ inputs.dry_run == true }}
         run: |
           VERSION="${{ inputs.release_version }}"
-          sed -i "s/^\([[:space:]]*\)version = '.*'/\1version = '${VERSION}'/" build.gradle
+          # `version = '...'` lives in build.gradle since c354f12b; 2.2.x release branches keep
+          # `project.version = '...'` in common.gradle. Edit whichever file the checkout carries.
+          VERSION_FILE=build.gradle
+          grep -qE "^[[:space:]]*version = '" build.gradle || VERSION_FILE=common.gradle
+          sed -i -E "s/^([[:space:]]*(project\.)?version = )'[^']*'/\1'${VERSION}'/" "${VERSION_FILE}"
+          echo "VERSION_FILE=${VERSION_FILE}" >> "$GITHUB_ENV"
+          grep -E "^[[:space:]]*(project\.)?version = '" "${VERSION_FILE}"
 
       - name: Build distribution packages from a clean tree
         run: |
@@ -1173,13 +1184,18 @@ jobs:
       - name: Update version in develop
         run: |
           NEXT_VERSION="${{ inputs.next_snapshot }}"
-          sed -i "s/^\([[:space:]]*\)version = '.*'/\1version = '${NEXT_VERSION}'/" build.gradle
-          echo "Updated develop to ${NEXT_VERSION}"
-          grep -E "^[[:space:]]*version = '" build.gradle
+          # `version = '...'` lives in build.gradle since c354f12b; 2.2.x release branches keep
+          # `project.version = '...'` in common.gradle. Edit whichever file the checkout carries.
+          VERSION_FILE=build.gradle
+          grep -qE "^[[:space:]]*version = '" build.gradle || VERSION_FILE=common.gradle
+          sed -i -E "s/^([[:space:]]*(project\.)?version = )'[^']*'/\1'${NEXT_VERSION}'/" "${VERSION_FILE}"
+          echo "VERSION_FILE=${VERSION_FILE}" >> "$GITHUB_ENV"
+          echo "Updated develop to ${NEXT_VERSION} in ${VERSION_FILE}"
+          grep -E "^[[:space:]]*(project\.)?version = '" "${VERSION_FILE}"
 
       - name: Commit and push
         run: |
-          git add build.gradle
+          git add "${VERSION_FILE}"
           git commit -m "Bump version to ${{ inputs.next_snapshot }} after ${RELEASE_TAG} release"
           git push origin develop
 
@@ -1219,13 +1235,18 @@ jobs:
       - name: Update version in release branch
         run: |
           NEXT_VERSION="${{ steps.next-version.outputs.version }}"
-          sed -i "s/^\([[:space:]]*\)version = '.*'/\1version = '${NEXT_VERSION}'/" build.gradle
-          echo "Updated release branch to ${NEXT_VERSION}"
-          grep -E "^[[:space:]]*version = '" build.gradle
+          # `version = '...'` lives in build.gradle since c354f12b; 2.2.x release branches keep
+          # `project.version = '...'` in common.gradle. Edit whichever file the checkout carries.
+          VERSION_FILE=build.gradle
+          grep -qE "^[[:space:]]*version = '" build.gradle || VERSION_FILE=common.gradle
+          sed -i -E "s/^([[:space:]]*(project\.)?version = )'[^']*'/\1'${NEXT_VERSION}'/" "${VERSION_FILE}"
+          echo "VERSION_FILE=${VERSION_FILE}" >> "$GITHUB_ENV"
+          echo "Updated release branch to ${NEXT_VERSION} in ${VERSION_FILE}"
+          grep -E "^[[:space:]]*(project\.)?version = '" "${VERSION_FILE}"
 
       - name: Commit and push
         run: |
-          git add build.gradle
+          git add "${VERSION_FILE}"
           git commit -m "Bump version to ${{ steps.next-version.outputs.version }} for next patch release"
           git push origin ${{ inputs.release_branch }}
 
