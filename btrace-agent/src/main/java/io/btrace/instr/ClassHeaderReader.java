@@ -107,8 +107,10 @@ final class ClassHeaderReader {
     }
     synchronized (ClassHeaderReader.class) {
       if (!classFileApiReadAttempted) {
-        classFileApiReadAttempted = true;
+        // Publish the result before the flag: a caller that reads the flag outside the lock must
+        // never see "attempted" while the reference is still null.
         classFileApiRead = loadClassFileApiRead();
+        classFileApiReadAttempted = true;
       }
     }
     return classFileApiRead;

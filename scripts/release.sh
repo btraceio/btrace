@@ -250,7 +250,9 @@ pick_release_branch() {
             echo "Branch: $branch"
             echo ""
             latest_tag=$(git describe --tags --abbrev=0 "$branch" 2>/dev/null || echo "none")
-            current_ver=$(git show "$branch:build.gradle" 2>/dev/null | grep -E "^[[:space:]]*version = \x27" | head -1 | sed -E "s/.*\x27([^\x27]+)\x27.*/\1/")
+            # `version = ...` in the root build.gradle since c354f12b; release branches cut before
+            # 2026-04-22 (2.2.x) carry `project.version = ...` in common.gradle instead
+            current_ver=$( { git show "$branch:build.gradle" 2>/dev/null; git show "$branch:common.gradle" 2>/dev/null; } | grep -E "^[[:space:]]*(project\.)?version = \x27" | head -1 | sed -E "s/.*\x27([^\x27]+)\x27.*/\1/")
             echo "Latest tag:      $latest_tag"
             echo "Current version: $current_ver"
             echo ""

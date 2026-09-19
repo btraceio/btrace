@@ -56,8 +56,9 @@ public final class LinkerInstrumentor {
     }
     synchronized (LinkerInstrumentor.class) {
       if (!classFileAddGuardAttempted) {
-        classFileAddGuardAttempted = true;
+        // Publish the result before the flag (see ClassHeaderReader.getClassFileApiRead).
         classFileAddGuard = loadClassFileAddGuard();
+        classFileAddGuardAttempted = true;
       }
     }
     return classFileAddGuard;
