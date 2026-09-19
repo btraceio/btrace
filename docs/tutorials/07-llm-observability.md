@@ -9,7 +9,7 @@ without adding a tracing SDK. **Time:** ~10 minutes.
 
 ## What you'll need
 
-- JDK 11 or newer on your PATH (the demo uses single-file source launch)
+- JDK 11 or newer with `JAVA_HOME` set (the demo uses single-file source launch; `bin/btrace` and `bin/btracex` refuse to start without `JAVA_HOME`)
 - BTrace 3.0 installed, including the bundled `btrace-llm-trace` and `btrace-contracts`
   extensions — `bin/btrace` and `bin/btracex` on your PATH
   ([installation options](../GettingStarted.md#installation))
@@ -61,7 +61,7 @@ btracex inspect btrace-llm-trace
 
 ```
 Extension: btrace-llm-trace
-Version  : 3.0.0-SNAPSHOT
+Version  : 3.0.0
 Privileged: true
 Required : [THREADS]
 Services : io.btrace.llm.LlmTraceService
@@ -75,7 +75,7 @@ btracex inspect btrace-contracts
 
 ```
 Extension: btrace-contracts
-Version  : 3.0.0-SNAPSHOT
+Version  : 3.0.0
 Privileged: true
 Required : [THREADS]
 Services : io.btrace.contracts.ContractService

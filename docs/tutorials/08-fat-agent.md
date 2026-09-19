@@ -44,8 +44,9 @@ btrace-metrics-3.0.0-extension.zip
 > the fat-agent plugin's `file()` source. `maven()` remains for separately published third-party
 > extensions; BTrace's bundled extensions are not Maven artifacts.
 
-Copy it into a scratch directory, renamed to match the extension's real id (`btrace-metrics`) —
-you'll see exactly why that naming matters in Step 3:
+Copy it into a scratch directory. Renaming it to `btrace-metrics.zip` is purely for readability —
+it's the name [demo/fat-agent-build.gradle](demo/fat-agent-build.gradle) references, and Step 3
+explains why the file name is *not* where the embedded extension's id comes from:
 
 ```sh
 mkdir -p ~/fat-agent-demo
@@ -93,9 +94,13 @@ properties fail during Gradle configuration instead of being accepted as no-ops.
 ./gradlew fatAgentJar
 ```
 
-**You should see**, among the standard Gradle task lines, this exact lifecycle message:
+**You should see**, among the standard Gradle task lines, these two lifecycle messages (the engine
+path is wherever Gradle cached the `io.btrace:btrace:3.0.0` artifact):
 
 ```
+> Task :stageBTraceEngine
+[fat-agent] Staged masked BTrace engine: /home/you/.gradle/caches/.../btrace-3.0.0.jar
+
 > Task :stageExtensions
 [fat-agent] Staged 1 extension(s): btrace-metrics
 
@@ -104,18 +109,23 @@ properties fail during Gradle configuration instead of being accepted as no-ops.
 BUILD SUCCESSFUL
 ```
 
-> **What just happened?** `stageExtensions`, `stageProbes`, and `fatAgentJar` are the three tasks
-> the plugin registers on `apply` — confirmed by `BTraceFatAgentPluginTest.pluginCanBeApplied()`,
-> which asserts all three names appear in `gradle tasks --all`. The `"[fat-agent] Staged ..."` line
-> is a literal string from `BTraceFatAgentPlugin.groovy`'s `stageExtensions` task.
+> **What just happened?** `stageBTraceEngine`, `stageExtensions`, `stageProbes`, and `fatAgentJar`
+> are the four tasks the plugin registers on `apply` (`BTraceFatAgentPlugin.groovy`;
+> `BTraceFatAgentPluginTest.pluginCanBeApplied()` asserts that `fatAgentJar`, `stageExtensions`,
+> and `stageProbes` appear in `gradle tasks --all`). Both `"[fat-agent] Staged ..."` lines are
+> literal strings from the `stageBTraceEngine` and `stageExtensions` tasks; `stageProbes` only
+> prints one once you configure `bundledProbes {}` (Step 5).
 >
-> **Heads up — naming your `file()` zip matters.** `packageExtension`'s zip has no standalone
-> `extension.properties` at its root (only the nested API/impl jars) — verified by reading the
-> `packageExtension` task, which only adds `buildApiJar` and the shadow jar's output files.
-> `FileExtensionSource.extractFromDirectory()` therefore falls back to the *zip's own filename
-> minus `.zip`* as the extension id, and to `0.0.0` as its version, whenever it can't find that
-> properties file. That's why Step 1 had you rename the file to `btrace-metrics.zip` — call it
-> anything else and your embedded extension shows up under the wrong id.
+> **Heads up — the zip's file name does not decide the extension id.** `packageExtension`'s zip has
+> no `extension.properties` at its root (only the API and impl jars), so
+> `FileExtensionSource.extractFromDirectory()` starts from a placeholder id (the zip's file name
+> minus `.zip`) and version `0.0.0`. Before anything is staged, though, the plugin calls
+> `hydrateFromApiManifest()` on every resolved extension: it reads `BTrace-Extension-Id`,
+> `BTrace-Extension-Version`, `BTrace-Extension-Permissions`, and the other `BTrace-Extension-*`
+> attributes from the API jar's manifest (written by the `io.btrace.extension` plugin) and treats
+> them as authoritative. Call the zip whatever you like — the id is `btrace-metrics` either way.
+> What *does* fail the build is an API jar with no `BTrace-Extension-Permissions` attribute: the
+> plugin refuses to default an embedded extension's permissions to an empty set.
 
 Look at what actually landed in the jar:
 
@@ -123,11 +133,15 @@ Look at what actually landed in the jar:
 unzip -l build/libs/demo-btrace-agent.jar | grep -E 'MANIFEST|btrace-extensions|metrics'
 ```
 
-**You should see** something like:
+**You should see** something like (one `extension.properties` per embedded extension — there are
+more than one, see the manifest note below):
 
 ```
 META-INF/MANIFEST.MF
+META-INF/btrace-extensions/btrace-contracts/extension.properties
+...
 META-INF/btrace-extensions/btrace-metrics/extension.properties
+...
 io/btrace/metrics/MetricsService.class
 io/btrace/metrics/MetricsServiceImpl.classdata
 ```
@@ -156,28 +170,39 @@ BTrace-Agent-Main: io.btrace.agent.Main
 Can-Redefine-Classes: true
 Can-Retransform-Classes: true
 Boot-Class-Path: demo-btrace-agent.jar
-BTrace-Embedded-Extensions: btrace-metrics
+BTrace-Embedded-Extensions: btrace-contracts,btrace-gpu-bridge,btrace-llm-trace,btrace-metrics,btrace-rag-quality,btrace-statsd,btrace-utils
 ```
 
-Every one of these attribute keys and values is written verbatim by the `manifest { attributes(...) }`
-block in `BTraceFatAgentPlugin.groovy`'s `fatAgentJar` task registration.
+`Boot-Class-Path` and `BTrace-Embedded-Extensions` are the two attributes `fatAgentJar` sets
+itself; everything else (you'll also see `Main-Class`, `BTrace-Version`, and `BTrace-Client-Main`)
+is copied verbatim from the engine jar's manifest by `seedManifestFromEngine()`. The embedded list
+is *merged*, not replaced: the public `io.btrace:btrace:3.0.0` artifact is itself a fat agent —
+`btrace-dist/build.gradle` publishes `fatAgentJar` under that coordinate — and already embeds
+BTrace's seven default extensions, `btrace-metrics` included. Your `file()` source is deduplicated
+by id against that list; it's the mechanism for adding an extension the engine *doesn't* carry
+(your own, from [Tutorial 6](06-write-your-own-extension.md), or a third-party one).
 
 ## Step 4 — Attach it at JVM startup and use the embedded extension
 
 Copy the built jar wherever you like, then start the demo app *with the fat agent already loaded* —
-no separate `btrace <PID>` attach step needed to get the extension in:
+no separate `btrace <PID>` attach step needed to get the extension in. `btrace-metrics` is
+**privileged**: its `package-info.java` declares `THREADS`, and the build-time permission scan adds
+`REFLECTION` and `CLASSLOADER`, so its API jar's manifest reads
+`BTrace-Extension-Permissions: THREADS,REFLECTION,CLASSLOADER`. An embedded privileged extension
+is gated exactly like a filesystem-installed one, so allow it right on the `-javaagent` line:
 
 ```sh
-java -javaagent:build/libs/demo-btrace-agent.jar=debug=true DemoApp.java
+java -javaagent:build/libs/demo-btrace-agent.jar=debug=true,allowExtensions=btrace-metrics DemoApp.java
 ```
 
 **You should see** the usual demo app lines, plus (message text verified against
-`Main.java`/`ExtensionLoader.java`; exact log prefixes depend on your SLF4J SimpleLogger config):
+`Main.java`/`ExtensionLoader.java`; exact log prefixes depend on your SLF4J SimpleLogger config;
+the count is 7 because the engine embeds the default extension set — see Step 3):
 
 ```
 [demo] order service running - stop with Ctrl+C
 Initializing BTrace extension system
-Extension system initialized with 1 available extension(s)
+Extension system initialized with 7 available extension(s)
 [demo] processed 64 orders, 8 failed
 ```
 
@@ -197,17 +222,24 @@ processOrder  p50=58ms  p95=346ms  p99=402ms  (n=41)
 =======================
 ```
 
-> **What just happened?** Tutorial 4 needed you to hand-edit `~/.btrace/permissions.properties`
-> with `allowExtensions=btrace-metrics` before this worked, because `btrace-metrics` requires the
-> privileged `THREADS` permission. This time it just worked, with no policy file at all — and that's
-> a real, verified difference worth knowing before you embed something privileged: embedded
-> extensions are parsed by `EmbeddedExtensionRepository.parseEmbeddedExtension()`, which hardcodes
-> `.requiredPermissions(PermissionSet.empty())` regardless of what the extension actually needs.
-> `ExtensionBridgeImpl.requiresPrivileged()` then always returns `false` for an empty permission set,
-> so the privileged-tier gate from [Tutorial 4](04-extensions-and-permissions.md) never triggers for
-> anything you bundle into a fat agent. If you embed an extension that needs a privileged
-> permission, it is active for anyone who runs your jar, with no separate opt-in — treat the act of
-> embedding itself as the grant.
+> **What just happened?** Tutorial 4 granted `btrace-metrics` by hand-editing
+> `~/.btrace/permissions.properties`; here the same grant travelled as an agent argument. The agent
+> still runs `PermissionPolicy.loadFromDefaults()` first (`-Dbtrace.permissions=...`, then
+> `~/.btrace/permissions.properties`, then a classpath resource) and *then* applies
+> `allowExtensions=` / `allowPrivileged=` from the `-javaagent` arguments on top. `allowExtensions`
+> is additive, and an explicit deny is checked before the privileged gate — so a leftover
+> `denyExtensions=btrace-metrics` from Tutorial 4's Step 4 would still win; Tutorial 4's clean-up
+> removes that file, which is why the argument above is all you need. Embedding does **not** bypass
+> the gate: the fat-agent plugin copies `BTrace-Extension-Permissions` into the embedded
+> `extension.properties` (`hydrateFromApiManifest()`), `EmbeddedExtensionRepository` parses that
+> `permissions` property into the descriptor, and `ExtensionBridgeImpl` refuses to link a privileged
+> extension unless `allowPrivileged=true` is set or its id is in `allowExtensions`. Leave the
+> argument off and you get Tutorial 4's `! ERROR` block
+> (`BTrace optional service unavailable: io.btrace.metrics.MetricsService`) on every probed call,
+> and `btrace -le <PID>` reports
+> `btrace-metrics: Blocked privileged extension. Required=[THREADS, REFLECTION, CLASSLOADER]`. The
+> fix is the argument above — or `allowPrivileged=true`, which allows *every* privileged extension
+> in the jar and is broader than you usually want.
 
 ## Step 5 — Add a startup probe
 
@@ -227,8 +259,8 @@ The class is stored at
 `META-INF/btrace-probes/com/example/OrderStartupProbe.class`. Select it with:
 
 ```sh
-java -javaagent:build/libs/btrace-agent-fat.jar=probes=com.example.OrderStartupProbe,output=stdout \
-     DemoApp
+java -javaagent:build/libs/demo-btrace-agent.jar=probes=com.example.OrderStartupProbe,output=stdout \
+     DemoApp.java
 ```
 
 Probe names are exact Java binary names. Invalid names, configured classes that are missing at
@@ -260,16 +292,20 @@ rm -rf ~/fat-agent-demo
   'io.btrace.fat-agent' version '3.0.0' }` block needs `gradlePluginPortal()` (or wherever your
   BTrace release is published) in `pluginManagement.repositories`, as in
   [fat-agent-settings.gradle](demo/fat-agent-settings.gradle).
-- **Embedded extension shows up with the wrong id, or version `0.0.0`** — see Step 3's callout: a
-  `file()` source without a top-level `extension.properties` in the zip falls back to the zip's own
-  filename. Rename the file to match the real extension id.
+- **Build fails with `Cannot embed extension '...': ... is missing BTrace-Extension-Permissions`**
+  — the zip's API jar wasn't produced by the `io.btrace.extension` plugin, which writes the
+  `BTrace-Extension-*` manifest attributes (id, version, permissions, ...) that
+  `hydrateFromApiManifest()` requires. Rebuild it with `packageExtension` (Step 1); renaming the zip
+  can't help, because the file name is never used as the id (Step 3's callout).
 - **`probes=YourProbe` fails at startup with `BundledProbeException`** — the named class is not
   staged under `META-INF/btrace-probes/` in the jar (check `bundledProbes {}` in Step 5 and the
   fully qualified class name); a missing bundled probe is a loud failure, never a silent no-op.
-- **Extension works when embedded but was blocked by policy when filesystem-installed (or vice
-  versa)** — see Step 4's callout: embedded and filesystem extensions are gated differently right
-  now; embedding bypasses the privileged-permission check that
-  [Tutorial 4](04-extensions-and-permissions.md) demonstrates for filesystem extensions.
+- **Embedded extension is blocked** (`! ERROR ... BTrace optional service unavailable`, and
+  `btrace -le <PID>` says `Blocked privileged extension`) — embedded and filesystem extensions go
+  through the same privileged-tier gate (Step 4's callout). Pass `allowExtensions=<id>` (or
+  `allowPrivileged=true`) on the `-javaagent` line, or grant it in `~/.btrace/permissions.properties`
+  as [Tutorial 4](04-extensions-and-permissions.md) does — and make sure that file doesn't still
+  carry a `denyExtensions=` entry from Tutorial 4's Step 4, which takes precedence.
 - **An old Maven `fat-agent` configuration no longer resolves** — the unpublished module was
   removed for 3.0.0; use the Gradle plugin from this tutorial.
 

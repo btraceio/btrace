@@ -20,18 +20,29 @@ representative 2.x-style probe ([demo/legacy/SlowChargeProbe.java](demo/legacy/S
 — the kind of thing you might have sitting in a `scripts/` directory:
 
 ```java
+/*
+ * Example 2.x-style BTrace probe used by "Upgrade from 2.x in 10 Minutes"
+ * (docs/tutorials/03-upgrade-from-2x.md). This file intentionally still uses
+ * the pre-3.0 org.openjdk.btrace package so the tutorial has something real
+ * to run scripts/migrate-btrace-script.sh against.
+ */
 package demo;
 
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Duration;
+import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.Return;
 import static org.openjdk.btrace.core.BTraceUtils.println;
 import static org.openjdk.btrace.core.BTraceUtils.str;
 
 @BTrace
 public class SlowChargeProbe {
-  @OnMethod(clazz = "demo.OrderService", method = "chargeCard")
+  @OnMethod(
+      clazz = "demo.OrderService",
+      method = "chargeCard",
+      location = @Location(Kind.RETURN))
   public static void onCharge(@Duration long duration, @Return Object result) {
     if (duration > 200_000_000L) {
       println("slow chargeCard: " + str(duration / 1_000_000) + " ms");
@@ -40,63 +51,74 @@ public class SlowChargeProbe {
 }
 ```
 
-Every one of its imports is a `org.openjdk.btrace.*` reference. That's the entire migration
-surface — there's no other syntax change between 2.x and 3.0.
+Every one of its eight imports is a `org.openjdk.btrace.*` reference (and so is the header
+comment, which matters in a moment). That's the entire migration surface — there's no other
+syntax change between 2.x and 3.0.
 
 ## Step 2 — Preview the fix
 
 BTrace ships a small helper that rewrites exactly that prefix. Preview what it would change,
-without touching anything:
+without touching anything — run this (and Step 3) from the root of your BTrace repository checkout,
+where both the script and the demo file resolve:
 
 ```sh
-scripts/migrate-btrace-script.sh --dry-run SlowChargeProbe.java
+scripts/migrate-btrace-script.sh --dry-run docs/tutorials/demo/legacy/SlowChargeProbe.java
 ```
 
 **You should see:**
 
 ```
-would migrate: SlowChargeProbe.java
-    3:import org.openjdk.btrace.core.annotations.BTrace;
-    4:import org.openjdk.btrace.core.annotations.OnMethod;
-    5:import org.openjdk.btrace.core.annotations.Duration;
-    6:import org.openjdk.btrace.core.annotations.Return;
-    7:import static org.openjdk.btrace.core.BTraceUtils.println;
-    8:import static org.openjdk.btrace.core.BTraceUtils.str;
+would migrate: docs/tutorials/demo/legacy/SlowChargeProbe.java
+    4: * the pre-3.0 org.openjdk.btrace package so the tutorial has something real
+    9:import org.openjdk.btrace.core.annotations.BTrace;
+    10:import org.openjdk.btrace.core.annotations.OnMethod;
+    11:import org.openjdk.btrace.core.annotations.Duration;
+    12:import org.openjdk.btrace.core.annotations.Kind;
+    13:import org.openjdk.btrace.core.annotations.Location;
+    14:import org.openjdk.btrace.core.annotations.Return;
+    15:import static org.openjdk.btrace.core.BTraceUtils.println;
+    16:import static org.openjdk.btrace.core.BTraceUtils.str;
 Dry run: 1 file(s) would be migrated (of 1 examined).
 ```
+
+Line 4 is the header comment: the script matches the package name anywhere in the file, not just
+in `import` statements.
 
 ## Step 3 — Apply it
 
 ```sh
-scripts/migrate-btrace-script.sh SlowChargeProbe.java
+scripts/migrate-btrace-script.sh docs/tutorials/demo/legacy/SlowChargeProbe.java
 ```
 
 **You should see:**
 
 ```
-migrated: SlowChargeProbe.java (backup: SlowChargeProbe.java.bak)
-    3:import io.btrace.core.annotations.BTrace;
-    4:import io.btrace.core.annotations.OnMethod;
-    5:import io.btrace.core.annotations.Duration;
-    6:import io.btrace.core.annotations.Return;
-    7:import static io.btrace.core.BTraceUtils.println;
-    8:import static io.btrace.core.BTraceUtils.str;
+migrated: docs/tutorials/demo/legacy/SlowChargeProbe.java (backup: docs/tutorials/demo/legacy/SlowChargeProbe.java.bak)
+    4: * the pre-3.0 io.btrace package so the tutorial has something real
+    9:import io.btrace.core.annotations.BTrace;
+    10:import io.btrace.core.annotations.OnMethod;
+    11:import io.btrace.core.annotations.Duration;
+    12:import io.btrace.core.annotations.Kind;
+    13:import io.btrace.core.annotations.Location;
+    14:import io.btrace.core.annotations.Return;
+    15:import static io.btrace.core.BTraceUtils.println;
+    16:import static io.btrace.core.BTraceUtils.str;
 Done: 1 file(s) migrated (of 1 examined).
 ```
 
-Your original file is preserved as `SlowChargeProbe.java.bak`; the script itself now imports
+Your original file is preserved as `SlowChargeProbe.java.bak` next to it; the script itself now imports
 `io.btrace.*` and deploys against BTrace 3.0 exactly as before — `@BTrace`, `@OnMethod`,
-`@Duration`, `@Return`, and `BTraceUtils.println`/`str` all exist with the same names and
-signatures in 3.0.
+`@Duration`, `@Return`, `@Location`/`Kind`, and `BTraceUtils.println`/`str` all exist with the same
+names and signatures in 3.0.
 
-> **What just happened?** The tool does one thing: it finds `org.openjdk.btrace` (as an import or
-> a fully-qualified reference) and replaces it with `io.btrace`, everywhere in the file. That's the
-> entire migration for script *sources*. Pass `-r` to point it at a whole directory of scripts
-> instead of one file at a time.
+> **What just happened?** The tool does one thing: it finds `org.openjdk.btrace` (as an import, a
+> fully-qualified reference, or — as line 4 shows — plain text in a comment) and replaces it with
+> `io.btrace`, everywhere in the file. That's the entire migration for script *sources*. Pass `-r`
+> to point it at a whole directory of scripts instead of one file at a time.
 
 > **Going further:** since the 3.0 compiler auto-injects `import static io.btrace.BTrace.*;` and
 > `import io.btrace.core.annotations.*;` into any script that doesn't already import the DSL or
-> the annotations package, you can now *delete* most of those six import lines entirely and keep
+> the annotations package, you can now *delete* most of those eight import lines entirely and keep
 > only the logic. Migrating gets you back to 3.0's zero-import style for free — see
 > [From Oneliner to Script](02-oneliner-to-script.md) for that DSL.
 
@@ -135,8 +157,15 @@ agent side:
 ```
 
 and a matching notice on the client console when you attach. If this is expected in your
-environment (a fleet you're migrating gradually, say) and you'd rather not see it, set
-`-Dbtrace.suppressJavaDeprecationWarning=true` on the target JVM.
+environment (a fleet you're migrating gradually, say) and you'd rather not see it, the same
+property silences each side separately: set `-Dbtrace.suppressJavaDeprecationWarning=true` on the
+target JVM for the agent-side warning, and on the `btrace` client JVM for the console notice — the
+launcher script takes no JVM flags, so hand it over via `JAVA_TOOL_OPTIONS`, exactly as
+[Tutorial 2](02-oneliner-to-script.md) does for `btrace.oneliner.dump`:
+
+```sh
+JAVA_TOOL_OPTIONS="-Dbtrace.suppressJavaDeprecationWarning=true" btrace <PID> docs/tutorials/demo/legacy/SlowChargeProbe.java
+```
 
 > **What just happened?** Nothing enforced — this is advance notice, not a breaking change.
 > Support for Java 8–16 will be removed in BTrace's *next* major release, not this one.
@@ -157,7 +186,13 @@ environment (a fleet you're migrating gradually, say) and you'd rather not see i
 
 Nothing to detach here — this tutorial didn't attach to a running JVM. If you migrated a real
 file, keep the `.bak` backup until you've confirmed the migrated script deploys and behaves as
-expected.
+expected. If you ran Step 3 against the repository's own demo file, put it back so the next run of
+this tutorial starts from the 2.x version:
+
+```sh
+git checkout -- docs/tutorials/demo/legacy/SlowChargeProbe.java
+rm docs/tutorials/demo/legacy/SlowChargeProbe.java.bak
+```
 
 ## Go deeper
 

@@ -1897,7 +1897,7 @@ Use `@OnEvent` for on-demand reporting triggered by `btrace send event <PID>` an
 
 ## Lesson 13 — BTrace MCP Server: AI Agents as Diagnosticians
 
-**Hands-on lab →** [Let an AI Assistant Debug Your JVM in 10 Minutes](tutorials/05-mcp-server.md) wires the server into Claude Code and walks a real diagnostic conversation end to end, including the gaps in the current tool set worth knowing about before you rely on it.
+**Hands-on lab →** [Let an AI Assistant Debug Your JVM in 10 Minutes](tutorials/05-mcp-server.md) is a short pointer: the MCP server now ships as the `btrace-observability` plugin in the external [BTrace Agent Plugins](https://github.com/btraceio/agent-plugins) marketplace (Claude Code, Codex, Pi), and the page tells you where the installation instructions and tool list live and what to ask the assistant once it's wired in.
 
 #### What is MCP?
 

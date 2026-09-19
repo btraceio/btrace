@@ -264,11 +264,12 @@ spark-submit --conf spark.driver.extraJavaOptions=-javaagent:btrace-spark-agent.
 ### 2. Kubernetes with Pre-loaded Extensions
 
 ```dockerfile
-FROM btrace/btrace:latest AS btrace
 FROM openjdk:17
 
-# Copy only the fat agent (no extension installation needed)
-COPY --from=btrace /opt/btrace/libs/btrace-agent-fat.jar /opt/btrace/
+# Copy only the fat agent (no extension installation needed). Build it first with
+# `./gradlew :btrace-dist:fatAgentJar` (output: btrace-dist/build/fat-agent/btrace-agent-fat.jar)
+# or your own fatAgentJar task; the official btrace/btrace images do not contain it.
+COPY btrace-agent-fat.jar /opt/btrace/
 ```
 
 ### 3. CI/CD Pipeline

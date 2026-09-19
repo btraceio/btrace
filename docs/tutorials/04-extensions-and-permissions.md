@@ -9,7 +9,7 @@ integrations) without accidentally opening a hole in the target JVM. **Time:** ~
 
 ## What you'll need
 
-- JDK 11 or newer on your PATH (the demo uses single-file source launch)
+- JDK 11 or newer with `JAVA_HOME` set (the demo uses single-file source launch; `bin/btrace` and `bin/btracex` refuse to start without `JAVA_HOME`)
 - BTrace 3.0 installed — `bin/btrace` and `bin/btracex` on your PATH ([installation options](../GettingStarted.md#installation))
 - Two terminal windows
 
@@ -243,7 +243,7 @@ btracex inspect btrace-metrics
 
 ```
 Extension: btrace-metrics
-Version  : 3.0.0-SNAPSHOT
+Version  : 3.0.0
 Privileged: true
 Required : [CLASSLOADER,REFLECTION,THREADS]
 Services : io.btrace.metrics.MetricsService
