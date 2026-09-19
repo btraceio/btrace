@@ -31,7 +31,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Configuration
-GRADLE_VERSION_FILE="${PROJECT_ROOT}/common.gradle"
+GRADLE_VERSION_FILE="${PROJECT_ROOT}/build.gradle"
 DRY_RUN="${DRY_RUN:-false}"
 
 #######################################
@@ -250,7 +250,7 @@ pick_release_branch() {
             echo "Branch: $branch"
             echo ""
             latest_tag=$(git describe --tags --abbrev=0 "$branch" 2>/dev/null || echo "none")
-            current_ver=$(git show "$branch:common.gradle" 2>/dev/null | grep "project.version" | sed -E "s/.*\x27([^\x27]+)\x27.*/\1/")
+            current_ver=$(git show "$branch:build.gradle" 2>/dev/null | grep -E "^[[:space:]]*version = \x27" | head -1 | sed -E "s/.*\x27([^\x27]+)\x27.*/\1/")
             echo "Latest tag:      $latest_tag"
             echo "Current version: $current_ver"
             echo ""
@@ -343,7 +343,7 @@ check_prerequisites() {
         exit 1
     fi
 
-    # Check common.gradle exists
+    # Check build.gradle exists
     if [[ ! -f "${GRADLE_VERSION_FILE}" ]]; then
         error "Cannot find ${GRADLE_VERSION_FILE}"
         exit 1
@@ -353,18 +353,18 @@ check_prerequisites() {
 }
 
 #######################################
-# Extract current version from common.gradle
+# Extract current version from the root build.gradle (allprojects { version = ... })
 #######################################
 get_current_version() {
     local version_line
-    version_line=$(grep "project.version" "${GRADLE_VERSION_FILE}" | head -1)
+    version_line=$(grep -E "^[[:space:]]*version = '" "${GRADLE_VERSION_FILE}" | head -1)
 
     if [[ -z "${version_line}" ]]; then
         error "Cannot find version in ${GRADLE_VERSION_FILE}"
         exit 1
     fi
 
-    # Extract version from line like: project.version = '2.3.0-SNAPSHOT'
+    # Extract version from line like:     version = '3.0.0-SNAPSHOT'
     echo "${version_line}" | sed -E "s/.*'([^']+)'.*/\1/"
 }
 
@@ -689,7 +689,7 @@ main() {
     check_prerequisites
 
     # Get current version
-    info "Reading version from common.gradle..."
+    info "Reading version from build.gradle..."
     local current_version
     current_version=$(get_current_version)
     info "Current version: ${current_version}"
@@ -702,7 +702,7 @@ main() {
         # Get version from the source reference (branch or commit)
         local version_source="${source_ref}"
         local branch_version
-        branch_version=$(git show "${version_source}:common.gradle" 2>/dev/null | grep "project.version" | sed -E "s/.*'([^']+)'.*/\1/")
+        branch_version=$(git show "${version_source}:build.gradle" 2>/dev/null | grep -E "^[[:space:]]*version = '" | head -1 | sed -E "s/.*'([^']+)'.*/\1/")
         if [[ -n "${branch_version}" ]]; then
             current_version="${branch_version}"
             if [[ -n "${SELECTED_RELEASE_BRANCH:-}" ]]; then

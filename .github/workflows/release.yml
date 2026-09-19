@@ -412,7 +412,7 @@ jobs:
       - name: Update version in build.gradle
         run: |
           VERSION="${{ inputs.release_version }}"
-          sed -i "s/version = '.*'/version = '${VERSION}'/" build.gradle
+          sed -i "s/^\([[:space:]]*\)version = '.*'/\1version = '${VERSION}'/" build.gradle
           echo "Updated version to ${VERSION}"
           grep "version = " build.gradle
 
@@ -766,7 +766,7 @@ jobs:
         if: ${{ inputs.dry_run == true }}
         run: |
           VERSION="${{ inputs.release_version }}"
-          sed -i "s/project.version = '.*'/project.version = '${VERSION}'/" common.gradle
+          sed -i "s/^\([[:space:]]*\)version = '.*'/\1version = '${VERSION}'/" build.gradle
 
       - name: Build distribution packages from a clean tree
         run: |
@@ -1033,13 +1033,13 @@ jobs:
       - name: Update version in develop
         run: |
           NEXT_VERSION="${{ inputs.next_snapshot }}"
-          sed -i "s/project.version = '.*'/project.version = '${NEXT_VERSION}'/" common.gradle
+          sed -i "s/^\([[:space:]]*\)version = '.*'/\1version = '${NEXT_VERSION}'/" build.gradle
           echo "Updated develop to ${NEXT_VERSION}"
-          grep "project.version" common.gradle
+          grep -E "^[[:space:]]*version = '" build.gradle
 
       - name: Commit and push
         run: |
-          git add common.gradle
+          git add build.gradle
           git commit -m "Bump version to ${{ inputs.next_snapshot }} after ${RELEASE_TAG} release"
           git push origin develop
 
@@ -1079,13 +1079,13 @@ jobs:
       - name: Update version in release branch
         run: |
           NEXT_VERSION="${{ steps.next-version.outputs.version }}"
-          sed -i "s/project.version = '.*'/project.version = '${NEXT_VERSION}'/" common.gradle
+          sed -i "s/^\([[:space:]]*\)version = '.*'/\1version = '${NEXT_VERSION}'/" build.gradle
           echo "Updated release branch to ${NEXT_VERSION}"
-          grep "project.version" common.gradle
+          grep -E "^[[:space:]]*version = '" build.gradle
 
       - name: Commit and push
         run: |
-          git add common.gradle
+          git add build.gradle
           git commit -m "Bump version to ${{ steps.next-version.outputs.version }} for next patch release"
           git push origin ${{ inputs.release_branch }}
 
