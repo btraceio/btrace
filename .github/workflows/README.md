@@ -23,7 +23,7 @@ This directory contains GitHub Actions workflows for continuous integration and 
   - Uploads dist build artifacts
 - **test:** Runs integration tests on multiple Java versions
   - Matrix: Java 8, 11, 17, 21, 25 (EA)
-  - Uses SDKMAN for multiple JDK management
+  - Lane JDKs from actions/setup-java (newest Temurin build of each major); SDKMAN only for a major Adoptium has not published yet
   - Downloads build artifacts from previous job
   - Runs integration tests with `-Pintegration` flag
 - **publish:** Publishes artifacts to Maven Central
@@ -204,7 +204,7 @@ The workflows ensure comprehensive testing of the v2 protocol implementation:
 
 **Test Job:**
 - `TEST_JAVA_HOME`: Set per matrix Java version
-- SDKMAN for multiple JDK management
+- Lane JDKs from actions/setup-java (Temurin); SDKMAN via `scripts/resolve-sdkman-java.sh` for `sdkman: true` lanes
 
 **Publish Job:**
 - `GPG_SIGNING_KEY`: GPG key for artifact signing

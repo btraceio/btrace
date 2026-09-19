@@ -55,9 +55,10 @@ MATRIX_VERSIONS=$(grep 'java:.*\[' "$CONTINUOUS" | head -1 \
   | sed 's/.*\[//;s/\].*//' | tr ',' '\n' \
   | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
-# Build JDK from the "echo 'y' | sdk install java" line
+# Build JDK from the "echo 'y' | sdk install java" line, if the workflow still has one
+# (`|| true`: under pipefail a missing line must not abort the script)
 BUILD_JDK=$(grep "echo 'y' | sdk install java" "$CONTINUOUS" | head -1 \
-  | sed "s/.*sdk install java //" | tr -d "[:space:]")
+  | sed "s/.*sdk install java //" | tr -d "[:space:]" || true)
 
 # --- Resolve and apply updates ---
 

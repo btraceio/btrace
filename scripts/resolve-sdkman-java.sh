@@ -6,19 +6,24 @@
 # spec forms:
 #   <full identifier>   e.g. 25.0.3-tem   -> printed unchanged; `sdk install` fails loudly if SDKMAN
 #                                            does not carry it
-#   <major>             e.g. 27           -> newest GA build of that major, preferring Temurin, then
-#                                            the OpenJDK (java.net) build, then Oracle JDK
+#   <major>             e.g. 27           -> newest GA build of that major that SDKMAN lists,
+#                                            preferring Temurin, then Oracle JDK, then the java.net
+#                                            build (last: java.net GA builds such as 21.0.2-open are
+#                                            frozen at GA and never receive updates)
 #
 # Early-access lanes (`<major>-ea`) are not SDKMAN lanes: SDKMAN publishes java.net EA builds late
 # and retires them at GA, so the workflows install those with actions/setup-java (Temurin EA) and
 # never call this script for them.
 #
-# The identifier list is the SDKMAN API's complete list for linuxx64 (the endpoint
-# scripts/update-jdk-versions.sh already uses). `sdk list java` is only a fallback when the API is
-# unreachable: it prints a curated subset per vendor, so an identifier missing from it may still
-# install. Set SDKMAN_JAVA_IDENTIFIERS (newline-separated) to bypass both, e.g. in tests. Exits 1
-# with a message on stderr when nothing matches, so a lane fails loudly instead of installing the
-# wrong JDK.
+# The identifier list is the SDKMAN API's list for linuxx64 (the endpoint
+# scripts/update-jdk-versions.sh already uses), with `sdk list java` as a fallback when the API is
+# unreachable. Both show one build per vendor and major and omit vendors whose newest build SDKMAN
+# has not ingested yet (on 2026-09-19 neither listed any Temurin 8, 11 or 21 build although the
+# pinned 8.0.492-tem, 11.0.31-tem and 21.0.11-tem still installed), so `<major>` can only pick
+# among listed builds; the CI workflows therefore use this script only for majors that
+# actions/setup-java cannot serve yet. Set SDKMAN_JAVA_IDENTIFIERS (newline-separated) to bypass
+# both sources, e.g. in tests. Exits 1 with a message on stderr when nothing matches, so a lane
+# fails loudly instead of installing the wrong JDK.
 set -euo pipefail
 
 SDKMAN_API=${SDKMAN_API:-https://api.sdkman.io/2/candidates/java/linuxx64/versions/all}
@@ -71,13 +76,13 @@ identifiers() {
 ids=$(identifiers | grep -E "$IDENTIFIER_RE" | sort -u || true)
 
 match=""
-for vendor in tem open oracle; do
+for vendor in tem oracle open; do
   match=$(grep -E "^${major}(\.[0-9]+)*-${vendor}$" <<<"$ids" | sort -V | tail -1 || true)
   [[ -n "$match" ]] && break
 done
 
 if [[ -z "$match" ]]; then
-  echo "No SDKMAN java GA build of ${major} (Temurin, java.net or Oracle) is listed. Known identifiers:" >&2
+  echo "No SDKMAN java GA build of ${major} (Temurin, Oracle or java.net) is listed. Known identifiers:" >&2
   printf '  %s\n' $ids >&2
   exit 1
 fi

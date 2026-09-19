@@ -10,18 +10,19 @@ and push to `develop`:
 
 | JDK Version | How CI installs it | Distribution | Status |
 |-------------|--------------------|--------------|--------|
-| 8 | lane spec `8` → newest 8 GA build at run time (Temurin preferred; `scripts/resolve-sdkman-java.sh`) | Eclipse Temurin | Supported (LTS) — deprecated target, removed in 4.0 |
-| 11 | lane spec `11` → newest 11 GA build at run time (Temurin preferred; `scripts/resolve-sdkman-java.sh`) | Eclipse Temurin | Supported (LTS) — minimum build JDK; deprecated target, removed in 4.0 |
-| 17 | lane spec `17` → newest 17 GA build at run time (Temurin preferred; `scripts/resolve-sdkman-java.sh`) | Eclipse Temurin | Supported (LTS) |
-| 21 | lane spec `21` → newest 21 GA build at run time (Temurin preferred; `scripts/resolve-sdkman-java.sh`) | Eclipse Temurin | Supported (LTS) |
-| 25 | lane spec `25` → newest 25 GA build at run time (Temurin preferred; `scripts/resolve-sdkman-java.sh`) | Eclipse Temurin | Supported (LTS) |
-| 27 | lane spec `27` → newest 27 GA build at run time (Temurin, else java.net, else Oracle; `scripts/resolve-sdkman-java.sh`) | GA 2026-09-15 | Supported — the newest GA release |
+| 8 | `actions/setup-java` with `java-version: 8`, `check-latest: true` → newest Temurin 8 release at run time | Eclipse Temurin | Supported (LTS) — deprecated target, removed in 4.0 |
+| 11 | `actions/setup-java` with `java-version: 11`, `check-latest: true` → newest Temurin 11 release at run time | Eclipse Temurin | Supported (LTS) — minimum build JDK; deprecated target, removed in 4.0 |
+| 17 | `actions/setup-java` with `java-version: 17`, `check-latest: true` → newest Temurin 17 release at run time | Eclipse Temurin | Supported (LTS) |
+| 21 | `actions/setup-java` with `java-version: 21`, `check-latest: true` → newest Temurin 21 release at run time | Eclipse Temurin | Supported (LTS) |
+| 25 | `actions/setup-java` with `java-version: 25`, `check-latest: true` → newest Temurin 25 release at run time | Eclipse Temurin | Supported (LTS) |
+| 27 | lane spec `27` with `sdkman: true` → newest 27 GA build SDKMAN lists (Temurin, else Oracle JDK, else java.net; `scripts/resolve-sdkman-java.sh`), `27.0.0-oracle` until Temurin 27 is published | GA 2026-09-15 | Supported — the newest GA release |
 | 28 (EA) | lane spec `28-ea` → Temurin early-access build via `actions/setup-java` (SDKMAN publishes java.net EA builds late and retires them at GA) | Temurin Early Access | Experimental — tracked for future readiness; exercises the ClassFile API instrumentation backend (class-file major 72) |
 
-No lane pins a build. SDKMan drops superseded builds (`sdk list java` shows only `25.0.4-tem`
-for 25 once it ships, and `27.ea.31-open` was retired at 27 GA), so a pinned identifier fails
-`sdk install` until someone bumps it; resolving the newest GA build of each major at run time
-removes that failure mode. [`.github/workflows/update-jdk-versions.yml`](../.github/workflows/update-jdk-versions.yml)
+No lane pins a build. SDKMan drops superseded builds from its catalogue (`27.ea.31-open` was
+retired at 27 GA; its list shows one build per vendor and major), so a pinned identifier fails
+`sdk install` once that happens. `actions/setup-java` resolves the newest Temurin release of a
+major through the Adoptium API at run time, which removes that failure mode; SDKMan remains in
+use only for a major that Adoptium has not published yet (27 at the time of writing). [`.github/workflows/update-jdk-versions.yml`](../.github/workflows/update-jdk-versions.yml)
 keeps running every Monday; it rewrites pinned `-tem` and `N.ea.M-open` entries, so it becomes
 active again as soon as a lane pins a build.
 

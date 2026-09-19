@@ -29,8 +29,7 @@ jobs:
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'test:v2-protocol'))
     strategy:
       matrix:
-        # Installed as the newest GA build of the major on SDKMAN (scripts/resolve-sdkman-java.sh);
-        # pinned builds are retired by SDKMAN when the next patch release ships.
+        # Newest Temurin build of each major from actions/setup-java; pinned builds rot.
         java: [ 11, 17, 21 ]
     steps:
       - name: Checkout
@@ -45,8 +44,8 @@ jobs:
 
       # Gradle 9.x requires JVM 17+ to run the build itself. This JDK only hosts
       # the Gradle daemon; the JDK under test (matrix.java) is installed below via
-      # SDKMAN and selected through the testJavaVersion toolchain property
-      # (see btrace-core/build.gradle).
+      # actions/setup-java, handed to Gradle as a toolchain installation path and
+      # selected through the testJavaVersion toolchain property (see btrace-core/build.gradle).
       - name: Set up JDK 21 (Gradle runner)
         if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
@@ -67,18 +66,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Prepare OS
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y curl zip unzip
-
-      - name: Install JDK ${{ matrix.java }} under test
-        run: |
-          curl -s "https://get.sdkman.io" | bash
-          source "$HOME/.sdkman/bin/sdkman-init.sh"
-          JAVA_ID=$(scripts/resolve-sdkman-java.sh "${{ matrix.java }}")
-          echo "JDK ${{ matrix.java }} -> SDKMAN java ${JAVA_ID}"
-          echo 'n' | sdk install java "${JAVA_ID}"
+      - name: Set up Temurin ${{ matrix.java }} (JDK under test)
+        id: test-jdk
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: temurin
+          check-latest: true
 
       - name: Run V2 Protocol Tests
         run: |
@@ -86,6 +80,7 @@ jobs:
                                        --tests "io.btrace.core.comm.Protocol*" \
                                        --tests "io.btrace.core.comm.WireProtocol*" \
                                        -PtestJavaVersion=${{ matrix.java }} \
+                                       -Porg.gradle.java.installations.paths=${{ steps.test-jdk.outputs.path }} \
                                        --rerun-tasks
 
       - name: Upload Test Reports
