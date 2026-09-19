@@ -178,8 +178,8 @@ JAVA_TOOL_OPTIONS="-Dbtrace.suppressJavaDeprecationWarning=true" btrace <PID> do
   (`scripts/migrate-btrace-script.sh -r path/to/scripts/`), so you don't accidentally rewrite a
   directory you pointed at by mistake.
 - **A script still won't compile after migrating** — the migration only rewrites the package
-  prefix; if your 2.x script also used APIs removed between 2.x and 3.0 (for example the
-  probe-level `RequestPermission` API), you'll need to port those separately. Check
+  prefix; if your script also used APIs that changed between 2.x and 3.0 (for example the
+  `libs=` profiles, now replaced by extensions), you'll need to port those separately. Check
   [Migrating from 2.x to 3.0](../Migration-2.x-to-3.0.md) for the full list of what changed.
 
 ## Clean up

@@ -25,12 +25,14 @@ All types live in the `io.btrace.instr` package of the **btrace-agent** module:
 
 ## Why: the ASM Ceiling
 
-BTrace's instrumentation pipeline is built on ASM. ASM can only parse class files up to a major version it explicitly knows about; ASM 9.9.x tops out at class file major version **69 (Java 25)** and throws when handed anything newer:
+BTrace's instrumentation pipeline is built on ASM. ASM can only parse class files up to a major version it explicitly knows about and throws when handed anything newer, so every new Java release used to need an ASM upgrade before BTrace could instrument it. BTrace fixes the ASM backend's ceiling at class file major version **69 (Java 25)** and routes anything newer to the ClassFile API backend:
 
 ```java
-/** Highest class file major version ASM 9.9.x can parse without throwing. */
+/** Highest class file major version handled by the ASM backend (see class javadoc). */
 static final int MAX_ASM_MAJOR_VERSION = 69; // Java 25
 ```
+
+The bundled ASM (9.10.1, `settings.gradle`) itself defines `V26 = 70` and `V27 = 71`, so the ceiling is a routing decision rather than the parser's hard limit: it keeps Java 26+ class files on the backend that does not depend on ASM keeping pace with the JDK.
 
 Without an alternative backend, an application compiled for Java 26+ (class file major version 70+) could not be instrumented at all. The JDK ClassFile API (`java.lang.classfile.*`, standardized in JDK 24) always understands the class file format of the JDK it ships with, so it provides a forward-compatible path for such classes.
 

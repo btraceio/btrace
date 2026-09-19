@@ -10,7 +10,6 @@ Good news first: for most users, migrating to BTrace 3.0 requires **no action at
 | BTrace script sources (`.java`) | **Nothing** for most scripts — or a one-line rename (see below) |
 | Mixed 2.x/3.0 client and agent (dynamic attach) | **Nothing** — the wire protocol auto-negotiates |
 | 2.x client against a 3.0 *prepared* agent (`-javaagent:...=port=`) | **Upgrade the client** — prepared mode is authenticated and rejects old clients |
-| Scripts using `@RequestPermission(s)` / `@RequiresPermission(s)` | **Remove them** — permissions moved to extensions and agent-side grants |
 | Maven/Gradle dependencies | Update coordinates to `io.btrace:btrace` |
 | Launch scripts referencing multiple BTrace jars | Point to the single `btrace.jar` |
 | `libs=` / profiles agent options | **Migrate to extensions** — removed, loads nothing |
@@ -87,13 +86,13 @@ authenticates every connection before it decodes a command and binds loopback on
 cannot connect to it (see [Getting Started](GettingStarted.md#startup-modes-and-the-30-security-boundary) for the
 3.0 client flow). Dynamic attach is unaffected.
 
-## Probe-Level Permission Annotations: Removed
+## Permissions Live in Extensions, Not in Scripts
 
-The 2.x-era `@RequestPermission`, `@RequestPermissions`, `@RequiresPermission`, and
-`@RequiresPermissions` annotations no longer exist. Permissions are declared by extensions and
-granted on the agent side — `grant=`, `allowExtensions=`, `allowPrivileged=` agent arguments or the
-[permission policy file](PermissionPolicy.md); the `btrace` client has no `--grant` flag. Scripts
-that only used the built-in API need no permission declarations at all.
+2.x scripts carried no permission declarations and still need none. In 3.0 permissions are declared
+by extensions and granted on the agent side — `grant=`, `allowExtensions=`, `allowPrivileged=`
+agent arguments or the [permission policy file](PermissionPolicy.md); the `btrace` client has no
+`--grant` flag. (If you tried a 3.0 pre-release build: the probe-level `@RequestPermission(s)` /
+`@RequiresPermission(s)` annotations it had were removed before 3.0.0 and never existed in 2.x.)
 
 ## License
 
