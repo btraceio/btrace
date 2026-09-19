@@ -31,13 +31,10 @@ public final class ClassFileApiClassHeaderReader {
 
   public static ClassHeader read(byte[] bytes) {
     ClassModel model = ClassFile.of().parse(bytes);
-    String superName = model.superclass().map(ClassEntry::asInternalName).orElse(null);
-    String[] interfaces =
-        model.interfaces().stream().map(ClassEntry::asInternalName).toArray(String[]::new);
     return new ClassHeader(
         model.thisClass().asInternalName(),
-        superName,
-        interfaces,
+        model.superclass().map(ClassEntry::asInternalName).orElse(null),
+        model.interfaces().stream().map(ClassEntry::asInternalName).toArray(String[]::new),
         model.flags().has(AccessFlag.INTERFACE));
   }
 }
