@@ -16,7 +16,7 @@ and push to `develop`:
 | 21 | `21.0.11-tem` | Eclipse Temurin | Supported (LTS) |
 | 25 | `25.0.3-tem` | Eclipse Temurin | Supported (LTS) |
 | 27 | lane spec `27` → newest 27 GA build at run time (Temurin, else java.net, else Oracle; `scripts/resolve-sdkman-java.sh`) | GA 2026-09-15 | Supported — the newest GA release |
-| 28 (EA) | lane spec `28-ea` → newest `28.ea.N-open` build at run time | OpenJDK Early Access | Experimental — tracked for future readiness; exercises the ClassFile API instrumentation backend (class-file major 72) |
+| 28 (EA) | lane spec `28-ea` → Temurin early-access build via `actions/setup-java` (SDKMAN publishes java.net EA builds late and retires them at GA) | Temurin Early Access | Experimental — tracked for future readiness; exercises the ClassFile API instrumentation backend (class-file major 72) |
 
 Version identifiers are checked every Monday via
 [`.github/workflows/update-jdk-versions.yml`](../.github/workflows/update-jdk-versions.yml)

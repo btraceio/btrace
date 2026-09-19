@@ -279,11 +279,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # See continuous.yml: `<major>` and `<major>-ea` are resolved to concrete SDKMAN identifiers
-        # by scripts/resolve-sdkman-java.sh at run time.
+        # See continuous.yml: `<major>` resolves to the newest GA build on SDKMAN at run time
+        # (scripts/resolve-sdkman-java.sh); `<major>-ea` is a Temurin early-access build from
+        # actions/setup-java.
         java: [8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem, 25.0.3-tem, '27', '28-ea']
     env:
-      # TEST_JAVA_HOME is exported by the "Prepare target JDK" step once the identifier is resolved.
+      # TEST_JAVA_HOME is exported by the "Prepare target JDK" step once the target JDK is installed.
       # Runners are ephemeral, so the Testcontainers Ryuk reaper is unnecessary. Disabling it
       # removes a Docker Hub image pull that intermittently times out and fails Docker-based tests.
       TESTCONTAINERS_RYUK_DISABLED: "true"
@@ -295,6 +296,15 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Set up early-access target JDK ${{ matrix.java }}
+        # Runs before the JDK 24/21 steps so that JAVA_HOME still points at JDK 21 for Gradle.
+        if: endsWith(matrix.java, '-ea')
+        id: ea-jdk
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: temurin
 
       - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
@@ -320,11 +330,17 @@ jobs:
         run: |
           curl -s "https://get.sdkman.io" | bash
           source "$HOME/.sdkman/bin/sdkman-init.sh"
-          JAVA_ID=$(scripts/resolve-sdkman-java.sh "${{ matrix.java }}")
-          echo "Lane ${{ matrix.java }} -> SDKMAN java ${JAVA_ID}"
-          echo 'n' | sdk install java "${JAVA_ID}"
-          echo "TEST_JAVA_HOME=${HOME}/.sdkman/candidates/java/${JAVA_ID}" >> "$GITHUB_ENV"
-          "${HOME}/.sdkman/candidates/java/${JAVA_ID}/bin/java" -version
+          if [[ "${{ matrix.java }}" == *-ea ]]; then
+            TARGET_JAVA_HOME="${{ steps.ea-jdk.outputs.path }}"
+            echo "Lane ${{ matrix.java }} -> Temurin early-access build at ${TARGET_JAVA_HOME}"
+          else
+            JAVA_ID=$(scripts/resolve-sdkman-java.sh "${{ matrix.java }}")
+            echo "Lane ${{ matrix.java }} -> SDKMAN java ${JAVA_ID}"
+            echo 'n' | sdk install java "${JAVA_ID}"
+            TARGET_JAVA_HOME="${HOME}/.sdkman/candidates/java/${JAVA_ID}"
+          fi
+          echo "TEST_JAVA_HOME=${TARGET_JAVA_HOME}" >> "$GITHUB_ENV"
+          "${TARGET_JAVA_HOME}/bin/java" -version
 
       - name: Cache Gradle
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
