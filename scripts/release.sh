@@ -355,6 +355,16 @@ check_prerequisites() {
 }
 
 #######################################
+# Read the version recorded at a git ref: `version = '...'` in the root build.gradle since
+# c354f12b, or `project.version = '...'` in common.gradle on release branches cut before
+# 2026-04-22 (the 2.2.x line). Prints nothing when neither is present.
+# Args: git ref (branch, tag or commit)
+version_at_ref() {
+    local ref=$1
+    { git show "${ref}:build.gradle" 2>/dev/null; git show "${ref}:common.gradle" 2>/dev/null; } \
+        | grep -E "^[[:space:]]*(project\.)?version = '" | head -1 | sed -E "s/.*'([^']+)'.*/\1/"
+}
+
 # Extract current version from the root build.gradle (allprojects { version = ... })
 #######################################
 get_current_version() {
@@ -704,7 +714,7 @@ main() {
         # Get version from the source reference (branch or commit)
         local version_source="${source_ref}"
         local branch_version
-        branch_version=$(git show "${version_source}:build.gradle" 2>/dev/null | grep -E "^[[:space:]]*version = '" | head -1 | sed -E "s/.*'([^']+)'.*/\1/")
+        branch_version=$(version_at_ref "${version_source}")
         if [[ -n "${branch_version}" ]]; then
             current_version="${branch_version}"
             if [[ -n "${SELECTED_RELEASE_BRANCH:-}" ]]; then
