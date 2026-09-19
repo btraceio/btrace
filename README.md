@@ -76,8 +76,9 @@ jbang btrace@btraceio <PID> script.java
 # SDKMan
 sdk install btrace
 
-# Manual download
-curl -LO https://github.com/btraceio/btrace/releases/latest/download/btrace-bin.tar.gz
+# Manual download (assets are versioned: btrace-v<version>-bin.tar.gz)
+BTRACE_VERSION=3.0.0
+curl -LO https://github.com/btraceio/btrace/releases/download/v${BTRACE_VERSION}/btrace-v${BTRACE_VERSION}-bin.tar.gz
 ```
 
 See [Installation Guide](docs/GettingStarted.md#installation) for Docker, package managers, and more options.
@@ -381,7 +382,7 @@ because it cannot consume the published 3.0 extension layout safely. Use the
 
 ## Contributing
 
-**Important:** Pull requests can only be accepted from signers of the [Oracle Contributor Agreement](https://oca.opensource.oracle.com/).
+Contributions are accepted under the [Apache License 2.0](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and expectations.
 
 ### Development
 

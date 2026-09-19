@@ -18,6 +18,13 @@ BTrace uses an automated release process via GitHub Actions. The release is trig
 | **minor** | New features, non-breaking changes | 2.3.0-SNAPSHOT → 2.3.0 |
 | **patch** | Bug fixes on release branch | 2.3.1-SNAPSHOT → 2.3.1 |
 
+The type is a version *operation* on the snapshot currently in the root `build.gradle`, not a
+description of the release. `major` always bumps the major number, so when `develop` has already
+been pre-bumped to the target major snapshot (as it is for 3.0.0: `version = '3.0.0-SNAPSHOT'`),
+release it with `minor` (`3.0.0-SNAPSHOT → 3.0.0`, next develop `3.1.0-SNAPSHOT`, branch
+`release/3.0._`). Running `major` in that state would release `4.0.0`. Always confirm the
+`RELEASE SUMMARY` printed by `DRY_RUN=true ./scripts/release.sh <type>` before triggering.
+
 ### Running a Release
 
 ```bash
@@ -152,7 +159,7 @@ BTrace will be available via:
 sdk install btrace
 ```
 
-For major releases, `sdkMajorRelease` is used; for minor/patch, `sdkMinorRelease` is used.
+The workflow always runs `sdkMajorRelease` (announce and set as default, `.github/workflows/release.yml` "Announce to SDKMan" step); `sdkMinorRelease` is only for manual use.
 
 ## JBang
 

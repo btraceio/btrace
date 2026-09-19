@@ -150,8 +150,9 @@ unzip -p build/libs/demo-btrace-agent.jar META-INF/MANIFEST.MF
 
 ```
 Manifest-Version: 1.0
-Premain-Class: io.btrace.agent.Main
-Agent-Class: io.btrace.agent.Main
+Premain-Class: io.btrace.boot.Loader
+Agent-Class: io.btrace.boot.Loader
+BTrace-Agent-Main: io.btrace.agent.Main
 Can-Redefine-Classes: true
 Can-Retransform-Classes: true
 Boot-Class-Path: demo-btrace-agent.jar
@@ -262,8 +263,9 @@ rm -rf ~/fat-agent-demo
 - **Embedded extension shows up with the wrong id, or version `0.0.0`** — see Step 3's callout: a
   `file()` source without a top-level `extension.properties` in the zip falls back to the zip's own
   filename. Rename the file to match the real extension id.
-- **`probes=YourProbe` does nothing at startup, no error either** — expected in this checkout; see
-  Step 5. Attach with `btrace <PID> Script.java` instead.
+- **`probes=YourProbe` fails at startup with `BundledProbeException`** — the named class is not
+  staged under `META-INF/btrace-probes/` in the jar (check `bundledProbes {}` in Step 5 and the
+  fully qualified class name); a missing bundled probe is a loud failure, never a silent no-op.
 - **Extension works when embedded but was blocked by policy when filesystem-installed (or vice
   versa)** — see Step 4's callout: embedded and filesystem extensions are gated differently right
   now; embedding bypasses the privileged-permission check that

@@ -71,4 +71,14 @@ else
     || fail "Java $FEATURE emitted a Java-version deprecation warning"
 fi
 
+if ((FEATURE < 17)); then
+  SUPPRESSED=$("$TARGET_JAVA_HOME/bin/java" -Dbtrace.suppressJavaDeprecationWarning=true \
+    -cp "$WORK:$DIST/libs/btrace.jar" JdkWarningProbe 2>&1) \
+    || fail "suppressed probe process failed: $SUPPRESSED"
+  SUPPRESSED_COUNT=$(printf '%s\n' "$SUPPRESSED" \
+    | grep -cF '[BTrace] WARNING: This JVM is Java' || true)
+  [[ "$SUPPRESSED_COUNT" -eq 0 ]] \
+    || fail "Java $FEATURE emitted $SUPPRESSED_COUNT warnings with -Dbtrace.suppressJavaDeprecationWarning=true; expected none"
+fi
+
 echo "JDK warning policy PASSED for Java $FEATURE (warnings=$WARNING_COUNT)"

@@ -797,23 +797,26 @@ class Example {
 
 ##### Granting Permissions at Runtime
 
-When running a probe that requires privileged permissions, you must explicitly grant them:
+When running a probe that requires privileged permissions, you must explicitly grant them. Grants
+are always configured on the *agent* side; the `btrace` client has no `--grant` flag.
 
-###### Using the btrace client
+###### Dynamic attach: permission policy file
+The agent reads the policy from `-Dbtrace.permissions=<file>`, then `~/.btrace/permissions.properties`
+(of the user running the target JVM), then the `META-INF/btrace/permissions.properties` classpath
+resource. Allow the extension that needs the permissions, then attach as usual:
 ```bash
-btrace --grant=NETWORK,THREADS <pid> MetricsProbe.class
+btracex policy set --allowExtensions btrace-metrics
+btrace <pid> MetricsProbe.class
 ```
+See [Permission Policy](PermissionPolicy.md) and
+[Tutorial 04](tutorials/04-extensions-and-permissions.md) for the full flow.
 
-###### Using the Java agent
+###### Java agent (`-javaagent`)
 ```bash
 java -javaagent:btrace.jar=script=MetricsProbe.class,grant=NETWORK,THREADS ...
 ```
 
 ###### Grant all permissions (use with caution)
-```bash
-btrace --grantAll=true <pid> MetricsProbe.class
-```
-or
 ```bash
 java -javaagent:btrace.jar=script=MetricsProbe.class,grantAll=true ...
 ```
@@ -845,10 +848,13 @@ Probe requires permissions that are not granted:
   - THREADS
     Create and manage threads. Risk: Resource exhaustion, concurrent operations.
 
-To allow these permissions, use:
-  --grant=NETWORK,THREADS
+To allow these permissions, grant them on the agent side, e.g.
+  -javaagent:btrace.jar=grant=NETWORK,THREADS
 
-Or use --grantAll=true to allow all permissions (not recommended).
+or allow the extension in the permission policy
+  (btracex policy set --allowExtensions <id>, or allowPrivileged=true).
+
+Use grantAll=true to allow all permissions (not recommended).
 ```
 
 ##### Inspecting Probe Permissions
@@ -880,9 +886,10 @@ public class StatsdExample {
 }
 ```
 
-Run with:
+Run with (after allowing the extension in the permission policy, see above):
 ```bash
-btrace --grant=NETWORK,THREADS -statsd localhost:8125 <pid> StatsdExample.class
+btracex policy set --allowExtensions btrace-statsd
+btrace -statsd localhost:8125 <pid> StatsdExample.class
 ```
 
 ##### Using the Histogram Metrics Extension (btrace-metrics)

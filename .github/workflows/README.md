@@ -340,8 +340,6 @@ git commit -m "Optimize binary protocol [benchmark]"
 ## References
 
 - [BTrace v2 Protocol Architecture](../../docs/architecture/Version2ProtocolArchitecture.md)
-- [Phase 3 Integration Guide](../../docs/architecture/phase3-integration-guide.md)
-- [V2 Implementation Summary](../../docs/architecture/v2-implementation-summary.md)
 - [JMH Benchmarks Guide](../../btrace-core/JMH_BENCHMARKS.md)
 
 ## Support

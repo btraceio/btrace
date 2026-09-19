@@ -599,7 +599,7 @@ jmc recording.jfr
 - Can be analyzed offline
 - Timeline visualization in Mission Control
 
-For complete JFR documentation, see [BTrace Tutorial Lesson 5](BTraceTutorial.md) and [FAQ: JFR Integration](FAQ.md#jfr-integration).
+For complete JFR documentation, see [BTrace Tutorial Lesson 5](BTraceTutorial.md) and [FAQ: JFR Integration](FAQ.md#how-does-btrace-integrate-with-jfr).
 
 ## BTrace in Containers and Kubernetes
 
@@ -639,9 +639,10 @@ ENTRYPOINT ["java", "-jar", "/app/myapp.jar"]
 **Alternative: Manual installation (if not using official images):**
 ```dockerfile
 FROM bellsoft/liberica-openjdk-debian:11-cds
-RUN curl -L https://github.com/btraceio/btrace/releases/download/v3.0.0/btrace-3.0.0.tar.gz \
-    | tar -xz -C /opt/
-ENV BTRACE_HOME=/opt/btrace-3.0.0
+RUN mkdir -p /opt/btrace \
+    && curl -L https://github.com/btraceio/btrace/releases/download/v3.0.0/btrace-v3.0.0-bin.tar.gz \
+    | tar -xz -C /opt/btrace
+ENV BTRACE_HOME=/opt/btrace
 ENV PATH=$PATH:$BTRACE_HOME/bin
 ```
 

@@ -117,9 +117,11 @@ catches and silently swallows.
 
 ## Step 6 — Clean up
 
-`Ctrl+C` in the BTrace terminal detaches the client. In BTrace 3.0, detaching disables all
-injected probes on the spot (they become no-ops — no restart, no lingering overhead), and you can
-re-attach at any time. Stop the demo app with `Ctrl+C` in terminal 1 when you're done.
+`Ctrl+C` in the BTrace terminal opens a small menu. Choose `1. exit` to end the session: the agent
+retracts the probe on the spot (its hooks become no-ops — no restart, no lingering overhead).
+Choose `6. detach client` instead if you want the probe to keep running in the target; you can
+reconnect to it later with `btrace -r <probe id> <PID>`. Stop the demo app with `Ctrl+C` in
+terminal 1 when you're done.
 
 ## Troubleshooting
 

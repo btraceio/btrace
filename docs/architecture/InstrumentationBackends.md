@@ -97,14 +97,22 @@ On JDK < 24 the `Class.forName` fails (the compiled class targets class file ver
 
 The backend parses the class with `ClassFile.parse()`, builds a `ClassMeta` from the class model (name, runtime-visible annotations, classloader), collects applicable handlers via `BTraceProbe.getApplicableHandlers(meta)`, and injects probe calls as `invokedynamic` instructions bootstrapped by `io.btrace.runtime.IndyDispatcher.bootstrap(...)` — entry probes before the first real instruction, return probes before each `ReturnInstruction`.
 
-### Current Limitations
+### Supported Probe Kinds and Current Limitations
 
-Verified in `ClassFileApiBackend.java`:
+Verified in `btrace-agent/src/main/java24/io/btrace/instr/ClassFileApiBackend.java` (class javadoc
+and the handler dispatch in `instrument(...)`):
 
-- **Only `Kind.ENTRY` and `Kind.RETURN` probes are supported.** Handlers with any other probe kind (CALL, LINE, FIELD_GET/SET, ERROR, etc.) are skipped with a debug-level log; the remaining handlers are still applied.
-- Method matching supports exact names and `/regex/` patterns; **type-constrained method matching** (a non-empty `type` in `@OnMethod`) is unsupported — such handlers are skipped.
-- Supported handler parameters: `@ProbeClassName`, `@ProbeMethodName`, and `@Self` (on instance methods; `null` is passed for static methods and constructor entry). Handlers using other special parameters (`@Return`, `@TargetInstance`, `@Duration`, `@TargetMethodOrField`) or plain probed-method arguments are skipped.
-- Classes the ClassFile API fails to parse are skipped (warning logged) rather than failing class loading.
+- **All probe kinds are supported**: `ENTRY`, `RETURN`, `CALL`, `LINE`, `FIELD_GET`, `FIELD_SET`,
+  `ARRAY_GET`, `ARRAY_SET`, `CHECKCAST`, `INSTANCEOF`, `THROW`, `CATCH`, `ERROR`, `NEWARRAY`, `NEW`,
+  `SYNC_ENTRY`, and `SYNC_EXIT`.
+- Method matching supports exact names, `/regex/` patterns, and type-constrained matching (a
+  non-empty `type` in `@OnMethod`).
+- Handler parameters: `@ProbeClassName`, `@ProbeMethodName`, `@Self`, ordinary probed-method
+  arguments (including `AnyType[]`), `@Return`, `@TargetInstance` (caught/escaping throwable for
+  `CATCH`/`ERROR`, lock object for `SYNC_*`), and `@Duration` where the kind defines it.
+- **Remaining limitation:** `@Duration` is not supported on `SYNC_ENTRY`/`SYNC_EXIT` handlers.
+- Classes the ClassFile API fails to parse are skipped (warning logged) rather than failing class
+  loading.
 
 ## Packaging
 
