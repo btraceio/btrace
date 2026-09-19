@@ -24,6 +24,8 @@ import io.btrace.core.annotations.Kind;
 import io.btrace.core.annotations.Sampled;
 import io.btrace.core.annotations.Where;
 import io.btrace.core.extensions.Permission;
+import java.lang.reflect.Method;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -31,6 +33,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -60,6 +63,42 @@ import org.objectweb.asm.tree.VarInsnNode;
  */
 @EnabledForJreRange(min = JRE.JAVA_24)
 class ClassFileApiBackendTest {
+
+  @BeforeAll
+  static void installRuntime() throws Throwable {
+    // ClassInfo.isBootstrap() consults the installed BTrace runtime (same setup as ClassInfoTest)
+    Class<?> accessImpl = Class.forName("io.btrace.runtime.BTraceRuntimeAccessImpl");
+    Method m = accessImpl.getDeclaredMethod("install");
+    m.setAccessible(true);
+    m.invoke(null);
+  }
+
+  @Test
+  void classFileApiReadsClassHeaders() {
+    // forced ClassFile API path on a class file ASM could also read: proves the reader itself
+    ClassHeader header =
+        ClassHeaderReader.readWithClassFileApi(
+            ClassHeaderReaderTest.classBytes(org.objectweb.asm.Opcodes.V17));
+    assertEquals(ClassHeaderReaderTest.CLASS_NAME, header.getClassName());
+    assertEquals("java/util/AbstractList", header.getSuperName());
+    assertArrayEquals(new String[] {"java/io/Serializable"}, header.getInterfaces());
+    assertFalse(header.isInterface());
+  }
+
+  @Test
+  void classInfoResolvesHierarchyOfClassFilesNewerThanAsm() {
+    requireJdk28ForVersion72();
+    // The failing CI case in a nutshell: type-assignability checks on a JDK 28 target read the
+    // JDK's own (major 72) classes, which ASM rejects; the ClassFile API must serve them instead.
+    byte[] bytes = ClassHeaderReaderTest.classBytes(ClassHeaderReaderTest.NEWER_THAN_ASM);
+    ClassCache cache = ClassCache.getInstance();
+    ClassInfo info =
+        cache.get(ClassHeaderReaderTest.loaderServing(bytes), ClassHeaderReaderTest.CLASS_NAME);
+    assertTrue(info.isAvailable(), "hierarchy of a newer-than-ASM class must be loadable");
+    assertTrue(
+        info.getSupertypes(false).contains(cache.get(AbstractList.class)),
+        "supertypes must include java.util.AbstractList: " + info.getSupertypes(false));
+  }
 
   @Test
   void supportsVersionAbove71() {
