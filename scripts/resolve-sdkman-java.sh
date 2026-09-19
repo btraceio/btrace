@@ -26,10 +26,15 @@ identifiers() {
     return
   fi
   if ! command -v sdk >/dev/null 2>&1; then
+    # sdkman-init.sh reads unset variables such as ZSH_VERSION, so it must not run under `set -u`
+    set +u
     # shellcheck disable=SC1091
     source "${SDKMAN_DIR:-$HOME/.sdkman}/bin/sdkman-init.sh"
+    set -u
   fi
+  set +u
   sdk list java 2>/dev/null | tr ' |' '\n\n'
+  set -u
 }
 
 ids=$(identifiers | grep -E '^[0-9]+(\.[0-9]+)*(\.ea\.[0-9]+)?-[a-z]+$' | sort -u || true)
