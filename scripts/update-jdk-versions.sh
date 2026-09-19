@@ -51,9 +51,10 @@ latest_ea_major() {
 # --- Extract current versions ---
 
 # Test matrix from continuous.yml (superset of release.yml)
+# (quotes stripped: YAML entries may be written as '8.0.492-tem' or "8.0.492-tem")
 MATRIX_VERSIONS=$(grep 'java:.*\[' "$CONTINUOUS" | head -1 \
   | sed 's/.*\[//;s/\].*//' | tr ',' '\n' \
-  | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr -d "'\"")
 
 # Build JDK from the "echo 'y' | sdk install java" line, if the workflow still has one
 # (`|| true`: under pipefail a missing line must not abort the script)

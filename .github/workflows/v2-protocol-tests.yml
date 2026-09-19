@@ -42,12 +42,20 @@ jobs:
           path: ${{ runner.tool_cache }}/Java_*
           key: java-${{ runner.os }}-temurin-21
 
-      # Gradle 9.x requires JVM 17+ to run the build itself. This JDK only hosts
-      # the Gradle daemon; the JDK under test (matrix.java) is installed below via
-      # actions/setup-java, handed to Gradle as a toolchain installation path and
+      # The JDK under test (matrix.java) is handed to Gradle as a toolchain installation path and
       # selected through the testJavaVersion toolchain property (see btrace-core/build.gradle).
+      - name: Set up Temurin ${{ matrix.java }} (JDK under test)
+        id: test-jdk
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: temurin
+          check-latest: true
+
+      # Gradle 9.x requires JVM 17+ to run the build itself. This step runs last so that JAVA_HOME
+      # (which every setup-java step overwrites) hosts the Gradle daemon on JDK 21, whatever the
+      # matrix JDK is; it is cheap when the tool cache already holds JDK 21.
       - name: Set up JDK 21 (Gradle runner)
-        if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
           java-version: 21
@@ -65,14 +73,6 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-
-      - name: Set up Temurin ${{ matrix.java }} (JDK under test)
-        id: test-jdk
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
-        with:
-          java-version: ${{ matrix.java }}
-          distribution: temurin
-          check-latest: true
 
       - name: Run V2 Protocol Tests
         run: |

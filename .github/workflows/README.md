@@ -17,12 +17,12 @@ This directory contains GitHub Actions workflows for continuous integration and 
 
 **Jobs:**
 - **build:** Compiles the project and runs all tests
-  - Java 11 with Temurin distribution
+  - Gradle on Java 21 (Temurin) with Java 24 and 28-ea toolchains (java24 source set, ClassFile API backend tests)
   - Parallel build with caching
   - **V2 Protocol Tests:** Runs dedicated v2 protocol test suite
   - Uploads dist build artifacts
 - **test:** Runs integration tests on multiple Java versions
-  - Matrix: Java 8, 11, 17, 21, 25 (EA)
+  - Matrix: Java 8, 11, 17, 21, 25, 27 and 28-ea (see `docs/JDKCompatibility.md`)
   - Lane JDKs from actions/setup-java (newest Temurin build of each major); SDKMAN only for a major Adoptium has not published yet
   - Downloads build artifacts from previous job
   - Runs integration tests with `-Pintegration` flag

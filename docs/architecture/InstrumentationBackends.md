@@ -12,7 +12,7 @@ BTrace performs bytecode instrumentation through a small internal SPI, `Instrume
 
 | Backend | Source set | Availability | Class file versions |
 |---------|-----------|--------------|---------------------|
-| `AsmInstrumentationBackend` | `src/main/java` (Java 8) | Always | ≤ 69 (up to Java 25) |
+| `AsmInstrumentationBackend` | `src/main/java` (Java 8) | Always | ≤ 71 (up to Java 27) |
 | `ClassFileApiBackend` | `src/main/java24` (Java 24) | Agent running on JDK 24+ | > 71 (Java 28+) |
 
 All types live in the `io.btrace.instr` package of the **btrace-agent** module:
@@ -73,9 +73,9 @@ static InstrumentationBackend select(int classFileMajorVersion) {
 
 In other words:
 
-1. Class file version ≤ 69 → ASM backend (the default, full-featured path).
-2. Class file version > 69 and the ClassFile API backend is available → ClassFile API backend.
-3. Class file version > 69 but the ClassFile API backend is unavailable (agent running on JDK < 24) → falls back to ASM, which will fail to parse the class; instrumentation of that class is effectively skipped.
+1. Class file version ≤ 71 → ASM backend (the default, full-featured path).
+2. Class file version > 71 and the ClassFile API backend is available → ClassFile API backend.
+3. Class file version > 71 but the ClassFile API backend is unavailable (agent running on JDK < 24) → falls back to ASM, which will fail to parse the class; instrumentation of that class is effectively skipped.
 
 The ClassFile API backend is loaded **reflectively** at class-initialization time so the main (Java 8-compiled) source set has no compile-time dependency on `java.lang.classfile`:
 
@@ -93,7 +93,7 @@ On JDK < 24 the `Class.forName` fails (the compiled class targets class file ver
 ### Requirements
 
 - The **agent must run on JDK 24+** — the backend is compiled with `sourceCompatibility = 24` / `targetCompatibility = 24` and uses `java.lang.classfile.*`.
-- It is engaged only for **class file major versions > 69** (`supports()` returns `classFileMajorVersion > AsmInstrumentationBackend.MAX_ASM_MAJOR_VERSION`).
+- It is engaged only for **class file major versions > 71** (`supports()` returns `classFileMajorVersion > AsmInstrumentationBackend.MAX_ASM_MAJOR_VERSION`).
 
 ### How It Instruments
 
