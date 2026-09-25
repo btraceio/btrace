@@ -17,14 +17,14 @@ Before granting anything, `btracex inspect` answers "what does this actually req
 ```
 $ btracex inspect btrace-llm-trace
 Extension: btrace-llm-trace
-Version  : 3.0.0-SNAPSHOT
+Version  : 3.0.0
 Privileged: true
 Required : [THREADS]
 Services : io.btrace.llm.LlmTraceService
 
 $ btracex inspect btrace-contracts
 Extension: btrace-contracts
-Version  : 3.0.0-SNAPSHOT
+Version  : 3.0.0
 Privileged: true
 Required : [THREADS]
 Services : io.btrace.contracts.ContractService
@@ -112,5 +112,6 @@ Contract: chat/latency
 ---
 
 - Full hands-on walkthrough: [docs/tutorials/07-llm-observability.md](../../docs/tutorials/07-llm-observability.md)
-- New to BTrace? Start here: [../GettingStarted.md](../GettingStarted.md)
+- New to BTrace? Start here: [docs/GettingStarted.md](../../docs/GettingStarted.md)
+<!-- TODO: replace with the per-post Discussions thread before publishing -->
 - Questions, ideas, war stories: [GitHub Discussions](https://github.com/btraceio/btrace/discussions)

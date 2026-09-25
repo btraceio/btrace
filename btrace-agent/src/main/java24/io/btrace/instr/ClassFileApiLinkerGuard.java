@@ -30,7 +30,7 @@ import java.lang.constant.MethodTypeDesc;
 
 /**
  * ClassFile API counterpart to {@link LinkerInstrumentor} for class-file versions that ASM
- * cannot parse (major &gt; 69, i.e. Java 26+). Injects the same {@code LinkingFlag} guards
+ * cannot parse (major &gt; 71, i.e. Java 28+). Injects the same {@code LinkingFlag} guards
  * into {@code MethodHandleNatives.linkCallSite} and
  * {@code MethodHandleNatives.linkMethodHandleConstant} as the ASM version does, preventing
  * BTrace probes from firing while an {@code invokedynamic} call-site is being linked.

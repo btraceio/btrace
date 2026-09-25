@@ -591,7 +591,7 @@ UnsupportedClassVersionError
 ```
 
 **Solutions:**
-- Ensure BTrace supports your Java version. BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
+- Ensure BTrace supports your Java version. BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
 - Compile scripts with target version matching JVM
 - Check `JAVA_HOME` points to correct version
 

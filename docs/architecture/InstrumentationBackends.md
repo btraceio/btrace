@@ -12,8 +12,8 @@ BTrace performs bytecode instrumentation through a small internal SPI, `Instrume
 
 | Backend | Source set | Availability | Class file versions |
 |---------|-----------|--------------|---------------------|
-| `AsmInstrumentationBackend` | `src/main/java` (Java 8) | Always | ≤ 69 (up to Java 25) |
-| `ClassFileApiBackend` | `src/main/java24` (Java 24) | Agent running on JDK 24+ | > 69 (Java 26+) |
+| `AsmInstrumentationBackend` | `src/main/java` (Java 8) | Always | ≤ 71 (up to Java 27) |
+| `ClassFileApiBackend` | `src/main/java24` (Java 24) | Agent running on JDK 24+ | > 71 (Java 28+) |
 
 All types live in the `io.btrace.instr` package of the **btrace-agent** module:
 
@@ -25,14 +25,16 @@ All types live in the `io.btrace.instr` package of the **btrace-agent** module:
 
 ## Why: the ASM Ceiling
 
-BTrace's instrumentation pipeline is built on ASM. ASM can only parse class files up to a major version it explicitly knows about; ASM 9.9.x tops out at class file major version **69 (Java 25)** and throws when handed anything newer:
+BTrace's instrumentation pipeline is built on ASM. ASM can only parse class files up to a major version it explicitly knows about and throws when handed anything newer, so every new Java release used to need an ASM upgrade before BTrace could instrument it. The ASM backend's ceiling is the highest version the bundled ASM (9.10.1, `settings.gradle`) parses, class file major version **71 (Java 27)**; anything newer is routed to the ClassFile API backend:
 
 ```java
-/** Highest class file major version ASM 9.9.x can parse without throwing. */
-static final int MAX_ASM_MAJOR_VERSION = 69; // Java 25
+/** Highest class file major version handled by the ASM backend (see class javadoc). */
+static final int MAX_ASM_MAJOR_VERSION = 71; // Java 27
 ```
 
-Without an alternative backend, an application compiled for Java 26+ (class file major version 70+) could not be instrumented at all. The JDK ClassFile API (`java.lang.classfile.*`, standardized in JDK 24) always understands the class file format of the JDK it ships with, so it provides a forward-compatible path for such classes.
+The constant is bumped together with the ASM dependency, so the ClassFile API backend always covers the JDK versions ahead of the current ASM release (at the time of writing: JDK 28 early-access builds).
+
+Without an alternative backend, an application compiled for a Java release newer than the bundled ASM (currently Java 28+, class file major version 72+) could not be instrumented at all. The JDK ClassFile API (`java.lang.classfile.*`, standardized in JDK 24) always understands the class file format of the JDK it ships with, so it provides a forward-compatible path for such classes.
 
 ## The SPI
 
@@ -71,9 +73,9 @@ static InstrumentationBackend select(int classFileMajorVersion) {
 
 In other words:
 
-1. Class file version ≤ 69 → ASM backend (the default, full-featured path).
-2. Class file version > 69 and the ClassFile API backend is available → ClassFile API backend.
-3. Class file version > 69 but the ClassFile API backend is unavailable (agent running on JDK < 24) → falls back to ASM, which will fail to parse the class; instrumentation of that class is effectively skipped.
+1. Class file version ≤ 71 → ASM backend (the default, full-featured path).
+2. Class file version > 71 and the ClassFile API backend is available → ClassFile API backend.
+3. Class file version > 71 but the ClassFile API backend is unavailable (agent running on JDK < 24) → falls back to ASM, which will fail to parse the class; instrumentation of that class is effectively skipped.
 
 The ClassFile API backend is loaded **reflectively** at class-initialization time so the main (Java 8-compiled) source set has no compile-time dependency on `java.lang.classfile`:
 
@@ -91,20 +93,28 @@ On JDK < 24 the `Class.forName` fails (the compiled class targets class file ver
 ### Requirements
 
 - The **agent must run on JDK 24+** — the backend is compiled with `sourceCompatibility = 24` / `targetCompatibility = 24` and uses `java.lang.classfile.*`.
-- It is engaged only for **class file major versions > 69** (`supports()` returns `classFileMajorVersion > AsmInstrumentationBackend.MAX_ASM_MAJOR_VERSION`).
+- It is engaged only for **class file major versions > 71** (`supports()` returns `classFileMajorVersion > AsmInstrumentationBackend.MAX_ASM_MAJOR_VERSION`).
 
 ### How It Instruments
 
 The backend parses the class with `ClassFile.parse()`, builds a `ClassMeta` from the class model (name, runtime-visible annotations, classloader), collects applicable handlers via `BTraceProbe.getApplicableHandlers(meta)`, and injects probe calls as `invokedynamic` instructions bootstrapped by `io.btrace.runtime.IndyDispatcher.bootstrap(...)` — entry probes before the first real instruction, return probes before each `ReturnInstruction`.
 
-### Current Limitations
+### Supported Probe Kinds and Current Limitations
 
-Verified in `ClassFileApiBackend.java`:
+Verified in `btrace-agent/src/main/java24/io/btrace/instr/ClassFileApiBackend.java` (class javadoc
+and the handler dispatch in `instrument(...)`):
 
-- **Only `Kind.ENTRY` and `Kind.RETURN` probes are supported.** Handlers with any other probe kind (CALL, LINE, FIELD_GET/SET, ERROR, etc.) are skipped with a debug-level log; the remaining handlers are still applied.
-- Method matching supports exact names and `/regex/` patterns; **type-constrained method matching** (a non-empty `type` in `@OnMethod`) is unsupported — such handlers are skipped.
-- Supported handler parameters: `@ProbeClassName`, `@ProbeMethodName`, and `@Self` (on instance methods; `null` is passed for static methods and constructor entry). Handlers using other special parameters (`@Return`, `@TargetInstance`, `@Duration`, `@TargetMethodOrField`) or plain probed-method arguments are skipped.
-- Classes the ClassFile API fails to parse are skipped (warning logged) rather than failing class loading.
+- **All probe kinds are supported**: `ENTRY`, `RETURN`, `CALL`, `LINE`, `FIELD_GET`, `FIELD_SET`,
+  `ARRAY_GET`, `ARRAY_SET`, `CHECKCAST`, `INSTANCEOF`, `THROW`, `CATCH`, `ERROR`, `NEWARRAY`, `NEW`,
+  `SYNC_ENTRY`, and `SYNC_EXIT`.
+- Method matching supports exact names, `/regex/` patterns, and type-constrained matching (a
+  non-empty `type` in `@OnMethod`).
+- Handler parameters: `@ProbeClassName`, `@ProbeMethodName`, `@Self`, ordinary probed-method
+  arguments (including `AnyType[]`), `@Return`, `@TargetInstance` (caught/escaping throwable for
+  `CATCH`/`ERROR`, lock object for `SYNC_*`), and `@Duration` where the kind defines it.
+- **Remaining limitation:** `@Duration` is not supported on `SYNC_ENTRY`/`SYNC_EXIT` handlers.
+- Classes the ClassFile API fails to parse are skipped (warning logged) rather than failing class
+  loading.
 
 ## Packaging
 

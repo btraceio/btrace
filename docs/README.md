@@ -49,7 +49,7 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 
 ### I Want Advanced Features
 1. **JFR Integration** → [Getting Started: JFR Integration](GettingStarted.md#advanced-jfr-integration), [Tutorial Lesson 5](BTraceTutorial.md)
-2. **Sampling** → [Quick Reference: @Sampled](QuickReference.md#sampled), [FAQ: Performance](FAQ.md#performance-issues)
+2. **Sampling** → [Quick Reference: @Sampled](QuickReference.md#sampled), [FAQ: Performance](FAQ.md#whats-the-performance-impact-of-btrace)
 3. **Aggregations** → [Quick Reference: Aggregation Functions](QuickReference.md#aggregation-functions)
 4. **Cloud Deployments** → [Getting Started: K8s](GettingStarted.md#btrace-in-containers-and-kubernetes), [FAQ: K8s](FAQ.md#can-i-use-btrace-with-microservices)
 5. **Fat Agent JAR** → [Getting Started: Fat Agent](GettingStarted.md#fat-agent-jar-single-jar-deployment) for single-JAR deployment
@@ -71,8 +71,8 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 - **Field Access** → [Quick Reference: Kind.FIELD_GET/SET](QuickReference.md#location-kinds)
 
 ### Advanced Features
-- **JFR Integration** → [Getting Started: JFR](GettingStarted.md#advanced-jfr-integration), [Quick Reference: @Event](QuickReference.md#event), [FAQ: JFR](FAQ.md#jfr-integration)
-- **Sampling** → [Quick Reference: @Sampled](QuickReference.md#sampled), [FAQ: Performance](FAQ.md#btrace-causes-significant-slowdown)
+- **JFR Integration** → [Getting Started: JFR](GettingStarted.md#advanced-jfr-integration), [Quick Reference: @Event](QuickReference.md#event), [FAQ: JFR](FAQ.md#how-does-btrace-integrate-with-jfr)
+- **Sampling** → [Quick Reference: @Sampled](QuickReference.md#sampled), [FAQ: Performance](FAQ.md#whats-the-performance-impact-of-btrace)
 - **Level Control** → [Quick Reference: @Level](QuickReference.md#level)
 - **Aggregations** → [Quick Reference: Aggregation Functions](QuickReference.md#aggregation-functions)
 - **Periodic Events** → [Quick Reference: @OnTimer](QuickReference.md#ontimer), [@PeriodicEvent](QuickReference.md#periodicevent)
@@ -150,15 +150,14 @@ BTrace includes 50+ sample scripts demonstrating real-world use cases:
 
 BTrace is an open-source project welcoming contributions. To contribute:
 
-1. Sign the [Oracle Contributor Agreement](https://oca.opensource.oracle.com/)
-2. Read the [Contributing Guidelines](../README.md#contributing---important)
-3. Fork the repository and create a pull request
-4. See [Build Instructions](../README.md#building-btrace) for development setup
+1. Read the [Contributing Guidelines](../CONTRIBUTING.md) (contributions are accepted under the Apache License 2.0)
+2. Fork the repository and create a pull request
+3. See [Build Instructions](../README.md#building-from-source) for development setup
 
 ## Version Information
 
 - **Current Version**: Check [GitHub Releases](https://github.com/btraceio/btrace/releases/latest)
-- **Java Compatibility**: BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). See the [migration guide](Migration-2.x-to-3.0.md).
+- **Java Compatibility**: BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). See the [migration guide](Migration-2.x-to-3.0.md).
 - **License**: Apache License 2.0
 
 ## Documentation Feedback

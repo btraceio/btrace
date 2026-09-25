@@ -797,23 +797,26 @@ class Example {
 
 ##### Granting Permissions at Runtime
 
-When running a probe that requires privileged permissions, you must explicitly grant them:
+When running a probe that requires privileged permissions, you must explicitly grant them. Grants
+are always configured on the *agent* side; the `btrace` client has no `--grant` flag.
 
-###### Using the btrace client
+###### Dynamic attach: permission policy file
+The agent reads the policy from `-Dbtrace.permissions=<file>`, then `~/.btrace/permissions.properties`
+(of the user running the target JVM), then the `META-INF/btrace/permissions.properties` classpath
+resource. Allow the extension that needs the permissions, then attach as usual:
 ```bash
-btrace --grant=NETWORK,THREADS <pid> MetricsProbe.class
+btracex policy set --allowExtensions btrace-metrics
+btrace <pid> MetricsProbe.class
 ```
+See [Permission Policy](PermissionPolicy.md) and
+[Tutorial 04](tutorials/04-extensions-and-permissions.md) for the full flow.
 
-###### Using the Java agent
+###### Java agent (`-javaagent`)
 ```bash
 java -javaagent:btrace.jar=script=MetricsProbe.class,grant=NETWORK,THREADS ...
 ```
 
 ###### Grant all permissions (use with caution)
-```bash
-btrace --grantAll=true <pid> MetricsProbe.class
-```
-or
 ```bash
 java -javaagent:btrace.jar=script=MetricsProbe.class,grantAll=true ...
 ```
@@ -845,10 +848,13 @@ Probe requires permissions that are not granted:
   - THREADS
     Create and manage threads. Risk: Resource exhaustion, concurrent operations.
 
-To allow these permissions, use:
-  --grant=NETWORK,THREADS
+To allow these permissions, grant them on the agent side, e.g.
+  -javaagent:btrace.jar=grant=NETWORK,THREADS
 
-Or use --grantAll=true to allow all permissions (not recommended).
+or allow the extension in the permission policy
+  (btracex policy set --allowExtensions <id>, or allowPrivileged=true).
+
+Use grantAll=true to allow all permissions (not recommended).
 ```
 
 ##### Inspecting Probe Permissions
@@ -880,9 +886,10 @@ public class StatsdExample {
 }
 ```
 
-Run with:
+Run with (after allowing the extension in the permission policy, see above):
 ```bash
-btrace --grant=NETWORK,THREADS -statsd localhost:8125 <pid> StatsdExample.class
+btracex policy set --allowExtensions btrace-statsd
+btrace -statsd localhost:8125 <pid> StatsdExample.class
 ```
 
 ##### Using the Histogram Metrics Extension (btrace-metrics)
@@ -1890,7 +1897,7 @@ Use `@OnEvent` for on-demand reporting triggered by `btrace send event <PID>` an
 
 ## Lesson 13 — BTrace MCP Server: AI Agents as Diagnosticians
 
-**Hands-on lab →** [Let an AI Assistant Debug Your JVM in 10 Minutes](tutorials/05-mcp-server.md) wires the server into Claude Code and walks a real diagnostic conversation end to end, including the gaps in the current tool set worth knowing about before you rely on it.
+**Hands-on lab →** [Let an AI Assistant Debug Your JVM in 10 Minutes](tutorials/05-mcp-server.md) is a short pointer: the MCP server now ships as the `btrace-observability` plugin in the external [BTrace Agent Plugins](https://github.com/btraceio/agent-plugins) marketplace (Claude Code, Codex, Pi), and the page tells you where the installation instructions and tool list live and what to ask the assistant once it's wired in.
 
 #### What is MCP?
 
@@ -2027,7 +2034,7 @@ The BTrace MCP server only attaches to JVMs on the local machine; it cannot conn
 
 Two packaging paths exist beyond a plain `$BTRACE_HOME` install, for when you need to ship BTrace as part of someone else's deployment rather than run it interactively yourself.
 
-**Fat agents** bundle BTrace plus one or more extensions into a single `-javaagent` JAR, with no separate extensions directory to copy alongside it. The supported 3.0 path is the `io.btrace.fat-agent` Gradle plugin, which embeds API classes as plain `.class` files and implementation classes as `.classdata`, matching the masked-classdata scheme used by the main distribution (see [Masked JAR Architecture](architecture/MaskedJarArchitecture.md)). The unpublished Maven `fat-agent` module was removed for 3.0.0 because it used an obsolete artifact layout. Worth knowing before you rely on the Gradle path: extensions embedded this way are parsed with an empty permission set, so the privileged-permission gate that governs filesystem-installed extensions (Lesson 6) never applies to anything you bundle into a fat agent — embedding a privileged extension *is* the grant, with no separate opt-in.
+**Fat agents** bundle BTrace plus one or more extensions into a single `-javaagent` JAR, with no separate extensions directory to copy alongside it. The supported 3.0 path is the `io.btrace.fat-agent` Gradle plugin, which embeds API classes as plain `.class` files and implementation classes as `.classdata`, matching the masked-classdata scheme used by the main distribution (see [Masked JAR Architecture](architecture/MaskedJarArchitecture.md)). The unpublished Maven `fat-agent` module was removed for 3.0.0 because it used an obsolete artifact layout. Embedding does **not** bypass the privileged-permission gate from Lesson 6: the plugin copies each extension's `BTrace-Extension-Permissions` manifest entry into the embedded descriptor, and a privileged extension is still refused at link time (`Blocked privileged extension. Required=[...]`) unless the agent runs with `allowExtensions=<id>` or `allowPrivileged=true`. [One JAR to Rule Them All](tutorials/08-fat-agent.md) shows the exact error and the argument that clears it.
 
 **Containers** ship as three official image variants — a full toolchain image, a smaller Alpine-based image for sidecars, and a distroless image with just the runtime JARs (no shell, so no interactive attach — the probe has to be baked in via `-javaagent` at build time). The common patterns are copying the distribution out of the official image with a multi-stage `COPY --from` build, or running BTrace as a separate sidecar container sharing the target pod's process namespace (`shareProcessNamespace: true` plus the `SYS_PTRACE` capability). See [docker/README.md](../docker/README.md) for the full pattern catalog and [GettingStarted.md](GettingStarted.md#btrace-in-containers-and-kubernetes) for the conceptual overview.
 
@@ -2041,4 +2048,4 @@ BTrace 3.0 fully supports Java 8 through the latest release, but running it agai
 
 The warning fires at most once per JVM and never throws, so it cannot interfere with agent or client startup. If you're deliberately running a fleet on older JDKs during a gradual migration, set `-Dbtrace.suppressJavaDeprecationWarning=true` on the target JVM to silence it. Java 8–16 support itself is not going away in 3.0 — only in BTrace's *next* major release. See [Migrating from 2.x to 3.0](Migration-2.x-to-3.0.md) for the full support policy and timeline.
 
-Separately, and unrelated to the deprecation floor, BTrace 3.0 also gained a second instrumentation backend to handle newer bytecode. BTrace's primary pipeline is built on ASM, which can only parse class files up to major version 69 (Java 25) — an application compiled for Java 26+ would be unparseable by ASM alone. When the agent itself runs on JDK 24 or newer, a second backend built on the JDK's own ClassFile API (`java.lang.classfile.*`, standardized in JDK 24) steps in for any class file version ASM can't handle; on older agent JDKs, such classes are simply skipped rather than crashing the target. The two backends are not equivalent in capability — the ClassFile API backend currently only supports `Kind.ENTRY`/`Kind.RETURN` probes and a narrower set of handler parameters — so this is a forward-compatibility safety net, not a full replacement. See [Instrumentation Backends](architecture/InstrumentationBackends.md) for the complete picture, including the backend-selection logic and current limitations.
+Separately, and unrelated to the deprecation floor, BTrace 3.0 also gained a second instrumentation backend to handle newer bytecode. BTrace's primary pipeline is built on ASM, which can only parse class files up to the version its release knows about (major version 71, Java 27, for the ASM 9.10.1 bundled with 3.0.0) — an application compiled for a newer Java would be unparseable by ASM alone. When the agent itself runs on JDK 24 or newer, a second backend built on the JDK's own ClassFile API (`java.lang.classfile.*`, standardized in JDK 24) steps in for any class file version ASM can't handle; on older agent JDKs, such classes are simply skipped rather than crashing the target. The ClassFile API backend supports every probe kind and handler parameter the ASM backend does, with one exception (`@Duration` on `SYNC_ENTRY`/`SYNC_EXIT` handlers), so probes behave the same on class files newer than the bundled ASM. See [Instrumentation Backends](architecture/InstrumentationBackends.md) for the complete picture, including the backend-selection logic and current limitations.

@@ -13,6 +13,7 @@ That's the entire premise of BTrace's oneliner language, and it's the fastest on
 opens the hands-on tutorial.
 
 *[terminal recording]*
+<!-- TODO: asset not produced yet (no docs/tutorials/images/, no .tape/.cast in internal/tutorial-assets/) -->
 
 ## The setup: an app that's lying to you, a little
 
@@ -67,9 +68,12 @@ was touched. You just asked the JVM what actually happened, and it told you.
 
 ## Detach, and nothing is left behind
 
-`Ctrl+C` in the BTrace terminal detaches the client, and in 3.0 that's a clean, total stop — every
-injected hook becomes a no-op on the spot, with no lingering overhead and no restart required to
-remove it. Reattach whenever you want; the app never noticed you were there.
+`Ctrl+C` in the BTrace terminal doesn't just drop the connection — it opens a small menu. Choose
+`1. exit` to end the session, and in 3.0 that's a clean, total stop: the agent retracts the probe
+and every injected hook becomes a no-op on the spot, with no lingering overhead and no restart
+required to remove it. Choose `6. detach client` instead if you want the probe to keep running in
+the target while you walk away; you can reconnect to it later with `btrace -r <probe id> <PID>`.
+Either way, reattach whenever you want; the app never noticed you were there.
 
 Total elapsed time for all three of the moves above: about five minutes, with the first real
 answer landing well inside the first two. That's not a demo trick — it's the actual shape of an
@@ -77,14 +81,14 @@ oneliner session against a real, misbehaving app.
 
 ## About the 30-second start
 
-The fastest possible path into BTrace, in principle, is [JBang](https://www.jbang.dev/): no
-install, just `jbang btrace@btraceio <PID> script.java` and you're attached. We want to be upfront
-about where that stands today — the external `btraceio/jbang-catalog` that powers the short
-`btrace@btraceio` alias hasn't been updated for 3.0 yet and still points at old 2.x coordinates, so
-that particular shortcut isn't reliable against a 3.0 build right now. The longer form,
-`jbang io.btrace:btrace-client:<version> <PID> script.java` with an explicit version, is the safe
-substitute until the catalog is refreshed — and everything else in this post, the oneliners
-themselves, works exactly as shown against any 3.0 install.
+The fastest possible path into BTrace is [JBang](https://www.jbang.dev/): no install, just
+`jbang io.btrace:btrace:<version> <PID> script.java` with an explicit version (`3.0.0`, say) and
+you're attached — JBang pulls the single published `io.btrace:btrace` artifact and runs it as the
+client. If you'd rather not type coordinates, add the `btraceio` catalog once
+(`jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json`)
+and the short `jbang btrace@btraceio <PID> script.java` alias does the same thing; the release
+workflow updates that catalog to the new version as part of every release. Either way, everything
+else in this post — the oneliners themselves — works exactly as shown against any 3.0 install.
 
 ## Why this is the on-ramp
 
@@ -99,4 +103,5 @@ what exactly failed" question, one line and under two minutes is the whole answe
 
 - Hands-on tutorial: [docs/tutorials/01-first-trace-in-2-minutes.md](../../docs/tutorials/01-first-trace-in-2-minutes.md)
 - Getting started: [../../docs/GettingStarted.md](../../docs/GettingStarted.md)
+<!-- TODO: replace with the per-post Discussions thread before publishing -->
 - Questions, war stories, or "here's the bug I found" reports: [GitHub Discussions](https://github.com/btraceio/btrace/discussions)

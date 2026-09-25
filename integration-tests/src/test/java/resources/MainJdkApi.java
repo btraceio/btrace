@@ -26,8 +26,8 @@ import java.util.Map;
 
 /**
  * Target app for ClassFile API backend integration tests. Repeatedly calls JDK APIs with stable
- * bytecode shapes so BTrace probes on JDK classes produce output. On JDK 26+ the JDK classes have
- * class-file major version &ge; 70, which routes instrumentation through the ClassFile API backend
+ * bytecode shapes so BTrace probes on JDK classes produce output. On JDK 28+ the JDK classes have
+ * class-file major version &ge; 72, which routes instrumentation through the ClassFile API backend
  * instead of ASM.
  */
 public class MainJdkApi extends TestApp {

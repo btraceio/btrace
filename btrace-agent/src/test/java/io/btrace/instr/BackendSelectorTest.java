@@ -29,14 +29,14 @@ class BackendSelectorTest {
   }
 
   @Test
-  void asmBackendSelectedForJava25() {
-    InstrumentationBackend b = BackendSelector.select(69);
+  void asmBackendSelectedForJava27() {
+    InstrumentationBackend b = BackendSelector.select(71);
     assertInstanceOf(AsmInstrumentationBackend.class, b);
   }
 
   @Test
-  void nonAsmBackendOrFallbackForJava26Plus() {
-    InstrumentationBackend b = BackendSelector.select(70);
+  void nonAsmBackendOrFallbackForJava28Plus() {
+    InstrumentationBackend b = BackendSelector.select(72);
     assertNotNull(b);
   }
 

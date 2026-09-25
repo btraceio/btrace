@@ -20,7 +20,7 @@ spec:
       imagePullPolicy: IfNotPresent
 
     - name: btrace-sidecar
-      image: btrace/btrace:3.0.0-alpine
+      image: ghcr.io/btraceio/btrace:3.0.0-alpine
       command: ["/bin/sh", "-c", "while true; do sleep 30; done"]
       securityContext:
         capabilities:

@@ -8,18 +8,23 @@ across diverse runtime environments.
 The CI pipeline runs integration tests against the following JDK versions on every pull request
 and push to `develop`:
 
-| JDK Version | SDKMan Identifier | Distribution | Status |
-|-------------|-------------------|--------------|--------|
-| 8 | `8.0.492-tem` | Eclipse Temurin | Supported (LTS) |
-| 11 | `11.0.31-tem` | Eclipse Temurin | Supported (LTS) — minimum build JDK |
-| 17 | `17.0.19-tem` | Eclipse Temurin | Supported (LTS) |
-| 21 | `21.0.11-tem` | Eclipse Temurin | Supported (LTS) |
-| 25 | `25.0.3-tem` | Eclipse Temurin | Supported (LTS) |
-| 27 (EA) | `27.ea.25-open` | OpenJDK Early Access | Experimental — tracked for future readiness |
+| JDK Version | How CI installs it | Distribution | Status |
+|-------------|--------------------|--------------|--------|
+| 8 | `actions/setup-java` with `java-version: 8`, `check-latest: true` → newest Temurin 8 release at run time | Eclipse Temurin | Supported (LTS) — deprecated target, removed in 4.0 |
+| 11 | `actions/setup-java` with `java-version: 11`, `check-latest: true` → newest Temurin 11 release at run time | Eclipse Temurin | Supported (LTS) — minimum build JDK; deprecated target, removed in 4.0 |
+| 17 | `actions/setup-java` with `java-version: 17`, `check-latest: true` → newest Temurin 17 release at run time | Eclipse Temurin | Supported (LTS) |
+| 21 | `actions/setup-java` with `java-version: 21`, `check-latest: true` → newest Temurin 21 release at run time | Eclipse Temurin | Supported (LTS) |
+| 25 | `actions/setup-java` with `java-version: 25`, `check-latest: true` → newest Temurin 25 release at run time | Eclipse Temurin | Supported (LTS) |
+| 27 | lane spec `27` with `sdkman: true` → newest 27 GA build SDKMAN lists (Temurin, else Oracle JDK, else java.net; `scripts/resolve-sdkman-java.sh`), `27.0.0-oracle` until Temurin 27 is published | GA 2026-09-15 | Supported — the newest GA release |
+| 28 (EA) | lane spec `28-ea` → Temurin early-access build via `actions/setup-java` (SDKMAN publishes java.net EA builds late and retires them at GA) | Temurin Early Access | Experimental — tracked for future readiness; exercises the ClassFile API instrumentation backend (class-file major 72) |
 
-Version identifiers are checked every Monday via
-[`.github/workflows/update-jdk-versions.yml`](../.github/workflows/update-jdk-versions.yml)
-using the SDKMan API; a pull request is opened automatically when a newer version is available.
+No lane pins a build. SDKMan drops superseded builds from its catalogue (`27.ea.31-open` was
+retired at 27 GA; its list shows one build per vendor and major), so a pinned identifier fails
+`sdk install` once that happens. `actions/setup-java` resolves the newest Temurin release of a
+major through the Adoptium API at run time, which removes that failure mode; SDKMan remains in
+use only for a major that Adoptium has not published yet (27 at the time of writing). [`.github/workflows/update-jdk-versions.yml`](../.github/workflows/update-jdk-versions.yml)
+keeps running every Monday; it rewrites pinned `-tem` and `N.ea.M-open` entries, so it becomes
+active again as soon as a lane pins a build.
 
 ## Distribution Support Policy
 

@@ -31,9 +31,9 @@ BTrace publishes three image variants, each for a different job
 
 | Variant | Base image (from the Dockerfile) | Size | Ships | Best for |
 |---|---|---|---|---|
-| `btrace/btrace:3.0.0` | `bellsoft/liberica-openjdk-debian:11.0.30-cds` | ~25MB | Full toolchain, shell, samples | Development, interactive debugging |
-| `btrace/btrace:3.0.0-alpine` | `alpine:3.23` + `openjdk11-jdk` | ~15MB | Full toolchain, smaller OS | Kubernetes sidecars, resource-constrained environments |
-| `btrace/btrace:3.0.0-distroless` | `gcr.io/distroless/java11-debian11` | ~10MB | Runtime JARs only — **no shell, no scripts** | Production apps using `-javaagent` |
+| `ghcr.io/btraceio/btrace:3.0.0` | `bellsoft/liberica-openjdk-debian:11.0.32.1-cds` | ~25MB | Full toolchain, shell, samples | Development, interactive debugging |
+| `ghcr.io/btraceio/btrace:3.0.0-alpine` | `alpine:3.24` + `openjdk11-jdk` | ~15MB | Full toolchain, smaller OS | Kubernetes sidecars, resource-constrained environments |
+| `ghcr.io/btraceio/btrace:3.0.0-distroless` | `gcr.io/distroless/java11-debian11` | ~10MB | Runtime JARs only — **no shell, no scripts** | Production apps using `-javaagent` |
 
 > **What just happened?** Those base images and sizes come straight from
 > [`docker/Dockerfile`](../../docker/Dockerfile), [`docker/Dockerfile.alpine`](../../docker/Dockerfile.alpine),
@@ -53,8 +53,8 @@ series' demo app
 ([full Dockerfile: demo/Dockerfile.k8s-sidecar-demo](demo/Dockerfile.k8s-sidecar-demo)):
 
 ```dockerfile
-FROM btrace/btrace:3.0.0 AS btrace
-FROM bellsoft/liberica-openjdk-debian:11.0.30-cds
+FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
+FROM bellsoft/liberica-openjdk-debian:11.0.32.1-cds
 
 WORKDIR /app
 COPY DemoApp.java /app/
@@ -138,7 +138,7 @@ spec:
       image: demo-app-with-btrace:local # <-- replace with your registry/tag
 
     - name: btrace-sidecar
-      image: btrace/btrace:3.0.0-alpine
+      image: ghcr.io/btraceio/btrace:3.0.0-alpine
       command: ["/bin/sh", "-c", "while true; do sleep 30; done"]
       securityContext:
         capabilities:
@@ -153,18 +153,31 @@ spec:
         name: btrace-scripts
 ```
 
-Push your image to a registry `kubectl` can reach, update the `image:` field above, then:
+Push your image to a registry `kubectl` can reach and update the `image:` field above. The pod
+mounts a ConfigMap named `btrace-scripts` at `/scripts`, so create it first — from
+[Tutorial 2](02-oneliner-to-script.md)'s [demo/OrderTiming.java](demo/OrderTiming.java), which
+lands in the sidecar as `/scripts/OrderTiming.java` — then apply the pod and attach (still from
+`docs/tutorials/demo/`):
 
 ```sh
+kubectl create configmap btrace-scripts --from-file=OrderTiming.java
 kubectl apply -f k8s-sidecar-pod.yaml
 kubectl exec demo-app-with-btrace -c btrace-sidecar -- \
-  sh -c 'btrace $(pgrep -f DemoApp) /scripts/trace.btrace'
+  sh -c 'btrace $(pgrep -f "[D]emoApp") /scripts/OrderTiming.java'
 ```
 
-**You should see** (illustrative — depends on your cluster and registry):
+(The `[D]emoApp` bracket trick keeps `pgrep -f` from matching the `sh -c '...'` wrapper itself,
+whose own command line contains the pattern; only the app container's `java DemoApp.java` matches.)
+
+**You should see** (illustrative — depends on your cluster and registry), followed by the same
+per-worker lines as [Tutorial 2, Step 4](02-oneliner-to-script.md):
 
 ```
+configmap/btrace-scripts created
 pod/demo-app-with-btrace created
+worker=order-worker-1 order #1 total=43ms at 1783778034521
+worker=order-worker-0 order #1 total=57ms at 1783778034534
+worker=order-worker-2 order #3 total=414ms at 1783778034964
 ```
 
 > **What just happened?** `shareProcessNamespace: true` is the one field that makes this pattern
@@ -191,7 +204,7 @@ your application's own build, not BTrace's):
 ```dockerfile
 # ... an earlier "build" stage that produces /app/target/myapp.jar goes here ...
 
-FROM btrace/btrace:3.0.0-distroless AS btrace
+FROM ghcr.io/btraceio/btrace:3.0.0-distroless AS btrace
 FROM gcr.io/distroless/java11-debian11
 WORKDIR /app
 
@@ -202,16 +215,6 @@ ENTRYPOINT ["java", \
   "-javaagent:/opt/btrace/libs/btrace.jar=script=/scripts/trace.btrace", \
   "-jar", "/app/myapp.jar"]
 ```
-
-> **A correction worth flagging:** `docker/README.md`'s own copy of this pattern still shows the
-> *legacy* two-JAR invocation (`-javaagent:...btrace-agent.jar=...` plus a separate
-> `-Xbootclasspath/a:...btrace-boot.jar`). That layout predates the current build: BTrace 3.0 ships
-> a single self-contained, masked JAR named `btrace.jar` (task `btraceJar` in
-> `btrace-dist/build.gradle`, manifest attribute `Boot-Class-Path: btrace.jar` — the jar declares
-> itself as its own boot classpath entry, so no second `-Xbootclasspath/a:` flag is needed). Every
-> other current doc in this tree — `GettingStarted.md`, `Troubleshooting.md`, `FAQ.md`,
-> `BTraceTutorial.md`, `docs/architecture/MaskedJarArchitecture.md` — already uses the one-JAR form
-> shown above; this tutorial follows them rather than `docker/README.md`'s stale snippet.
 
 > **What just happened?** `Dockerfile.distroless` only ever `COPY`s `btrace/libs` — there's no
 > `bin/`, no entrypoint script, nothing to `docker exec` a shell into (distroless images ship no
@@ -224,27 +227,36 @@ ENTRYPOINT ["java", \
 If your extension needs (say, `btrace-metrics` for percentile histograms, from
 [Tutorial 4](04-extensions-and-permissions.md)) are fixed at build time, you can go one step
 further than Step 5 and skip `$BTRACE_HOME` entirely with a **fat agent JAR** — the packaging
-BTrace builds for exactly this situation, covered in depth in
-[Tutorial 8](08-fat-agent.md). Per
-[`docs/architecture/fat-agent-plugin.md`](../architecture/fat-agent-plugin.md)'s own Kubernetes use
-case:
+BTrace builds for exactly this situation, covered in depth in [Tutorial 8](08-fat-agent.md).
 
-```dockerfile
-FROM btrace/btrace:3.0.0 AS btrace
-FROM openjdk:17
+No official image contains one, so you can't `COPY --from=btrace` it: `btrace-dist/build.gradle`
+deliberately writes the fat agent to `btrace-dist/build/fat-agent/` — *outside* the distribution
+tree the images copy, so it never rides along into the zip/tarball/deb/rpm — and
+`buildDockerContext` depends on `btraceJar` only. Build it yourself and put it in your Docker build
+context:
 
-# Copy only the fat agent (no BTRACE_HOME needed)
-COPY --from=btrace /opt/btrace/libs/btrace-agent-fat.jar /opt/btrace/
+```sh
+# Option A: your own fat agent with exactly the extensions you chose (Tutorial 8, Steps 1-3)
+cp ~/fat-agent-demo/build/libs/demo-btrace-agent.jar ./btrace-agent-fat.jar
+
+# Option B: BTrace's release fat agent (all seven default extensions), from a source checkout.
+# It's the same jar Maven Central serves as io.btrace:btrace:3.0.0.
+./gradlew :btrace-dist:fatAgentJar
+cp btrace-dist/build/fat-agent/btrace-agent-fat.jar ./btrace-agent-fat.jar
 ```
 
-One thing worth knowing before you rely on this: the fat agent JAR is produced by an **opt-in**
-Gradle task (`./gradlew :btrace-dist:fatAgentJar`, `outputDir = libsDir` — same `libs/` directory
-`btrace.jar` lands in). The Docker image build tasks in `btrace-dist/build.gradle`
-(`buildDockerImage`, `buildDockerImageAlpine`, `buildDockerImageDistroless`) all depend on
-`btraceJar`, but none of them depend on `fatAgentJar` — so `btrace-agent-fat.jar` only ends up in
-`/opt/btrace/libs` if you (or your release pipeline) ran that task before the image was built.
-Don't assume a `btrace/btrace:3.0.0` image you pulled has it; build it yourself first, per
-[Tutorial 8](08-fat-agent.md).
+Then copy it from the build context rather than from an image:
+
+```dockerfile
+FROM gcr.io/distroless/java11-debian11
+
+# Copy only the fat agent (no BTRACE_HOME, no /opt/btrace/libs needed)
+COPY btrace-agent-fat.jar /opt/btrace/
+```
+
+and point Step 5's `-javaagent:` at `/opt/btrace/btrace-agent-fat.jar` instead of
+`/opt/btrace/libs/btrace.jar`. Remember from Tutorial 8 that a privileged embedded extension still
+needs `allowExtensions=<id>` (or `allowPrivileged=true`) among the agent arguments.
 
 ## Troubleshooting
 
@@ -272,7 +284,7 @@ Don't assume a `btrace/btrace:3.0.0` image you pulled has it; build it yourself 
 docker rm -f demo-app
 docker rmi demo-app-with-btrace:local
 kubectl delete pod demo-app-with-btrace
-kubectl delete configmap btrace-scripts   # if you created one for Step 4's scripts volume
+kubectl delete configmap btrace-scripts
 ```
 
 ## Go deeper

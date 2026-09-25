@@ -30,7 +30,7 @@ Yes, with proper precautions:
 
 ### Does BTrace work with all Java applications?
 BTrace works with:
-- Java 8 through Java 25+ (running against a JVM older than Java 17 is deprecated, see below)
+- Java 8 through Java 27+ (running against a JVM older than Java 17 is deprecated, see below)
 - Standard JVMs (HotSpot, OpenJDK)
 - Most application frameworks (Spring, Java EE, etc.)
 - Containerized applications (Docker, Kubernetes)
@@ -440,7 +440,7 @@ public static void heartbeat() {
 ```
 
 ### Can I use BTrace with Java 17+?
-Yes. BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). For Java 9+ you may need to add module opens:
+Yes. BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). For Java 9+ you may need to add module opens:
 
 ```bash
 btrace --add-opens java.base/java.lang=ALL-UNNAMED \
@@ -457,7 +457,7 @@ If the target JVM runs a Java version older than 17, the BTrace agent prints a w
 [BTrace] WARNING: This JVM is Java <N>. Running BTrace on Java versions older than 17 is deprecated and support will be removed in the next major release. Please upgrade to Java 17 or newer. Suppress this warning with -Dbtrace.suppressJavaDeprecationWarning=true.
 ```
 
-This reflects the BTrace 3.0 Java support policy: BTrace 3.0 runs on Java 8–25+, but running against a JVM older than Java 17 is deprecated. It continues to work throughout 3.x, and support for Java < 17 will be removed in the next major release (4.0).
+This reflects the BTrace 3.0 Java support policy: BTrace 3.0 runs on Java 8–27+, but running against a JVM older than Java 17 is deprecated. It continues to work throughout 3.x, and support for Java < 17 will be removed in the next major release (4.0).
 
 The warning is informational only — nothing is disabled. To suppress it, set the system property `btrace.suppressJavaDeprecationWarning=true` (e.g., `-Dbtrace.suppressJavaDeprecationWarning=true`).
 
@@ -826,12 +826,12 @@ Service mesh telemetry and BTrace serve different purposes:
 Use both together for comprehensive observability.
 
 ### How do I contribute to BTrace?
-1. Sign the [Oracle Contributor Agreement](https://oca.opensource.oracle.com/)
-2. Fork the [repository](https://github.com/btraceio/btrace)
-3. Create a feature branch
-4. Submit a pull request
+1. Fork the [repository](https://github.com/btraceio/btrace)
+2. Create a feature branch
+3. Submit a pull request
 
-See [Contributing Guide](../README.md#contributing) for details.
+Contributions are accepted under the Apache License 2.0; no contributor agreement is required.
+See the [Contributing Guide](../CONTRIBUTING.md) for details.
 
 ### Where can I find more examples?
 - **Sample scripts**: `btrace-dist/src/main/resources/samples/` (50+ examples)

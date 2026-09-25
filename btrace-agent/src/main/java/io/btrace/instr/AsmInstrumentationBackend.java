@@ -19,14 +19,15 @@ package io.btrace.instr;
 import java.util.Collection;
 
 /**
- * The default instrumentation backend; delegates to the existing ASM-based pipeline. Supports class
- * file major versions up to {@value #MAX_ASM_MAJOR_VERSION} (Java 25), which is the ceiling for ASM
- * 9.9.x.
+ * The default instrumentation backend; delegates to the existing ASM-based pipeline. Handles class
+ * file major versions up to {@value #MAX_ASM_MAJOR_VERSION} (Java 27), the highest version the
+ * bundled ASM (9.10.1, see {@code settings.gradle}) can parse; newer class files are routed to the
+ * ClassFile API backend. Bump this constant together with the ASM dependency.
  */
 final class AsmInstrumentationBackend implements InstrumentationBackend {
 
-  /** Highest class file major version ASM 9.9.x can parse without throwing. */
-  static final int MAX_ASM_MAJOR_VERSION = 69; // Java 25
+  /** Highest class file major version handled by the ASM backend (see class javadoc). */
+  static final int MAX_ASM_MAJOR_VERSION = 71; // Java 27
 
   @Override
   public boolean supports(int classFileMajorVersion) {

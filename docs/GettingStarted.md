@@ -14,7 +14,7 @@ BTrace is a safe, dynamic tracing tool for the Java platform. It allows you to d
 
 ## Prerequisites
 
-- Java 8 or higher. BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
+- Java 8 or higher. BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
 - Basic knowledge of Java programming
 - Target Java application running with appropriate permissions
 
@@ -599,7 +599,7 @@ jmc recording.jfr
 - Can be analyzed offline
 - Timeline visualization in Mission Control
 
-For complete JFR documentation, see [BTrace Tutorial Lesson 5](BTraceTutorial.md) and [FAQ: JFR Integration](FAQ.md#jfr-integration).
+For complete JFR documentation, see [BTrace Tutorial Lesson 5](BTraceTutorial.md) and [FAQ: JFR Integration](FAQ.md#how-does-btrace-integrate-with-jfr).
 
 ## BTrace in Containers and Kubernetes
 
@@ -624,7 +624,7 @@ docker exec -it <container-id> btrace <PID> script.java
 **Example Dockerfile with official BTrace images:**
 ```dockerfile
 # Option 1: Copy BTrace into your application image (recommended)
-FROM btrace/btrace:latest AS btrace
+FROM ghcr.io/btraceio/btrace:latest AS btrace
 FROM bellsoft/liberica-openjdk-debian:11-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
@@ -639,9 +639,10 @@ ENTRYPOINT ["java", "-jar", "/app/myapp.jar"]
 **Alternative: Manual installation (if not using official images):**
 ```dockerfile
 FROM bellsoft/liberica-openjdk-debian:11-cds
-RUN curl -L https://github.com/btraceio/btrace/releases/download/v3.0.0/btrace-3.0.0.tar.gz \
-    | tar -xz -C /opt/
-ENV BTRACE_HOME=/opt/btrace-3.0.0
+RUN mkdir -p /opt/btrace \
+    && curl -L https://github.com/btraceio/btrace/releases/download/v3.0.0/btrace-v3.0.0-bin.tar.gz \
+    | tar -xz -C /opt/btrace
+ENV BTRACE_HOME=/opt/btrace
 ENV PATH=$PATH:$BTRACE_HOME/bin
 ```
 
@@ -695,7 +696,7 @@ spec:
         image: myapp:latest
 
       - name: btrace
-        image: btrace/btrace:latest-alpine  # Official BTrace Alpine image
+        image: ghcr.io/btraceio/btrace:latest-alpine  # Official BTrace Alpine image
         command: ["/bin/sh", "-c", "while true; do sleep 30; done"]
         volumeMounts:
         - name: btrace-scripts

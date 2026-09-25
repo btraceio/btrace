@@ -4,7 +4,7 @@
 
 > Draft B5 · target: BTrace 3.0.0 + 3 weeks · grounded in `docs/tutorials/06-write-your-own-extension.md`
 
-`btrace-metrics` gets you HdrHistogram-backed percentiles for free. But at some point you'll want a capability that's specific to your own domain — an order counter, a cache-hit tracker, whatever your systems actually need — and that means writing an extension of your own. The good news is that BTrace 3.0 ships a real Gradle plugin for exactly this, and building one is closer to filling in a template than writing a framework integration. The tutorial this post is based on builds a tiny "order counter" service from scratch, end to end, in about 25 minutes — and along the way it turned up a real gotcha in the plugin that's worth knowing before it costs you twenty minutes of head-scratching.
+`btrace-metrics` gets you HdrHistogram-backed percentiles for free. But at some point you'll want a capability that's specific to your own domain — an order counter, a cache-hit tracker, whatever your systems actually need — and that means writing an extension of your own. The good news is that BTrace 3.0 ships a real Gradle plugin for exactly this, and building one is closer to filling in a template than writing a framework integration. The tutorial this post is based on builds a tiny "order counter" service from scratch, end to end, in about 25 minutes — and along the way it makes one build-file choice explicit that's worth understanding before it costs you twenty minutes of head-scratching.
 
 ## The scaffold
 
@@ -28,8 +28,8 @@ java {
 }
 
 dependencies {
-    apiCompileOnly 'io.btrace:btrace-core:3.0.0'
-    implCompileOnly 'io.btrace:btrace-core:3.0.0'
+    apiCompileOnly 'io.btrace:btrace:3.0.0'
+    implCompileOnly 'io.btrace:btrace:3.0.0'
 }
 
 btraceExtension {
@@ -40,7 +40,7 @@ btraceExtension {
 }
 ```
 
-`io.btrace.extension` is the plugin's real Gradle Plugin Portal ID. Applying it auto-applies the Shadow plugin for you, and registers the `btraceExtension { }` block as a real Gradle extension object. Notice that `services` line — hold onto it, because it's the thing standing between "this works" and "this silently exports nothing," and not for the reason you'd guess.
+`io.btrace.extension` is the plugin's real Gradle Plugin Portal ID. Applying it auto-applies the Shadow plugin for you, and registers the `btraceExtension { }` block as a real Gradle extension object. Notice that `services` line — hold onto it, because it's the thing standing between "this works" and "this silently exports nothing" whenever the plugin can't discover your service interface on its own.
 
 From there, the extension itself is refreshingly plain: BTrace extensions use a single authored source tree, meaning the API interface and its implementation live side by side in the same package — exactly how the bundled `btrace-metrics` extension is laid out. The API is a `package-info.java` carrying an `@ExtensionDescriptor`, plus a small interface:
 
@@ -85,9 +85,9 @@ public final class OrderCounterServiceImpl extends Extension implements OrderCou
 
 ## The gotcha: `services` isn't optional busywork
 
-Here's the thing to know plainly, not bury in a footnote: that `services = [...]` line in `build.gradle` is *load-bearing*, and it's load-bearing for a reason that has nothing to do with your code being wrong. The plugin can, in principle, auto-detect service interfaces from the `@ServiceDescriptor` annotation without you listing them by hand. But as of this checkout, that auto-detection logic checks for the *pre-3.0* package name — `org.openjdk.btrace.core.extensions.ServiceDescriptor` — not the current `io.btrace.core.extensions.ServiceDescriptor` that this codebase's own API actually uses. In other words: auto-detection is currently dead code against BTrace 3.0's own annotations. If you leave `services` out of your `btraceExtension { }` block and lean on auto-detection, nothing gets exported, and you won't get an error telling you why.
+Here's the thing to know plainly, not bury in a footnote: that `services = [...]` line in `build.gradle` is *load-bearing*. The plugin does auto-detect service interfaces when you leave it out — it scans your compiled classes for *interfaces* carrying the `io.btrace.core.extensions.ServiceDescriptor` annotation and exports those. But that discovery only sees the annotation when it's on the compiled service interface itself, not just on the implementation. Put `@ServiceDescriptor` on the wrong side, or on a class rather than an interface, and nothing gets exported: the build logs `No services declared or detected`, reports success, and ships a service-less extension.
 
-The fix costs nothing — declare `services` explicitly, exactly as this tutorial does and exactly as the real `btrace-metrics` module does. But it's worth knowing about up front rather than discovering it after a build that reports success while quietly shipping a service-less extension. If you write your own extension against BTrace 3.0 today, always list `services` by hand.
+The fix costs nothing — declare `services` explicitly, exactly as this tutorial does and exactly as the real `btrace-metrics` module does. It also decides which classes land on the API side of the split, which is why the tutorial treats it as mandatory rather than optional. If you write your own extension against BTrace 3.0 today, list `services` by hand and let auto-detection be a fallback, not the plan.
 
 ## Wiring it into a probe
 
@@ -108,5 +108,6 @@ Running against the shared demo app, it reports back `orders: succeeded=41 faile
 ---
 
 - Full hands-on walkthrough: [docs/tutorials/06-write-your-own-extension.md](../../docs/tutorials/06-write-your-own-extension.md)
-- New to BTrace? Start here: [../GettingStarted.md](../GettingStarted.md)
+- New to BTrace? Start here: [docs/GettingStarted.md](../../docs/GettingStarted.md)
+<!-- TODO: replace with the per-post Discussions thread before publishing -->
 - Questions, ideas, war stories: [GitHub Discussions](https://github.com/btraceio/btrace/discussions)

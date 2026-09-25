@@ -24,6 +24,8 @@ import io.btrace.core.annotations.Kind;
 import io.btrace.core.annotations.Sampled;
 import io.btrace.core.annotations.Where;
 import io.btrace.core.extensions.Permission;
+import java.lang.reflect.Method;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -31,6 +33,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -61,33 +64,69 @@ import org.objectweb.asm.tree.VarInsnNode;
 @EnabledForJreRange(min = JRE.JAVA_24)
 class ClassFileApiBackendTest {
 
+  @BeforeAll
+  static void installRuntime() throws Throwable {
+    // ClassInfo.isBootstrap() consults the installed BTrace runtime (same setup as ClassInfoTest)
+    Class<?> accessImpl = Class.forName("io.btrace.runtime.BTraceRuntimeAccessImpl");
+    Method m = accessImpl.getDeclaredMethod("install");
+    m.setAccessible(true);
+    m.invoke(null);
+  }
+
   @Test
-  void supportsVersionAbove69() {
-    InstrumentationBackend backend = BackendSelector.select(70);
+  void classFileApiReadsClassHeaders() {
+    // forced ClassFile API path on a class file ASM could also read: proves the reader itself
+    ClassHeader header =
+        ClassHeaderReader.readWithClassFileApi(
+            ClassHeaderReaderTest.classBytes(org.objectweb.asm.Opcodes.V17));
+    assertEquals(ClassHeaderReaderTest.CLASS_NAME, header.getClassName());
+    assertEquals("java/util/AbstractList", header.getSuperName());
+    assertArrayEquals(new String[] {"java/io/Serializable"}, header.getInterfaces());
+    assertFalse(header.isInterface());
+  }
+
+  @Test
+  void classInfoResolvesHierarchyOfClassFilesNewerThanAsm() {
+    requireJdk28ForVersion72();
+    // The failing CI case in a nutshell: type-assignability checks on a JDK 28 target read the
+    // JDK's own (major 72) classes, which ASM rejects; the ClassFile API must serve them instead.
+    byte[] bytes = ClassHeaderReaderTest.classBytes(ClassHeaderReaderTest.NEWER_THAN_ASM);
+    ClassCache cache = ClassCache.getInstance();
+    ClassInfo info =
+        cache.get(ClassHeaderReaderTest.loaderServing(bytes), ClassHeaderReaderTest.CLASS_NAME);
+    assertTrue(info.isAvailable(), "hierarchy of a newer-than-ASM class must be loadable");
+    assertTrue(
+        info.getSupertypes(false).contains(cache.get(AbstractList.class)),
+        "supertypes must include java.util.AbstractList: " + info.getSupertypes(false));
+  }
+
+  @Test
+  void supportsVersionAbove71() {
+    InstrumentationBackend backend = BackendSelector.select(72);
     assertFalse(
         backend instanceof AsmInstrumentationBackend,
-        "Expected ClassFile API backend for version 70 on JDK 24+");
-    assertTrue(backend.supports(70));
+        "Expected ClassFile API backend for version 72 on JDK 24+");
+    assertTrue(backend.supports(72));
     assertTrue(backend.supports(80));
-    assertFalse(backend.supports(69));
+    assertFalse(backend.supports(71));
   }
 
   @Test
   void returnsNullWhenNoProbesMatch() {
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     // Pass empty probe list — no match possible
-    byte[] result = backend.instrument(null, buildMinimalClass(70), Collections.emptyList());
+    byte[] result = backend.instrument(null, buildMinimalClass(72), Collections.emptyList());
     assertNull(result);
   }
 
   @Test
   void entryProbeInjectedIntoMatchingMethod() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "doWork");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "doWork");
     BTraceProbe probe =
         buildStubProbe("com/example/MyTrace", "com.example.Target", "doWork", Kind.ENTRY, "()V");
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes when probe matches");
@@ -99,12 +138,12 @@ class ClassFileApiBackendTest {
 
   @Test
   void entryProbeNotInjectedWhenMethodNameMismatches() {
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "doWork");
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "doWork");
     BTraceProbe probe =
         buildStubProbe(
             "com/example/MyTrace", "com.example.Target", "otherMethod", Kind.ENTRY, "()V");
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Expected null when no method name matches");
@@ -112,8 +151,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void entryProbeInjectedWhenTypeConstraintMatches() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithStaticCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithStaticCall(72, "com/example/Target", "callTopLevel");
     BTraceProbe probe =
         buildStubProbeWithType(
             "com/example/MyTrace",
@@ -124,7 +163,7 @@ class ClassFileApiBackendTest {
             "long (java.lang.String, long)");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected type-constrained ENTRY probe to match method descriptor");
     assertTrue(containsInvokeDynamic(patchVersion(result, 65), "callTopLevel", "$btrace$"));
@@ -132,8 +171,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void entryProbeSkippedWhenTypeConstraintMismatches() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithStaticCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithStaticCall(72, "com/example/Target", "callTopLevel");
     BTraceProbe probe =
         buildStubProbeWithType(
             "com/example/MyTrace",
@@ -144,7 +183,7 @@ class ClassFileApiBackendTest {
             "int (java.lang.String, long)");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Expected mismatched type-constrained ENTRY probe to be skipped");
   }
@@ -153,8 +192,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void entryProbePassesTypedMethodArgs() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     BTraceProbe probe =
         buildStubProbe(
             "com/example/MyTrace",
@@ -164,7 +203,7 @@ class ClassFileApiBackendTest {
             "(Ljava/lang/String;J)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected ENTRY probe capturing typed method args to be injected");
     byte[] readable = patchVersion(result, 65);
@@ -175,8 +214,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void entryProbePassesTypedMethodArgsStatic() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithStaticCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithStaticCall(72, "com/example/Target", "callTopLevel");
     BTraceProbe probe =
         buildStubProbe(
             "com/example/MyTrace",
@@ -186,7 +225,7 @@ class ClassFileApiBackendTest {
             "(Ljava/lang/String;J)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected ENTRY probe on static method with typed args to be injected");
     byte[] readable = patchVersion(result, 65);
@@ -199,8 +238,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void entryProbePackagesAnyTypeArrayArgs() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     BTraceProbe probe =
         buildStubProbe(
             "com/example/MyTrace",
@@ -210,7 +249,7 @@ class ClassFileApiBackendTest {
             "([Lio/btrace/core/types/AnyType;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected ENTRY AnyType[] probe to be injected");
     byte[] readable = patchVersion(result, 65);
@@ -226,8 +265,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void returnProbePassesTypedMethodArgs() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     BTraceProbe probe =
         buildStubProbe(
             "com/example/MyTrace",
@@ -237,7 +276,7 @@ class ClassFileApiBackendTest {
             "(Ljava/lang/String;J)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected RETURN probe capturing typed method args to be injected");
     byte[] readable = patchVersion(result, 65);
@@ -248,8 +287,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void returnProbePackagesAnyTypeArrayArgs() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     BTraceProbe probe =
         buildStubProbe(
             "com/example/MyTrace",
@@ -259,7 +298,7 @@ class ClassFileApiBackendTest {
             "([Lio/btrace/core/types/AnyType;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected RETURN AnyType[] probe to be injected");
     byte[] readable = patchVersion(result, 65);
@@ -275,8 +314,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void callProbePackagesAnyTypeArrayArgs() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.BEFORE);
@@ -292,7 +331,7 @@ class ClassFileApiBackendTest {
             "([Lio/btrace/core/types/AnyType;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected CALL AnyType[] probe to be injected");
     byte[] readable = patchVersion(result, 65);
@@ -306,8 +345,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void callProbePackagesAnyTypeArrayArgsEmpty() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithVoidCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithVoidCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.BEFORE);
@@ -323,7 +362,7 @@ class ClassFileApiBackendTest {
             "([Lio/btrace/core/types/AnyType;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected CALL AnyType[] probe on a no-arg call to be injected");
     byte[] readable = patchVersion(result, 65);
@@ -334,12 +373,12 @@ class ClassFileApiBackendTest {
 
   @Test
   void returnProbeInjectedBeforeReturn() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "compute");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "compute");
     BTraceProbe probe =
         buildStubProbe("com/example/MyTrace", "com.example.Target", "compute", Kind.RETURN, "()V");
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes for RETURN probe");
@@ -350,11 +389,11 @@ class ClassFileApiBackendTest {
 
   @Test
   void noInjectionWhenCallProbeHasNoCallSite() {
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "doWork");
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "doWork");
     BTraceProbe probe =
         buildStubProbe("com/example/MyTrace", "com.example.Target", "doWork", Kind.CALL, "()V");
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Expected null when CALL probe has no matching call site");
@@ -362,8 +401,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void lineProbeInjectedBeforeMatchingLine() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithLineNumber(70, "com/example/Target", "doWork", 42);
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithLineNumber(72, "com/example/Target", "doWork", 42);
     Location location = new Location();
     location.setValue(Kind.LINE);
     location.setLine(42);
@@ -371,7 +410,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "doWork", location, "(I)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes for matching LINE probe");
     byte[] readable = patchVersion(result, 65);
@@ -381,8 +420,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void lineProbeNotInjectedWhenLineMismatches() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithLineNumber(70, "com/example/Target", "doWork", 42);
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithLineNumber(72, "com/example/Target", "doWork", 42);
     Location location = new Location();
     location.setValue(Kind.LINE);
     location.setLine(43);
@@ -390,15 +429,15 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "doWork", location, "(I)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Expected no instrumentation for a non-matching line");
   }
 
   @Test
   void lineProbePassesSelfClassAndMethod() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithLineNumber(70, "com/example/Target", "doWork", 42);
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithLineNumber(72, "com/example/Target", "doWork", 42);
     Location location = new Location();
     location.setValue(Kind.LINE);
     location.setLine(42);
@@ -414,7 +453,7 @@ class ClassFileApiBackendTest {
             3);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -427,8 +466,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void lineProbeAfterInjectedAtNextLineBoundary() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithLineNumbers(70, "com/example/Target", "doWork", 42, 43);
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithLineNumbers(72, "com/example/Target", "doWork", 42, 43);
     Location location = new Location();
     location.setValue(Kind.LINE);
     location.setWhere(Where.AFTER);
@@ -437,7 +476,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "doWork", location, "(I)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -447,8 +486,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void lineProbeRepeatedLineOnlyEmitsAtExecutablePoint() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithRepeatedLineNumber(70, "com/example/Target", "doWork", 42);
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithRepeatedLineNumber(72, "com/example/Target", "doWork", 42);
     Location location = new Location();
     location.setValue(Kind.LINE);
     location.setLine(42);
@@ -456,7 +495,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "doWork", location, "(I)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -466,8 +505,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void lineProbeCombinesWithEntryReturnAndCallProbes() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithLineAndCall(70, "com/example/Target", "doWork", 42);
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithLineAndCall(72, "com/example/Target", "doWork", 42);
 
     Location lineLocation = new Location();
     lineLocation.setValue(Kind.LINE);
@@ -493,7 +532,7 @@ class ClassFileApiBackendTest {
             "com/example/CallTrace", "com.example.Target", "doWork", callLocation, "()V");
 
     byte[] result =
-        BackendSelector.select(70)
+        BackendSelector.select(72)
             .instrument(
                 null, classBytes, Arrays.asList(lineProbe, entryProbe, returnProbe, callProbe));
 
@@ -506,8 +545,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldGetBeforePassesTargetInstanceAndFieldName() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_GET);
     location.setWhere(Where.BEFORE);
@@ -527,7 +566,7 @@ class ClassFileApiBackendTest {
             true);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -540,8 +579,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldGetBeforeUsesNullTargetInstanceForStaticField() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_GET);
     location.setWhere(Where.BEFORE);
@@ -560,7 +599,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     assertTrue(loadsNullBeforeBTrace(patchVersion(result, 65), "fields"));
@@ -568,8 +607,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldGetAfterPassesReturnValue() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_GET);
     location.setWhere(Where.AFTER);
@@ -580,7 +619,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace", "com.example.Target", "fields", location, "(I)V", 0, -1, -1, -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -590,8 +629,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldGetAfterBoxesPrimitiveReturnForObjectHandler() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_GET);
     location.setWhere(Where.AFTER);
@@ -610,7 +649,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -621,8 +660,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldGetAfterPassesStaticLongReturnValue() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_GET);
     location.setWhere(Where.AFTER);
@@ -633,7 +672,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace", "com.example.Target", "fields", location, "(J)V", 0, -1, -1, -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -643,8 +682,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldGetAfterPassesReferenceReturnValue() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_GET);
     location.setWhere(Where.AFTER);
@@ -663,7 +702,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -674,8 +713,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldGetBeforePassesStaticFieldFqn() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_GET);
     location.setWhere(Where.BEFORE);
@@ -695,7 +734,7 @@ class ClassFileApiBackendTest {
             true);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     assertTrue(
@@ -707,8 +746,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldGetSkipsWhenFieldNameMismatches() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_GET);
     location.setWhere(Where.BEFORE);
@@ -718,15 +757,15 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "fields", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result);
   }
 
   @Test
   void fieldGetSkipsInvalidStaticTargetInstanceDescriptor() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_GET);
     location.setWhere(Where.BEFORE);
@@ -745,7 +784,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(
         result, "Expected incompatible static field @TargetInstance descriptor to be skipped");
@@ -753,8 +792,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldSetBeforePassesValueTargetInstanceAndFieldName() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_SET);
     location.setWhere(Where.BEFORE);
@@ -774,7 +813,7 @@ class ClassFileApiBackendTest {
             true);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -787,8 +826,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldSetBeforeUsesNullTargetInstanceForStaticField() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_SET);
     location.setWhere(Where.BEFORE);
@@ -807,7 +846,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     assertTrue(loadsNullBeforeBTrace(patchVersion(result, 65), "fields"));
@@ -815,8 +854,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldSetAfterPassesStaticLongValue() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_SET);
     location.setWhere(Where.AFTER);
@@ -826,7 +865,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "fields", location, "(J)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -836,8 +875,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldSetBeforeBoxesPrimitiveValueForObjectHandler() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_SET);
     location.setWhere(Where.BEFORE);
@@ -852,7 +891,7 @@ class ClassFileApiBackendTest {
             "(Ljava/lang/Object;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -863,8 +902,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void fieldSetSkipsWhenFieldNameMismatches() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_SET);
     location.setWhere(Where.BEFORE);
@@ -874,15 +913,15 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "fields", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result);
   }
 
   @Test
   void fieldSetSkipsInvalidStaticTargetInstanceDescriptor() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithFieldAccesses(70, "com/example/Target", "fields");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithFieldAccesses(72, "com/example/Target", "fields");
     Location location = new Location();
     location.setValue(Kind.FIELD_SET);
     location.setWhere(Where.BEFORE);
@@ -901,7 +940,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(
         result, "Expected incompatible static field @TargetInstance descriptor to be skipped");
@@ -909,8 +948,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void arrayGetBeforePassesIndexAndTargetInstance() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAccesses(72, "com/example/Target", "arrays");
     Location location = new Location();
     location.setValue(Kind.ARRAY_GET);
     location.setWhere(Where.BEFORE);
@@ -928,7 +967,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -939,8 +978,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void arrayGetAfterPassesPrimitiveReturnValue() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAccesses(72, "com/example/Target", "arrays");
     Location location = new Location();
     location.setValue(Kind.ARRAY_GET);
     location.setWhere(Where.AFTER);
@@ -950,7 +989,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace", "com.example.Target", "arrays", location, "(I)V", 0, -1, -1, -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -960,8 +999,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void arrayGetAfterBoxesPrimitiveReturnForObjectHandler() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAccesses(72, "com/example/Target", "arrays");
     Location location = new Location();
     location.setValue(Kind.ARRAY_GET);
     location.setWhere(Where.AFTER);
@@ -979,7 +1018,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -990,8 +1029,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void arrayGetAfterPassesReferenceReturnValue() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAccesses(72, "com/example/Target", "arrays");
     Location location = new Location();
     location.setValue(Kind.ARRAY_GET);
     location.setWhere(Where.AFTER);
@@ -1009,7 +1048,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1021,8 +1060,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void arrayGetAfterPassesWidePrimitiveReturnValue() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithLongArrayLoad(70, "com/example/Target", "wideArrays");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithLongArrayLoad(72, "com/example/Target", "wideArrays");
     Location location = new Location();
     location.setValue(Kind.ARRAY_GET);
     location.setWhere(Where.AFTER);
@@ -1040,7 +1079,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1050,8 +1089,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void arrayGetAfterPassesDoubleReturnValue() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithDoubleArrayLoad(70, "com/example/Target", "doubleArrays");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithDoubleArrayLoad(72, "com/example/Target", "doubleArrays");
     Location location = new Location();
     location.setValue(Kind.ARRAY_GET);
     location.setWhere(Where.AFTER);
@@ -1069,7 +1108,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1079,8 +1118,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void arrayGetSkipsWhenTypeMismatches() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAccesses(72, "com/example/Target", "arrays");
     Location location = new Location();
     location.setValue(Kind.ARRAY_GET);
     location.setWhere(Where.BEFORE);
@@ -1089,15 +1128,15 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "arrays", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result);
   }
 
   @Test
   void arraySetBeforePassesIndexValueAndTargetInstance() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAccesses(72, "com/example/Target", "arrays");
     Location location = new Location();
     location.setValue(Kind.ARRAY_SET);
     location.setWhere(Where.BEFORE);
@@ -1115,7 +1154,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1126,8 +1165,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void arraySetAfterPassesObjectValue() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAccesses(72, "com/example/Target", "arrays");
     Location location = new Location();
     location.setValue(Kind.ARRAY_SET);
     location.setWhere(Where.AFTER);
@@ -1141,7 +1180,7 @@ class ClassFileApiBackendTest {
             "(ILjava/lang/Object;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1152,8 +1191,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void arraySetBeforeBoxesPrimitiveValueForObjectHandler() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAccesses(72, "com/example/Target", "arrays");
     Location location = new Location();
     location.setValue(Kind.ARRAY_SET);
     location.setWhere(Where.BEFORE);
@@ -1167,7 +1206,7 @@ class ClassFileApiBackendTest {
             "(ILjava/lang/Object;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1178,8 +1217,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void arraySetAfterPassesWidePrimitiveValues() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithWideArrayStores(70, "com/example/Target", "wideArrayStores");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithWideArrayStores(72, "com/example/Target", "wideArrayStores");
     Location location = new Location();
     location.setValue(Kind.ARRAY_SET);
     location.setWhere(Where.AFTER);
@@ -1189,7 +1228,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace", "com.example.Target", "wideArrayStores", location, "(IJ)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1199,8 +1238,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void arraySetAfterPassesDoubleValue() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithWideArrayStores(70, "com/example/Target", "wideArrayStores");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithWideArrayStores(72, "com/example/Target", "wideArrayStores");
     Location location = new Location();
     location.setValue(Kind.ARRAY_SET);
     location.setWhere(Where.AFTER);
@@ -1210,7 +1249,7 @@ class ClassFileApiBackendTest {
             "com/example/MyTrace", "com.example.Target", "wideArrayStores", location, "(ID)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1220,8 +1259,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void arraySetSkipsWhenTypeMismatches() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAccesses(70, "com/example/Target", "arrays");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAccesses(72, "com/example/Target", "arrays");
     Location location = new Location();
     location.setValue(Kind.ARRAY_SET);
     location.setWhere(Where.BEFORE);
@@ -1230,15 +1269,15 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "arrays", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result);
   }
 
   @Test
   void checkcastBeforePassesTypeNameAndTargetInstance() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithTypeChecks(70, "com/example/Target", "types");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithTypeChecks(72, "com/example/Target", "types");
     Location location = new Location();
     location.setValue(Kind.CHECKCAST);
     location.setWhere(Where.BEFORE);
@@ -1256,7 +1295,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1269,8 +1308,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void checkcastAfterRunsAfterOriginalCast() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithTypeChecks(70, "com/example/Target", "types");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithTypeChecks(72, "com/example/Target", "types");
     Location location = new Location();
     location.setValue(Kind.CHECKCAST);
     location.setWhere(Where.AFTER);
@@ -1284,7 +1323,7 @@ class ClassFileApiBackendTest {
             "(Ljava/lang/String;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1295,8 +1334,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void instanceofBeforePassesTypeName() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithTypeChecks(70, "com/example/Target", "types");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithTypeChecks(72, "com/example/Target", "types");
     Location location = new Location();
     location.setValue(Kind.INSTANCEOF);
     location.setWhere(Where.BEFORE);
@@ -1310,7 +1349,7 @@ class ClassFileApiBackendTest {
             "(Ljava/lang/String;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1322,8 +1361,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void instanceofAfterPreservesBooleanResult() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithTypeChecks(70, "com/example/Target", "types");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithTypeChecks(72, "com/example/Target", "types");
     Location location = new Location();
     location.setValue(Kind.INSTANCEOF);
     location.setWhere(Where.AFTER);
@@ -1337,7 +1376,7 @@ class ClassFileApiBackendTest {
             "(Ljava/lang/String;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1348,8 +1387,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void instanceofAfterPassesTargetInstanceCapturedBeforeTypeCheck() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithTypeChecks(70, "com/example/Target", "types");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithTypeChecks(72, "com/example/Target", "types");
     Location location = new Location();
     location.setValue(Kind.INSTANCEOF);
     location.setWhere(Where.AFTER);
@@ -1367,7 +1406,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1379,8 +1418,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void typeCheckSkipsWhenTargetTypeMismatches() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithTypeChecks(70, "com/example/Target", "types");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithTypeChecks(72, "com/example/Target", "types");
     Location location = new Location();
     location.setValue(Kind.INSTANCEOF);
     location.setWhere(Where.BEFORE);
@@ -1394,15 +1433,15 @@ class ClassFileApiBackendTest {
             "(Ljava/lang/String;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result);
   }
 
   @Test
   void instanceofHandlesNullOperandShape() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithNullInstanceof(70, "com/example/Target", "nullType");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithNullInstanceof(72, "com/example/Target", "nullType");
     Location location = new Location();
     location.setValue(Kind.INSTANCEOF);
     location.setWhere(Where.AFTER);
@@ -1416,7 +1455,7 @@ class ClassFileApiBackendTest {
             "(Ljava/lang/String;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1425,8 +1464,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void throwProbeBeforeExplicitThrowPassesThrowableTarget() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "exceptions");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithThrowAndCatch(72, "com/example/Target", "exceptions");
     Location location = new Location();
     location.setValue(Kind.THROW);
     BTraceProbe probe =
@@ -1442,7 +1481,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1453,8 +1492,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void throwProbePassesSelfClassAndMethod() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "exceptions");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithThrowAndCatch(72, "com/example/Target", "exceptions");
     Location location = new Location();
     location.setValue(Kind.THROW);
     BTraceProbe probe =
@@ -1469,7 +1508,7 @@ class ClassFileApiBackendTest {
             2);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1483,15 +1522,15 @@ class ClassFileApiBackendTest {
 
   @Test
   void throwProbeInstrumentsRethrowSite() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "sync");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMonitorBlock(72, "com/example/Target", "sync");
     Location location = new Location();
     location.setValue(Kind.THROW);
     BTraceProbe probe =
         buildStubProbe("com/example/MyTrace", "com.example.Target", "sync", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1501,8 +1540,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void throwProbeSkipsInvalidOrdinaryArgument() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "exceptions");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithThrowAndCatch(72, "com/example/Target", "exceptions");
     Location location = new Location();
     location.setValue(Kind.THROW);
     BTraceProbe probe =
@@ -1514,7 +1553,7 @@ class ClassFileApiBackendTest {
             "(Ljava/lang/String;)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result);
   }
@@ -1522,11 +1561,11 @@ class ClassFileApiBackendTest {
   @Test
   void phaseZeroFixturesContainExpectedBytecodeShapes() {
     byte[] lineFixture =
-        patchVersion(buildClassWithLineNumber(70, "com/example/Target", "line", 42), 65);
+        patchVersion(buildClassWithLineNumber(72, "com/example/Target", "line", 42), 65);
     assertTrue(containsLineNumber(lineFixture, "line", 42));
 
     byte[] fieldFixture =
-        patchVersion(buildClassWithFieldAccesses(70, "com/example/Target", "fields"), 65);
+        patchVersion(buildClassWithFieldAccesses(72, "com/example/Target", "fields"), 65);
     assertEquals(
         1, countFieldInsn(fieldFixture, "fields", Opcodes.GETFIELD, "com/example/Target", "value"));
     assertEquals(
@@ -1541,19 +1580,19 @@ class ClassFileApiBackendTest {
             fieldFixture, "fields", Opcodes.PUTSTATIC, "com/example/Target", "staticValue"));
 
     byte[] arrayFixture =
-        patchVersion(buildClassWithArrayAccesses(70, "com/example/Target", "arrays"), 65);
+        patchVersion(buildClassWithArrayAccesses(72, "com/example/Target", "arrays"), 65);
     assertEquals(1, countOpcode(arrayFixture, "arrays", Opcodes.IALOAD));
     assertEquals(1, countOpcode(arrayFixture, "arrays", Opcodes.IASTORE));
     assertEquals(1, countOpcode(arrayFixture, "arrays", Opcodes.AALOAD));
     assertEquals(1, countOpcode(arrayFixture, "arrays", Opcodes.AASTORE));
 
     byte[] typeFixture =
-        patchVersion(buildClassWithTypeChecks(70, "com/example/Target", "types"), 65);
+        patchVersion(buildClassWithTypeChecks(72, "com/example/Target", "types"), 65);
     assertEquals(1, countTypeInsn(typeFixture, "types", Opcodes.INSTANCEOF, "java/util/List"));
     assertEquals(1, countTypeInsn(typeFixture, "types", Opcodes.CHECKCAST, "java/lang/String"));
 
     byte[] allocationFixture =
-        patchVersion(buildClassWithArrayAllocations(70, "com/example/Target", "allocations"), 65);
+        patchVersion(buildClassWithArrayAllocations(72, "com/example/Target", "allocations"), 65);
     assertEquals(
         1, countIntInsn(allocationFixture, "allocations", Opcodes.NEWARRAY, Opcodes.T_INT));
     assertEquals(
@@ -1561,13 +1600,13 @@ class ClassFileApiBackendTest {
     assertEquals(1, countOpcode(allocationFixture, "allocations", Opcodes.MULTIANEWARRAY));
 
     byte[] objectAllocationFixture =
-        patchVersion(buildClassWithObjectAllocation(70, "com/example/Target", "objects"), 65);
+        patchVersion(buildClassWithObjectAllocation(72, "com/example/Target", "objects"), 65);
     assertEquals(
         1,
         countTypeInsn(objectAllocationFixture, "objects", Opcodes.NEW, "java/lang/StringBuilder"));
 
     byte[] exceptionFixture =
-        patchVersion(buildClassWithThrowAndCatch(70, "com/example/Target", "exceptions"), 65);
+        patchVersion(buildClassWithThrowAndCatch(72, "com/example/Target", "exceptions"), 65);
     assertEquals(2, countOpcode(exceptionFixture, "exceptions", Opcodes.ATHROW));
     assertEquals(1, countTryCatchBlocks(exceptionFixture, "exceptions"));
     assertEquals(
@@ -1576,7 +1615,7 @@ class ClassFileApiBackendTest {
             .size());
 
     byte[] monitorFixture =
-        patchVersion(buildClassWithMonitorBlock(70, "com/example/Target", "monitor"), 65);
+        patchVersion(buildClassWithMonitorBlock(72, "com/example/Target", "monitor"), 65);
     assertEquals(1, countOpcode(monitorFixture, "monitor", Opcodes.MONITORENTER));
     assertEquals(2, countOpcode(monitorFixture, "monitor", Opcodes.MONITOREXIT));
     assertEquals(2, countTryCatchBlocks(monitorFixture, "monitor"));
@@ -1584,8 +1623,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void callProbeInjectedBeforeMatchingCall() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.BEFORE);
@@ -1596,7 +1635,7 @@ class ClassFileApiBackendTest {
         buildStubProbe(
             "com/example/MyTrace", "com.example.Target", "callTopLevel", location, "()V");
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes for matching CALL probe");
@@ -1608,8 +1647,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void callProbeBeforePassesCalledArguments() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.BEFORE);
@@ -1625,7 +1664,7 @@ class ClassFileApiBackendTest {
             "(Ljava/lang/String;J)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     String desc = getInvokeDynamicDescriptor(patchVersion(result, 65), "callTopLevel", "$btrace$");
@@ -1637,8 +1676,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void callProbeBeforeSkipsIncompatibleCalledArgumentDescriptor() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.BEFORE);
@@ -1654,15 +1693,15 @@ class ClassFileApiBackendTest {
             "(Ljava/lang/Integer;J)V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Expected incompatible call argument descriptor to be skipped");
   }
 
   @Test
   void callProbeBeforePassesTargetInstanceAndMethodName() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.BEFORE);
@@ -1683,7 +1722,7 @@ class ClassFileApiBackendTest {
             true);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1700,8 +1739,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void callProbeBeforeUsesNullTargetInstanceForStaticCall() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithStaticCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithStaticCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.BEFORE);
@@ -1721,7 +1760,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1734,8 +1773,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void callProbeBeforeSkipsInvalidStaticTargetInstanceDescriptor() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithStaticCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithStaticCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.BEFORE);
@@ -1755,15 +1794,15 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Expected incompatible static @TargetInstance descriptor to be skipped");
   }
 
   @Test
   void callProbeBeforeAllowsAssignableTargetInstanceAndMethodName() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayListCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayListCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.BEFORE);
@@ -1783,7 +1822,7 @@ class ClassFileApiBackendTest {
             1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1796,8 +1835,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void callProbeBeforeSkipsInvalidTargetMethodDescriptor() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.BEFORE);
@@ -1817,15 +1856,15 @@ class ClassFileApiBackendTest {
             0);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Expected non-String @TargetMethodOrField descriptor to be skipped");
   }
 
   @Test
   void callProbeBeforeSkipsInvalidTargetInstanceDescriptor() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.BEFORE);
@@ -1845,15 +1884,15 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Expected incompatible @TargetInstance descriptor to be skipped");
   }
 
   @Test
   void callProbeAfterPassesReturnValue() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.AFTER);
@@ -1873,7 +1912,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1886,8 +1925,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void callProbeAfterPassesDuration() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.AFTER);
@@ -1907,7 +1946,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1924,8 +1963,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void callProbeAfterBoxesPrimitiveReturnForObjectHandler() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.AFTER);
@@ -1945,7 +1984,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -1956,8 +1995,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void callProbeAfterSkipsVoidReturnParameter() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithVoidCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithVoidCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.AFTER);
@@ -1977,15 +2016,15 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Expected @Return on void call to be skipped");
   }
 
   @Test
   void callProbeInjectedAfterMatchingCall() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithInstanceCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithInstanceCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.AFTER);
@@ -1996,7 +2035,7 @@ class ClassFileApiBackendTest {
         buildStubProbe(
             "com/example/MyTrace", "com.example.Target", "callTopLevel", location, "()V");
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes for matching CALL probe");
@@ -2008,8 +2047,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void callProbeBeforeConstructorCallIsSkipped() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithConstructorCall(70, "com/example/Target", "callTopLevel");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithConstructorCall(72, "com/example/Target", "callTopLevel");
     Location location = new Location();
     location.setValue(Kind.CALL);
     location.setWhere(Where.BEFORE);
@@ -2020,7 +2059,7 @@ class ClassFileApiBackendTest {
         buildStubProbe(
             "com/example/MyTrace", "com.example.Target", "callTopLevel", location, "()V");
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Expected no instrumentation before constructor call site");
@@ -2749,17 +2788,17 @@ class ClassFileApiBackendTest {
   }
 
   /**
-   * Skips the test on JDK versions that cannot parse class file version 70 (Java 26). The ClassFile
+   * Skips the test on JDK versions that cannot parse class file version 72 (Java 28). The ClassFile
    * API only supports class files up to the running JDK's own major version (JDK 24 → v68, JDK 25 →
-   * v69, JDK 26 → v70). Tests that instrument version-70 class files require JDK 26+.
+   * v69, ..., JDK 28 → v72). Tests that instrument version-72 class files require JDK 28+.
    */
-  private static void requireJdk26ForVersion70() {
+  private static void requireJdk28ForVersion72() {
     int major = javaMajorVersion();
     Assumptions.assumeTrue(
-        major >= 26,
+        major >= 28,
         "ClassFile API on JDK "
             + major
-            + " cannot parse class file version 70; test requires JDK 26+");
+            + " cannot parse class file version 72; test requires JDK 28+");
   }
 
   /**
@@ -3687,17 +3726,17 @@ class ClassFileApiBackendTest {
 
   // ---------------------------------------------------------------------------
   // @Return tests
-  // The following tests instrument class file version 70 (Java 26+). Each test calls
-  // requireJdk26ForVersion70() to skip on JDK < 26 — the ClassFile API can only parse
+  // The following tests instrument class file version 72 (Java 26+). Each test calls
+  // requireJdk28ForVersion72() to skip on JDK < 26 — the ClassFile API can only parse
   // class files up to the running JDK's own major version (JDK 24→v68, JDK 25→v69, JDK 26→v70).
   // The class-level @EnabledForJreRange(min = JRE.JAVA_24) covers only basic parsing tests.
   // ---------------------------------------------------------------------------
 
   @Test
   void returnProbeInjectedWithReturnValueInt() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     // Build class with method returning int
-    byte[] classBytes = buildClassWithNonVoidMethod(70, "com/example/Target", "compute", "I");
+    byte[] classBytes = buildClassWithNonVoidMethod(72, "com/example/Target", "compute", "I");
     // Handler descriptor: (I)V — index 0 is the return value
     BTraceProbe probe =
         buildStubProbe(
@@ -3709,7 +3748,7 @@ class ClassFileApiBackendTest {
             0, // returnParameter at index 0
             -1);
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes for @Return probe on int method");
@@ -3723,8 +3762,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void returnProbeInjectedWithReturnValueLong() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithNonVoidMethod(70, "com/example/Target", "compute", "J");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithNonVoidMethod(72, "com/example/Target", "compute", "J");
     // Handler descriptor: (J)V — index 0 is long return value (2 slots)
     BTraceProbe probe =
         buildStubProbe(
@@ -3736,7 +3775,7 @@ class ClassFileApiBackendTest {
             0, // returnParameter at index 0
             -1);
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
@@ -3747,8 +3786,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void returnProbeBoxesBooleanForObjectHandler() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithNonVoidMethod(70, "com/example/Target", "compute", "Z");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithNonVoidMethod(72, "com/example/Target", "compute", "Z");
     BTraceProbe probe =
         buildStubProbe(
             "com/example/MyTrace",
@@ -3759,7 +3798,7 @@ class ClassFileApiBackendTest {
             0,
             -1);
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
@@ -3772,9 +3811,9 @@ class ClassFileApiBackendTest {
 
   @Test
   void returnProbeSkippedForVoidMethod() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     // void method: @Return handler should be silently skipped (no INVOKEDYNAMIC emitted)
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "doWork");
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "doWork");
     BTraceProbe probe =
         buildStubProbe(
             "com/example/MyTrace",
@@ -3785,7 +3824,7 @@ class ClassFileApiBackendTest {
             0, // returnParameter
             -1);
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     // Either null (nothing matched) or result with zero INVOKEDYNAMIC instructions
@@ -3819,8 +3858,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void durationProbeInjectedOnNormalReturn() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "timed");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "timed");
     // Handler descriptor: (J)V — index 0 is duration (long)
     BTraceProbe probe =
         buildStubProbe(
@@ -3832,7 +3871,7 @@ class ClassFileApiBackendTest {
             -1, // no @Return
             0); // durationParameter at index 0
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes for @Duration probe");
@@ -3844,9 +3883,9 @@ class ClassFileApiBackendTest {
 
   @Test
   void durationProbeInjectedOnExceptionExit() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     // Build a class whose method can throw (we'll verify the exception handler block exists)
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "risky");
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "risky");
     BTraceProbe probe =
         buildStubProbe(
             "com/example/MyTrace",
@@ -3857,7 +3896,7 @@ class ClassFileApiBackendTest {
             -1, // no @Return
             0); // durationParameter
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes for @Duration probe");
@@ -3879,9 +3918,9 @@ class ClassFileApiBackendTest {
 
   @Test
   void returnAndDurationSlotsDoNotCollide() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     // Method returns int; handler has both @Return (int, index 0) and @Duration (long, index 1)
-    byte[] classBytes = buildClassWithNonVoidMethod(70, "com/example/Target", "combined", "I");
+    byte[] classBytes = buildClassWithNonVoidMethod(72, "com/example/Target", "combined", "I");
     BTraceProbe probe =
         buildStubProbe(
             "com/example/MyTrace",
@@ -3892,7 +3931,7 @@ class ClassFileApiBackendTest {
             0, // returnParameter
             1); // durationParameter
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes");
@@ -3916,14 +3955,14 @@ class ClassFileApiBackendTest {
 
   @Test
   void catchProbeInjectedAtHandlerEntry() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     // Build class with try { throw RuntimeException } catch (RuntimeException e) { }
-    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "run");
+    byte[] classBytes = buildClassWithThrowAndCatch(72, "com/example/Target", "run");
     // Simple CATCH probe with no special parameters: ()V
     BTraceProbe probe =
         buildStubProbe("com/example/MyTrace", "com.example.Target", "run", Kind.CATCH, "()V");
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes for CATCH probe");
@@ -3934,8 +3973,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void catchProbeCapturesCaughtThrowable() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "run");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithThrowAndCatch(72, "com/example/Target", "run");
     // CATCH probe with @TargetInstance at index 0 typed as RuntimeException
     Location catchLoc = new Location();
     catchLoc.setValue(Kind.CATCH);
@@ -3951,7 +3990,7 @@ class ClassFileApiBackendTest {
             0, // targetInstanceParameter = 0
             -1);
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes for CATCH+@TargetInstance probe");
@@ -3965,14 +4004,14 @@ class ClassFileApiBackendTest {
 
   @Test
   void catchProbeSkippedForFinallyBlock() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     // Build class that has a catch-all (finally) block — CATCH probes must not fire for catch-all.
     // We reuse buildClassWithMonitorBlock which has a null-type catch-all handler.
-    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "sync");
+    byte[] classBytes = buildClassWithMonitorBlock(72, "com/example/Target", "sync");
     BTraceProbe probe =
         buildStubProbe("com/example/MyTrace", "com.example.Target", "sync", Kind.CATCH, "()V");
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     // Either no instrumentation or zero INVOKEDYNAMIC (catch-all must not trigger CATCH probes)
@@ -3984,9 +4023,9 @@ class ClassFileApiBackendTest {
 
   @Test
   void catchProbeTypeMismatchSkipsHandler() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     // Catch block catches RuntimeException; probe @TargetInstance is IOException — incompatible.
-    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "run");
+    byte[] classBytes = buildClassWithThrowAndCatch(72, "com/example/Target", "run");
     Location catchLoc = new Location();
     catchLoc.setValue(Kind.CATCH);
     BTraceProbe probe =
@@ -4001,7 +4040,7 @@ class ClassFileApiBackendTest {
             0, // targetInstanceParameter
             -1);
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     if (result != null) {
@@ -4018,13 +4057,13 @@ class ClassFileApiBackendTest {
 
   @Test
   void errorProbeInjectedOnUncaughtExit() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     // Simple void method; an ERROR probe adds a synthetic Throwable handler.
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "run");
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "run");
     BTraceProbe probe =
         buildStubProbe("com/example/MyTrace", "com.example.Target", "run", Kind.ERROR, "()V");
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes for ERROR probe");
@@ -4035,8 +4074,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void errorProbeCapturesEscapingThrowable() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "run");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "run");
     // ERROR probe with @TargetInstance at index 0 typed as Throwable
     Location errorLoc = new Location();
     errorLoc.setValue(Kind.ERROR);
@@ -4052,7 +4091,7 @@ class ClassFileApiBackendTest {
             0, // targetInstanceParameter
             -1);
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes for ERROR+@TargetInstance probe");
@@ -4065,8 +4104,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void errorProbeWithDuration() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "timed");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "timed");
     // ERROR probe with @Duration at index 0 (long)
     Location errorLoc = new Location();
     errorLoc.setValue(Kind.ERROR);
@@ -4082,7 +4121,7 @@ class ClassFileApiBackendTest {
             -1, // targetInstanceParameter
             -1);
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result, "Expected instrumented bytes for ERROR+@Duration probe");
@@ -4101,14 +4140,14 @@ class ClassFileApiBackendTest {
 
   @Test
   void errorProbeDoesNotFireForCaughtExceptions() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     // A method with a try-catch: the exception is caught, so it does NOT exit the method as
     // uncaught. The ERROR probe must NOT inject its INVOKEDYNAMIC inside the catch handler.
-    byte[] classBytes = buildClassWithThrowAndCatch(70, "com/example/Target", "safe");
+    byte[] classBytes = buildClassWithThrowAndCatch(72, "com/example/Target", "safe");
     BTraceProbe probe =
         buildStubProbe("com/example/MyTrace", "com.example.Target", "safe", Kind.ERROR, "()V");
 
-    InstrumentationBackend backend = BackendSelector.select(70);
+    InstrumentationBackend backend = BackendSelector.select(72);
     byte[] result = backend.instrument(null, classBytes, Collections.singletonList(probe));
 
     // The ERROR probe adds a synthetic handler, but the method already catches everything
@@ -4142,8 +4181,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void primitiveNewarrayProbeBeforeAllocation() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAllocations(70, "com/example/Target", "allocations");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAllocations(72, "com/example/Target", "allocations");
     Location location = new Location();
     location.setValue(Kind.NEWARRAY);
     location.setWhere(Where.BEFORE);
@@ -4152,7 +4191,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "allocations", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4162,8 +4201,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void referenceAnewarrayProbeBeforeAllocation() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAllocations(70, "com/example/Target", "allocations");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAllocations(72, "com/example/Target", "allocations");
     Location location = new Location();
     location.setValue(Kind.NEWARRAY);
     location.setWhere(Where.BEFORE);
@@ -4172,7 +4211,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "allocations", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4183,8 +4222,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void newarrayProbeMatchesAllTypesWhenClazzEmpty() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAllocations(70, "com/example/Target", "allocations");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAllocations(72, "com/example/Target", "allocations");
     Location location = new Location();
     location.setValue(Kind.NEWARRAY);
     location.setWhere(Where.BEFORE);
@@ -4193,7 +4232,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "allocations", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4202,8 +4241,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void newarrayAfterProbeGetsArrayRef() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAllocations(70, "com/example/Target", "allocations");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAllocations(72, "com/example/Target", "allocations");
     Location location = new Location();
     location.setValue(Kind.NEWARRAY);
     location.setWhere(Where.AFTER);
@@ -4221,7 +4260,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4235,8 +4274,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void newarrayProbeTypeMismatchSkips() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAllocations(70, "com/example/Target", "allocations");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAllocations(72, "com/example/Target", "allocations");
     Location location = new Location();
     location.setValue(Kind.NEWARRAY);
     location.setWhere(Where.BEFORE);
@@ -4245,15 +4284,15 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "allocations", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Probe for float[] must not match int[] or String[] allocations");
   }
 
   @Test
   void newarrayProbeSkipsUnsupportedParameter() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithArrayAllocations(70, "com/example/Target", "allocations");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithArrayAllocations(72, "com/example/Target", "allocations");
     Location location = new Location();
     location.setValue(Kind.NEWARRAY);
     location.setWhere(Where.BEFORE);
@@ -4271,7 +4310,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Handler with @Duration must be rejected for NEWARRAY probes");
   }
@@ -4281,8 +4320,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void newObjectProbeBeforeAllocation() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithObjectAllocation(70, "com/example/Target", "objects");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithObjectAllocation(72, "com/example/Target", "objects");
     Location location = new Location();
     location.setValue(Kind.NEW);
     location.setWhere(Where.BEFORE);
@@ -4291,7 +4330,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "objects", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4301,8 +4340,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void newObjectAfterProbeFiresAfterInit() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithObjectAllocation(70, "com/example/Target", "objects");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithObjectAllocation(72, "com/example/Target", "objects");
     Location location = new Location();
     location.setValue(Kind.NEW);
     location.setWhere(Where.AFTER);
@@ -4311,7 +4350,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "objects", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4321,8 +4360,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void newObjectAfterProbeGetsInitializedRef() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithObjectAllocation(70, "com/example/Target", "objects");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithObjectAllocation(72, "com/example/Target", "objects");
     Location location = new Location();
     location.setValue(Kind.NEW);
     location.setWhere(Where.AFTER);
@@ -4340,7 +4379,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4352,8 +4391,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void newObjectProbeEmptyClazzMatchesAll() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithObjectAllocation(70, "com/example/Target", "objects");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithObjectAllocation(72, "com/example/Target", "objects");
     Location location = new Location();
     location.setValue(Kind.NEW);
     location.setWhere(Where.BEFORE);
@@ -4362,7 +4401,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "objects", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4371,8 +4410,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void newObjectProbeTypeMismatchSkips() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithObjectAllocation(70, "com/example/Target", "objects");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithObjectAllocation(72, "com/example/Target", "objects");
     Location location = new Location();
     location.setValue(Kind.NEW);
     location.setWhere(Where.BEFORE);
@@ -4381,7 +4420,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "objects", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(
         result, "Probe for java.lang.String must not match java.lang.StringBuilder allocation");
@@ -4389,8 +4428,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void newObjectProbeSkipsUnsupportedParameter() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithObjectAllocation(70, "com/example/Target", "objects");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithObjectAllocation(72, "com/example/Target", "objects");
     Location location = new Location();
     location.setValue(Kind.NEW);
     location.setWhere(Where.BEFORE);
@@ -4408,7 +4447,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Handler with @Duration must be rejected for NEW probes");
   }
@@ -4418,8 +4457,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void syncEntryProbeBeforeMonitorenter() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMonitorBlock(72, "com/example/Target", "monitor");
     Location location = new Location();
     location.setValue(Kind.SYNC_ENTRY);
     location.setWhere(Where.BEFORE);
@@ -4427,7 +4466,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "monitor", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4437,8 +4476,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void syncEntryProbeAfterMonitorenter() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMonitorBlock(72, "com/example/Target", "monitor");
     Location location = new Location();
     location.setValue(Kind.SYNC_ENTRY);
     location.setWhere(Where.AFTER);
@@ -4446,7 +4485,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "monitor", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4456,9 +4495,9 @@ class ClassFileApiBackendTest {
 
   @Test
   void syncEntryAfterSynchronizedMethod() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     byte[] classBytes =
-        buildClassWithSynchronizedMethod(70, "com/example/Target", "syncMethod", false, false);
+        buildClassWithSynchronizedMethod(72, "com/example/Target", "syncMethod", false, false);
     Location location = new Location();
     location.setValue(Kind.SYNC_ENTRY);
     location.setWhere(Where.AFTER);
@@ -4466,7 +4505,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "syncMethod", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4477,9 +4516,9 @@ class ClassFileApiBackendTest {
 
   @Test
   void syncEntryBeforeSynchronizedMethodIsNotEmitted() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     byte[] classBytes =
-        buildClassWithSynchronizedMethod(70, "com/example/Target", "syncMethod", false, false);
+        buildClassWithSynchronizedMethod(72, "com/example/Target", "syncMethod", false, false);
     Location location = new Location();
     location.setValue(Kind.SYNC_ENTRY);
     location.setWhere(Where.BEFORE);
@@ -4487,15 +4526,15 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "syncMethod", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "BEFORE cannot be emitted for synchronized-method entry");
   }
 
   @Test
   void syncEntryProbeReceivesLockObject() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMonitorBlock(72, "com/example/Target", "monitor");
     Location location = new Location();
     location.setValue(Kind.SYNC_ENTRY);
     location.setWhere(Where.BEFORE);
@@ -4512,7 +4551,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4524,8 +4563,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void syncEntryProbeSkipsUnsupportedParameter() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMonitorBlock(72, "com/example/Target", "monitor");
     Location location = new Location();
     location.setValue(Kind.SYNC_ENTRY);
     location.setWhere(Where.BEFORE);
@@ -4543,7 +4582,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Handler with @Duration must be rejected for SYNC_ENTRY probes");
   }
@@ -4553,8 +4592,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void syncExitProbeBeforeMonitorexit() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMonitorBlock(72, "com/example/Target", "monitor");
     Location location = new Location();
     location.setValue(Kind.SYNC_EXIT);
     location.setWhere(Where.BEFORE);
@@ -4562,7 +4601,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "monitor", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4573,9 +4612,9 @@ class ClassFileApiBackendTest {
 
   @Test
   void syncExitBeforeSynchronizedMethodReturn() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     byte[] classBytes =
-        buildClassWithSynchronizedMethod(70, "com/example/Target", "syncMethod", false, false);
+        buildClassWithSynchronizedMethod(72, "com/example/Target", "syncMethod", false, false);
     Location location = new Location();
     location.setValue(Kind.SYNC_EXIT);
     location.setWhere(Where.BEFORE);
@@ -4583,7 +4622,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "syncMethod", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4595,9 +4634,9 @@ class ClassFileApiBackendTest {
 
   @Test
   void syncExitBeforeSynchronizedMethodException() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     byte[] classBytes =
-        buildClassWithSynchronizedMethod(70, "com/example/Target", "syncThrow", false, true);
+        buildClassWithSynchronizedMethod(72, "com/example/Target", "syncThrow", false, true);
     Location location = new Location();
     location.setValue(Kind.SYNC_EXIT);
     location.setWhere(Where.BEFORE);
@@ -4605,7 +4644,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "syncThrow", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4616,9 +4655,9 @@ class ClassFileApiBackendTest {
 
   @Test
   void syncExitAfterSynchronizedMethodIsNotEmitted() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     byte[] classBytes =
-        buildClassWithSynchronizedMethod(70, "com/example/Target", "syncMethod", false, false);
+        buildClassWithSynchronizedMethod(72, "com/example/Target", "syncMethod", false, false);
     Location location = new Location();
     location.setValue(Kind.SYNC_EXIT);
     location.setWhere(Where.AFTER);
@@ -4626,16 +4665,16 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "syncMethod", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "AFTER cannot be emitted for synchronized-method exit");
   }
 
   @Test
   void syncExitStaticSynchronizedMethodReceivesClassLock() {
-    requireJdk26ForVersion70();
+    requireJdk28ForVersion72();
     byte[] classBytes =
-        buildClassWithSynchronizedMethod(70, "com/example/Target", "syncStatic", true, false);
+        buildClassWithSynchronizedMethod(72, "com/example/Target", "syncStatic", true, false);
     Location location = new Location();
     location.setValue(Kind.SYNC_EXIT);
     location.setWhere(Where.BEFORE);
@@ -4652,7 +4691,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4664,8 +4703,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void syncExitProbeAfterMonitorexit() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMonitorBlock(72, "com/example/Target", "monitor");
     Location location = new Location();
     location.setValue(Kind.SYNC_EXIT);
     location.setWhere(Where.AFTER);
@@ -4673,7 +4712,7 @@ class ClassFileApiBackendTest {
         buildStubProbe("com/example/MyTrace", "com.example.Target", "monitor", location, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4683,8 +4722,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void syncExitProbeReceivesLockObject() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMonitorBlock(72, "com/example/Target", "monitor");
     Location location = new Location();
     location.setValue(Kind.SYNC_EXIT);
     location.setWhere(Where.BEFORE);
@@ -4701,7 +4740,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4712,8 +4751,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void syncExitProbeSkipsUnsupportedDurationParameter() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMonitorBlock(70, "com/example/Target", "monitor");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMonitorBlock(72, "com/example/Target", "monitor");
     Location location = new Location();
     location.setValue(Kind.SYNC_EXIT);
     location.setWhere(Where.BEFORE);
@@ -4730,7 +4769,7 @@ class ClassFileApiBackendTest {
             -1);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNull(result, "Handler with @Duration must be rejected for SYNC_EXIT probes");
   }
@@ -4740,8 +4779,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void sampledEntryProbeEmitsSamplingCheck() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "doWork");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "doWork");
     OnMethod om = new OnMethod();
     om.setClazz("com.example.Target");
     om.setMethod("doWork");
@@ -4755,7 +4794,7 @@ class ClassFileApiBackendTest {
     BTraceProbe probe = buildStubProbe("com/example/MyTrace", "com.example.Target", om);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4769,8 +4808,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void sampledReturnProbeEmitsSamplingCheck() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "compute");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "compute");
     OnMethod om = new OnMethod();
     om.setClazz("com.example.Target");
     om.setMethod("compute");
@@ -4784,7 +4823,7 @@ class ClassFileApiBackendTest {
     BTraceProbe probe = buildStubProbe("com/example/MyTrace", "com.example.Target", om);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4798,8 +4837,8 @@ class ClassFileApiBackendTest {
 
   @Test
   void levelGuardedProbeStillEmitsInvokedynamic() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "doWork");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "doWork");
     OnMethod om = new OnMethod();
     om.setClazz("com.example.Target");
     om.setMethod("doWork");
@@ -4812,7 +4851,7 @@ class ClassFileApiBackendTest {
     BTraceProbe probe = buildStubProbe("com/example/MyTrace", "com.example.Target", om);
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);
@@ -4826,13 +4865,13 @@ class ClassFileApiBackendTest {
 
   @Test
   void unsampledProbeDoesNotEmitSamplingCheck() {
-    requireJdk26ForVersion70();
-    byte[] classBytes = buildClassWithMethod(70, "com/example/Target", "doWork");
+    requireJdk28ForVersion72();
+    byte[] classBytes = buildClassWithMethod(72, "com/example/Target", "doWork");
     BTraceProbe probe =
         buildStubProbe("com/example/MyTrace", "com.example.Target", "doWork", Kind.ENTRY, "()V");
 
     byte[] result =
-        BackendSelector.select(70).instrument(null, classBytes, Collections.singletonList(probe));
+        BackendSelector.select(72).instrument(null, classBytes, Collections.singletonList(probe));
 
     assertNotNull(result);
     byte[] readable = patchVersion(result, 65);

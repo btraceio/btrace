@@ -50,12 +50,6 @@ jobs:
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
-    - name: Set up Java 26
-      uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
-      with:
-        java-version: 26
-        distribution: temurin
-
     - name: Set up Java 24
       uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
       with:
@@ -64,7 +58,9 @@ jobs:
 
     - name: Build BTrace
       run: |
-        ./gradlew -x test build
+        # CodeQL only needs compiled sources; skip the test tasks (classFileApiBackendTest is a
+        # separate Test task that needs a JDK 28 EA toolchain, so -x test alone does not cover it).
+        ./gradlew -x test -x classFileApiBackendTest build
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4

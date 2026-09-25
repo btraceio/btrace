@@ -32,16 +32,19 @@ writes a manifest that makes the result a drop-in `-javaagent`:
 
 ```
 Manifest-Version: 1.0
-Premain-Class: io.btrace.agent.Main
-Agent-Class: io.btrace.agent.Main
+Premain-Class: io.btrace.boot.Loader
+Agent-Class: io.btrace.boot.Loader
+BTrace-Agent-Main: io.btrace.agent.Main
 Can-Redefine-Classes: true
 Can-Retransform-Classes: true
 Boot-Class-Path: demo-btrace-agent.jar
 BTrace-Embedded-Extensions: btrace-metrics
 ```
 
-Start your app with `-javaagent:demo-btrace-agent.jar=debug=true` and the extension is just there —
-no separate attach step, no policy file to edit by hand. Deploy a probe that uses it
+(`io.btrace.boot.Loader` is the same masked-jar bootstrap the regular `btrace.jar` uses;
+`BTrace-Agent-Main` tells it where the real agent entry point lives inside the jar.) Start your app
+with `-javaagent:demo-btrace-agent.jar=debug=true` and the extension is just there — no separate
+attach step, no extensions directory to install into. Deploy a probe that uses it
 (`LatencyHistogram.java`, reused unchanged from the extensions tutorial) and you get the same
 five-second histogram you'd get from a hand-run BTrace, percentiles and all:
 
@@ -52,15 +55,17 @@ processOrder  p50=58ms  p95=346ms  p99=402ms  (n=41)
 =======================
 ```
 
-Maven gets the same idea through a `fat-agent` goal bound to the `package` phase, with its own
-`btraceVersion`, `extensions`, and `outputName` parameters, producing the same shape of artifact
-from a `pom.xml` instead of a `build.gradle`.
+There's no Maven equivalent in 3.0.0. An unpublished in-repository Maven `fat-agent` module was
+removed before release — it targeted pre-3.0 artifacts and could report a successful build even
+though the embedded implementation couldn't load. The external
+[`btrace-maven`](https://github.com/btraceio/btrace-maven) project remains the Maven integration for
+script compilation; for fat agents, the Gradle plugin is the supported path.
 
 ## Layered into Docker, three ways
 
 Once you've got a jar (fat or otherwise), BTrace's official Docker images give you three variants
 tuned for three different jobs, and the size difference between them is the whole point. The full
-image (`btrace/btrace:3.0.0`, ~25MB) ships the entire toolchain — shell, samples, docs — and is
+image (`ghcr.io/btraceio/btrace:3.0.0`, ~25MB) ships the entire toolchain — shell, samples, docs — and is
 built for development and interactive debugging. The alpine variant (~15MB) trims the OS down but
 keeps the full toolchain, which makes it the right choice for a Kubernetes sidecar that needs to
 run `btrace` and `jps` interactively but doesn't need the extra samples and docs weight. The
@@ -91,45 +96,37 @@ over from the app it's watching.
 
 ## Known rough edges
 
-All of the above works as described — but three things surfaced during verification are worth
-knowing about before you build a workflow around them, rather than discovering them mid-incident.
+All of the above works as described — but two behaviours are worth knowing about before you build
+a workflow around them, rather than discovering them mid-incident.
 
-First, embedding an extension into a fat agent currently sidesteps the privileged-permission gate
-entirely. The filesystem-extension flow from the permissions tutorial requires you to explicitly
-opt a privileged extension into `~/.btrace/permissions.properties` before it's allowed to run. The
-fat-agent path skips that check completely: embedded extensions are parsed with an empty permission
-set regardless of what they actually declare needing, so the privileged-tier gate never triggers.
-If you embed something that needs a privileged permission, it's active for anyone who runs your
-jar, with no separate opt-in. Treat the act of embedding itself as the grant, and review what you're
-bundling accordingly.
+First, embedding an extension into a fat agent does **not** bypass the privileged-permission gate.
+The fat-agent plugin copies each embedded extension's `BTrace-Extension-Permissions` manifest
+attribute into the embedded descriptor, and the agent honours it when it loads the extension — so an
+embedded `btrace-metrics` (privileged, because of `THREADS`) is gated exactly like a
+filesystem-installed one. If your app's JVM has no policy granting it (`allowExtensions=btrace-metrics`
+or `allowPrivileged=true` in `~/.btrace/permissions.properties`, or the equivalent
+`btracex policy set`), the extension is blocked and a probe that injects it will fail to link (or,
+for an `@Injected(optional = true)` field, get the throwing stub from the permissions tutorial).
+Embedding decides what ships in the jar; the policy on the target host still decides what runs.
 
 Second, the "zero-config startup probes" feature — bundling a compiled probe class into a fat agent
-so it auto-runs at JVM startup via `bundledProbes {}` and a `probes=` argument — doesn't work yet in
-the current build. The Gradle plugin stages the probe class into the jar, but the agent's loader at
-runtime never looks in that location; it only checks each embedded extension's own bundled-probes
-list. The result is a silent no-op: the agent logs that it's loading the named probe, finds nothing,
-and moves on, with no error surfaced anywhere. Until that's wired together, use the same
-attach-based flow you'd use with any other BTrace script — `btrace <PID> Script.java` — for anything
-you wanted to auto-start.
+so it auto-runs at JVM startup via `bundledProbes {}` and a `probes=` agent argument — fails loudly
+rather than quietly. The Gradle plugin stages each probe class under `META-INF/btrace-probes/`, and
+the agent honours `probes=` directly: it validates every name as an exact Java binary name (so a
+value can't escape that namespace), loads each class from that location, and throws a
+`BundledProbeException` at startup if a named probe isn't there or can't be loaded. A typo in
+`probes=` or a class you forgot to list in `bundledProbes {}` is a startup failure, never a silent
+no-op — which is what you want from something that's supposed to be running before your first
+request lands.
 
-Third, the Maven fat-agent goal has a classifier and path mismatch that likely breaks embedding for
-real extensions. The mojo looks for an implementation artifact published under an `impl` classifier,
-but no extension in this repo actually publishes one — only `api`, `api-sources`, `api-javadoc`, and
-`extension` classifiers exist. When that lookup fails, it's caught and logged only at debug level,
-silently producing a fat jar with an extension's API on the classpath but no working implementation
-behind it. Even when an implementation jar is found by other means, it's staged under a nested path
-that the runtime's class loader doesn't look in — it expects a flat layout, the same one the Gradle
-plugin produces. If you're building fat agents with Maven, verify the embedded implementation
-actually loads before depending on it in production; the Gradle path (`file()`/`project()` sources)
-doesn't share either of these gaps.
-
-None of these are reasons to skip the fat-agent story — the JAR-embedding mechanics, the manifest
+Neither of these is a reason to skip the fat-agent story — the JAR-embedding mechanics, the manifest
 rewriting, and the Docker/Kubernetes packaging patterns are all solid and verified end to end. They're
-reasons to test the specific combination you're relying on (Maven plus embedded implementation
-classes, or bundled auto-start probes) before you build a deploy pipeline around it.
+reasons to test the specific combination you're relying on (a privileged embedded extension plus the
+policy on the target host, or bundled auto-start probes) before you build a deploy pipeline around it.
 
 ---
 
 - Hands-on tutorials: [docs/tutorials/08-fat-agent.md](../../docs/tutorials/08-fat-agent.md), [docs/tutorials/09-kubernetes-sidecar.md](../../docs/tutorials/09-kubernetes-sidecar.md)
 - Getting started: [../../docs/GettingStarted.md](../../docs/GettingStarted.md)
+<!-- TODO: replace with the per-post Discussions thread before publishing -->
 - Questions, deployment war stories, or "here's what broke for us": [GitHub Discussions](https://github.com/btraceio/btrace/discussions)

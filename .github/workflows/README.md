@@ -17,13 +17,13 @@ This directory contains GitHub Actions workflows for continuous integration and 
 
 **Jobs:**
 - **build:** Compiles the project and runs all tests
-  - Java 11 with Temurin distribution
+  - Gradle on Java 21 (Temurin) with Java 24 and 28-ea toolchains (java24 source set, ClassFile API backend tests)
   - Parallel build with caching
   - **V2 Protocol Tests:** Runs dedicated v2 protocol test suite
   - Uploads dist build artifacts
 - **test:** Runs integration tests on multiple Java versions
-  - Matrix: Java 8, 11, 17, 21, 25 (EA)
-  - Uses SDKMAN for multiple JDK management
+  - Matrix: Java 8, 11, 17, 21, 25, 27 and 28-ea (see `docs/JDKCompatibility.md`)
+  - Lane JDKs from actions/setup-java (newest Temurin build of each major); SDKMAN only for a major Adoptium has not published yet
   - Downloads build artifacts from previous job
   - Runs integration tests with `-Pintegration` flag
 - **publish:** Publishes artifacts to Maven Central
@@ -204,7 +204,7 @@ The workflows ensure comprehensive testing of the v2 protocol implementation:
 
 **Test Job:**
 - `TEST_JAVA_HOME`: Set per matrix Java version
-- SDKMAN for multiple JDK management
+- Lane JDKs from actions/setup-java (Temurin); SDKMAN via `scripts/resolve-sdkman-java.sh` for `sdkman: true` lanes
 
 **Publish Job:**
 - `GPG_SIGNING_KEY`: GPG key for artifact signing
@@ -340,8 +340,6 @@ git commit -m "Optimize binary protocol [benchmark]"
 ## References
 
 - [BTrace v2 Protocol Architecture](../../docs/architecture/Version2ProtocolArchitecture.md)
-- [Phase 3 Integration Guide](../../docs/architecture/phase3-integration-guide.md)
-- [V2 Implementation Summary](../../docs/architecture/v2-implementation-summary.md)
 - [JMH Benchmarks Guide](../../btrace-core/JMH_BENCHMARKS.md)
 
 ## Support

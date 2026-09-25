@@ -18,6 +18,13 @@ BTrace uses an automated release process via GitHub Actions. The release is trig
 | **minor** | New features, non-breaking changes | 2.3.0-SNAPSHOT → 2.3.0 |
 | **patch** | Bug fixes on release branch | 2.3.1-SNAPSHOT → 2.3.1 |
 
+The type is a version *operation* on the snapshot currently in the root `build.gradle`, not a
+description of the release. `major` always bumps the major number, so when `develop` has already
+been pre-bumped to the target major snapshot (as it is for 3.0.0: `version = '3.0.0-SNAPSHOT'`),
+release it with `minor` (`3.0.0-SNAPSHOT → 3.0.0`, next develop `3.1.0-SNAPSHOT`, branch
+`release/3.0._`). Running `major` in that state would release `4.0.0`. Always confirm the
+`RELEASE SUMMARY` printed by `DRY_RUN=true ./scripts/release.sh <type>` before triggering.
+
 ### Running a Release
 
 ```bash
@@ -40,7 +47,7 @@ The release workflow performs these steps:
 
 1. **Validation**: Verifies inputs, checks tag doesn't exist
 2. **Build & Test**: Runs full build and unit tests
-3. **Integration Tests**: Tests on JDK 8, 11, 17, 21, 25, and the configured OpenJDK EA build
+3. **Integration Tests**: Tests on JDK 8, 11, 17, 21, 25, 27, and the configured OpenJDK EA build
 4. **Prepare Release**: Creates/updates release branch, updates version, creates tag
 5. **Stage to Maven Central**: Uploads artifacts to staging (requires manual release)
 6. **⏸️ MANUAL CHECKPOINT**: You must release artifacts via Central Portal
@@ -49,6 +56,7 @@ The release workflow performs these steps:
 9. **Release Smoke**: Exercises acquisition, first-trace, prepared, migration, extension, protocol,
    archive, container, version, and license paths against the release candidate
 10. **GitHub Release**: Creates release with artifacts and changelog
+10b. **Container images**: Builds the Debian, Alpine, and distroless variants for `linux/amd64` and `linux/arm64` from the candidate distribution and pushes them to `ghcr.io/btraceio/btrace` (tags `<version>`, `latest`, `-alpine`, `-distroless`) using the workflow's `GITHUB_TOKEN`; no registry account or secret is needed
 11. **SDKMan Update**: Announces new version to SDKMan
 12. **JBang**: Verifies both the Maven coordinate and catalog alias
 13. **Version Bumps**: Updates develop and release branch to next snapshots
@@ -143,6 +151,17 @@ The workflow uses these GitHub secrets:
 
 Generate Central Portal tokens at: https://central.sonatype.com/account
 
+## Container images
+
+Images are published to the GitHub Container Registry by the `publish-container-images` job, not
+to Docker Hub (the `btrace` Docker Hub namespace belongs to an unrelated account). The job
+authenticates with the workflow's `GITHUB_TOKEN` (`packages: write`), so nothing has to be
+configured for a release. One-time setup after the first successful push: open the `btrace`
+package under https://github.com/orgs/btraceio/packages, change its visibility to **public**, and
+confirm it is linked to this repository (the `org.opencontainers.image.source` label links it
+automatically). Until the package is public, `docker pull ghcr.io/btraceio/btrace:<version>`
+requires a GitHub login.
+
 ## SDKMan
 
 After the GitHub release is created, the workflow announces the new version to SDKMan.
@@ -152,7 +171,7 @@ BTrace will be available via:
 sdk install btrace
 ```
 
-For major releases, `sdkMajorRelease` is used; for minor/patch, `sdkMinorRelease` is used.
+The workflow always runs `sdkMajorRelease` (announce and set as default, `.github/workflows/release.yml` "Announce to SDKMan" step); `sdkMinorRelease` is only for manual use.
 
 ## JBang
 

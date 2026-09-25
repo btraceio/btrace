@@ -166,22 +166,20 @@ public final class ClassInfo {
               : cl.getResourceAsStream(resourcePath);
       if (typeIs != null) {
         try {
-          BTraceClassReader cr = new BTraceClassReader(cl, typeIs);
+          // ASM for class files it can parse, the JDK ClassFile API for newer ones (JDK 28+
+          // targets): the hierarchy of such classes must still resolve for @OnMethod type matching
+          ClassHeader header = ClassHeaderReader.read(typeIs);
 
-          isInterface = cr.isInterface();
-          String[] info = cr.readClassSupers();
-          String superName = info[0];
+          isInterface = header.isInterface();
+          String superName = header.getSuperName();
           if (superName != null) {
             ClassName superClassName = new ClassName(superName);
             supertypes.add(cache.get(inferClassLoader(cl, superClassName), superClassName));
           }
-          if (info.length > 1) {
-            for (int i = 1; i < info.length; i++) {
-              String ifc = info[i];
-              if (ifc != null) {
-                ClassName ifcClassName = new ClassName(ifc);
-                supertypes.add(cache.get(inferClassLoader(cl, ifcClassName), ifcClassName));
-              }
+          for (String ifc : header.getInterfaces()) {
+            if (ifc != null) {
+              ClassName ifcClassName = new ClassName(ifc);
+              supertypes.add(cache.get(inferClassLoader(cl, ifcClassName), ifcClassName));
             }
           }
           isAvailable = true;

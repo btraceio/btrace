@@ -21,7 +21,7 @@ BTrace dynamically instruments running Java applications to inject tracing code 
 
 ### Supported Java Versions
 
-BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). See the [migration guide](docs/Migration-2.x-to-3.0.md) for details on upgrading from BTrace 2.x.
+BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). See the [migration guide](docs/Migration-2.x-to-3.0.md) for details on upgrading from BTrace 2.x and the [3.0.0 release notes](.github/release-notes/v3.0.0.md) for everything that changed.
 
 ---
 
@@ -76,8 +76,9 @@ jbang btrace@btraceio <PID> script.java
 # SDKMan
 sdk install btrace
 
-# Manual download
-curl -LO https://github.com/btraceio/btrace/releases/latest/download/btrace-bin.tar.gz
+# Manual download (assets are versioned: btrace-v<version>-bin.tar.gz)
+BTRACE_VERSION=3.0.0
+curl -LO https://github.com/btraceio/btrace/releases/download/v${BTRACE_VERSION}/btrace-v${BTRACE_VERSION}-bin.tar.gz
 ```
 
 See [Installation Guide](docs/GettingStarted.md#installation) for Docker, package managers, and more options.
@@ -193,7 +194,7 @@ sudo dpkg -i btrace-*.deb
 **Docker images:**
 ```dockerfile
 # Copy BTrace into your application image
-FROM btrace/btrace:latest AS btrace
+FROM ghcr.io/btraceio/btrace:latest AS btrace
 FROM bellsoft/liberica-openjdk-debian:11-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
@@ -203,9 +204,9 @@ ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:${BTRACE_HOME}/bin"
 ```
 
 Available variants:
-- `btrace/btrace:latest` - Debian-based (~25MB)
-- `btrace/btrace:latest-alpine` - Alpine-based (~15MB)
-- `btrace/btrace:latest-distroless` - Distroless (~10MB)
+- `ghcr.io/btraceio/btrace:latest` - Debian-based (~25MB)
+- `ghcr.io/btraceio/btrace:latest-alpine` - Alpine-based (~15MB)
+- `ghcr.io/btraceio/btrace:latest-distroless` - Distroless (~10MB)
 
 See [docker/README.md](docker/README.md) for complete Docker documentation.
 
@@ -381,7 +382,7 @@ because it cannot consume the published 3.0 extension layout safely. Use the
 
 ## Contributing
 
-**Important:** Pull requests can only be accepted from signers of the [Oracle Contributor Agreement](https://oca.opensource.oracle.com/).
+Contributions are accepted under the [Apache License 2.0](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and expectations.
 
 ### Development
 

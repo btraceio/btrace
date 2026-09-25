@@ -29,7 +29,7 @@ public static void onChargeCardReturn(@Duration long durationNanos) {
 
 ## The permission that has to be earned
 
-Here's the fact worth knowing before you deploy anything: `btrace-metrics` needs the `THREADS` permission, because it runs a background thread for HdrHistogram's own bookkeeping — and `THREADS` sits in BTrace's **privileged** tier, blocked unless you explicitly say otherwise. Grant it with a policy file:
+Here's the fact worth knowing before you deploy anything: `btrace-metrics` declares the `THREADS` permission, because it runs a background thread for HdrHistogram's own bookkeeping (the build-time permission scanner adds `REFLECTION` and `CLASSLOADER` to its manifest on top, which is why `btracex inspect` lists three) — and `THREADS` sits in BTrace's **privileged** tier, blocked unless you explicitly say otherwise. Grant it with a policy file:
 
 ```sh
 mkdir -p ~/.btrace
@@ -90,7 +90,7 @@ btrace-metrics [PRIV] - /opt/btrace-3.0.0/extensions/btrace-metrics
 
 $ btracex inspect btrace-metrics
 Extension: btrace-metrics
-Version  : 3.0.0-SNAPSHOT
+Version  : 3.0.0
 Privileged: true
 Required : [CLASSLOADER,REFLECTION,THREADS]
 Services : io.btrace.metrics.MetricsService
@@ -109,5 +109,6 @@ That's the whole shape of the story: a real capability, a real permission gate i
 ---
 
 - Full hands-on walkthrough: [docs/tutorials/04-extensions-and-permissions.md](../../docs/tutorials/04-extensions-and-permissions.md)
-- New to BTrace? Start here: [../GettingStarted.md](../GettingStarted.md)
+- New to BTrace? Start here: [docs/GettingStarted.md](../../docs/GettingStarted.md)
+<!-- TODO: replace with the per-post Discussions thread before publishing -->
 - Questions, ideas, war stories: [GitHub Discussions](https://github.com/btraceio/btrace/discussions)

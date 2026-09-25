@@ -64,10 +64,11 @@ Redeploy, and instead of a method name on one line and a duration on the next, y
 
 The real payoff shows up once you want something a single `@Duration` parameter can't give you: how many orders each of the app's worker threads has handled, and how long an order takes end-to-end — from `validateOrder`'s first line to `chargeCard`'s return — even though those are two separate methods with two separate `@OnMethod` hooks. That needs state that survives *between* probe invocations, kept separate per thread. `@TLS` (thread-local storage) does exactly that: a field marked `@TLS` behaves like a `ThreadLocal`, transparently, with each thread reading and writing its own copy. One probe on `validateOrder` starts the clock and bumps a counter; a second probe on `chargeCard`'s return reads both back, and the two never race across `order-worker-0/1/2`. The output tells its own story — workers reporting independent running counts, `order-worker-2` jumping from `#1` to `#3` because a failed validation still counted as an attempt even though no `chargeCard` probe ever fired for it, and a `total=414ms` line quietly confirming the same slow-payment defect earlier tutorials caught, this time counted from further upstream.
 
-One rule worth carrying forward: you can only read or write a `@TLS` field from inside another `@OnMethod`-annotated handler — not from `@OnTimer`, `@OnEvent`, or similar global callbacks. It's a small constraint for a lot of leverage: cross-probe, per-thread state, with no imports, no boilerplate, and no ceremony beyond an annotation on a field.
+One rule worth carrying forward — it's spelled out in the `@TLS` annotation's own javadoc ("It is not possible to access the data stored in the thread local storage from any other handler than `OnMethod`"): you can only read or write a `@TLS` field from inside an `@OnMethod`-annotated handler — not from `@OnTimer`, `@OnEvent`, or similar global callbacks. It's a small constraint for a lot of leverage: cross-probe, per-thread state, with no imports, no boilerplate, and no ceremony beyond an annotation on a field.
 
 ---
 
 - Full hands-on walkthrough: [docs/tutorials/02-oneliner-to-script.md](../../docs/tutorials/02-oneliner-to-script.md)
-- New to BTrace? Start here: [../GettingStarted.md](../GettingStarted.md)
+- New to BTrace? Start here: [docs/GettingStarted.md](../../docs/GettingStarted.md)
+<!-- TODO: replace with the per-post Discussions thread before publishing -->
 - Questions, ideas, war stories: [GitHub Discussions](https://github.com/btraceio/btrace/discussions)

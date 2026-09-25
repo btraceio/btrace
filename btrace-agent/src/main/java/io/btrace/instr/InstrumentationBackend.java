@@ -20,8 +20,8 @@ import java.util.Collection;
 
 /**
  * SPI for bytecode instrumentation backends. BTrace ships two implementations: {@link
- * AsmInstrumentationBackend} (default, class file versions &le; 69) and {@code ClassFileApiBackend}
- * (JDK 24+, used for versions &gt; 69 that ASM cannot parse).
+ * AsmInstrumentationBackend} (default, class file versions &le; 71) and {@code ClassFileApiBackend}
+ * (JDK 24+, used for versions &gt; 71 that ASM cannot parse).
  */
 interface InstrumentationBackend {
 

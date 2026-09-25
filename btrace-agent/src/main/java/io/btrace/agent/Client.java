@@ -687,11 +687,12 @@ abstract class Client implements CommandListener {
       sb.append("  - ").append(p.name()).append("\n");
       sb.append("    ").append(p.getRiskDescription()).append("\n");
     }
-    sb.append("\nTo allow these permissions, use:\n");
-    sb.append("  --grant=")
-        .append(missing.stream().map(Permission::name).collect(Collectors.joining(",")))
-        .append("\n");
-    sb.append("\nOr use --grantAll=true to allow all permissions (not recommended).\n");
+    String names = missing.stream().map(Permission::name).collect(Collectors.joining(","));
+    sb.append("\nTo allow these permissions, grant them on the agent side, e.g.\n");
+    sb.append("  -javaagent:btrace.jar=grant=").append(names).append("\n");
+    sb.append("\nor allow the extension in the permission policy\n");
+    sb.append("  (btracex policy set --allowExtensions <id>, or allowPrivileged=true).\n");
+    sb.append("\nUse grantAll=true to allow all permissions (not recommended).\n");
     return sb.toString();
   }
 }

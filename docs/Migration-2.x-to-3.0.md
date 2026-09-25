@@ -8,7 +8,8 @@ Good news first: for most users, migrating to BTrace 3.0 requires **no action at
 |---|---|
 | Compiled/persisted probes (`.class`) | **Nothing** — the agent auto-migrates them at load time |
 | BTrace script sources (`.java`) | **Nothing** for most scripts — or a one-line rename (see below) |
-| Mixed 2.x/3.0 client and agent | **Nothing** — the wire protocol auto-negotiates |
+| Mixed 2.x/3.0 client and agent (dynamic attach) | **Nothing** — the wire protocol auto-negotiates |
+| 2.x client against a 3.0 *prepared* agent (`-javaagent:...=port=`) | **Upgrade the client** — prepared mode is authenticated and rejects old clients |
 | Maven/Gradle dependencies | Update coordinates to `io.btrace:btrace` |
 | Launch scripts referencing multiple BTrace jars | Point to the single `btrace.jar` |
 | `libs=` / profiles agent options | **Migrate to extensions** — removed, loads nothing |
@@ -80,13 +81,26 @@ The `libs=<profile>` agent option has been removed. The agent logs an error nami
 
 BTrace 3.0 defaults to the binary V2 wire protocol (faster, 2–5x smaller payloads), but every connection starts with an automatic negotiation: the receiving side inspects the first bytes of the stream for the V2 magic prefix (`BTR2`) and falls back to the V1 Java-serialization protocol when it is absent. A 2.x client can therefore talk to a 3.0 agent and vice versa — no configuration required.
 
+The one exception is *prepared mode*: a 3.0 agent started with `-javaagent:btrace.jar=port=...`
+authenticates every connection before it decodes a command and binds loopback only, so a 2.x client
+cannot connect to it (see [Getting Started](GettingStarted.md#startup-modes-and-the-30-security-boundary) for the
+3.0 client flow). Dynamic attach is unaffected.
+
+## Permissions Live in Extensions, Not in Scripts
+
+2.x scripts carried no permission declarations and still need none. In 3.0 permissions are declared
+by extensions and granted on the agent side — `grant=`, `allowExtensions=`, `allowPrivileged=`
+agent arguments or the [permission policy file](PermissionPolicy.md); the `btrace` client has no
+`--grant` flag. (If you tried a 3.0 pre-release build: the probe-level `@RequestPermission(s)` /
+`@RequiresPermission(s)` annotations it had were removed before 3.0.0 and never existed in 2.x.)
+
 ## License
 
 BTrace 3.0 is licensed under the **Apache License, Version 2.0** (previously GPLv2 with the Classpath Exception).
 
 ## Java Support Policy
 
-BTrace 3.0 runs on Java 8–25+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
+BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0).
 
 The warning is printed once per target JVM when the agent starts:
 
@@ -94,4 +108,4 @@ The warning is printed once per target JVM when the agent starts:
 [BTrace] WARNING: This JVM is Java <N>. Running BTrace on Java versions older than 17 is deprecated and support will be removed in the next major release. Please upgrade to Java 17 or newer. Suppress this warning with -Dbtrace.suppressJavaDeprecationWarning=true.
 ```
 
-If the warning is noise in your environment, suppress it by setting the system property `btrace.suppressJavaDeprecationWarning=true` on the target JVM.
+If the warning is noise in your environment, suppress it by setting the system property `btrace.suppressJavaDeprecationWarning=true` on the target JVM (agent notice) and on the client JVM, e.g. via `JAVA_TOOL_OPTIONS`, for the console notice printed at attach time.

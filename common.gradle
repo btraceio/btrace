@@ -41,14 +41,14 @@ ext.getJavadoc = {
 }
 
 ext.getGitCommit = {
+    // Gradle 9 removed Project.exec; providers.exec is the supported replacement and
+    // keeps the value out of the configuration cache inputs until it is read.
     try {
-        def stdout = new ByteArrayOutputStream()
-        exec {
+        def result = providers.exec {
             commandLine 'git', 'rev-parse', 'HEAD'
-            standardOutput = stdout
             ignoreExitValue = true
         }
-        def commit = stdout.toString().trim()
+        def commit = result.standardOutput.asText.get().trim()
         return commit ?: 'dev'
     } catch (Exception e) {
         return 'dev'

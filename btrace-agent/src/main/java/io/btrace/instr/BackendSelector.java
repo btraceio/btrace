@@ -54,8 +54,9 @@ final class BackendSelector {
   /**
    * Returns the most appropriate backend for the given class file major version.
    *
-   * <p>Uses the ASM backend for versions &le; 69 (Java 25). For higher versions uses the ClassFile
-   * API backend when available, otherwise falls back to ASM.
+   * <p>Uses the ASM backend for versions &le; {@link
+   * AsmInstrumentationBackend#MAX_ASM_MAJOR_VERSION} (71, Java 27). For higher versions uses the
+   * ClassFile API backend when available, otherwise falls back to ASM.
    */
   static InstrumentationBackend select(int classFileMajorVersion) {
     if (ASM.supports(classFileMajorVersion)) {
@@ -68,8 +69,10 @@ final class BackendSelector {
     if (!classFileApiAttempted) {
       synchronized (BackendSelector.class) {
         if (!classFileApiAttempted) {
-          classFileApiAttempted = true;
+          // Publish the backend before the flag: a caller that reads the flag outside the lock
+          // must never see "attempted" while the backend is still null (it would fall back to ASM).
           classFileApiBackend = loadClassFileApiBackend();
+          classFileApiAttempted = true;
         }
       }
       cfApi = classFileApiBackend;
