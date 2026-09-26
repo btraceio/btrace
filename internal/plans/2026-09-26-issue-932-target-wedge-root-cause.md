@@ -148,6 +148,43 @@ the blind overnight loop as the primary step):
 real odds; if it was July's runner-pool environment, it will not fire — either result is
 informative.
 
+**RESULT (2026-09-26): REPRODUCED — the sentinel caught a live wedge on the second iteration.**
+Docker `ubuntu-24.04`, `--cpus=2 --memory=6g`, worker Temurin 24, `TEST_JAVA_HOME` = Temurin
+17.0.19+10 (the exact July-window build), repo copy (working tree + sentinel commit) mounted at
+`/work`, GRADLE_USER_HOME=`.gradle-user`. The loop is kept at `/tmp/btrace-repro/` with a host
+supervisor restarting rounds until the watcher (manual two-frame dumps of any target older than
+100 s) captures the next wedge.
+
+The captured dump (`repro-logs/stall-dumps-iter-2/exit-wedge-pid-1020-*.txt`) shows the target
+JVM wedged **inside exit** — Phase 3's signature 4, precisely:
+
+1. `DestroyJavaVM` in `Object.wait` → `ApplicationShutdownHooks.runHooks` — waiting to join the
+   agent's `"BTrace Server Shutdown"` hook.
+2. `"BTrace Server Shutdown"` BLOCKED entering `static synchronized Main.shutdownServer()`
+   (`Main.java:1479`) — the server hook can never run; `Thread-0` (the `ControlServer.accept`
+   loop) is still parked in `accept()`.
+3. The per-probe hook (registered by agent `Client.loadClass`, `Client.java:365`) — `Thread-3` —
+   BLOCKED at `completeTerminalCleanup` (`BTraceRuntimeImplBase:1012`, bytecode offset 0 at the
+   method entry; the `synchronized exitImpl` at `:1320` is the contended monitor) — its stack:
+   `handleExit(976)` → `requestTerminalShutdown(987)` → `completeTerminalCleanup`.
+4. Probe timer (`Timer-1`) BLOCKED in the handler-dispatch wrapper (`BTraceRuntimeImplBase:1305`,
+   `mthd.invoke`); ClassCache cleanup timer (`Timer-0`) BLOCKED at `cacheMap.remove`
+   (`ClassCache:91`).
+5. Command-queue drain (`Thread-2`) BLOCKED inside `Filter.matchClass`
+   (`BTraceTransformer:348`) — reached from `RemoteClient.onCommand` → socket write →
+   `NioSocketImpl.implWrite` → **hidden-class definition during the write invoking the transform
+   pipeline** — so every class definition in the dying JVM funnels into the blocked filter state
+   (`nameMap`/`nameRegexMap`, `BTraceTransformer:334/340`).
+
+All five blocked threads show no monitor owner in the frozen capture (the `waiting to lock`
+annotations are absent — likely a capture artifact of the mid-shutdown state); the watcher's
+fresh two-frame capture of the next wedge will resolve the exact owner topology. The emerging
+mechanism — a self-deadlock of the agent exit path (hooks, probe timers, transform pipeline,
+ClassCache all contending on agent monitors, with JDK-internal hidden-class definition pulling
+the transform pipeline in mid-write) — is exactly the "target wedged in its exit path" the
+masked-vs-gone analysis predicted, and exactly what the pre-#934 stall needed to produce a
+silent 30-minute job.
+
 - Docker `ubuntu-24.04`, 2 CPUs / 7 GB (GitHub linux-runner parity), worker JDK 24,
   `TEST_JAVA_HOME` = Temurin 17.0.19, `./gradlew clean :btrace-dist:build` first.
 - Loop `--tests "tests.PreparedModeAuthenticationFunctionalTest"` with a per-iteration
@@ -259,6 +296,20 @@ expected).
    and `stall-dumps` — the sentinel now converts any resurrected exit-path wedge into captured
    evidence with the shutdown-hook stack. If it never fires, the issue can be closed as
    "diagnosed to the class/tier window, mitigated, sentinel in place".
+
+## Status after the reproduction run (2026-09-26, evening)
+
+7. ✅ **Reproduced.** The container loop (2 CPUs, worker Temurin 24, target Temurin 17.0.19+10)
+   fired the wedge on its second iteration; the sentinel captured the full target dump before the
+   force-kill. A second loop run with an extended grace period (300 s, container copy only) and a
+   live watcher is hunting the next occurrence for the monitor-owner topology; the host supervisor
+   (`/tmp/btrace-repro/supervisor.sh`, nohup) restarts rounds automatically.
+8. The dump confirms the masked-wedge model end-to-end: the test passes at +grace because the
+   wedge lives in the target's JVM-exit path, not in the test method. Phase 4's fix surface is now
+   concrete: the agent exit path (`Main.shutdownServer` class lock vs `ControlServer.accept`
+   blocking; per-probe hook blocking on `synchronized exitImpl`; `Filter` state contended with
+   in-flight class definitions). Do not fix until the watcher capture names the owners —
+   per the issue's rule, one more frame settles it.
 
 ## Open questions
 
