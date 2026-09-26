@@ -143,8 +143,8 @@ public class StallWatchdog
     disarm();
   }
 
-  /** Points dumps at a caller-controlled directory. For the watchdog's own tests. */
-  static void setDumpDirForTesting(Path dir) {
+  /** Points dumps at a caller-controlled directory. For the watchdog and sentinel tests. */
+  public static void setDumpDirForTesting(Path dir) {
     dumpDirOverride = dir;
   }
 
@@ -245,7 +245,13 @@ public class StallWatchdog
     }
   }
 
-  private static Path dumpDir() {
+  /**
+   * The directory stall diagnostics are written to.
+   *
+   * <p>Shared by the watchdog and the {@code TestApp} exit-wedge sentinel, so every diagnostic a
+   * stalled run produces lands under the one path the CI workflows already upload.
+   */
+  public static Path dumpDir() {
     Path override = dumpDirOverride;
     if (override != null) {
       return override;
