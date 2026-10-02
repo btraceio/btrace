@@ -50,6 +50,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
@@ -69,6 +70,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -1066,19 +1069,21 @@ public class Client {
       protocol.write(new ListProbesCommand());
 
       log.debug("entering into command loop");
+      AtomicBoolean replied = new AtomicBoolean(false);
       commandLoop(
           cmd -> {
+            listener.onCommand(cmd);
             if (cmd.getType() == Command.LIST_PROBES) {
-              listener.onCommand(cmd);
-              System.exit(0);
-            } else {
-              listener.onCommand(cmd);
+              replied.set(true);
             }
-          });
+          },
+          replied::get);
     } catch (UnknownHostException uhe) {
       throw new IOException(uhe);
     } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
+      throw interrupted(e);
+    } finally {
+      closeQuietly();
     }
   }
 
@@ -1107,19 +1112,21 @@ public class Client {
       protocol.write(new ListFailedExtensionsCommand());
 
       log.debug("entering into command loop");
+      AtomicBoolean replied = new AtomicBoolean(false);
       commandLoop(
           cmd -> {
+            listener.onCommand(cmd);
             if (cmd.getType() == Command.LIST_FAILED_EXTENSIONS) {
-              listener.onCommand(cmd);
-              System.exit(0);
-            } else {
-              listener.onCommand(cmd);
+              replied.set(true);
             }
-          });
+          },
+          replied::get);
     } catch (UnknownHostException uhe) {
       throw new IOException(uhe);
     } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
+      throw interrupted(e);
+    } finally {
+      closeQuietly();
     }
   }
 
@@ -1151,6 +1158,7 @@ public class Client {
       protocol.write(new ReconnectCommand(resumeProbe));
 
       log.debug("entering into command loop");
+      AtomicReference<IOException> failure = new AtomicReference<>();
       commandLoop(
           new CommandListener() {
             boolean statusReported = false;
@@ -1197,7 +1205,8 @@ public class Client {
                     }
                   } else {
                     log.warn("Unable to reconnect to an active probe: {}", resumeProbe);
-                    System.exit(1);
+                    failure.set(
+                        new IOException("Unable to reconnect to an active probe: " + resumeProbe));
                   }
                 } else {
                   listener.onCommand(cmd);
@@ -1205,11 +1214,20 @@ public class Client {
                 statusReported = true;
               }
             }
-          });
+          },
+          () -> failure.get() != null);
+      if (failure.get() != null) {
+        throw failure.get();
+      }
     } catch (UnknownHostException uhe) {
+      closeQuietly();
       throw new IOException(uhe);
+    } catch (IOException e) {
+      // leave no half-open connection behind; the caller may reuse or discard this client
+      closeQuietly();
+      throw e;
     } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
+      throw interrupted(e);
     }
   }
 
@@ -1249,7 +1267,7 @@ public class Client {
 
       if (sock == null) {
         log.debug("server not available. exiting.");
-        System.exit(1);
+        throw new IOException("BTrace server not available at port " + port);
       }
       protocol = createProtocol(sock, host, true);
       log.debug("setting up client settings");
@@ -1269,6 +1287,7 @@ public class Client {
       protocol.write(new InstrumentCommand(code, args));
 
       log.debug("entering into command loop");
+      AtomicReference<IOException> failure = new AtomicReference<>();
       commandLoop(
           new CommandListener() {
             boolean statusReported = false;
@@ -1284,7 +1303,7 @@ public class Client {
                     log.info("Successfully started BTrace probe: {}", fileName);
                   } else {
                     log.warn("Failed to start BTrace probe: {}", fileName);
-                    System.exit(1);
+                    failure.set(new IOException("Failed to start BTrace probe: " + fileName));
                   }
                   statusReported = true;
                   // Forward the first STATUS as well so higher-level listeners (e.g. unattended -x)
@@ -1295,11 +1314,20 @@ public class Client {
                 }
               }
             }
-          });
+          },
+          () -> failure.get() != null);
+      if (failure.get() != null) {
+        throw failure.get();
+      }
     } catch (UnknownHostException uhe) {
+      closeQuietly();
       throw new IOException(uhe);
+    } catch (IOException e) {
+      // leave no half-open connection behind; the caller may reuse or discard this client
+      closeQuietly();
+      throw e;
     } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
+      throw interrupted(e);
     }
   }
 
@@ -1336,6 +1364,23 @@ public class Client {
   /** Sends an EventCommand to the traced JVM. */
   public void sendEvent(String name) throws IOException {
     send(new EventCommand(name));
+  }
+
+  /** Restores the interrupt flag and reports an interrupted connection attempt to the caller. */
+  private InterruptedIOException interrupted(InterruptedException cause) {
+    Thread.currentThread().interrupt();
+    InterruptedIOException failure =
+        new InterruptedIOException("Interrupted while connecting to BTrace server at port " + port);
+    failure.initCause(cause);
+    return failure;
+  }
+
+  private void closeQuietly() {
+    try {
+      close();
+    } catch (IOException e) {
+      log.debug("error closing connection: {}", e.toString());
+    }
   }
 
   /** Closes all connection state to the traced JVM. */
@@ -1523,6 +1568,11 @@ public class Client {
   }
 
   private void commandLoop(CommandListener listener) throws IOException {
+    commandLoop(listener, () -> false);
+  }
+
+  /** Runs the command loop until EXIT is received or {@code done} reports true after a command. */
+  private void commandLoop(CommandListener listener, BooleanSupplier done) throws IOException {
     assert protocol != null : "null protocol?";
     AtomicBoolean exited = new AtomicBoolean(false);
     while (true) {
@@ -1534,6 +1584,10 @@ public class Client {
         listener.onCommand(cmd);
         if (cmd.getType() == Command.EXIT) {
           log.debug("received EXIT cmd");
+          return;
+        }
+        if (done.getAsBoolean()) {
+          log.debug("command loop completed");
           return;
         }
       } catch (IOException e) {

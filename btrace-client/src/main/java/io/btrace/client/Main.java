@@ -379,7 +379,8 @@ public final class Main {
             cmd -> {
               if (isUnattended
                   && cmd.getType() == Command.STATUS
-                  && ((StatusCommand) cmd).getFlag() == StatusCommand.STATUS_FLAG) {
+                  && ((StatusCommand) cmd).getFlag() == StatusCommand.STATUS_FLAG
+                  && ((StatusCommand) cmd).isSuccess()) {
                 // In unattended mode, initiate a graceful disconnect and
                 // continue processing so the server can send DISCONNECT
                 // with the probe id, which the client prints.

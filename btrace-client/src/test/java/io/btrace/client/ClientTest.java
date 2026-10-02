@@ -19,9 +19,16 @@ package io.btrace.client;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.sun.tools.attach.AgentLoadException;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.JavaSerializationProtocol;
+import io.btrace.core.comm.ListFailedExtensionsCommand;
+import io.btrace.core.comm.ListProbesCommand;
+import io.btrace.core.comm.ReconnectCommand;
+import io.btrace.core.comm.StatusCommand;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -30,6 +37,9 @@ import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -308,6 +318,225 @@ class ClientTest {
     assertTrue(failure.getMessage().contains("-javaagent:/opt/btrace/libs/btrace.jar=port=0"));
     assertTrue(failure.getMessage().contains("did not inspect the target VM flag state"));
     assertSame(cause, failure.getCause());
+  }
+
+  /**
+   * Fake agent speaking the V1 protocol: consumes {@code expectedCommands} client commands, sends
+   * {@code replies}, then reports whether the client closed the connection.
+   */
+  private static final class FakeAgent implements AutoCloseable {
+    final ServerSocket server;
+    final ExecutorService executor = Executors.newSingleThreadExecutor();
+    final Future<Boolean> clientClosed;
+
+    FakeAgent(int expectedCommands, Command... replies) throws IOException {
+      server = new ServerSocket(0, 1, InetAddress.getLoopbackAddress());
+      clientClosed =
+          executor.submit(
+              () -> {
+                try (Socket socket = server.accept()) {
+                  JavaSerializationProtocol protocol =
+                      new JavaSerializationProtocol(
+                          socket.getInputStream(), socket.getOutputStream());
+                  for (int i = 0; i < expectedCommands; i++) {
+                    protocol.read();
+                  }
+                  for (Command reply : replies) {
+                    protocol.write(reply);
+                  }
+                  protocol.flush();
+                  socket.setSoTimeout(5000);
+                  try {
+                    protocol.read();
+                    return false;
+                  } catch (SocketTimeoutException e) {
+                    return false;
+                  } catch (IOException e) {
+                    return true; // EOF: the client closed the connection
+                  }
+                }
+              });
+    }
+
+    Client client() throws IOException {
+      Properties properties = new Properties();
+      properties.setProperty("btrace.port", String.valueOf(server.getLocalPort()));
+      properties.setProperty("btrace.address", "127.0.0.1");
+      Client client = new Client(0);
+      client.configureConnection(properties);
+      return client;
+    }
+
+    @Override
+    public void close() throws IOException {
+      executor.shutdownNow();
+      server.close();
+    }
+  }
+
+  private static void forceV1Protocol() {
+    System.setProperty("btrace.comm.protocol", "1");
+    System.setProperty("btrace.comm.autoNegotiate", "false");
+  }
+
+  private static void clearProtocolProperties() {
+    System.clearProperty("btrace.comm.protocol");
+    System.clearProperty("btrace.comm.autoNegotiate");
+  }
+
+  @Test
+  void connectAndListProbesReturnsAfterReplyAndClosesSocket() throws Exception {
+    forceV1Protocol();
+    try (FakeAgent agent = new FakeAgent(1, new ListProbesCommand())) {
+      Client client = agent.client();
+      List<Byte> seen = new ArrayList<>();
+
+      client.connectAndListProbes("localhost", cmd -> seen.add(cmd.getType()));
+
+      assertEquals(List.of((byte) Command.LIST_PROBES), seen);
+      assertTrue(agent.clientClosed.get(10, TimeUnit.SECONDS), "socket must be closed");
+    } finally {
+      clearProtocolProperties();
+    }
+  }
+
+  @Test
+  void connectAndListFailedExtensionsReturnsAfterReplyAndClosesSocket() throws Exception {
+    forceV1Protocol();
+    try (FakeAgent agent = new FakeAgent(1, new ListFailedExtensionsCommand())) {
+      Client client = agent.client();
+      List<Byte> seen = new ArrayList<>();
+
+      client.connectAndListFailedExtensions("localhost", cmd -> seen.add(cmd.getType()));
+
+      assertEquals(List.of((byte) Command.LIST_FAILED_EXTENSIONS), seen);
+      assertTrue(agent.clientClosed.get(10, TimeUnit.SECONDS), "socket must be closed");
+    } finally {
+      clearProtocolProperties();
+    }
+  }
+
+  @Test
+  void submitThrowsWhenNoAgentIsListening() throws Exception {
+    int freePort;
+    try (ServerSocket probe = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+      freePort = probe.getLocalPort();
+    }
+    Properties properties = new Properties();
+    properties.setProperty("btrace.port", String.valueOf(freePort));
+    properties.setProperty("btrace.address", "127.0.0.1");
+    Client client = new Client(0);
+    client.configureConnection(properties);
+
+    IOException failure =
+        assertThrows(
+            IOException.class,
+            () -> client.submit("localhost", null, new byte[0], new String[0], cmd -> {}));
+    assertTrue(failure.getMessage().contains(String.valueOf(freePort)));
+  }
+
+  @Test
+  void submitThrowsWhenStatusReportsFailureAfterForwardingIt() throws Exception {
+    forceV1Protocol();
+    try (FakeAgent agent = new FakeAgent(2, new StatusCommand(-StatusCommand.STATUS_FLAG))) {
+      Client client = agent.client();
+      List<Command> seen = new ArrayList<>();
+      byte[] code =
+          Files.readAllBytes(Paths.get(ClientTest.class.getResource("ClientTest.class").toURI()));
+
+      IOException failure =
+          assertThrows(
+              IOException.class,
+              () -> client.submit("localhost", "probe.class", code, new String[0], seen::add));
+
+      assertTrue(failure.getMessage().contains("probe.class"));
+      assertEquals(1, seen.size());
+      assertEquals(Command.STATUS, seen.get(0).getType());
+      assertFalse(((StatusCommand) seen.get(0)).isSuccess());
+      assertTrue(agent.clientClosed.get(10, TimeUnit.SECONDS), "socket must be closed");
+    } finally {
+      clearProtocolProperties();
+    }
+  }
+
+  @Test
+  void submitClosesConnectionWhenProtocolSetupFails() throws Exception {
+    forceV1Protocol();
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+      executor.submit(
+          () -> {
+            server.accept().close(); // drop the connection before any protocol handshake
+            return null;
+          });
+      Properties properties = new Properties();
+      properties.setProperty("btrace.port", String.valueOf(server.getLocalPort()));
+      properties.setProperty("btrace.address", "127.0.0.1");
+      Client client = new Client(0);
+      client.configureConnection(properties);
+
+      assertThrows(
+          IOException.class,
+          () -> client.submit("localhost", null, new byte[0], new String[0], cmd -> {}));
+
+      assertNull(readField(client, "sock"));
+      assertNull(readField(client, "protocol"));
+    } finally {
+      executor.shutdownNow();
+      clearProtocolProperties();
+    }
+  }
+
+  @Test
+  void interruptedConnectThrowsAndRestoresInterruptFlag() throws Exception {
+    int freePort;
+    try (ServerSocket probe = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+      freePort = probe.getLocalPort();
+    }
+    Properties properties = new Properties();
+    properties.setProperty("btrace.port", String.valueOf(freePort));
+    properties.setProperty("btrace.address", "127.0.0.1");
+
+    try {
+      for (int attempt = 0; attempt < 2; attempt++) {
+        Client client = new Client(0);
+        client.configureConnection(properties);
+        Thread.currentThread().interrupt(); // the retry sleep after the refused connect throws
+        if (attempt == 0) {
+          assertThrows(
+              InterruptedIOException.class,
+              () -> client.submit("localhost", null, new byte[0], new String[0], cmd -> {}));
+        } else {
+          assertThrows(
+              InterruptedIOException.class,
+              () -> client.connectAndListProbes("localhost", cmd -> {}));
+        }
+        assertTrue(Thread.currentThread().isInterrupted(), "interrupt flag must be restored");
+        Thread.interrupted(); // clear for the next iteration / other tests
+      }
+    } finally {
+      Thread.interrupted();
+    }
+  }
+
+  @Test
+  void reconnectThrowsForUnknownProbe() throws Exception {
+    forceV1Protocol();
+    try (FakeAgent agent = new FakeAgent(1, new StatusCommand(-ReconnectCommand.STATUS_FLAG))) {
+      Client client = agent.client();
+
+      IOException failure =
+          assertThrows(
+              IOException.class,
+              () ->
+                  client.reconnect(
+                      "localhost", "no-such-probe", cmd -> {}, new String[] {null, null}));
+
+      assertTrue(failure.getMessage().contains("no-such-probe"));
+      assertTrue(agent.clientClosed.get(10, TimeUnit.SECONDS), "socket must be closed");
+    } finally {
+      clearProtocolProperties();
+    }
   }
 
   private static Object readField(Client client, String name) throws Exception {
