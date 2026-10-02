@@ -227,7 +227,18 @@ public final class Main {
   private static volatile Long fileRollMilliseconds;
   private static volatile ExtensionLoader extensionLoader;
   private static volatile boolean serverRunning = true;
-  private static ControlServer controlServer;
+  private static volatile ControlServer controlServer;
+
+  /**
+   * Serializes agent initialization only ({@code premain} and {@code agentmain} may race on a
+   * target that both boots with {@code -javaagent} and is attached to). Deliberately an object lock
+   * and not the {@code Main} class monitor: holding {@code Main.class} for the whole of
+   * initialization made the "BTrace Server Shutdown" hook block on {@code Main.class} when a target
+   * exits while the agent is still initializing -- the hook could never run, never close the
+   * control server, and the JVM hung in exit with nothing to report (issue #932).
+   */
+  private static final Object INIT_LOCK = new Object();
+
   // Track appended jars to avoid duplicate classpath entries
   private static final Set<Path> BOOT_ADDED = Collections.synchronizedSet(new LinkedHashSet<>());
   private static final Set<Path> SYSTEM_ADDED = Collections.synchronizedSet(new LinkedHashSet<>());
@@ -259,7 +270,20 @@ public final class Main {
     }
   }
 
-  private static synchronized void main(String args, Instrumentation inst) {
+  private static void main(String args, Instrumentation inst) {
+    synchronized (INIT_LOCK) {
+      mainLocked(args, inst);
+    }
+  }
+
+  /** Runs {@code action} holding the same lock agent initialization holds. Tests only. */
+  static void runUnderInitLockForTesting(Runnable action) {
+    synchronized (INIT_LOCK) {
+      action.run();
+    }
+  }
+
+  private static void mainLocked(String args, Instrumentation inst) {
     if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization started");
     if (Main.inst != null) {
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Agent already initialized, skipping");
@@ -1482,7 +1506,16 @@ public final class Main {
                 "BTrace Server Shutdown"));
   }
 
-  private static synchronized void shutdownServer() {
+  /**
+   * Stops the control server. Deliberately not synchronized and deliberately not taking {@link
+   * #INIT_LOCK}: this runs on the JVM's shutdown-hook thread and must always make progress, even
+   * when agent initialization is still in flight and holds {@code INIT_LOCK}. Closing the server
+   * also unblocks the accept loop parked in {@code accept()}; without it a target whose main exits
+   * early can hang in exit (#932). The state it touches is {@code volatile}; the endpoint is
+   * captured once, so a server that was never started, or is closed twice, is handled by the null
+   * and closed-ness checks.
+   */
+  static void shutdownServer() {
     serverRunning = false;
     ControlServer endpoint = controlServer;
     controlServer = null;

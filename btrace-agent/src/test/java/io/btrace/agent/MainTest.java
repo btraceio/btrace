@@ -25,6 +25,8 @@ import io.btrace.core.ArgsMap;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 class MainTest {
@@ -121,5 +123,43 @@ class MainTest {
   void explicitServerOverridesStartupScriptDefault() {
     assertTrue(
         Main.shouldStartServer(new ArgsMap(new String[] {"script=probe.class", "noServer=false"})));
+  }
+
+  /**
+   * Regression for #932: the "BTrace Server Shutdown" hook must make progress while agent
+   * initialization is still in flight. It used to share the {@code Main.class} monitor with the
+   * whole of {@code main()}, so a target exiting during init hung in JVM exit.
+   */
+  @Test
+  void serverShutdownDoesNotWaitForInFlightInitialization() throws Exception {
+    CountDownLatch initLockHeld = new CountDownLatch(1);
+    CountDownLatch releaseInit = new CountDownLatch(1);
+    Thread init =
+        new Thread(
+            () ->
+                Main.runUnderInitLockForTesting(
+                    () -> {
+                      initLockHeld.countDown();
+                      try {
+                        releaseInit.await();
+                      } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                      }
+                    }),
+            "simulated-agent-init");
+    init.setDaemon(true);
+    init.start();
+    Thread shutdown = new Thread(Main::shutdownServer, "simulated-shutdown-hook");
+    shutdown.setDaemon(true);
+    try {
+      assertTrue(initLockHeld.await(10, TimeUnit.SECONDS), "init lock was never taken");
+      shutdown.start();
+      shutdown.join(TimeUnit.SECONDS.toMillis(10));
+      assertFalse(shutdown.isAlive(), "shutdownServer() blocked on the agent init lock");
+    } finally {
+      releaseInit.countDown();
+      init.join(TimeUnit.SECONDS.toMillis(10));
+      shutdown.join(TimeUnit.SECONDS.toMillis(10));
+    }
   }
 }
