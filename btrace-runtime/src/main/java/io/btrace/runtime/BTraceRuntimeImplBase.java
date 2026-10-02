@@ -1317,33 +1317,45 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     requestTerminalShutdown(exitCode);
   }
 
-  private synchronized void exitImpl(int exitCode) {
+  /**
+   * Tears the runtime down and runs the probe's {@code @OnExit} handlers. Runs at most once, from
+   * {@link #completeTerminalCleanup}, so the handlers still complete before extension and runtime
+   * cleanup and before the terminal marker is queued. The handlers are user code and are invoked
+   * outside the runtime monitor: holding it across them blocked every other user of the monitor
+   * (MBean initialization, event-handler lookup) on whatever the handler waited for (#932).
+   */
+  private void exitImpl(int exitCode) {
     boolean entered = enter();
     try {
-      if (timer != null) {
-        timer.cancel();
-      }
-
-      if (memoryListener != null && memoryMBean != null) {
-        NotificationEmitter emitter = (NotificationEmitter) memoryMBean;
-        try {
-          emitter.removeNotificationListener(memoryListener);
-        } catch (ListenerNotFoundException ignored) {
+      ExitHandler[] handlers;
+      synchronized (this) {
+        if (timer != null) {
+          timer.cancel();
         }
+
+        if (memoryListener != null && memoryMBean != null) {
+          NotificationEmitter emitter = (NotificationEmitter) memoryMBean;
+          try {
+            emitter.removeNotificationListener(memoryListener);
+          } catch (ListenerNotFoundException ignored) {
+          }
+        }
+
+        if (threadPool != null) {
+          threadPool.shutdownNow();
+        }
+
+        handlers = exitHandlers;
+        exitHandlers = null;
       }
 
-      if (threadPool != null) {
-        threadPool.shutdownNow();
-      }
-
-      if (exitHandlers != null) {
-        for (ExitHandler eh : exitHandlers) {
+      if (handlers != null) {
+        for (ExitHandler eh : handlers) {
           try {
             eh.getMethod(clazz).invoke(null, exitCode);
           } catch (Throwable ignored) {
           }
         }
-        exitHandlers = null;
       }
 
       cleanupExtensions();

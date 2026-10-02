@@ -24,6 +24,7 @@ import io.btrace.core.ArgsMap;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.ExitCommand;
 import io.btrace.core.comm.MessageCommand;
+import io.btrace.core.handlers.ExitHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -143,6 +144,83 @@ class BTraceRuntimeImplBaseTest {
     assertEquals(-1, runtime.speculation());
     runtime.send(new MessageCommand("post-exit"));
     assertFalse(postExitMessage.await(250, TimeUnit.MILLISECONDS));
+  }
+
+  /** Probe stand-in whose {@code @OnExit} handler blocks until the test releases it. */
+  public static final class BlockingExitProbe {
+    static volatile CountDownLatch entered;
+    static volatile CountDownLatch release;
+    static volatile int exitCode = -1;
+
+    public static void onExit(int code) throws InterruptedException {
+      exitCode = code;
+      entered.countDown();
+      release.await(10, TimeUnit.SECONDS);
+    }
+  }
+
+  /**
+   * Regression for #932: {@code @OnExit} handlers are user code and must not run under the runtime
+   * monitor, or every other user of that monitor stalls behind whatever the handler waits on. They
+   * must still complete before the terminal marker is dispatched (#908 ordering).
+   */
+  @Test
+  void exitHandlersRunOutsideTheRuntimeMonitorAndBeforeTheTerminalMarker() throws Exception {
+    BlockingExitProbe.entered = new CountDownLatch(1);
+    BlockingExitProbe.release = new CountDownLatch(1);
+    BlockingExitProbe.exitCode = -1;
+    List<Command> commands = Collections.synchronizedList(new ArrayList<Command>());
+    BTraceRuntimeImpl_8 runtime =
+        new BTraceRuntimeImpl_8("issue-932-exit-handler-test", new ArgsMap(), commands::add, null);
+    runtime.init(
+        BlockingExitProbe.class,
+        null,
+        null,
+        null,
+        new ExitHandler[] {new ExitHandler("onExit")},
+        null);
+
+    Thread shutdown = new Thread(() -> runtime.handleExit(17), "issue-932-terminal-shutdown");
+    shutdown.setDaemon(true);
+    CountDownLatch monitorAcquired = new CountDownLatch(1);
+    Thread contender =
+        new Thread(
+            () -> {
+              synchronized (runtime) {
+                monitorAcquired.countDown();
+              }
+            },
+            "issue-932-runtime-monitor-user");
+    contender.setDaemon(true);
+    try {
+      shutdown.start();
+      assertTrue(BlockingExitProbe.entered.await(5, TimeUnit.SECONDS), "@OnExit never ran");
+      contender.start();
+      assertTrue(
+          monitorAcquired.await(5, TimeUnit.SECONDS),
+          "the runtime monitor was held across the @OnExit handler");
+      assertFalse(
+          containsTerminalMarker(commands),
+          "terminal marker dispatched before the @OnExit handler completed");
+    } finally {
+      BlockingExitProbe.release.countDown();
+    }
+    shutdown.join(TimeUnit.SECONDS.toMillis(10));
+    assertFalse(shutdown.isAlive(), "terminal shutdown did not complete");
+    assertEquals(17, BlockingExitProbe.exitCode);
+    assertTrue(containsTerminalMarker(commands), "terminal marker was never dispatched");
+  }
+
+  private static boolean containsTerminalMarker(List<Command> commands) {
+    synchronized (commands) {
+      for (Command command : commands) {
+        if (command instanceof MessageCommand
+            && ((MessageCommand) command).getMessage().startsWith("[BTRACE] terminal cleanup:")) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   private static void assertClearInterleaving(String operation, SpeculativeOperation action)
