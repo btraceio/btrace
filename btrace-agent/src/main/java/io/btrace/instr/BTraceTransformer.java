@@ -23,7 +23,6 @@ import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -269,31 +268,22 @@ public final class BTraceTransformer implements ClassFileTransformer {
   }
 
   static class Filter {
-    private final Map<String, Integer> nameMap = new HashMap<>();
-    private final Map<Pattern, Integer> nameRegexMap = new HashMap<>();
+    // Concurrent maps: matchClass() runs for every class definition in the JVM, JDK-internal
+    // hidden classes defined mid-I/O included, and must never block on a monitor (#932).
+    // Mutation is already serialized by the transformer's setupLock write lock.
+    private final Map<String, Integer> nameMap = new ConcurrentHashMap<>();
+    private final Map<Pattern, Integer> nameRegexMap = new ConcurrentHashMap<>();
     private final Map<String, Pattern> patternCache = new ConcurrentHashMap<>();
     private boolean isFast = true;
     private boolean isRegex = false;
 
-    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     private static <K> void addToMap(Map<K, Integer> map, K name) {
-      synchronized (map) {
-        map.merge(name, 1, Integer::sum);
-      }
+      map.merge(name, 1, Integer::sum);
     }
 
-    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
+    /** Drops one registration of {@code name}; the entry goes away with its last registration. */
     private static <K> void removeFromMap(Map<K, Integer> map, K name) {
-      synchronized (map) {
-        Integer i = map.get(name);
-        if (i == null) {
-          return;
-        }
-        int freq = i - 1;
-        if (freq == 0) {
-          map.remove(name);
-        }
-      }
+      map.computeIfPresent(name, (k, count) -> count > 1 ? count - 1 : null);
     }
 
     void add(OnMethod om) {
@@ -331,17 +321,13 @@ public final class BTraceTransformer implements ClassFileTransformer {
 
     public Result matchClass(String className) {
       if (isFast) {
-        synchronized (nameMap) {
-          if (nameMap.containsKey(className)) {
-            return Result.TRUE;
-          }
+        if (nameMap.containsKey(className)) {
+          return Result.TRUE;
         }
         if (isRegex) {
-          synchronized (nameRegexMap) {
-            for (Pattern p : nameRegexMap.keySet()) {
-              if (p.matcher(className).matches()) {
-                return Result.TRUE;
-              }
+          for (Pattern p : nameRegexMap.keySet()) {
+            if (p.matcher(className).matches()) {
+              return Result.TRUE;
             }
           }
         }
