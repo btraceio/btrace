@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.Writer;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -40,6 +41,7 @@ import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,6 +58,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.extension.ExtendWith;
 import tests.harness.Completion;
 import tests.harness.OutputPump;
+import tests.harness.StallCapture;
 import tests.harness.StallWatchdog;
 import tests.harness.TargetRegistry;
 
@@ -971,6 +974,9 @@ public abstract class RuntimeTest {
     private final Process process;
     private final StringBuilder startupStderr = new StringBuilder();
 
+    /** The per-run grace period a target gets to exit on its own after being told to stop. */
+    private static volatile int shutdownTimeoutSeconds = SHUTDOWN_TIMEOUT_SECONDS;
+
     public TestApp(Process process, boolean debug, TargetRegistry.Handle stallHandle) {
       this.process = process;
 
@@ -1046,6 +1052,22 @@ public abstract class RuntimeTest {
       exitT.start();
     }
 
+    /**
+     * Shortens the grace period before {@link #stop()} treats a target as wedged, for the
+     * sentinel's own test.
+     *
+     * <p>Restore the previous value in a {@code finally}: the field is shared by every test in this
+     * JVM and a leaked short period would force-kill healthy targets.
+     */
+    static void setShutdownTimeoutSecondsForTesting(int seconds) {
+      shutdownTimeoutSeconds = seconds;
+    }
+
+    /** The current grace period, so the sentinel test can save and restore it. */
+    static int shutdownTimeoutSeconds() {
+      return shutdownTimeoutSeconds;
+    }
+
     public void stop() throws InterruptedException {
       if (process.isAlive()) {
         PrintWriter pw = new PrintWriter(process.getOutputStream());
@@ -1054,11 +1076,65 @@ public abstract class RuntimeTest {
         // Bounded: a target that ignores "done" -- because the agent still holds it, or a probe
         // never detached -- used to block the test here indefinitely, which surfaces as a job that
         // burns its entire timeout with no failing assertion and leaves the JVM behind.
-        if (!process.waitFor(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+        if (!process.waitFor(shutdownTimeoutSeconds, TimeUnit.SECONDS)) {
+          // Issue #932: the force-kill bounds the test but also masks the wedge it kills. A
+          // target stuck in its exit path (e.g. an agent shutdown hook inside retransform)
+          // still lets the test method finish, so neither the watchdog nor the JUnit timeout
+          // fire -- the wedge disappears without a trace. Capture the target's threads while
+          // it is still wedged: this is the one observable moment it leaves behind.
+          captureExitWedge();
           process.destroyForcibly();
           process.waitFor(FORCED_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         }
       }
+    }
+
+    /**
+     * Writes the wedged target's thread dump to the stall-dumps directory before the force-kill.
+     *
+     * <p>Best effort by contract: a capture that fails degrades to a marker line, never to an
+     * exception or an unbounded wait, because the caller is a teardown that must stay bounded.
+     */
+    private void captureExitWedge() {
+      long waitedMs = TimeUnit.SECONDS.toMillis(shutdownTimeoutSeconds);
+      try {
+        Path dumpFile =
+            StallWatchdog.dumpDir()
+                .resolve("exit-wedge-" + wedgeLabel() + "-" + System.currentTimeMillis() + ".txt");
+        Files.createDirectories(dumpFile.getParent());
+        try (Writer sink =
+            Files.newBufferedWriter(
+                dumpFile,
+                StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.APPEND)) {
+          StallCapture.captureExitWedge(sink, exitWedgeTarget(), waitedMs);
+        }
+        System.out.println(
+            "[exit-wedge] target "
+                + wedgeLabel()
+                + " ignored 'done' for "
+                + waitedMs / 1000
+                + "s; thread dump preserved at "
+                + dumpFile.toAbsolutePath()
+                + " before forced destroy");
+      } catch (Throwable t) {
+        System.out.println("[exit-wedge] capture failed for target " + wedgeLabel() + ": " + t);
+      }
+    }
+
+    private String wedgeLabel() {
+      return pid > 0 ? "pid-" + pid : "unready";
+    }
+
+    /** This target's registry snapshot, or {@code null} if it was never registered. */
+    private TargetRegistry.Snapshot exitWedgeTarget() {
+      for (TargetRegistry.Snapshot snapshot : TargetRegistry.liveTargets()) {
+        if (snapshot.getProcess() == process) {
+          return snapshot;
+        }
+      }
+      return null;
     }
 
     public int getPid() throws InterruptedException {

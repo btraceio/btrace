@@ -131,6 +131,47 @@ public final class StallCapture {
   }
 
   /**
+   * Captures the threads of a target that ignored the harness stop request, immediately before it
+   * is force-destroyed.
+   *
+   * <p>The force-kill that ends a wedged teardown also destroys the evidence: {@code
+   * Process.destroyForcibly()} bypasses JVM shutdown hooks, so a target wedged inside one leaves no
+   * trace through the normal test machinery, and the watchdog never fires because the test method
+   * it watches has already finished. This is the last moment the target's state is observable, so
+   * it is written down here.
+   *
+   * <p>Never throws: an internal failure is recorded as text, because the caller is a test teardown
+   * that must stay bounded.
+   *
+   * @param sink where the report goes; flushed after each section if it is {@link Flushable}
+   * @param target the wedged target's registry snapshot, or {@code null} if it never registered
+   * @param waitedMs how long the target ignored the stop request before this capture
+   */
+  public static void captureExitWedge(
+      Appendable sink, TargetRegistry.Snapshot target, long waitedMs) {
+    line(sink, "");
+    line(sink, "======================================================================");
+    line(sink, "EXIT-WEDGE -- target ignored the stop request");
+    line(sink, "waited:  " + waitedMs / 1000L + "s");
+    line(sink, "A target still alive here was wedged during teardown, most plausibly inside a JVM");
+    line(
+        sink,
+        "shutdown hook; the test that owns it has already finished, so no watchdog will fire.");
+    line(sink, "======================================================================");
+    flush(sink);
+    if (target == null) {
+      line(sink, "target:  (not registered; no pid or jcmd path known)");
+    } else {
+      line(sink, "target:  " + target.getLabel() + " (pid " + target.getPid() + ")");
+      flush(sink);
+      writeTargetThreads(sink, target);
+    }
+    flush(sink);
+    line(sink, "==== end of exit-wedge dump ====");
+    flush(sink);
+  }
+
+  /**
    * Dumps this JVM's threads.
    *
    * <p>Done on a throwaway thread with a bounded join: {@code dumpAllThreads} needs a safepoint,
