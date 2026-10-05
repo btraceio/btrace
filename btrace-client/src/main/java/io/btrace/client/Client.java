@@ -301,9 +301,8 @@ public class Client {
    * Scans the extensions directory and returns a classpath string with all API JARs.
    *
    * <p>Looks in the following locations (first match wins): - System property 'btrace.libs'
-   * (assumed to point to BTrace libs directory); scans sibling 'extensions/' - Derived from
-   * java.class.path entry containing 'btrace-client' (for dist layouts); scans sibling
-   * 'extensions/'
+   * (assumed to point to BTrace libs directory); scans sibling 'extensions/' - Derived from a
+   * btrace-client JAR on java.class.path (for legacy dist layouts); scans sibling 'extensions/'
    */
   private String getExtensionApiClasspath() {
     try {
@@ -318,19 +317,12 @@ public class Client {
         }
       }
 
-      // 2) Fall back to locating btrace-client in the classpath
-      String classPath = System.getProperty("java.class.path");
-      for (String entry : classPath.split(File.pathSeparator)) {
-        if (entry.contains("btrace-client")) {
-          File clientPath = new File(entry);
-          File libsDir = clientPath.getParentFile();
-          if (libsDir != null) {
-            File btraceHome = libsDir.getParentFile();
-            String cp = scanExtensionsDir(new File(btraceHome, "extensions"));
-            if (!cp.isEmpty()) {
-              return cp;
-            }
-          }
+      // 2) Fall back to locating the btrace-client JAR in the classpath
+      File btraceHome = btraceHomeFromClassPath(System.getProperty("java.class.path"));
+      if (btraceHome != null) {
+        String cp = scanExtensionsDir(new File(btraceHome, "extensions"));
+        if (!cp.isEmpty()) {
+          return cp;
         }
       }
       // 3) Fall back to extensions embedded in the agent JAR itself. A Maven or jbang user has no
@@ -346,6 +338,31 @@ public class Client {
       log.warn("Failed to scan extensions directory", e);
     }
     return "";
+  }
+
+  /**
+   * Returns the BTrace home of a {@code <home>/libs/btrace-client[-<version>].jar} entry on {@code
+   * classPath}. Only the entry's file name is matched, so a directory that merely contains
+   * "btrace-client" in its path, such as a checkout or worktree, is never taken for the client.
+   *
+   * @return the home directory, or {@code null} when no such JAR is on the classpath
+   */
+  static File btraceHomeFromClassPath(String classPath) {
+    if (classPath == null) {
+      return null;
+    }
+    for (String entry : classPath.split(File.pathSeparator)) {
+      File clientJar = new File(entry);
+      String name = clientJar.getName();
+      boolean isClientJar =
+          name.endsWith(".jar")
+              && (name.equals("btrace-client.jar") || name.startsWith("btrace-client-"));
+      File libsDir = clientJar.getAbsoluteFile().getParentFile();
+      if (isClientJar && libsDir != null && libsDir.getParentFile() != null) {
+        return libsDir.getParentFile();
+      }
+    }
+    return null;
   }
 
   /**
@@ -1125,6 +1142,22 @@ public class Client {
       throw new IOException(uhe);
     } catch (InterruptedException e) {
       throw interrupted(e);
+    } finally {
+      closeQuietly();
+    }
+  }
+
+  /**
+   * Reconnects to a probe that a client detached from and stops it, as {@code -r <probe-id> exit}
+   * does. Returns once the agent confirms the exit; the connection is always closed.
+   *
+   * @param host the agent host
+   * @param probeId a probe id as reported by {@link #connectAndListProbes}
+   * @throws IOException if the agent is unavailable or does not know {@code probeId}
+   */
+  public void connectAndExitProbe(String host, String probeId) throws IOException {
+    try {
+      reconnect(host, probeId, cmd -> {}, new String[] {"exit", null});
     } finally {
       closeQuietly();
     }

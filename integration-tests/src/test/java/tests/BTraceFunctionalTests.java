@@ -47,6 +47,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import tests.harness.Completion;
@@ -533,10 +534,51 @@ public class BTraceFunctionalTests extends RuntimeTest {
   @Test
   public void testOnMethodUnattended() throws Exception {
     TestApp testApp = launchTestApp("resources.Main");
+    try {
+      String host = "localhost";
+      String probeId = deployAndDetachOnMethodProbe(testApp, host);
+
+      List<String> probes = listProbesWithProtocol(host);
+      long matches =
+          probes.stream().filter(p -> extractProbeClassName(p).endsWith("OnMethodTest")).count();
+      assertEquals(1, matches, "expected exactly one OnMethodTest probe listed by -lp");
+      assertTrue(
+          probes.stream().anyMatch(p -> p.startsWith(probeId + " ")),
+          "probe id not present in -lp output");
+    } finally {
+      // The target's agent holds the BTrace port; a later test attaching a new target needs it.
+      testApp.stop();
+    }
+  }
+
+  @Test
+  @Timeout(value = 2, unit = TimeUnit.MINUTES)
+  public void testStopDetachedProbe() throws Exception {
+    TestApp testApp = launchTestApp("resources.Main");
+    try {
+      String host = "localhost";
+      String probeId = deployAndDetachOnMethodProbe(testApp, host);
+      assertTrue(
+          listProbesWithProtocol(host).stream().anyMatch(p -> p.startsWith(probeId + " ")),
+          "detached probe not listed");
+
+      Client stopper = createClientForTests(locateTrace("btrace/OnMethodTest.java").getParent());
+      stopper.attach(String.valueOf(testApp.getPid()), null, getEventsClassPath());
+      stopper.connectAndExitProbe(host, probeId);
+
+      assertFalse(
+          listProbesWithProtocol(host).stream().anyMatch(p -> p.startsWith(probeId + " ")),
+          "stopped probe is still listed");
+    } finally {
+      testApp.stop();
+    }
+  }
+
+  /** Deploys OnMethodTest into {@code testApp}, detaches from it and returns its probe id. */
+  private String deployAndDetachOnMethodProbe(TestApp testApp, String host) throws Exception {
     File traceFile = locateTrace("btrace/OnMethodTest.java");
 
     String pid = String.valueOf(testApp.getPid());
-    String host = "localhost";
     Client client = createClientForTests(traceFile.getParentFile().getAbsolutePath());
     client.attach(pid, null, getEventsClassPath());
     byte[] code = client.compile(traceFile.getAbsolutePath(), getEventsClassPath());
@@ -587,14 +629,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     } finally {
       executor.shutdownNow();
     }
-
-    List<String> probes = listProbesWithProtocol(host);
-    long matches =
-        probes.stream().filter(p -> extractProbeClassName(p).endsWith("OnMethodTest")).count();
-    assertEquals(1, matches, "expected exactly one OnMethodTest probe listed by -lp");
-    assertTrue(
-        probes.stream().anyMatch(p -> p.startsWith(probeId + " ")),
-        "probe id not present in -lp output");
+    return probeId;
   }
 
   private static String extractProbeClassName(String probeEntry) {

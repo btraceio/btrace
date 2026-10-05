@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.sun.tools.attach.AgentLoadException;
 import io.btrace.core.comm.Command;
+import io.btrace.core.comm.ExitCommand;
 import io.btrace.core.comm.JavaSerializationProtocol;
 import io.btrace.core.comm.ListFailedExtensionsCommand;
 import io.btrace.core.comm.ListProbesCommand;
@@ -537,6 +538,90 @@ class ClientTest {
     } finally {
       clearProtocolProperties();
     }
+  }
+
+  @Test
+  void connectAndExitProbeStopsTheProbeAndClosesSocket() throws Exception {
+    forceV1Protocol();
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+      // The agent side of a reconnect: acknowledge the probe, then echo the client's EXIT.
+      Future<List<Command>> received =
+          executor.submit(
+              () -> {
+                List<Command> commands = new ArrayList<>();
+                try (Socket socket = server.accept()) {
+                  socket.setSoTimeout(10_000);
+                  JavaSerializationProtocol protocol =
+                      new JavaSerializationProtocol(
+                          socket.getInputStream(), socket.getOutputStream());
+                  commands.add(protocol.read());
+                  protocol.write(new StatusCommand(ReconnectCommand.STATUS_FLAG));
+                  protocol.flush();
+                  Command exit = protocol.read();
+                  commands.add(exit);
+                  protocol.write(exit);
+                  protocol.flush();
+                  try {
+                    protocol.read();
+                  } catch (IOException e) {
+                    commands.add(null); // EOF: the client closed the connection
+                  }
+                }
+                return commands;
+              });
+      Properties properties = new Properties();
+      properties.setProperty("btrace.port", String.valueOf(server.getLocalPort()));
+      properties.setProperty("btrace.address", "127.0.0.1");
+      Client client = new Client(0);
+      client.configureConnection(properties);
+
+      client.connectAndExitProbe("localhost", "probe-1");
+
+      List<Command> commands = received.get(10, TimeUnit.SECONDS);
+      assertEquals(3, commands.size(), "socket must be closed after the EXIT echo");
+      assertEquals("probe-1", ((ReconnectCommand) commands.get(0)).getProbeId());
+      assertEquals(Command.EXIT, commands.get(1).getType());
+      assertEquals(0, ((ExitCommand) commands.get(1)).getExitCode());
+    } finally {
+      executor.shutdownNow();
+      clearProtocolProperties();
+    }
+  }
+
+  @Test
+  void connectAndExitProbeThrowsForUnknownProbe() throws Exception {
+    forceV1Protocol();
+    try (FakeAgent agent = new FakeAgent(1, new StatusCommand(-ReconnectCommand.STATUS_FLAG))) {
+      Client client = agent.client();
+
+      IOException failure =
+          assertThrows(
+              IOException.class, () -> client.connectAndExitProbe("localhost", "no-such-probe"));
+
+      assertTrue(failure.getMessage().contains("no-such-probe"));
+      assertTrue(agent.clientClosed.get(10, TimeUnit.SECONDS), "socket must be closed");
+    } finally {
+      clearProtocolProperties();
+    }
+  }
+
+  @Test
+  void btraceHomeIsDerivedOnlyFromABtraceClientJar() {
+    String sep = File.pathSeparator;
+    String home = new File("/opt/btrace").getAbsolutePath();
+    // A directory merely named like the client -- a checkout or worktree -- is not the client.
+    assertNull(
+        Client.btraceHomeFromClassPath(
+            "/work/btrace-client-feature/build/classes/java/main"
+                + sep
+                + "/work/btrace-client-feature/lib/other.jar"));
+    assertNull(Client.btraceHomeFromClassPath("/opt/btrace/libs/btrace-clientx.jar"));
+    assertEquals(
+        new File(home),
+        Client.btraceHomeFromClassPath("/x/a.jar" + sep + home + "/libs/btrace-client.jar"));
+    assertEquals(
+        new File(home), Client.btraceHomeFromClassPath(home + "/libs/btrace-client-3.0.0.jar"));
   }
 
   private static Object readField(Client client, String name) throws Exception {

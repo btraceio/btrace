@@ -16,6 +16,7 @@
  */
 package io.btrace.core.comm.v2;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -37,7 +38,7 @@ public class BinaryProtocol {
   public static byte readByte(InputStream is) throws IOException {
     int value = is.read();
     if (value == -1) {
-      throw new IOException("End of stream reached");
+      throw new EOFException("End of stream reached");
     }
     return (byte) value;
   }
@@ -181,7 +182,7 @@ public class BinaryProtocol {
     while (totalBytesRead < length) {
       int bytesRead = is.read(buffer, offset + totalBytesRead, length - totalBytesRead);
       if (bytesRead == -1) {
-        throw new IOException("End of stream reached");
+        throw new EOFException("End of stream reached");
       }
       totalBytesRead += bytesRead;
     }
