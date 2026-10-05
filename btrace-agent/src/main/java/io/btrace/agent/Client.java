@@ -288,6 +288,11 @@ abstract class Client implements CommandListener {
     return probes;
   }
 
+  /** Returns {@code true} once {@link #onExit(int)} has started removing this probe. */
+  final boolean isShuttingDown() {
+    return shuttingDown;
+  }
+
   synchronized void onExit(int exitCode) {
     if (!shuttingDown) {
       shuttingDown = true;

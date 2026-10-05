@@ -103,6 +103,8 @@ class RemoteClient extends Client {
       AtomicReferenceFieldUpdater.newUpdater(RemoteClient.class, Socket.class, "sock");
   private final AtomicReferenceFieldUpdater<RemoteClient, WireProtocol> protocolUpdater =
       AtomicReferenceFieldUpdater.newUpdater(RemoteClient.class, WireProtocol.class, "protocol");
+  // Keeps sock and protocol a consistent pair across reconnect() and releaseTransport().
+  private final Object transportLock = new Object();
 
   private final CircularBuffer<Command> delayedCommands = new CircularBuffer<>(5000);
   private final AtomicReference<TerminalHandshake> terminalHandshake = new AtomicReference<>();
@@ -279,13 +281,20 @@ class RemoteClient extends Client {
             () -> {
               try {
                 BTraceRuntime.enter();
-                while (true) {
+                while (!isShuttingDown()) {
+                  WireProtocol input;
+                  Socket inputSocket;
+                  synchronized (transportLock) {
+                    input = protocol;
+                    inputSocket = sock;
+                  }
                   try {
-                    if (protocol == null) {
+                    if (input == null) {
+                      // Detached: wait for reconnect() to install a new transport.
                       LockSupport.parkNanos(500_000_000L); // sleep 500ms
                       continue;
                     }
-                    Command cmd = protocol.read();
+                    Command cmd = input.read();
                     switch (cmd.getType()) {
                       case Command.EXIT:
                         {
@@ -340,6 +349,12 @@ class RemoteClient extends Client {
                     if (exp instanceof java.io.EOFException || exp instanceof SocketException) {
                       if (log.isDebugEnabled()) {
                         log.debug("client command stream closed: {}", exp.toString());
+                      }
+                      if (terminalHandshake.get() == null) {
+                        // The probe outlives its client: keep it reconnectable and keep reading
+                        // once a client reconnects.
+                        releaseTransport(input, inputSocket);
+                        continue;
                       }
                     } else {
                       log.debug("Error while processing BTrace command", exp);
@@ -548,10 +563,38 @@ class RemoteClient extends Client {
     }
   }
 
+  /**
+   * Drops a client transport whose stream has ended, leaving the probe running and reconnectable. A
+   * transport that reconnect() has already replaced is closed without touching the new one.
+   */
+  private void releaseTransport(WireProtocol input, Socket inputSocket) {
+    synchronized (transportLock) {
+      if (protocol == input) {
+        protocol = null;
+        sock = null;
+        disconnected = true;
+      }
+    }
+    try {
+      input.close();
+    } catch (IOException ignore) {
+      // best effort
+    }
+    if (inputSocket != null) {
+      try {
+        inputSocket.close();
+      } catch (IOException ignore) {
+        // best effort
+      }
+    }
+  }
+
   void reconnect(WireProtocol protocol, Socket socket) throws IOException {
-    this.sock = socket;
-    this.protocol = protocol;
-    this.disconnected = false;
+    synchronized (transportLock) {
+      this.sock = socket;
+      this.protocol = protocol;
+      this.disconnected = false;
+    }
     onCommand(Command.NULL);
   }
 }
