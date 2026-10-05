@@ -7,8 +7,8 @@ Follow the repository-wide rules in [AGENTS.md](AGENTS.md). This file intentiona
 Use a workspace-local Gradle cache when appropriate, and redirect Gradle output to a log before filtering and reading it (see [AGENTS.md](AGENTS.md#build-and-verification)).
 
 ```bash
-# Distribution and all unit tests
-GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-dist:build
+# Distribution and all unit tests (:btrace-dist:build alone skips most module tests)
+GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew build
 
 # Module, test class, or formatting check
 GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-agent:test
