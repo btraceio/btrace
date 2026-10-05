@@ -606,6 +606,24 @@ class ClientTest {
     }
   }
 
+  @Test
+  void btraceHomeIsDerivedOnlyFromABtraceClientJar() {
+    String sep = File.pathSeparator;
+    String home = new File("/opt/btrace").getAbsolutePath();
+    // A directory merely named like the client -- a checkout or worktree -- is not the client.
+    assertNull(
+        Client.btraceHomeFromClassPath(
+            "/work/btrace-client-feature/build/classes/java/main"
+                + sep
+                + "/work/btrace-client-feature/lib/other.jar"));
+    assertNull(Client.btraceHomeFromClassPath("/opt/btrace/libs/btrace-clientx.jar"));
+    assertEquals(
+        new File(home),
+        Client.btraceHomeFromClassPath("/x/a.jar" + sep + home + "/libs/btrace-client.jar"));
+    assertEquals(
+        new File(home), Client.btraceHomeFromClassPath(home + "/libs/btrace-client-3.0.0.jar"));
+  }
+
   private static Object readField(Client client, String name) throws Exception {
     Field field = Client.class.getDeclaredField(name);
     field.setAccessible(true);
