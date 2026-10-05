@@ -1130,6 +1130,22 @@ public class Client {
     }
   }
 
+  /**
+   * Reconnects to a probe that a client detached from and stops it, as {@code -r <probe-id> exit}
+   * does. Returns once the agent confirms the exit; the connection is always closed.
+   *
+   * @param host the agent host
+   * @param probeId a probe id as reported by {@link #connectAndListProbes}
+   * @throws IOException if the agent is unavailable or does not know {@code probeId}
+   */
+  public void connectAndExitProbe(String host, String probeId) throws IOException {
+    try {
+      reconnect(host, probeId, cmd -> {}, new String[] {"exit", null});
+    } finally {
+      closeQuietly();
+    }
+  }
+
   void reconnect(String host, String resumeProbe, CommandListener listener, String[] command)
       throws IOException {
     if (sock != null) {
