@@ -55,15 +55,15 @@ dependencyResolutionManagement {
     versionCatalogs {
         libs {
             // Families...
-            version('asm', '9.10.1')
+            version('asm', '9.11')
             version('jmh', '1.37')
             version('jmhGradlePlugin', '0.7.3')
-            version('slf4j', '2.0.19')
+            version('slf4j', '2.0.20')
             version('junit', '6.1.3')
             version('testcontainers', '2.0.5')
 
             // *** Gradle plugins ***
-            plugin ('spotless', 'com.diffplug.spotless').version('8.10.2')
+            plugin ('spotless', 'com.diffplug.spotless').version('8.10.4')
             plugin ('versioning', 'net.nemerosa.versioning').version('4.0.1')
             plugin ('ospackage', 'com.netflix.nebula.ospackage').version('12.3.0')
             plugin ('publish', 'io.github.gradle-nexus.publish-plugin').version('2.0.0')
