@@ -63,7 +63,7 @@ jobs:
                                        --tests "io.btrace.core.comm.WireProtocol*"
       - name: Upload dist build data
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: dist-build
           retention-days: 1
@@ -72,7 +72,7 @@ jobs:
             btrace-agent/build/classes/traces
       - name: Upload test trace data
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: test-trace
           retention-days: 1
@@ -80,7 +80,7 @@ jobs:
             btrace-agent/build/classes/traces
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: test-reports
           path: |
@@ -194,14 +194,14 @@ jobs:
         run: du -sh ~/.gradle/caches
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: integration-test-reports-${{ matrix.java }}
           path: |
             integration-tests/build/reports/**/*
       - name: Archive binary artifacts
         if: success() && matrix.java == '11'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: btrace-dist
           path: |
