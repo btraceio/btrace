@@ -34,7 +34,7 @@ jobs:
         if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
-          java-version: 11
+          java-version: 25
           distribution: temurin
 
       - name: Grant execute permission for gradlew
