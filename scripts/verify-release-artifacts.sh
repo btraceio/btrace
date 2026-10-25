@@ -89,6 +89,16 @@ if grep -E "^v${VERSION}/(bin|libs)/" <<<"$sdkman_entries" >/dev/null; then
   fail "SDKMAN archive contains an extra v$VERSION directory"
 fi
 
+license_file="$DIST/LICENSE"
+[[ -f "$license_file" ]] || fail "distribution does not contain LICENSE"
+grep -q "Apache License" "$license_file" || fail "distribution LICENSE is not the Apache License"
+if grep -q "GNU General Public License" "$license_file"; then
+  fail "distribution LICENSE still contains GPL text"
+fi
+sdkman_license=$(unzip -p "$SDKMAN_ARCHIVE" LICENSE 2>/dev/null) \
+  || fail "SDKMAN archive does not contain LICENSE at its root"
+[[ "$sdkman_license" == *"Apache License"* ]] || fail "SDKMAN archive LICENSE is not the Apache License"
+
 grep -F "<name>The Apache License, Version 2.0</name>" "$MAVEN_POM" >/dev/null \
   || fail "Maven POM is missing the Apache 2.0 license name"
 grep -F "<url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>" "$MAVEN_POM" >/dev/null \
