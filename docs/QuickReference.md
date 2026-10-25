@@ -558,7 +558,9 @@ java -javaagent:/path/to/btrace.jar=script=<script.class>,noServer=true[,arg=val
 - `scriptdir=<dir>` - Directory to load scripts from
 - `port=<port>` - Communication port; prepared mode accepts `0` and publishes the selected port
 - `bindAddress=<address>` - Loopback bind address (`127.0.0.1` or `::1`); non-loopback and wildcard
-  addresses are rejected in 3.0.0
+  addresses are rejected in 3.0.0. An invalid `port` or `bindAddress` is reported as
+  `invalid agent option <name>=<value>` and the agent starts without a command server; the
+  application and any startup script keep running
 - `authTokenFile=<path>` - Existing owner-protected prepared-mode token file, or a path where the
   agent creates one; the token value is never passed as an argument
 - `noServer=true` - Don't start the command server; use for startup scripts that need no later

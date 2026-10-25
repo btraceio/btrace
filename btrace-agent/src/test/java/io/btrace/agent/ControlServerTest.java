@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.btrace.core.ArgsMap;
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.nio.file.Files;
@@ -81,7 +80,9 @@ class ControlServerTest {
   void wildcardBindingFailsClosed() {
     ArgsMap args = new ArgsMap(new String[] {"port=0", "bindAddress=0.0.0.0"});
 
-    assertThrows(IOException.class, () -> ControlServer.open(args, true));
+    InvalidAgentOptionException failure =
+        assertThrows(InvalidAgentOptionException.class, () -> ControlServer.open(args, true));
+    assertTrue(failure.getMessage().contains("bindAddress=0.0.0.0"), failure.getMessage());
     assertNull(System.getProperty(ControlServer.PORT_PROPERTY));
   }
 
@@ -108,8 +109,19 @@ class ControlServerTest {
 
   @Test
   void invalidPortFailsClosed() {
-    assertThrows(
-        IOException.class,
-        () -> ControlServer.open(new ArgsMap(new String[] {"port=70000"}), true));
+    InvalidAgentOptionException failure =
+        assertThrows(
+            InvalidAgentOptionException.class,
+            () -> ControlServer.open(new ArgsMap(new String[] {"port=70000"}), true));
+    assertTrue(failure.getMessage().contains("port=70000"), failure.getMessage());
+  }
+
+  @Test
+  void nonNumericPortNamesTheRejectedValue() {
+    InvalidAgentOptionException failure =
+        assertThrows(
+            InvalidAgentOptionException.class,
+            () -> ControlServer.open(new ArgsMap(new String[] {"port=notaport"}), true));
+    assertTrue(failure.getMessage().contains("port=notaport"), failure.getMessage());
   }
 }

@@ -325,23 +325,33 @@ public final class Main {
         if (scriptOutputFile != null && !scriptOutputFile.isEmpty()) {
           System.setProperty("btrace.output", scriptOutputFile);
         }
-        controlServer = ControlServer.open(argMap, "premain".equals(agentMode));
-        serverRunning = true;
-        installServerShutdownHook();
-        ControlServer endpoint = controlServer;
-        agentThread =
-            new Thread(
-                new Runnable() {
-                  @Override
-                  public void run() {
-                    BTraceRuntime.enter();
-                    try {
-                      runServer(endpoint);
-                    } finally {
-                      BTraceRuntime.leave();
+        try {
+          controlServer = ControlServer.open(argMap, "premain".equals(agentMode));
+        } catch (InvalidAgentOptionException e) {
+          // A misconfigured command server must not take the application down: name the option
+          // on one line, run without a command socket, and still execute any startup scripts.
+          String message = e.getMessage() + "; the command server was not started";
+          System.err.println("[BTrace Agent] " + message);
+          log.error(message);
+        }
+        if (controlServer != null) {
+          serverRunning = true;
+          installServerShutdownHook();
+          ControlServer endpoint = controlServer;
+          agentThread =
+              new Thread(
+                  new Runnable() {
+                    @Override
+                    public void run() {
+                      BTraceRuntime.enter();
+                      try {
+                        runServer(endpoint);
+                      } finally {
+                        BTraceRuntime.leave();
+                      }
                     }
-                  }
-                });
+                  });
+        }
       }
       // set the fall-back instrumentation object to BTraceRuntime
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Setting up runtime");

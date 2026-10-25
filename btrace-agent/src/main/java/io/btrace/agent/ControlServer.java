@@ -27,6 +27,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 
 final class ControlServer implements Closeable {
   static final String PORT_PROPERTY = "btrace.port";
@@ -155,24 +156,33 @@ final class ControlServer implements Closeable {
     if (configuredPort == null || configuredPort.trim().isEmpty()) {
       return Main.BTRACE_DEFAULT_PORT;
     }
+    String reason = "expected a port number between 0 and 65535";
     try {
       int port = Integer.parseInt(configuredPort.trim());
       if (port < 0 || port > 65535) {
-        throw new IOException("BTrace control server port is out of range");
+        throw new InvalidAgentOptionException(PORT, configuredPort, reason);
       }
       return port;
     } catch (NumberFormatException e) {
-      throw new IOException("BTrace control server port is invalid");
+      throw new InvalidAgentOptionException(PORT, configuredPort, reason);
     }
   }
 
   private static InetAddress resolveAddress(String configuredAddress) throws IOException {
-    InetAddress address =
-        configuredAddress == null || configuredAddress.trim().isEmpty()
-            ? InetAddress.getLoopbackAddress()
-            : InetAddress.getByName(configuredAddress.trim());
+    if (configuredAddress == null || configuredAddress.trim().isEmpty()) {
+      return InetAddress.getLoopbackAddress();
+    }
+    InetAddress address;
+    try {
+      address = InetAddress.getByName(configuredAddress.trim());
+    } catch (UnknownHostException e) {
+      throw new InvalidAgentOptionException(BIND_ADDRESS, configuredAddress, "unknown host");
+    }
     if (!address.isLoopbackAddress()) {
-      throw new IOException("BTrace 3.0 control server supports loopback binding only");
+      throw new InvalidAgentOptionException(
+          BIND_ADDRESS,
+          configuredAddress,
+          "BTrace 3.0 binds loopback addresses only (127.0.0.1 or ::1)");
     }
     return address;
   }

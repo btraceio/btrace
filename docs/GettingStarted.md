@@ -414,8 +414,9 @@ BTrace 3.0 distinguishes launch-time startup scripts from prepared mode:
 
   Use `authTokenFile=/owner/protected/path` to supply or create credentials at a controlled path,
   and `bindAddress=127.0.0.1` or `bindAddress=::1` to select a loopback family. Non-loopback and
-  wildcard addresses fail startup. To keep a startup script and accept later authenticated
-  connections, set `noServer=false` explicitly.
+  wildcard addresses are rejected: the agent reports `invalid agent option bindAddress=<value>`
+  and starts without a command server, and the application keeps running. To keep a startup
+  script and accept later authenticated connections, set `noServer=false` explicitly.
 
 Prepared-mode authentication runs before V1 or V2 negotiation and before every operational
 command. Older clients cannot connect to a 3.0 prepared endpoint. Remote prepared-mode operation
