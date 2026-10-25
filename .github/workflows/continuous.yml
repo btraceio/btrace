@@ -207,6 +207,29 @@ jobs:
           path: |
             btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
 
+  # Single required status check for the test matrix. Matrix jobs report as `test (8)`,
+  # `test (11)`, ...; branch protection matches check names exactly, so it cannot require the
+  # matrix as a whole, and listing every lane goes stale when a lane is added or dropped. Make
+  # this job's check (`tests-passed`) required instead. `if: always()` keeps it from being
+  # skipped when `build` or a lane fails: a skipped required check counts as passing.
+  tests-passed:
+    if: always()
+    needs:
+      - build
+      - test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require build and every test lane to succeed
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          echo "build: ${BUILD_RESULT}, test: ${TEST_RESULT}"
+          if [ "${BUILD_RESULT}" != "success" ] || [ "${TEST_RESULT}" != "success" ]; then
+            echo "::error::build and all test lanes must succeed (build=${BUILD_RESULT}, test=${TEST_RESULT})"
+            exit 1
+          fi
+
   publish:
     if: github.ref == 'refs/heads/develop'
     needs: 
