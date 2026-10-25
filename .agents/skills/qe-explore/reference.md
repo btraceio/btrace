@@ -58,3 +58,5 @@ missing value · wrong type · out of range / sign · unknown key · duplicate o
 ```
 - <date> <surface> <lens> — <idea> — <grounding> — <outcome: kept <id> | rejected (why) | blocked (needs ...) | lead (observed, no case yet)>
 ```
+
+Generated cases (`-Pqe.generate=<n> -Pqe.seed=<s>`, see `docs/QEAgent.md`) are written to `runs/gen.<family>.<seed>.<index>/case.yaml` in this schema; to promote a finding, copy that file into `btrace-qe/cases/<surface>/` and rename its id (`gen.` ids are reserved) and give it a stable title.

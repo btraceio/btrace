@@ -17,19 +17,28 @@
 package io.btrace.qe.report;
 
 import io.btrace.qe.exec.QeEnvironment;
+import io.btrace.qe.generate.CaseGenerator;
 import io.btrace.qe.model.CaseDef;
 
 public final class ReproCommand {
   private ReproCommand() {}
 
   /**
-   * The command that re-runs one case; a non-default step timeout and a set tier are part of it.
+   * The command that re-runs one case; a non-default step timeout and a set tier are part of it. A
+   * generated case also needs the seed and generate budget that produced it, so those are added for
+   * generated ids only.
    */
-  public static String forCase(CaseDef def, long timeoutMs, String tier) {
+  public static String forCase(CaseDef def, long timeoutMs, String tier, long seed, int generate) {
     return "./gradlew :btrace-qe:qe -Pqe.case="
         + def.id()
+        + (CaseGenerator.isGenerated(def) ? generateFlags(seed, generate) : "")
         + tierFlag(tier)
         + timeoutFlag(timeoutMs);
+  }
+
+  /** {@code " -Pqe.seed=<seed> -Pqe.generate=<n>"} when generating, else empty. */
+  public static String generateFlags(long seed, int generate) {
+    return generate > 0 ? " -Pqe.seed=" + seed + " -Pqe.generate=" + generate : "";
   }
 
   /** {@code " -Pqe.tier=<tier>"} when a tier was set, else empty. */

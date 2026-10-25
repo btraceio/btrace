@@ -38,9 +38,10 @@ public final class MarkdownReporter {
       throws IOException {
     StringBuilder sb = new StringBuilder();
     sb.append("# BTrace QE Report\n\n");
-    sb.append("- seed: ")
-        .append(meta.seed())
-        .append(" (recorded; no generated cases in this phase)\n");
+    sb.append("- seed: ").append(meta.seed()).append("\n");
+    if (meta.generate() > 0) {
+      sb.append("- generated: ").append(meta.generate()).append(" per family\n");
+    }
     sb.append("- git SHA: ").append(meta.gitSha()).append('\n');
     sb.append("- btrace version: ").append(meta.btraceVersion()).append('\n');
     sb.append("- target JDK: ").append(meta.jdk()).append('\n');
@@ -87,7 +88,9 @@ public final class MarkdownReporter {
               .append(v.def().id())
               .append("/`\n");
           sb.append("- repro: `")
-              .append(ReproCommand.forCase(v.def(), meta.timeoutMs(), meta.tier()))
+              .append(
+                  ReproCommand.forCase(
+                      v.def(), meta.timeoutMs(), meta.tier(), meta.seed(), meta.generate()))
               .append("`\n\n");
         }
       }

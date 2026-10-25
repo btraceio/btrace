@@ -64,7 +64,7 @@ task qe(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'io.btrace.qe.QeMain'
     configureQeEnvironment(it)
-    ['qe.surface', 'qe.case', 'qe.seed', 'qe.tier'].each { key ->
+    ['qe.surface', 'qe.case', 'qe.seed', 'qe.tier', 'qe.generate'].each { key ->
         if (project.hasProperty(key)) {
             systemProperty key, project.property(key)
         }

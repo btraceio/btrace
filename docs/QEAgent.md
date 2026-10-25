@@ -13,12 +13,14 @@ always exits `0`.
 ./gradlew :btrace-qe:qe -Pqe.case=cli.missing-operand      # one case
 ./gradlew :btrace-qe:qe -Pqe.tier=smoke                    # only the fast `tier: smoke` subset
 ./gradlew :btrace-qe:qe -Pqe.seed=42                       # recorded seed (default 20260811)
+./gradlew :btrace-qe:qe -Pqe.generate=10 -Pqe.seed=42      # add 10 seeded generated cases per family
 ./gradlew :btrace-qe:qe -Pqe.timeout=60000                 # per-step timeout in ms (default 30000, minimum 10000)
 scripts/qe-agent.sh --surface cli --timeout 60000
 scripts/qe-agent.sh --tier smoke
+scripts/qe-agent.sh --generate 10 --seed 42
 ```
 
-A non-default `-Pqe.timeout`, and `-Pqe.tier` when set, are recorded in the report's command line
+A non-default `-Pqe.timeout`, `-Pqe.tier` when set, and `-Pqe.seed`/`-Pqe.generate` when generating are recorded in the report's command line
 and in every repro command.
 Each case's `runs/<case-id>/` directory is wiped before that case runs, so its evidence is always
 from the current run; other cases' directories are left untouched.
@@ -74,6 +76,33 @@ An optional `tier: smoke | full` key (default `full`) marks the fast subset. `-P
 only `smoke` cases; unset or `full` runs everything (`full` is the default and is not recorded), so smoke is a subset of full. Tag a case
 `smoke` sparingly: roughly one clean and one finding-producing case per surface. The loader rejects
 any other case value; an unknown `-Pqe.tier` runs no cases and the report says so.
+
+### Generated cases
+
+`-Pqe.generate=<n>` (default 0 = off) adds `n` seeded cases per mutator family on top of the
+hand-written corpus; the same `-Pqe.seed` and `n` always produce the same cases. Families
+(`io.btrace.qe.generate`):
+
+- `agent-args.values` -- one agent option per case (names read by reflection from the string
+  constants of `io.btrace.core.Args`, minus harness-controlled and file/classpath options) set to a
+  hostile value: empty, 10k characters, negative, beyond `Long.MAX_VALUE`, non-numeric, unicode,
+  injected `,` `=` `:`. Runs like the hand-written target cases (`QeStartupProbe`, 5 steps).
+- `cli.flags` -- a client command line built from the flags of the `btrace` CLI with the same
+  value lenses, duplicated and reordered, always ending in an unused numeric PID and a script that
+  does not exist (`2147483647 qe-no-such-script.java`). A numeric PID skips the JVM-name lookup, so
+  cases exercise flag, oneliner and file-mode handling rather than the launcher's jvmstat setup.
+
+Generated cases are resilience-only (`expect: {}`: no crash, no hang, no corruption), have ids
+`gen.<family>.<seed>.<index>` and tier `full` (so `-Pqe.tier=smoke` excludes them). `-Pqe.surface`
+and `-Pqe.case` filter them like any other case; `-Pqe.case=gen...` needs the same seed and
+`-Pqe.generate`, which the repro command in the report already carries; a generated-case repro is
+reliable only on the same commit, because the option list and lenses can change. A NUL in a value cannot be
+passed on a command line, so that lens uses U+FFFD instead.
+
+Every generated case is written to `runs/<id>/case.yaml` in the corpus schema. To promote a
+finding: copy it to `btrace-qe/cases/<surface>/<kebab-name>.yaml`, rename its id (ids starting with
+`gen.` are reserved and rejected by the loader) and give it a descriptive title, add `messageMustMention`/`intent: conformance` only if a document makes the claim,
+and re-run it with `-Pqe.case=<new id>`.
 
 `agentArgs` supports these placeholders:
 

@@ -38,8 +38,9 @@ class QeMainTest {
 
   @Test
   void commandLineIncludesTierOnlyWhenSet() {
-    assertFalse(QeMain.commandLine(null, null, 1L, TIMEOUT, null).contains("qe.tier"));
-    assertTrue(QeMain.commandLine(null, null, 1L, TIMEOUT, "smoke").contains(" -Pqe.tier=smoke"));
+    assertFalse(QeMain.commandLine(null, null, 1L, TIMEOUT, null, 0).contains("qe.tier"));
+    assertTrue(
+        QeMain.commandLine(null, null, 1L, TIMEOUT, "smoke", 0).contains(" -Pqe.tier=smoke"));
   }
 
   @Test
@@ -56,10 +57,10 @@ class QeMainTest {
             new ExpectationDef(null, Collections.<String>emptyList()),
             CaseDef.TIER_FULL);
     assertEquals(
-        "./gradlew :btrace-qe:qe -Pqe.case=cli.x", ReproCommand.forCase(def, TIMEOUT, null));
+        "./gradlew :btrace-qe:qe -Pqe.case=cli.x", ReproCommand.forCase(def, TIMEOUT, null, 7L, 5));
     assertEquals(
         "./gradlew :btrace-qe:qe -Pqe.case=cli.x -Pqe.tier=smoke",
-        ReproCommand.forCase(def, TIMEOUT, "smoke"));
+        ReproCommand.forCase(def, TIMEOUT, "smoke", 7L, 5));
   }
 
   @Test

@@ -16,6 +16,7 @@
  */
 package io.btrace.qe.report;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.btrace.qe.model.CaseDef;
@@ -65,7 +66,8 @@ class MarkdownReporterTest {
             4,
             "./gradlew :btrace-qe:qe",
             30_000L,
-            null);
+            null,
+            0);
     Path out = Files.createTempDirectory("qe-md").resolve("report.md");
 
     new MarkdownReporter().write(meta, List.of(verdict), out);
@@ -76,6 +78,19 @@ class MarkdownReporterTest {
     assertTrue(content.contains("runs/agent-args.fixture/"));
     assertTrue(content.contains("| 1 | 0 | 0 | 0 | 1 | 0 |"));
     assertTrue(content.contains("- tier: full\n"), content);
+    assertTrue(content.contains("- seed: 1\n"), content);
+    assertFalse(content.contains("generated"), content);
+    assertFalse(content.contains("no generated cases"), content);
+  }
+
+  @Test
+  void headerShowsGenerateBudgetWhenGenerating() throws Exception {
+    RunMetadata meta = new RunMetadata(42L, "abc", "3", "jdk", "os", 4, "cmd", 30_000L, null, 5);
+    Path out = Files.createTempDirectory("qe-md-gen").resolve("report.md");
+    new MarkdownReporter().write(meta, Collections.<CaseVerdict>emptyList(), out);
+    String content = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
+    assertTrue(content.contains("- seed: 42\n"), content);
+    assertTrue(content.contains("- generated: 5 per family\n"), content);
   }
 
   @Test
@@ -98,7 +113,7 @@ class MarkdownReporterTest {
             VerdictValue.NA,
             VerdictValue.POOR,
             List.of(Finding.of(def.id(), Severity.S4, "s", "d")));
-    RunMetadata meta = new RunMetadata(1L, "abc", "3", "jdk", "os", 4, "cmd", 30_000L, "smoke");
+    RunMetadata meta = new RunMetadata(1L, "abc", "3", "jdk", "os", 4, "cmd", 30_000L, "smoke", 0);
     Path dir = Files.createTempDirectory("qe-tier");
 
     new MarkdownReporter().write(meta, List.of(verdict), dir.resolve("report.md"));
@@ -114,7 +129,7 @@ class MarkdownReporterTest {
 
   @Test
   void jsonTierIsNullWhenNotSet() throws Exception {
-    RunMetadata meta = new RunMetadata(1L, "abc", "3", "jdk", "os", 4, "cmd", 30_000L, null);
+    RunMetadata meta = new RunMetadata(1L, "abc", "3", "jdk", "os", 4, "cmd", 30_000L, null, 0);
     Path out = Files.createTempDirectory("qe-tier-null").resolve("report.json");
     new JsonReporter().write(meta, Collections.<CaseVerdict>emptyList(), out);
     String json = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
@@ -152,7 +167,8 @@ class MarkdownReporterTest {
             4,
             "./gradlew :btrace-qe:qe",
             45_000L,
-            null);
+            null,
+            0);
     Path out = Files.createTempDirectory("qe-md-harness").resolve("report.md");
 
     new MarkdownReporter().write(meta, List.of(verdict), out, "no cases matched surface=x case=y");

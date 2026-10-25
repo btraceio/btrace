@@ -16,6 +16,7 @@
  */
 package io.btrace.qe.corpus;
 
+import io.btrace.qe.generate.CaseGenerator;
 import io.btrace.qe.model.CaseDef;
 import io.btrace.qe.model.CaseValidationException;
 import io.btrace.qe.model.ExpectationDef;
@@ -83,6 +84,15 @@ public final class YamlCaseLoader {
       throw new CaseValidationException(file + ": invalid YAML: " + e.getMessage());
     }
     CaseDef def = parse(file, asMap(file, "document", loaded, TOP_KEYS));
+    if (CaseGenerator.isGenerated(def)) {
+      throw new CaseValidationException(
+          file
+              + ": ids starting with '"
+              + CaseGenerator.ID_PREFIX
+              + "' are reserved for generated cases, was '"
+              + def.id()
+              + "'");
+    }
     try {
       def.validate();
     } catch (CaseValidationException e) {

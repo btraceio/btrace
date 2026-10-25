@@ -31,6 +31,7 @@ public final class RunMetadata {
   private final String commandLine;
   private final long timeoutMs;
   private final String tier;
+  private final int generate;
 
   public RunMetadata(
       long seed,
@@ -41,7 +42,9 @@ public final class RunMetadata {
       int cpuCount,
       String commandLine,
       long timeoutMs,
-      String tier) {
+      String tier,
+      int generate) {
+    this.generate = generate;
     this.tier = tier;
     this.timeoutMs = timeoutMs;
     this.seed = seed;
@@ -54,7 +57,8 @@ public final class RunMetadata {
   }
 
   /** Records the JDK the targets run on ({@code qe.javaHome}), not the harness JVM. */
-  public static RunMetadata capture(long seed, String commandLine, long timeoutMs, String tier) {
+  public static RunMetadata capture(
+      long seed, String commandLine, long timeoutMs, String tier, int generate) {
     return new RunMetadata(
         seed,
         readGitSha(),
@@ -64,7 +68,8 @@ public final class RunMetadata {
         Runtime.getRuntime().availableProcessors(),
         commandLine,
         timeoutMs,
-        tier);
+        tier,
+        generate);
   }
 
   private static String readGitSha() {
@@ -123,5 +128,10 @@ public final class RunMetadata {
   /** The {@code -Pqe.tier} the run was restricted to, or {@code null} when not set. */
   public String tier() {
     return tier;
+  }
+
+  /** Generated cases per family ({@code -Pqe.generate}); 0 when generation is off. */
+  public int generate() {
+    return generate;
   }
 }

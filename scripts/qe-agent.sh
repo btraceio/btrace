@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 usage() {
-  echo "Usage: scripts/qe-agent.sh [--surface <csv>] [--case <id>] [--seed <n>] [--timeout <ms>] [--tier <smoke|full>]" >&2
+  echo "Usage: scripts/qe-agent.sh [--surface <csv>] [--case <id>] [--seed <n>] [--timeout <ms>] [--tier <smoke|full>] [--generate <n>]" >&2
 }
 
 GRADLE_ARGS=(:btrace-qe:qe)
@@ -16,6 +16,7 @@ while [[ $# -gt 0 ]]; do
     --seed) GRADLE_ARGS+=("-Pqe.seed=$2") ;;
     --timeout) GRADLE_ARGS+=("-Pqe.timeout=$2") ;;
     --tier) GRADLE_ARGS+=("-Pqe.tier=$2") ;;
+    --generate) GRADLE_ARGS+=("-Pqe.generate=$2") ;;
     *) echo "Unknown option: $1" >&2; usage; exit 64 ;;
   esac
   shift 2

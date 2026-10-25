@@ -32,6 +32,7 @@ public final class JsonReporter {
   public void write(RunMetadata meta, List<CaseVerdict> verdicts, Path outFile) throws IOException {
     Map<String, Object> root = new LinkedHashMap<>();
     root.put("seed", meta.seed());
+    root.put("generate", meta.generate());
     root.put("gitSha", meta.gitSha());
     root.put("btraceVersion", meta.btraceVersion());
     root.put("jdk", meta.jdk());
@@ -55,7 +56,10 @@ public final class JsonReporter {
         fm.put("severity", f.severity().name());
         fm.put("summary", f.summary());
         fm.put("detail", f.detail());
-        fm.put("reproCommand", ReproCommand.forCase(v.def(), meta.timeoutMs(), meta.tier()));
+        fm.put(
+            "reproCommand",
+            ReproCommand.forCase(
+                v.def(), meta.timeoutMs(), meta.tier(), meta.seed(), meta.generate()));
         findings.add(fm);
       }
       c.put("findings", findings);

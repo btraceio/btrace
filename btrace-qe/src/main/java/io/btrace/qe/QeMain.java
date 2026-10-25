@@ -21,6 +21,8 @@ import io.btrace.qe.corpus.YamlCaseLoader;
 import io.btrace.qe.exec.CaseExecutor;
 import io.btrace.qe.exec.ExecutionTrace;
 import io.btrace.qe.exec.QeEnvironment;
+import io.btrace.qe.generate.CaseGenerator;
+import io.btrace.qe.generate.CaseYamlWriter;
 import io.btrace.qe.model.CaseDef;
 import io.btrace.qe.model.CaseVerdict;
 import io.btrace.qe.model.Finding;
@@ -79,7 +81,11 @@ public final class QeMain {
       note = "unknown qe.tier '" + tier + "' (expected smoke or full); no cases run";
     }
 
-    List<CaseDef> all = new YamlCaseLoader().loadAll(Paths.get(System.getProperty("qe.corpusDir")));
+    int generate = parseGenerate(System.getProperty("qe.generate"));
+
+    List<CaseDef> all = new ArrayList<>();
+    all.addAll(new YamlCaseLoader().loadAll(Paths.get(System.getProperty("qe.corpusDir"))));
+    all.addAll(CaseGenerator.generate(seed, generate));
     List<CaseDef> selected =
         note != null
             ? Collections.<CaseDef>emptyList()
@@ -95,6 +101,9 @@ public final class QeMain {
       System.out.println("[qe] " + def.id());
       try {
         resetRunDir(runDir);
+        if (CaseGenerator.isGenerated(def)) {
+          CaseYamlWriter.write(def, runDir.resolve("case.yaml"));
+        }
         ExecutionTrace trace = new CaseExecutor(env).execute(def, runDir);
         new EvidenceStore().persist(trace, runDir);
         verdicts.add(new OracleRunner().evaluate(def, trace));
@@ -103,6 +112,10 @@ public final class QeMain {
       }
     }
 
+    if (generate == 0 && caseId != null && caseId.startsWith(CaseGenerator.ID_PREFIX)) {
+      System.out.println(
+          "[qe] WARNING: generated case ids need -Pqe.generate=<n> and the original -Pqe.seed");
+    }
     if (note == null && selected.isEmpty()) {
       note =
           "no cases matched surface="
@@ -117,9 +130,10 @@ public final class QeMain {
     RunMetadata meta =
         RunMetadata.capture(
             seed,
-            commandLine(surface, caseId, seed, env.defaultTimeoutMs(), tier),
+            commandLine(surface, caseId, seed, env.defaultTimeoutMs(), tier, generate),
             env.defaultTimeoutMs(),
-            tier);
+            tier,
+            generate);
     new JsonReporter().write(meta, verdicts, reportDir.resolve("report.json"));
     new MarkdownReporter().write(meta, verdicts, reportDir.resolve("report.md"), note);
 
@@ -194,13 +208,30 @@ public final class QeMain {
             "harness: " + e));
   }
 
-  static String commandLine(String surface, String caseId, long seed, long timeoutMs, String tier) {
+  /** Non-numeric or negative {@code qe.generate} means off (0). */
+  static int parseGenerate(String raw) {
+    if (raw == null || raw.trim().isEmpty()) {
+      return 0;
+    }
+    try {
+      return Math.max(0, Integer.parseInt(raw.trim()));
+    } catch (NumberFormatException e) {
+      System.out.println("[qe] WARNING: ignoring non-numeric qe.generate '" + raw + "'");
+      return 0;
+    }
+  }
+
+  static String commandLine(
+      String surface, String caseId, long seed, long timeoutMs, String tier, int generate) {
     StringBuilder sb = new StringBuilder("./gradlew :btrace-qe:qe -Pqe.seed=").append(seed);
     if (surface != null) {
       sb.append(" -Pqe.surface=").append(surface);
     }
     if (caseId != null) {
       sb.append(" -Pqe.case=").append(caseId);
+    }
+    if (generate > 0) {
+      sb.append(" -Pqe.generate=").append(generate);
     }
     sb.append(ReproCommand.tierFlag(tier));
     sb.append(ReproCommand.timeoutFlag(timeoutMs));
