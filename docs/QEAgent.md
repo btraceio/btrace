@@ -52,6 +52,13 @@ could not be launched) is a harness error, not a product defect: the case is rep
 
 ## Adding a case
 
+Before inventing a case, check [btrace-qe/EXPLORATION.md](../btrace-qe/EXPLORATION.md): it logs
+every abuse idea explored so far (kept, rejected, blocked, open leads), so ideas aren't repeated and
+known leads can be picked up. Coding agents can run the `qe-explore` skill, which researches,
+writes, validates and logs new cases. It lives in `.agents/skills/qe-explore/` (the Agent Skills
+location read by Pi, Codex and others) and is linked from `.claude/skills/qe-explore` for Claude
+Code: invoke it as `/qe-explore` in Claude Code or `/skill:qe-explore` in Pi.
+
 Add a YAML file under `btrace-qe/cases/<surface>/`. The schema is the Task 3 schema block in
 `internal/plans/2026-09-25-btrace-qe-agent-phase1.md`; the loader enforces it and rejects unknown
 keys. There are two modes: `given.mode: target` launches a fixture JVM with

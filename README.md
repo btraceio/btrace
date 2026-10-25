@@ -129,6 +129,12 @@ Integration tests (optional):
 ```
 These may exercise privileged extensions. If you run into permission denials, provide a policy file and pass it to the test JVMs via `-Dbtrace.permissions=/path/to/permissions.properties`.
 
+Misuse-resilience QE (optional):
+```sh
+./gradlew :btrace-qe:qe
+```
+Runs the abuse corpus in `btrace-qe/cases/` against real JVMs and writes a findings report to `btrace-qe/build/qe-report/`. See the [QE Agent guide](docs/QEAgent.md). Every abuse idea explored so far (kept, rejected, blocked, open leads) is logged in [btrace-qe/EXPLORATION.md](btrace-qe/EXPLORATION.md); check it before proposing new cases.
+
 
 ## Using BTrace
 
