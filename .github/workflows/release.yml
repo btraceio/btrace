@@ -160,13 +160,13 @@ jobs:
           ref: ${{ inputs.commit_sha }}
 
       - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 24
           distribution: temurin
 
       - name: Set up JDK 21
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin
@@ -236,7 +236,7 @@ jobs:
 
       - name: Upload release-gate logs
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-gate-build-logs
           retention-days: 7
@@ -244,7 +244,7 @@ jobs:
           path: release-gate-logs/
 
       - name: Upload dist build data
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: dist-build
           retention-days: 1
@@ -253,7 +253,7 @@ jobs:
             btrace-agent/build/classes/traces
 
       - name: Upload test trace data
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: test-trace
           retention-days: 1
@@ -262,7 +262,7 @@ jobs:
 
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: unit-test-reports
           path: |
@@ -304,20 +304,20 @@ jobs:
         # Runs before the JDK 24/21 steps so that JAVA_HOME still points at JDK 21 for Gradle.
         if: matrix.sdkman != true
         id: lane-jdk
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: ${{ matrix.java }}
           distribution: temurin
           check-latest: true
 
       - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 24
           distribution: temurin
 
       - name: Set up JDK 21 for Gradle
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin
@@ -357,13 +357,13 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Download build data
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: dist-build
           path: btrace-dist/build
 
       - name: Download test trace data
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: test-trace
           path: btrace-agent/build/classes/traces
@@ -399,7 +399,7 @@ jobs:
 
       - name: Upload JDK-lane release-gate logs
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-gate-jdk-${{ matrix.java }}
           retention-days: 7
@@ -408,7 +408,7 @@ jobs:
 
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: integration-test-reports-${{ matrix.java }}
           path: |
@@ -504,13 +504,13 @@ jobs:
           ref: ${{ env.RC_TAG }}
 
       - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 24
           distribution: temurin
 
       - name: Set up JDK 21 (Gradle 9 requires Java 17+)
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin
@@ -625,7 +625,7 @@ jobs:
           ref: ${{ env.RC_TAG }}
 
       - name: Set up JDK 17
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 17
           distribution: temurin
@@ -784,13 +784,13 @@ jobs:
           ref: ${{ inputs.dry_run == true && inputs.commit_sha || env.RC_TAG }}
 
       - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 24
           distribution: temurin
 
       - name: Set up JDK 21 (Gradle 9 requires Java 17+)
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin
@@ -823,7 +823,7 @@ jobs:
           ls -la btrace-dist/build/distributions/
 
       - name: Upload distribution artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-distributions
           retention-days: 7
@@ -850,13 +850,13 @@ jobs:
           ref: ${{ needs.prepare-release.outputs.release_sha }}
 
       - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 24
           distribution: temurin
 
       - name: Set up JDK 21
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin
@@ -865,7 +865,7 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
 
       - name: Download release distributions
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: release-distributions
           path: release-distributions
@@ -927,7 +927,7 @@ jobs:
 
       - name: Upload release-smoke diagnostics
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-smoke-diagnostics
           if-no-files-found: ignore
@@ -951,7 +951,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download distribution artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: release-distributions
           path: distributions
@@ -1053,7 +1053,7 @@ jobs:
           ref: ${{ needs.prepare-release.outputs.release_sha }}
 
       - name: Download release distributions
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: release-distributions
           path: release-distributions
@@ -1075,7 +1075,7 @@ jobs:
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1136,13 +1136,13 @@ jobs:
           ref: ${{ env.RELEASE_TAG }}
 
       - name: Set up JDK 24 (toolchain for the btrace-agent java24 source set)
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 24
           distribution: temurin
 
       - name: Set up JDK 21 (Gradle 9 requires Java 17+)
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin

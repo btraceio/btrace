@@ -46,7 +46,7 @@ jobs:
       # selected through the testJavaVersion toolchain property (see btrace-core/build.gradle).
       - name: Set up Temurin ${{ matrix.java }} (JDK under test)
         id: test-jdk
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: ${{ matrix.java }}
           distribution: temurin
@@ -56,7 +56,7 @@ jobs:
       # (which every setup-java step overwrites) hosts the Gradle daemon on JDK 21, whatever the
       # matrix JDK is; it is cheap when the tool cache already holds JDK 21.
       - name: Set up JDK 21 (Gradle runner)
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin
@@ -85,7 +85,7 @@ jobs:
 
       - name: Upload Test Reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: test-reports-java-${{ matrix.java }}
           retention-days: 7
@@ -114,7 +114,7 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin
@@ -138,7 +138,7 @@ jobs:
 
       - name: Upload Negotiation Test Reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: negotiation-test-reports
           retention-days: 7
@@ -167,7 +167,7 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin
@@ -194,7 +194,7 @@ jobs:
 
       - name: Upload Edge Case Reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: edge-case-reports
           retention-days: 7
@@ -219,7 +219,7 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin
@@ -237,7 +237,7 @@ jobs:
 
       - name: Upload JMH Results
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: jmh-results
           retention-days: 30
@@ -281,7 +281,7 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin
@@ -298,7 +298,7 @@ jobs:
 
       - name: Upload Compatibility Reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: compatibility-${{ matrix.scenario.name }}
           retention-days: 7
@@ -312,7 +312,7 @@ jobs:
     if: always()
     steps:
       - name: Download All Test Reports
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: test-reports
 
@@ -373,7 +373,7 @@ jobs:
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin
@@ -386,7 +386,7 @@ jobs:
           ./gradlew :btrace-core:test jacocoTestReport
 
       - name: Upload Coverage Reports
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-reports
           retention-days: 30

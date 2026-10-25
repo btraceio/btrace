@@ -19,17 +19,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Java 24
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 24
           distribution: temurin
       - name: Set up Java 28 (EA, runs the ClassFile API backend tests on version-72 class files)
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 28-ea
           distribution: temurin
       - name: Set up Java
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 21
           distribution: temurin
@@ -63,7 +63,7 @@ jobs:
                                        --tests "io.btrace.core.comm.WireProtocol*"
       - name: Upload dist build data
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: dist-build
           retention-days: 1
@@ -72,7 +72,7 @@ jobs:
             btrace-agent/build/classes/traces
       - name: Upload test trace data
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: test-trace
           retention-days: 1
@@ -80,7 +80,7 @@ jobs:
             btrace-agent/build/classes/traces
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: test-reports
           path: |
@@ -134,7 +134,7 @@ jobs:
         # The "Set up Java 24" step below restores JAVA_HOME for Gradle afterwards.
         if: matrix.sdkman != true
         id: lane-jdk
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: ${{ matrix.java }}
           distribution: temurin
@@ -164,17 +164,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Download build data
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: dist-build
           path: btrace-dist/build
       - name: Download test trace data
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: test-trace
           path: btrace-agent/build/classes/traces
       - name: Set up Java 24
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: 24
           distribution: temurin
@@ -194,18 +194,41 @@ jobs:
         run: du -sh ~/.gradle/caches
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: integration-test-reports-${{ matrix.java }}
           path: |
             integration-tests/build/reports/**/*
       - name: Archive binary artifacts
         if: success() && matrix.java == '11'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: btrace-dist
           path: |
             btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
+
+  # Single required status check for the test matrix. Matrix jobs report as `test (8)`,
+  # `test (11)`, ...; branch protection matches check names exactly, so it cannot require the
+  # matrix as a whole, and listing every lane goes stale when a lane is added or dropped. Make
+  # this job's check (`tests-passed`) required instead. `if: always()` keeps it from being
+  # skipped when `build` or a lane fails: a skipped required check counts as passing.
+  tests-passed:
+    if: always()
+    needs:
+      - build
+      - test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require build and every test lane to succeed
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          echo "build: ${BUILD_RESULT}, test: ${TEST_RESULT}"
+          if [ "${BUILD_RESULT}" != "success" ] || [ "${TEST_RESULT}" != "success" ]; then
+            echo "::error::build and all test lanes must succeed (build=${BUILD_RESULT}, test=${TEST_RESULT})"
+            exit 1
+          fi
 
   publish:
     if: github.ref == 'refs/heads/develop'
@@ -221,7 +244,7 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
     - name: Set up Java
-      uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+      uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
       with:
         java-version: 24
         distribution: temurin
@@ -235,7 +258,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
     - name: Download build data
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
       with:
         name: dist-build
     - name: Deploy Maven
