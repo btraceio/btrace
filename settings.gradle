@@ -61,6 +61,7 @@ dependencyResolutionManagement {
             version('slf4j', '2.0.19')
             version('junit', '6.1.3')
             version('testcontainers', '2.0.5')
+            version('snakeyaml', '2.3')
 
             // *** Gradle plugins ***
             plugin ('spotless', 'com.diffplug.spotless').version('8.10.2')
@@ -105,6 +106,9 @@ dependencyResolutionManagement {
 
             // https://mvnrepository.com/artifact/com.clearspring.analytics/stream
             library ('stream-lib', 'com.clearspring.analytics', 'stream').version('2.9.8')
+
+            // https://mvnrepository.com/artifact/org.yaml/snakeyaml
+            library ('snakeyaml', 'org.yaml', 'snakeyaml').versionRef('snakeyaml')
         }
     }
 }

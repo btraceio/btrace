@@ -1,0 +1,19 @@
+id: cli.unknown-flag
+surface: cli
+intent: conformance
+title: "btrace -this-flag-does-not-exist 0"
+spec:
+  doc: docs/QuickReference.md
+  claim: "Unrecognized CLI flags are rejected with usage, not silently accepted"
+given:
+  mode: client
+  clientArgs:
+    - "-this-flag-does-not-exist"
+    - "0"
+steps:
+  - runClient
+  - awaitExit
+expect:
+  exitCode: 1
+  messageMustMention:
+    - "Usage"

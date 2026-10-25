@@ -1,0 +1,96 @@
+sourceSets {
+    targets
+}
+
+// The fixture JVM may run on any supported JDK (TEST_JAVA_HOME can be 8), so pin its bytecode.
+compileTargetsJava {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+dependencies {
+    implementation project(':btrace-client')
+    implementation project(':btrace-core')
+    implementation libs.snakeyaml
+}
+
+def btraceDistProject = project(':btrace-dist')
+def qeLibsDir = btraceDistProject.layout.buildDirectory.dir("resources/main/v${project.version}/libs")
+def releaseBtraceJar = btraceDistProject.layout.buildDirectory.file("resources/main/v${project.version}/libs/btrace.jar")
+def resolvedJavaHome = System.getenv('TEST_JAVA_HOME') ?: System.getenv('JAVA_HOME') ?: System.getProperty('java.home')
+
+def probeClassesDir = layout.buildDirectory.dir('classes/qe-probes')
+
+// Shared by `qe` and `qeSelfTest` so both see the same environment.
+ext.configureQeEnvironment = { task ->
+    task.systemProperty 'qe.javaHome', resolvedJavaHome
+    task.systemProperty 'btrace.libs', qeLibsDir.get().asFile.absolutePath
+    task.systemProperty 'qe.corpusDir', "${projectDir}/cases"
+    task.systemProperty 'qe.reportDir', "${project.buildDir}/qe-report"
+    task.systemProperty 'qe.btraceVersion', project.version
+    task.systemProperty 'qe.targetsClasspath', sourceSets.targets.output.classesDirs.asPath
+    task.systemProperty 'qe.probeClassesDir', probeClassesDir.get().asFile.absolutePath
+    task.systemProperty 'qe.timeout', project.findProperty('qe.timeout') ?: '30000'
+}
+
+task compileQeProbes {
+    dependsOn compileJava, ':btrace-agent:jar', ':btrace-compiler:jar'
+    inputs.dir 'src/main/btrace'
+    outputs.dir probeClassesDir
+    doLast {
+        def path = sourceSets.main.runtimeClasspath
+        def loader = new URLClassLoader(path.collect { f -> f.toURI().toURL() } as URL[])
+        def compiler = loader.loadClass('io.btrace.compiler.Compiler')
+        def outDir = probeClassesDir.get().asFile
+        outDir.mkdirs()
+        def args = ['-cp', path.getAsPath(), '-d', outDir.toString()]
+        args.addAll(fileTree('src/main/btrace').include('**/*.java').files.collect { it.toString() }.sort())
+        def prev = Thread.currentThread().contextClassLoader
+        try {
+            Thread.currentThread().contextClassLoader = loader
+            compiler.main(args as String[])
+        } finally {
+            Thread.currentThread().contextClassLoader = prev
+        }
+    }
+}
+
+task qe(type: JavaExec) {
+    dependsOn ':btrace-dist:btraceJar', ':btrace-dist:explodeExtensions', targetsClasses, compileQeProbes
+    inputs.file releaseBtraceJar
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'io.btrace.qe.QeMain'
+    configureQeEnvironment(it)
+    ['qe.surface', 'qe.case', 'qe.seed'].each { key ->
+        if (project.hasProperty(key)) {
+            systemProperty key, project.property(key)
+        }
+    }
+    // an exploration tool, never a build gate
+    ignoreExitValue = true
+}
+
+// Unit tests stay fast and JVM-free; real-JVM self-tests run only in qeSelfTest.
+test {
+    useJUnitPlatform {
+        excludeTags 'qe-self-test'
+    }
+}
+
+task qeSelfTest(type: Test) {
+    description = 'Self-tests of the QE harness against real JVMs (never part of check/build).'
+    group = 'verification'
+    dependsOn ':btrace-dist:btraceJar', ':btrace-dist:explodeExtensions', targetsClasses, compileQeProbes
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'qe-self-test'
+    }
+    configureQeEnvironment(it)
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}

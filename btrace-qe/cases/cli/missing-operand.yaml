@@ -1,0 +1,18 @@
+id: cli.missing-operand
+surface: cli
+intent: conformance
+title: "btrace -p (flag with no operand)"
+spec:
+  doc: docs/QuickReference.md
+  claim: "CLI flags that take a value require one; a malformed invocation prints usage and exits non-zero"
+given:
+  mode: client
+  clientArgs:
+    - "-p"
+steps:
+  - runClient
+  - awaitExit
+expect:
+  exitCode: 1
+  messageMustMention:
+    - "Usage"

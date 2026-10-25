@@ -1,0 +1,17 @@
+id: fixture.valid
+surface: fixture
+intent: resilience
+title: "Fixture case used by YamlCaseLoaderTest"
+given:
+  mode: target
+  target: SteadyStateTarget
+  agentArgs: "script=${probeClassesDir}/io/btrace/qe/probe/QeStartupProbe.class,stdout=true"
+steps:
+  - launch
+  - awaitReady
+  - canary
+  - shutdown
+  - awaitExit
+expect:
+  messageMustMention:
+    - "example"

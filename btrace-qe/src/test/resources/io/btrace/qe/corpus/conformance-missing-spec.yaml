@@ -1,0 +1,13 @@
+id: fixture.missing-spec
+surface: fixture
+intent: conformance
+title: "Fixture case missing the required spec block"
+given:
+  mode: client
+  clientArgs:
+    - "-p"
+steps:
+  - runClient
+  - awaitExit
+expect:
+  exitCode: 1

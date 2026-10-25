@@ -1,0 +1,101 @@
+/*
+ * Copyright (c) 2026, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.btrace.qe.corpus;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import io.btrace.qe.model.CaseDef;
+import io.btrace.qe.model.CaseValidationException;
+import io.btrace.qe.model.GivenDef;
+import io.btrace.qe.model.Intent;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+
+class YamlCaseLoaderTest {
+
+  private Path fixtureDir(String... names) throws Exception {
+    Path tmp = Files.createTempDirectory("qe-corpus-test");
+    for (String name : names) {
+      Path source = Paths.get(getClass().getResource("/io/btrace/qe/corpus/" + name).toURI());
+      Files.copy(source, tmp.resolve(name));
+    }
+    return tmp;
+  }
+
+  @Test
+  void loadsAndValidatesAValidCase() throws Exception {
+    List<CaseDef> cases = new YamlCaseLoader().loadAll(fixtureDir("valid-case.yaml"));
+    assertEquals(1, cases.size());
+    CaseDef def = cases.get(0);
+    assertEquals("fixture.valid", def.id());
+    assertEquals(Intent.RESILIENCE, def.intent());
+    assertEquals(GivenDef.Mode.TARGET, def.given().mode());
+    assertEquals(List.of("launch", "awaitReady", "canary", "shutdown", "awaitExit"), def.steps());
+    assertEquals(List.of("example"), def.expect().messageMustMention());
+  }
+
+  @Test
+  void rejectsAConformanceCaseMissingSpec() throws Exception {
+    Path dir = fixtureDir("conformance-missing-spec.yaml");
+    CaseValidationException ex =
+        assertThrows(CaseValidationException.class, () -> new YamlCaseLoader().loadAll(dir));
+    assertTrue(ex.getMessage().contains("conformance cases require spec.doc"));
+  }
+
+  @Test
+  void rejectsKeysBelongingToTheOtherGivenMode() throws Exception {
+    Path dir = Files.createTempDirectory("qe-corpus-given");
+    String yaml =
+        "id: fixture.wrong-mode\nsurface: fixture\nintent: resilience\ntitle: t\n"
+            + "given:\n  mode: client\n  clientArgs: [\"-p\"]\n  agentArgs: \"x=1\"\n"
+            + "steps: [runClient, awaitExit]\n"
+            + "expect:\n  messageMustMention: [\"x\"]\n";
+    Files.write(dir.resolve("wrong-mode.yaml"), yaml.getBytes(StandardCharsets.UTF_8));
+    CaseValidationException ex =
+        assertThrows(CaseValidationException.class, () -> new YamlCaseLoader().loadAll(dir));
+    assertTrue(ex.getMessage().contains("wrong-mode.yaml"));
+    assertTrue(ex.getMessage().contains("agentArgs"));
+  }
+
+  @Test
+  void rejectsUnknownKeysWithTheFileName() throws Exception {
+    Path dir = Files.createTempDirectory("qe-corpus-typo");
+    String yaml =
+        "id: fixture.typo\nsurface: fixture\nintent: resilience\ntitle: t\n"
+            + "given:\n  mode: client\n  clientArgs: [\"-p\"]\n"
+            + "steps: [runClient, awaitExit]\n"
+            + "expect:\n  messageMustMentoin: [\"x\"]\n";
+    Files.write(dir.resolve("typo.yaml"), yaml.getBytes(StandardCharsets.UTF_8));
+    CaseValidationException ex =
+        assertThrows(CaseValidationException.class, () -> new YamlCaseLoader().loadAll(dir));
+    assertTrue(ex.getMessage().contains("typo.yaml"));
+    assertTrue(ex.getMessage().contains("messageMustMentoin"));
+  }
+
+  @Test
+  void skipsNonYamlFiles() throws Exception {
+    Path dir = fixtureDir("valid-case.yaml");
+    Files.write(dir.resolve("notes.txt"), "ignore me".getBytes(StandardCharsets.UTF_8));
+    assertEquals(1, new YamlCaseLoader().loadAll(dir).size());
+  }
+}

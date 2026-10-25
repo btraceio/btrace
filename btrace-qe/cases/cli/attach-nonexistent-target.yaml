@@ -1,0 +1,20 @@
+id: cli.attach-nonexistent-target
+surface: cli
+intent: conformance
+title: "btrace -p 65535 definitely-not-a-running-jvm-xyz"
+spec:
+  doc: docs/GettingStarted.md
+  claim: "Attaching to a JVM that does not exist fails cleanly with a clear message"
+given:
+  mode: client
+  clientArgs:
+    - "-p"
+    - "65535"
+    - "definitely-not-a-running-jvm-xyz"
+steps:
+  - runClient
+  - awaitExit
+expect:
+  exitCode: 1
+  messageMustMention:
+    - "Unable to find JVM"
