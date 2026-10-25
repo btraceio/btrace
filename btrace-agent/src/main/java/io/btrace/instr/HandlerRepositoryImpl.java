@@ -140,8 +140,26 @@ public final class HandlerRepositoryImpl {
       // Compose: if level check passes, invoke handler; otherwise noop
       return MethodHandles.guardWithTest(levelTest, handler, noop);
     } catch (Throwable e) {
-      log.warn("Failed to create level guard for handler {}", simpleHandlerName, e);
-      return handler; // Fall back to unguarded handler on error
+      // Fail closed: a handler whose level guard cannot be built must not run ungated, or a
+      // probe the operator meant to keep off at low levels would fire on every call.
+      log.error(
+          "Failed to create level guard for handler {}; the handler is disabled",
+          simpleHandlerName,
+          e);
+      return failClosed(handlerType);
+    }
+  }
+
+  /**
+   * A replacement for a handler that must never run: it accepts the handler's arguments, does
+   * nothing, and returns the default value of the handler's return type. Used when a level guard
+   * cannot be constructed.
+   */
+  static MethodHandle failClosed(MethodType handlerType) {
+    try {
+      return createNoopMH(handlerType);
+    } catch (Throwable t) {
+      throw new IllegalStateException("cannot build a fail-closed handler for " + handlerType, t);
     }
   }
 

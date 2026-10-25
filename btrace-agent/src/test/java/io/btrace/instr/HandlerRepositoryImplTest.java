@@ -469,4 +469,25 @@ public class HandlerRepositoryImplTest {
       HandlerRepositoryImpl.unregisterProbe(probe);
     }
   }
+
+  /**
+   * When a level guard cannot be built, the handler must be disabled rather than run ungated: the
+   * fail-closed replacement accepts the handler's arguments, does nothing, and returns the type's
+   * default value.
+   */
+  @Test
+  void testFailClosedHandlerNeverRunsAndReturnsDefaults() throws Throwable {
+    MethodHandle voidHandler =
+        HandlerRepositoryImpl.failClosed(
+            MethodType.methodType(void.class, int.class, String.class));
+    voidHandler.invokeExact(42, "arg");
+
+    MethodHandle intHandler =
+        HandlerRepositoryImpl.failClosed(MethodType.methodType(int.class, Object.class));
+    assertEquals(0, (int) intHandler.invokeExact((Object) "arg"));
+
+    MethodHandle objectHandler =
+        HandlerRepositoryImpl.failClosed(MethodType.methodType(Object.class));
+    assertNull((Object) objectHandler.invokeExact());
+  }
 }
