@@ -37,6 +37,13 @@ class MainTest {
   }
 
   @Test
+  void scriptIsMissingOnlyWhenNothingFollowsThePid() {
+    assertTrue(Main.scriptArgumentMissing(new String[] {"-p", "2020", "1234"}, 2));
+    assertFalse(Main.scriptArgumentMissing(new String[] {"-p", "2020", "1234", "T.java"}, 2));
+    assertFalse(Main.scriptArgumentMissing(new String[] {"1234", "T.java", "arg"}, 0));
+  }
+
+  @Test
   void verboseFlagBeforeDoctorIsDispatchedToDoctor() {
     assertArrayEquals(
         new String[] {"-v", "1234", "--json"},

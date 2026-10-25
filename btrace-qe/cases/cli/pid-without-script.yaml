@@ -1,0 +1,16 @@
+id: cli.pid-without-script
+surface: cli
+intent: resilience
+title: "btrace -p 2020 2147483647 (an option and a PID, but no script)"
+given:
+  mode: client
+  clientArgs:
+    - "-p"
+    - "2020"
+    - "2147483647"
+steps:
+  - runClient
+  - awaitExit
+expect:
+  messageMustMention:
+    - "script"

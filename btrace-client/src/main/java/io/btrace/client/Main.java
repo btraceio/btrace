@@ -265,6 +265,12 @@ public final class Main {
       usage();
     }
 
+    boolean fileMode =
+        resumeProbe == null && !listProbes && !listFailedExtensions && !ONELINER_MODE;
+    if (fileMode && scriptArgumentMissing(args, count)) {
+      errorExit("Missing BTrace script: expected <pid> <btrace source or .class file>", 1);
+    }
+
     String pidArg = args[count];
     Integer pid = JpsUtils.findVmByName(pidArg);
     if (pid == null) {
@@ -403,6 +409,10 @@ public final class Main {
     } catch (IOException exp) {
       errorExit(exp.getMessage(), 1);
     }
+  }
+
+  static boolean scriptArgumentMissing(String[] args, int pidIndex) {
+    return args.length <= pidIndex + 1;
   }
 
   static String[] doctorArguments(String[] args) {
