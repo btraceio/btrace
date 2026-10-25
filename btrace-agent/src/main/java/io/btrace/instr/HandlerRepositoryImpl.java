@@ -102,10 +102,12 @@ public final class HandlerRepositoryImpl {
    */
   private static MethodHandle applyLevelGuard(
       MethodHandle handler, BTraceProbe probe, String simpleHandlerName, MethodType handlerType) {
-    // Find the OnMethod metadata for this handler
+    // Find the OnMethod metadata for this handler. OnMethod.getTargetName() is the probe's handler
+    // method name; OnMethod.getMethod() is the matcher for the traced target method and never
+    // equals the handler name for an ordinary probe.
     Level level = null;
     for (OnMethod om : probe.onmethods()) {
-      if (om.getMethod().equals(simpleHandlerName)) {
+      if (simpleHandlerName.equals(om.getTargetName())) {
         level = om.getLevel();
         if (level != null) {
           break;
@@ -210,9 +212,16 @@ public final class HandlerRepositoryImpl {
   /** Create a noop MethodHandle that returns the default value for the given type. */
   private static MethodHandle createNoopMH(MethodType handlerType) throws Throwable {
     Class<?> returnType = handlerType.returnType();
-    // Reuse shared default value logic from IndyDispatcher
-    Object defaultValue = IndyDispatcher.defaultValueFor(returnType);
-    MethodHandle noop = MethodHandles.constant(returnType, defaultValue);
+    MethodHandle noop;
+    if (returnType == void.class) {
+      // MethodHandles.constant rejects void; probe handlers are almost always void. Produce a
+      // constant and discard its value instead (asType to a void return type drops the result).
+      noop = MethodHandles.constant(Object.class, null).asType(MethodType.methodType(void.class));
+    } else {
+      // Reuse shared default value logic from IndyDispatcher
+      Object defaultValue = IndyDispatcher.defaultValueFor(returnType);
+      noop = MethodHandles.constant(returnType, defaultValue);
+    }
     // Drop arguments so the noop accepts the handler's parameters but ignores them
     return MethodHandles.dropArguments(noop, 0, handlerType.parameterArray());
   }

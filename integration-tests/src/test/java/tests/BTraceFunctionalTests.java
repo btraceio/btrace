@@ -358,6 +358,32 @@ public class BTraceFunctionalTests extends RuntimeTest {
         });
   }
 
+  /**
+   * {@code OnMethodLevelTest} gates {@code noargs} at {@code @Level("100")} and {@code args} at
+   * {@code @Level("150")}. At {@code level=120} only the first may fire. The second {@code noargs}
+   * line reads {@code "A [this, noargs]"} only when the {@code args} handler, which would have set
+   * the shared variable to {@code "B"} in between, never ran.
+   */
+  @Test
+  public void testOnMethodLevelSuppressesHandlerAboveLevel() throws Exception {
+    testDynamic(
+        "resources.Main",
+        "btrace/OnMethodLevelTest.java",
+        new String[] {"level=120"},
+        Completion.untilMatches(Pattern.compile("\\[this, noargs\\]"), 2),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+            assertTrue(stdout.contains("none [this, noargs]"), "level-100 handler did not fire");
+            assertFalse(
+                stdout.contains("[this, args]"), "handler gated at level 150 fired at level 120");
+            assertTrue(stdout.contains("A [this, noargs]"), "shared state was touched by args");
+          }
+        });
+  }
+
   @Test
   public void testOnMethodTrackRetransform() throws Exception {
     trackRetransforms = true;
