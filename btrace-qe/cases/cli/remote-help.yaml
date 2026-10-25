@@ -1,0 +1,17 @@
+id: cli.remote-help
+surface: cli
+intent: conformance
+title: "btrace -r help"
+spec:
+  doc: docs/QuickReference.md
+  claim: "`-r help` - Show help on remote commands"
+given:
+  mode: client
+  clientArgs:
+    - "-r"
+    - "help"
+steps:
+  - runClient
+  - awaitExit
+expect:
+  exitCode: 0

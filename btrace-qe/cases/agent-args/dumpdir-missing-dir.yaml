@@ -1,0 +1,15 @@
+id: agent-args.dumpdir-missing-dir
+surface: agent-args
+intent: resilience
+title: "Agent started with dumpClasses=true and a dumpDir that does not exist"
+given:
+  mode: target
+  target: SteadyStateTarget
+  agentArgs: "script=${probeClassesDir}/io/btrace/qe/probe/QeStartupProbe.class,noServer=false,stdout=true,dumpClasses=true,dumpDir=${runDir}/no/such/dir"
+steps:
+  - launch
+  - awaitReady
+  - canary
+  - shutdown
+  - awaitExit
+expect: {}

@@ -1,0 +1,16 @@
+id: cli.duplicate-port
+surface: cli
+intent: resilience
+title: "btrace -p 2020 -p 3030 some-target (port given twice)"
+given:
+  mode: client
+  clientArgs:
+    - "-p"
+    - "2020"
+    - "-p"
+    - "3030"
+    - "some-target"
+steps:
+  - runClient
+  - awaitExit
+expect: {}

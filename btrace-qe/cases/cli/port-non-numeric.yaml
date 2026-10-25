@@ -1,0 +1,17 @@
+id: cli.port-non-numeric
+surface: cli
+intent: resilience
+title: "btrace -p notaport some-target"
+given:
+  mode: client
+  clientArgs:
+    - "-p"
+    - "notaport"
+    - "some-target"
+steps:
+  - runClient
+  - awaitExit
+expect:
+  messageMustMention:
+    - "-p"
+    - "notaport"

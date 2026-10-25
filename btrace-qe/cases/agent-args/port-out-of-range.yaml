@@ -1,0 +1,18 @@
+id: agent-args.port-out-of-range
+surface: agent-args
+intent: resilience
+title: "Agent started with port=70000"
+given:
+  mode: target
+  target: SteadyStateTarget
+  agentArgs: "script=${probeClassesDir}/io/btrace/qe/probe/QeStartupProbe.class,noServer=false,stdout=true,port=70000"
+steps:
+  - launch
+  - awaitReady
+  - canary
+  - shutdown
+  - awaitExit
+expect:
+  messageMustMention:
+    - "port"
+    - "70000"
