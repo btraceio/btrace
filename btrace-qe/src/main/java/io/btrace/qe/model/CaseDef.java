@@ -27,6 +27,9 @@ public final class CaseDef {
   private static final Set<String> CLIENT_STEPS =
       new LinkedHashSet<>(Arrays.asList("runClient", "awaitExit"));
 
+  public static final String TIER_SMOKE = "smoke";
+  public static final String TIER_FULL = "full";
+
   private final String id;
   private final String surface;
   private final Intent intent;
@@ -35,6 +38,7 @@ public final class CaseDef {
   private final GivenDef given;
   private final List<String> steps;
   private final ExpectationDef expect;
+  private final String tier;
 
   public CaseDef(
       String id,
@@ -44,7 +48,8 @@ public final class CaseDef {
       SpecRef spec,
       GivenDef given,
       List<String> steps,
-      ExpectationDef expect) {
+      ExpectationDef expect,
+      String tier) {
     this.id = id;
     this.surface = surface;
     this.intent = intent;
@@ -53,6 +58,11 @@ public final class CaseDef {
     this.given = given;
     this.steps = steps;
     this.expect = expect;
+    this.tier = tier == null ? TIER_FULL : tier;
+  }
+
+  public static boolean isValidTier(String tier) {
+    return TIER_SMOKE.equals(tier) || TIER_FULL.equals(tier);
   }
 
   public void validate() {
@@ -63,6 +73,7 @@ public final class CaseDef {
     require(given != null, "given is required");
     require(steps != null && !steps.isEmpty(), "steps must not be empty");
     require(expect != null, "expect is required");
+    require(isValidTier(tier), "tier must be 'smoke' or 'full', was '" + tier + "'");
     if (intent == Intent.CONFORMANCE) {
       require(
           spec != null && spec.doc() != null && spec.claim() != null,
@@ -127,5 +138,10 @@ public final class CaseDef {
 
   public ExpectationDef expect() {
     return expect;
+  }
+
+  /** Run tier: {@code smoke} cases form the fast subset; everything else is {@code full}. */
+  public String tier() {
+    return tier;
   }
 }

@@ -36,7 +36,25 @@ class CaseDefTest {
         spec,
         given,
         steps,
-        new ExpectationDef(exitCode, Collections.<String>emptyList()));
+        new ExpectationDef(exitCode, Collections.<String>emptyList()),
+        CaseDef.TIER_FULL);
+  }
+
+  @Test
+  void unknownTierFailsValidation() {
+    CaseDef def =
+        new CaseDef(
+            "x.case",
+            "x",
+            Intent.RESILIENCE,
+            "title",
+            null,
+            GivenDef.client(List.of("-p")),
+            List.of("runClient", "awaitExit"),
+            new ExpectationDef(null, Collections.<String>emptyList()),
+            "nightly");
+    CaseValidationException ex = assertThrows(CaseValidationException.class, def::validate);
+    assertTrue(ex.getMessage().contains("tier"));
   }
 
   @Test

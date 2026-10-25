@@ -47,7 +47,8 @@ class CaseExecutorSelfTest {
         null,
         GivenDef.target("SteadyStateTarget", agentArgs),
         TARGET_STEPS,
-        new ExpectationDef(null, Collections.<String>emptyList()));
+        new ExpectationDef(null, Collections.<String>emptyList()),
+        CaseDef.TIER_FULL);
   }
 
   @Test
@@ -73,7 +74,8 @@ class CaseExecutorSelfTest {
             null,
             GivenDef.target("NoSuchTarget", STARTUP),
             TARGET_STEPS,
-            new ExpectationDef(null, Collections.<String>emptyList()));
+            new ExpectationDef(null, Collections.<String>emptyList()),
+            CaseDef.TIER_FULL);
     long start = System.currentTimeMillis();
     ExecutionTrace trace =
         new CaseExecutor(QeEnvironment.fromSystemProperties())
@@ -95,7 +97,8 @@ class CaseExecutorSelfTest {
             new SpecRef("docs/QuickReference.md", "usage on bad args"),
             GivenDef.client(List.of("-p")),
             List.of("runClient", "awaitExit"),
-            new ExpectationDef(1, Collections.<String>emptyList()));
+            new ExpectationDef(1, Collections.<String>emptyList()),
+            CaseDef.TIER_FULL);
     ExecutionTrace trace =
         new CaseExecutor(QeEnvironment.fromSystemProperties())
             .execute(def, Files.createTempDirectory("qe-exec-client"));
@@ -115,7 +118,8 @@ class CaseExecutorSelfTest {
             null,
             GivenDef.target("ExitAfterReadyTarget", STARTUP),
             List.of("launch", "awaitReady", "awaitExit", "shutdown"),
-            new ExpectationDef(null, Collections.<String>emptyList()));
+            new ExpectationDef(null, Collections.<String>emptyList()),
+            CaseDef.TIER_FULL);
     ExecutionTrace trace =
         new CaseExecutor(QeEnvironment.fromSystemProperties())
             .execute(def, Files.createTempDirectory("qe-exec-dies-after-ready"));
@@ -148,7 +152,8 @@ class CaseExecutorSelfTest {
             null,
             GivenDef.target("DeafTarget", STARTUP),
             List.of("launch", "awaitReady", "shutdown", "awaitExit"),
-            new ExpectationDef(null, Collections.<String>emptyList()));
+            new ExpectationDef(null, Collections.<String>emptyList()),
+            CaseDef.TIER_FULL);
     long start = System.currentTimeMillis();
     ExecutionTrace trace =
         new CaseExecutor(env).execute(def, Files.createTempDirectory("qe-exec-deaf"));

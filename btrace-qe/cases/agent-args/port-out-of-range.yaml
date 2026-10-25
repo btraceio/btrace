@@ -1,6 +1,7 @@
 id: agent-args.port-out-of-range
 surface: agent-args
 intent: resilience
+tier: smoke
 title: "Agent started with port=70000"
 given:
   mode: target

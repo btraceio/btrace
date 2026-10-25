@@ -6,6 +6,7 @@
 id: <surface>.<kebab-name>            # unique; file at btrace-qe/cases/<surface>/<kebab-name>.yaml
 surface: agent-args | cli             # surfaces the harness can execute today
 intent: resilience | conformance
+tier: smoke | full                   # optional, default full; `-Pqe.tier=smoke` runs only smoke cases
 title: "<what the user does, in one line>"
 spec:                                 # conformance only (required there)
   doc: docs/<File>.md

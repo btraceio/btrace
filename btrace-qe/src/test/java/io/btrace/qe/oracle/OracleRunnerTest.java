@@ -65,7 +65,8 @@ class OracleRunnerTest {
         null,
         GivenDef.target("SteadyStateTarget", "x"),
         TARGET_STEPS,
-        new ExpectationDef(null, mentions));
+        new ExpectationDef(null, mentions),
+        CaseDef.TIER_FULL);
   }
 
   private static CaseDef client(String id, int exit, List<String> mentions) {
@@ -77,7 +78,8 @@ class OracleRunnerTest {
         new SpecRef("docs/QuickReference.md", "usage on bad args"),
         GivenDef.client(List.of("-p")),
         List.of("runClient", "awaitExit"),
-        new ExpectationDef(exit, mentions));
+        new ExpectationDef(exit, mentions),
+        CaseDef.TIER_FULL);
   }
 
   @Test

@@ -1,6 +1,7 @@
 id: agent-args.fileroll-ms-negative
 surface: agent-args
 intent: resilience
+tier: smoke
 title: "Agent started with fileRollMilliseconds=-5"
 given:
   mode: target

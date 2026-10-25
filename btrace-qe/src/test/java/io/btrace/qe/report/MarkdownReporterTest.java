@@ -46,7 +46,8 @@ class MarkdownReporterTest {
             null,
             GivenDef.target("SteadyStateTarget", "x"),
             List.of("launch", "awaitReady", "shutdown", "awaitExit"),
-            new ExpectationDef(null, Collections.<String>emptyList()));
+            new ExpectationDef(null, Collections.<String>emptyList()),
+            CaseDef.TIER_FULL);
     CaseVerdict verdict =
         new CaseVerdict(
             def,
@@ -55,7 +56,16 @@ class MarkdownReporterTest {
             VerdictValue.POOR,
             List.of(Finding.of(def.id(), Severity.S4, "the user is not guided", "detail text")));
     RunMetadata meta =
-        new RunMetadata(1L, "abc123", "3.0.0-SNAPSHOT", "jdk", "os", 4, "./gradlew :btrace-qe:qe");
+        new RunMetadata(
+            1L,
+            "abc123",
+            "3.0.0-SNAPSHOT",
+            "jdk",
+            "os",
+            4,
+            "./gradlew :btrace-qe:qe",
+            30_000L,
+            null);
     Path out = Files.createTempDirectory("qe-md").resolve("report.md");
 
     new MarkdownReporter().write(meta, List.of(verdict), out);
@@ -65,6 +75,50 @@ class MarkdownReporterTest {
     assertTrue(content.contains("-Pqe.case=agent-args.fixture"));
     assertTrue(content.contains("runs/agent-args.fixture/"));
     assertTrue(content.contains("| 1 | 0 | 0 | 0 | 1 | 0 |"));
+    assertTrue(content.contains("- tier: full\n"), content);
+  }
+
+  @Test
+  void recordsTheTierInHeaderAndReproCommand() throws Exception {
+    CaseDef def =
+        new CaseDef(
+            "cli.fixture",
+            "cli",
+            Intent.RESILIENCE,
+            "fixture case",
+            null,
+            GivenDef.client(List.of("-p")),
+            List.of("runClient", "awaitExit"),
+            new ExpectationDef(null, Collections.<String>emptyList()),
+            CaseDef.TIER_SMOKE);
+    CaseVerdict verdict =
+        new CaseVerdict(
+            def,
+            VerdictValue.PASS,
+            VerdictValue.NA,
+            VerdictValue.POOR,
+            List.of(Finding.of(def.id(), Severity.S4, "s", "d")));
+    RunMetadata meta = new RunMetadata(1L, "abc", "3", "jdk", "os", 4, "cmd", 30_000L, "smoke");
+    Path dir = Files.createTempDirectory("qe-tier");
+
+    new MarkdownReporter().write(meta, List.of(verdict), dir.resolve("report.md"));
+    new JsonReporter().write(meta, List.of(verdict), dir.resolve("report.json"));
+
+    String md = new String(Files.readAllBytes(dir.resolve("report.md")), StandardCharsets.UTF_8);
+    String json =
+        new String(Files.readAllBytes(dir.resolve("report.json")), StandardCharsets.UTF_8);
+    assertTrue(md.contains("- tier: smoke\n"), md);
+    assertTrue(md.contains("-Pqe.case=cli.fixture -Pqe.tier=smoke"), md);
+    assertTrue(json.contains("\"tier\": \"smoke\""), json);
+  }
+
+  @Test
+  void jsonTierIsNullWhenNotSet() throws Exception {
+    RunMetadata meta = new RunMetadata(1L, "abc", "3", "jdk", "os", 4, "cmd", 30_000L, null);
+    Path out = Files.createTempDirectory("qe-tier-null").resolve("report.json");
+    new JsonReporter().write(meta, Collections.<CaseVerdict>emptyList(), out);
+    String json = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
+    assertTrue(json.contains("\"tier\": null"), json);
   }
 
   @Test
@@ -78,7 +132,8 @@ class MarkdownReporterTest {
             null,
             GivenDef.target("SteadyStateTarget", "x"),
             List.of("launch", "awaitReady", "shutdown", "awaitExit"),
-            new ExpectationDef(null, Collections.<String>emptyList()));
+            new ExpectationDef(null, Collections.<String>emptyList()),
+            CaseDef.TIER_FULL);
     CaseVerdict verdict =
         new CaseVerdict(
             def,
@@ -89,7 +144,15 @@ class MarkdownReporterTest {
             "launch: java.io.IOException: no java");
     RunMetadata meta =
         new RunMetadata(
-            1L, "abc123", "3.0.0-SNAPSHOT", "jdk", "os", 4, "./gradlew :btrace-qe:qe", 45_000L);
+            1L,
+            "abc123",
+            "3.0.0-SNAPSHOT",
+            "jdk",
+            "os",
+            4,
+            "./gradlew :btrace-qe:qe",
+            45_000L,
+            null);
     Path out = Files.createTempDirectory("qe-md-harness").resolve("report.md");
 
     new MarkdownReporter().write(meta, List.of(verdict), out, "no cases matched surface=x case=y");

@@ -59,7 +59,12 @@ public final class QeMain {
     }
   }
 
-  private static void run() throws Exception {
+  /** Empty and {@code full} are the default tier and are not recorded; other values are kept. */
+  static String normalizeTier(String raw) {
+    return raw == null || raw.isEmpty() || CaseDef.TIER_FULL.equals(raw) ? null : raw;
+  }
+
+  static void run() throws Exception {
     System.setProperty("btrace.comm.protocol", "2");
     System.setProperty("btrace.comm.autoNegotiate", "false");
     System.setProperty("btrace.comm.forceVersion", "true");
@@ -68,9 +73,17 @@ public final class QeMain {
     long seed = Long.parseLong(System.getProperty("qe.seed", "20260811"));
     String surface = System.getProperty("qe.surface");
     String caseId = System.getProperty("qe.case");
+    String tier = normalizeTier(System.getProperty("qe.tier"));
+    String note = null;
+    if (tier != null && !CaseDef.isValidTier(tier)) {
+      note = "unknown qe.tier '" + tier + "' (expected smoke or full); no cases run";
+    }
 
     List<CaseDef> all = new YamlCaseLoader().loadAll(Paths.get(System.getProperty("qe.corpusDir")));
-    List<CaseDef> selected = CaseRegistry.of(all).filter(surface, caseId);
+    List<CaseDef> selected =
+        note != null
+            ? Collections.<CaseDef>emptyList()
+            : CaseRegistry.of(all).filter(surface, caseId, tier);
 
     Path reportDir = Paths.get(System.getProperty("qe.reportDir"));
     Path runsDir = reportDir.resolve("runs");
@@ -90,16 +103,23 @@ public final class QeMain {
       }
     }
 
-    String note = null;
-    if (selected.isEmpty()) {
-      note = "no cases matched surface=" + surface + " case=" + caseId;
+    if (note == null && selected.isEmpty()) {
+      note =
+          "no cases matched surface="
+              + surface
+              + " case="
+              + caseId
+              + (tier != null ? " tier=" + tier : "");
+    }
+    if (note != null) {
       System.out.println("[qe] WARNING: " + note);
     }
     RunMetadata meta =
         RunMetadata.capture(
             seed,
-            commandLine(surface, caseId, seed, env.defaultTimeoutMs()),
-            env.defaultTimeoutMs());
+            commandLine(surface, caseId, seed, env.defaultTimeoutMs(), tier),
+            env.defaultTimeoutMs(),
+            tier);
     new JsonReporter().write(meta, verdicts, reportDir.resolve("report.json"));
     new MarkdownReporter().write(meta, verdicts, reportDir.resolve("report.md"), note);
 
@@ -174,7 +194,7 @@ public final class QeMain {
             "harness: " + e));
   }
 
-  private static String commandLine(String surface, String caseId, long seed, long timeoutMs) {
+  static String commandLine(String surface, String caseId, long seed, long timeoutMs, String tier) {
     StringBuilder sb = new StringBuilder("./gradlew :btrace-qe:qe -Pqe.seed=").append(seed);
     if (surface != null) {
       sb.append(" -Pqe.surface=").append(surface);
@@ -182,6 +202,7 @@ public final class QeMain {
     if (caseId != null) {
       sb.append(" -Pqe.case=").append(caseId);
     }
+    sb.append(ReproCommand.tierFlag(tier));
     sb.append(ReproCommand.timeoutFlag(timeoutMs));
     return sb.toString();
   }

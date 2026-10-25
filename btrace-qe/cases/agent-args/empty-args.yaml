@@ -1,6 +1,7 @@
 id: agent-args.empty-args
 surface: agent-args
 intent: resilience
+tier: smoke
 title: "Agent started with no options except the harness port (no script) stays usable"
 given:
   mode: target

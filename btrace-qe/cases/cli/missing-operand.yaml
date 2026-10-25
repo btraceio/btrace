@@ -1,6 +1,7 @@
 id: cli.missing-operand
 surface: cli
 intent: conformance
+tier: smoke
 title: "btrace -p (flag with no operand)"
 spec:
   doc: docs/QuickReference.md

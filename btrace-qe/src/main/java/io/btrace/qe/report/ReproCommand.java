@@ -22,9 +22,19 @@ import io.btrace.qe.model.CaseDef;
 public final class ReproCommand {
   private ReproCommand() {}
 
-  /** The command that re-runs one case; a non-default step timeout is part of the repro. */
-  public static String forCase(CaseDef def, long timeoutMs) {
-    return "./gradlew :btrace-qe:qe -Pqe.case=" + def.id() + timeoutFlag(timeoutMs);
+  /**
+   * The command that re-runs one case; a non-default step timeout and a set tier are part of it.
+   */
+  public static String forCase(CaseDef def, long timeoutMs, String tier) {
+    return "./gradlew :btrace-qe:qe -Pqe.case="
+        + def.id()
+        + tierFlag(tier)
+        + timeoutFlag(timeoutMs);
+  }
+
+  /** {@code " -Pqe.tier=<tier>"} when a tier was set, else empty. */
+  public static String tierFlag(String tier) {
+    return tier != null && !tier.isEmpty() ? " -Pqe.tier=" + tier : "";
   }
 
   /** {@code " -Pqe.timeout=<ms>"} when the timeout differs from the default, else empty. */

@@ -38,6 +38,7 @@ public final class JsonReporter {
     root.put("os", meta.os());
     root.put("cpuCount", meta.cpuCount());
     root.put("commandLine", meta.commandLine());
+    root.put("tier", meta.tier());
     List<Object> cases = new ArrayList<>();
     for (CaseVerdict v : verdicts) {
       Map<String, Object> c = new LinkedHashMap<>();
@@ -54,7 +55,7 @@ public final class JsonReporter {
         fm.put("severity", f.severity().name());
         fm.put("summary", f.summary());
         fm.put("detail", f.detail());
-        fm.put("reproCommand", ReproCommand.forCase(v.def(), meta.timeoutMs()));
+        fm.put("reproCommand", ReproCommand.forCase(v.def(), meta.timeoutMs(), meta.tier()));
         findings.add(fm);
       }
       c.put("findings", findings);

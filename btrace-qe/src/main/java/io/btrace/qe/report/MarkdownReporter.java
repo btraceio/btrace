@@ -45,6 +45,7 @@ public final class MarkdownReporter {
     sb.append("- btrace version: ").append(meta.btraceVersion()).append('\n');
     sb.append("- target JDK: ").append(meta.jdk()).append('\n');
     sb.append("- OS: ").append(meta.os()).append(", CPUs: ").append(meta.cpuCount()).append('\n');
+    sb.append("- tier: ").append(meta.tier() != null ? meta.tier() : "full").append('\n');
     sb.append("- command: `").append(meta.commandLine()).append("`\n\n");
     if (note != null) {
       sb.append("> **WARNING:** ").append(note).append("\n\n");
@@ -86,7 +87,7 @@ public final class MarkdownReporter {
               .append(v.def().id())
               .append("/`\n");
           sb.append("- repro: `")
-              .append(ReproCommand.forCase(v.def(), meta.timeoutMs()))
+              .append(ReproCommand.forCase(v.def(), meta.timeoutMs(), meta.tier()))
               .append("`\n\n");
         }
       }

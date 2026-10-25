@@ -49,9 +49,10 @@ public final class CaseRegistry {
     return Collections.unmodifiableList(cases);
   }
 
-  public List<CaseDef> filter(String surfaceCsv, String caseId) {
+  public List<CaseDef> filter(String surfaceCsv, String caseId, String tier) {
     return cases.stream()
         .filter(c -> caseId == null || caseId.isEmpty() || c.id().equals(caseId))
+        .filter(c -> !CaseDef.TIER_SMOKE.equals(tier) || CaseDef.TIER_SMOKE.equals(c.tier()))
         .filter(
             c ->
                 surfaceCsv == null

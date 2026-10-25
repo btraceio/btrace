@@ -41,7 +41,8 @@ import org.yaml.snakeyaml.Yaml;
 public final class YamlCaseLoader {
   private static final Set<String> TOP_KEYS =
       new HashSet<>(
-          Arrays.asList("id", "surface", "intent", "title", "spec", "given", "steps", "expect"));
+          Arrays.asList(
+              "id", "surface", "intent", "title", "spec", "given", "steps", "expect", "tier"));
   private static final Set<String> SPEC_KEYS = new HashSet<>(Arrays.asList("doc", "claim"));
   private static final Set<String> GIVEN_KEYS =
       new HashSet<>(Arrays.asList("mode", "target", "agentArgs", "clientArgs"));
@@ -80,7 +81,12 @@ public final class YamlCaseLoader {
     GivenDef given = parseGiven(file, raw.get("given"));
     List<String> steps = requireStringList(file, raw, "steps");
     ExpectationDef expect = parseExpect(file, raw.get("expect"));
-    return new CaseDef(id, surface, intent, title, spec, given, steps, expect);
+    String tier = raw.containsKey("tier") ? String.valueOf(raw.get("tier")) : CaseDef.TIER_FULL;
+    if (!CaseDef.isValidTier(tier)) {
+      throw new CaseValidationException(
+          file + ": tier must be 'smoke' or 'full', was '" + tier + "'");
+    }
+    return new CaseDef(id, surface, intent, title, spec, given, steps, expect, tier);
   }
 
   private SpecRef parseSpec(Path file, Object rawSpec) {

@@ -1,6 +1,7 @@
 id: cli.port-non-numeric
 surface: cli
 intent: resilience
+tier: smoke
 title: "btrace -p notaport some-target"
 given:
   mode: client

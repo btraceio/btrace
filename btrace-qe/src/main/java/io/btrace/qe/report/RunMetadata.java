@@ -16,7 +16,6 @@
  */
 package io.btrace.qe.report;
 
-import io.btrace.qe.exec.QeEnvironment;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -31,25 +30,7 @@ public final class RunMetadata {
   private final int cpuCount;
   private final String commandLine;
   private final long timeoutMs;
-
-  public RunMetadata(
-      long seed,
-      String gitSha,
-      String btraceVersion,
-      String jdk,
-      String os,
-      int cpuCount,
-      String commandLine) {
-    this(
-        seed,
-        gitSha,
-        btraceVersion,
-        jdk,
-        os,
-        cpuCount,
-        commandLine,
-        QeEnvironment.DEFAULT_TIMEOUT_MS);
-  }
+  private final String tier;
 
   public RunMetadata(
       long seed,
@@ -59,7 +40,9 @@ public final class RunMetadata {
       String os,
       int cpuCount,
       String commandLine,
-      long timeoutMs) {
+      long timeoutMs,
+      String tier) {
+    this.tier = tier;
     this.timeoutMs = timeoutMs;
     this.seed = seed;
     this.gitSha = gitSha;
@@ -71,7 +54,7 @@ public final class RunMetadata {
   }
 
   /** Records the JDK the targets run on ({@code qe.javaHome}), not the harness JVM. */
-  public static RunMetadata capture(long seed, String commandLine, long timeoutMs) {
+  public static RunMetadata capture(long seed, String commandLine, long timeoutMs, String tier) {
     return new RunMetadata(
         seed,
         readGitSha(),
@@ -80,7 +63,8 @@ public final class RunMetadata {
         System.getProperty("os.name") + " " + System.getProperty("os.version"),
         Runtime.getRuntime().availableProcessors(),
         commandLine,
-        timeoutMs);
+        timeoutMs,
+        tier);
   }
 
   private static String readGitSha() {
@@ -134,5 +118,10 @@ public final class RunMetadata {
   /** The per-step timeout the run used; part of every repro command when non-default. */
   public long timeoutMs() {
     return timeoutMs;
+  }
+
+  /** The {@code -Pqe.tier} the run was restricted to, or {@code null} when not set. */
+  public String tier() {
+    return tier;
   }
 }

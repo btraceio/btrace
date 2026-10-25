@@ -54,6 +54,34 @@ class YamlCaseLoaderTest {
     assertEquals(List.of("example"), def.expect().messageMustMention());
   }
 
+  private CaseDef loadWithTier(String tierLine) throws Exception {
+    Path dir = Files.createTempDirectory("qe-corpus-tier");
+    String yaml =
+        "id: fixture.tier\nsurface: fixture\nintent: resilience\ntitle: t\n"
+            + tierLine
+            + "given:\n  mode: client\n  clientArgs: [\"-p\"]\n"
+            + "steps: [runClient, awaitExit]\nexpect: {}\n";
+    Files.write(dir.resolve("tier-case.yaml"), yaml.getBytes(StandardCharsets.UTF_8));
+    return new YamlCaseLoader().loadAll(dir).get(0);
+  }
+
+  @Test
+  void tierDefaultsToFullAndAcceptsSmokeAndFull() throws Exception {
+    assertEquals("full", loadWithTier("").tier());
+    assertEquals("smoke", loadWithTier("tier: smoke\n").tier());
+    assertEquals("full", loadWithTier("tier: full\n").tier());
+  }
+
+  @Test
+  void rejectsAnUnknownTierNamingTheFile() {
+    for (String bad : new String[] {"tier: nightly\n", "tier: Smoke\n", "tier: 1\n"}) {
+      CaseValidationException ex =
+          assertThrows(CaseValidationException.class, () -> loadWithTier(bad));
+      assertTrue(ex.getMessage().contains("tier-case.yaml"), ex.getMessage());
+      assertTrue(ex.getMessage().contains("tier"), ex.getMessage());
+    }
+  }
+
   @Test
   void rejectsAConformanceCaseMissingSpec() throws Exception {
     Path dir = fixtureDir("conformance-missing-spec.yaml");

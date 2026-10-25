@@ -11,12 +11,15 @@ always exits `0`.
 ./gradlew :btrace-qe:qe                                    # full corpus
 ./gradlew :btrace-qe:qe -Pqe.surface=agent-args            # one surface (comma-separated list allowed)
 ./gradlew :btrace-qe:qe -Pqe.case=cli.missing-operand      # one case
+./gradlew :btrace-qe:qe -Pqe.tier=smoke                    # only the fast `tier: smoke` subset
 ./gradlew :btrace-qe:qe -Pqe.seed=42                       # recorded seed (default 20260811)
 ./gradlew :btrace-qe:qe -Pqe.timeout=60000                 # per-step timeout in ms (default 30000, minimum 10000)
 scripts/qe-agent.sh --surface cli --timeout 60000
+scripts/qe-agent.sh --tier smoke
 ```
 
-A non-default `-Pqe.timeout` is recorded in the report's command line and in every repro command.
+A non-default `-Pqe.timeout`, and `-Pqe.tier` when set, are recorded in the report's command line
+and in every repro command.
 Each case's `runs/<case-id>/` directory is wiped before that case runs, so its evidence is always
 from the current run; other cases' directories are left untouched.
 
@@ -66,6 +69,11 @@ keys. There are two modes: `given.mode: target` launches a fixture JVM with
 point with `clientArgs`. A target case must start with `launch` and run `awaitReady` before
 `canary` and `shutdown`; a client case must start with `runClient`. Adding a case to an existing
 surface needs no code change.
+
+An optional `tier: smoke | full` key (default `full`) marks the fast subset. `-Pqe.tier=smoke` runs
+only `smoke` cases; unset or `full` runs everything (`full` is the default and is not recorded), so smoke is a subset of full. Tag a case
+`smoke` sparingly: roughly one clean and one finding-producing case per surface. The loader rejects
+any other case value; an unknown `-Pqe.tier` runs no cases and the report says so.
 
 `agentArgs` supports these placeholders:
 
