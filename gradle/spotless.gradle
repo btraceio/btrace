@@ -6,7 +6,9 @@ spotless {
         // note: you can use an empty string for all the imports you didn't specify explicitly, and '\\#` prefix for static imports
         importOrder('java', 'javax', 'io.btrace', '', '\\#io.btrace', '\\#')
 
-        googleJavaFormat()   // has its own section below
+        // Pinned: an unpinned googleJavaFormat() follows the Spotless plugin's default, so a
+        // Spotless patch bump can silently reformat the codebase (8.10.4 moved 1.30.0 -> 1.36.1).
+        googleJavaFormat('1.30.0')   // has its own section below
 
         formatAnnotations()  // fixes formatting of type annotations, see below
 
