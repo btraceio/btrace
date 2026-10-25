@@ -78,6 +78,13 @@ test {
     useJUnitPlatform {
         excludeTags 'qe-self-test'
     }
+    // Seeded property tests: forward -Dbtrace.prop.seed / -Dbtrace.prop.iterations when given.
+    ['btrace.prop.seed', 'btrace.prop.iterations'].each { name ->
+        def value = System.getProperty(name)
+        if (value != null) {
+            systemProperty name, value
+        }
+    }
 }
 
 task qeSelfTest(type: Test) {

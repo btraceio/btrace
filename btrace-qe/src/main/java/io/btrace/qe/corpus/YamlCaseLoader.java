@@ -30,13 +30,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
+import org.yaml.snakeyaml.error.YAMLException;
 
 public final class YamlCaseLoader {
   private static final Set<String> TOP_KEYS =
@@ -59,23 +63,51 @@ public final class YamlCaseLoader {
           walk.filter(p -> p.toString().endsWith(".yaml")).sorted().collect(Collectors.toList());
     }
     List<CaseDef> result = new ArrayList<>();
-    Yaml yaml = new Yaml();
     for (Path file : files) {
-      Object loaded;
-      try (InputStream in = Files.newInputStream(file)) {
-        loaded = yaml.load(in);
-      }
-      CaseDef def = parse(file, asMap(file, "document", loaded, TOP_KEYS));
-      def.validate();
-      result.add(def);
+      result.add(loadFile(file));
     }
     return result;
+  }
+
+  /** Loads one case file; every failure surfaces as a {@link CaseValidationException} naming it. */
+  private CaseDef loadFile(Path file) throws IOException {
+    // A fresh Yaml per file: Yaml instances are not thread-safe and carry per-document state.
+    LoaderOptions options = new LoaderOptions();
+    // A repeated key is ambiguous (SnakeYAML would silently keep the last value), so refuse it.
+    options.setAllowDuplicateKeys(false);
+    Yaml yaml = new Yaml(new SafeConstructor(options));
+    Object loaded;
+    try (InputStream in = Files.newInputStream(file)) {
+      loaded = yaml.load(in);
+    } catch (YAMLException e) {
+      throw new CaseValidationException(file + ": invalid YAML: " + e.getMessage());
+    }
+    CaseDef def = parse(file, asMap(file, "document", loaded, TOP_KEYS));
+    try {
+      def.validate();
+    } catch (CaseValidationException e) {
+      // CaseDef messages are keyed by case id; add the file so the author can find it.
+      throw new CaseValidationException(file + ": " + e.getMessage());
+    }
+    return def;
   }
 
   private CaseDef parse(Path file, Map<String, Object> raw) {
     String id = requireString(file, raw, "id");
     String surface = requireString(file, raw, "surface");
-    Intent intent = Intent.valueOf(requireString(file, raw, "intent").toUpperCase(Locale.ROOT));
+    String intentName = requireString(file, raw, "intent");
+    Intent intent;
+    try {
+      intent = Intent.valueOf(intentName.toUpperCase(Locale.ROOT));
+    } catch (IllegalArgumentException e) {
+      throw new CaseValidationException(
+          file
+              + ": intent must be one of "
+              + Arrays.toString(Intent.values())
+              + ", was '"
+              + intentName
+              + "'");
+    }
     String title = requireString(file, raw, "title");
     SpecRef spec = parseSpec(file, raw.get("spec"));
     GivenDef given = parseGiven(file, raw.get("given"));
@@ -125,7 +157,15 @@ public final class YamlCaseLoader {
   private ExpectationDef parseExpect(Path file, Object rawExpect) {
     Map<String, Object> expect = asMap(file, "expect", rawExpect, EXPECT_KEYS);
     Object rawExit = expect.get("exitCode");
-    Integer exitCode = rawExit == null ? null : Integer.valueOf(rawExit.toString());
+    Integer exitCode = null;
+    if (rawExit != null) {
+      try {
+        exitCode = Integer.valueOf(rawExit.toString());
+      } catch (NumberFormatException e) {
+        throw new CaseValidationException(
+            file + ": expect.exitCode must be an integer, was '" + rawExit + "'");
+      }
+    }
     List<String> mentions =
         expect.containsKey("messageMustMention")
             ? requireStringList(file, expect, "messageMustMention")
@@ -137,12 +177,18 @@ public final class YamlCaseLoader {
     if (!(value instanceof Map)) {
       throw new CaseValidationException(file + ": " + what + " must be a mapping");
     }
-    @SuppressWarnings("unchecked")
-    Map<String, Object> map = (Map<String, Object>) value;
-    for (String key : map.keySet()) {
+    Map<?, ?> raw = (Map<?, ?>) value;
+    Map<String, Object> map = new LinkedHashMap<>();
+    for (Map.Entry<?, ?> e : raw.entrySet()) {
+      if (!(e.getKey() instanceof String)) {
+        throw new CaseValidationException(
+            file + ": keys in " + what + " must be strings, found '" + e.getKey() + "'");
+      }
+      String key = (String) e.getKey();
       if (!allowedKeys.contains(key)) {
         throw new CaseValidationException(file + ": unknown key '" + key + "' in " + what);
       }
+      map.put(key, e.getValue());
     }
     return map;
   }
