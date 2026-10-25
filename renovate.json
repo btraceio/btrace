@@ -15,6 +15,22 @@
       "matchManagers": ["github-actions"],
       "pinDigests": true,
       "addLabels": ["github-actions"]
+    },
+    {
+      "description": "setup-java java-version values are toolchain requirements (e.g. btrace-agent's java24 source set needs JDK 24), not versions to keep current",
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["java-jdk"],
+      "enabled": false
+    },
+    {
+      "description": "These modules compile tests with a JDK 8 javac (or keep Java 8-compatible test deps); junit-jupiter 6.x requires JDK 17+",
+      "matchFileNames": [
+        "btrace-agent/build.gradle",
+        "integration-tests/build.gradle",
+        "btrace-gradle-plugin/build.gradle"
+      ],
+      "matchPackageNames": ["org.junit.jupiter:junit-jupiter"],
+      "allowedVersions": "<6"
     }
   ]
 }
