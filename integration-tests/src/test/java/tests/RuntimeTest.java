@@ -973,6 +973,7 @@ public abstract class RuntimeTest {
     private final CountDownLatch testAppLatch = new CountDownLatch(1);
     private final Process process;
     private final StringBuilder startupStderr = new StringBuilder();
+    private final StringBuilder stdout = new StringBuilder();
 
     /** The per-run grace period a target gets to exit on its own after being told to stop. */
     private static volatile int shutdownTimeoutSeconds = SHUTDOWN_TIMEOUT_SECONDS;
@@ -989,6 +990,9 @@ public abstract class RuntimeTest {
                 try {
                   String l;
                   while ((l = stdoutReader.readLine()) != null) {
+                    synchronized (stdout) {
+                      stdout.append(l).append('\n');
+                    }
                     if (l.startsWith("ready:")) {
                       pid = Integer.parseInt(l.split(":")[1]);
                       stallHandle.setPid(String.valueOf(pid));
@@ -1087,6 +1091,18 @@ public abstract class RuntimeTest {
           process.waitFor(FORCED_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         }
       }
+    }
+
+    /** Everything the target has written to stdout and stderr so far. */
+    public String capturedOutput() {
+      StringBuilder all = new StringBuilder();
+      synchronized (stdout) {
+        all.append(stdout);
+      }
+      synchronized (startupStderr) {
+        all.append(startupStderr);
+      }
+      return all.toString();
     }
 
     /**

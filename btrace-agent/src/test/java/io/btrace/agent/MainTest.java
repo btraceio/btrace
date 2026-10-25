@@ -110,6 +110,18 @@ class MainTest {
   }
 
   @Test
+  void parseFlagAcceptsOnlyBooleanSpellingsAndTheBareFlag() {
+    assertEquals(Boolean.TRUE, Main.parseFlag(""));
+    assertEquals(Boolean.TRUE, Main.parseFlag("true"));
+    assertEquals(Boolean.TRUE, Main.parseFlag("TRUE"));
+    assertEquals(Boolean.FALSE, Main.parseFlag("false"));
+    assertEquals(Boolean.FALSE, Main.parseFlag("False"));
+    for (String invalid : new String[] {"no", "yes", "0", "1", "off", "on", " true"}) {
+      assertNull(Main.parseFlag(invalid), invalid);
+    }
+  }
+
+  @Test
   void noServerArgumentDisablesEndpoint() {
     assertFalse(Main.shouldStartServer(new ArgsMap(new String[] {"noServer=true"})));
   }

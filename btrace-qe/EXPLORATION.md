@@ -27,4 +27,5 @@ agent-args → cli → (blocked surfaces: script-compile, lifecycle, protocol, e
 - 2026-10-25 cli wrong file kind — `-n <bad oneliner>` / missing script file — client/Main.java:341,355 — blocked (JVM resolved before the script is read; client mode has no live target)
 - 2026-10-25 agent-args wrong file kind — `script=` pointing at a non-class file — agent/Main.java loadBTraceScript — lead (observed: silently ignored; earlier attempt used non-portable /etc/hosts)
 - 2026-10-25 agent-args unknown key — option not in Args.java (e.g. `statsdPort`) — agent/Main.java parseArgs default branch — lead (observed: silently ignored)
+- 2026-10-25 agent-args wrong type — `debug=no` (and `stdout=no`) — agent/Main.java parseArgs `!"false".equals(p)` — kept agent-args.debug-non-boolean (was S4: debug=no silently enabled debug; fixed — values other than true/false now warn and leave the option off; token is the literal `debug=no`, since "debug"/"no" alone match unrelated output)
 - 2026-10-25 agent-args doc claim — probe targeting an io.btrace.* class — instr/BTraceTransformer.java:129 — blocked (needs a probe aimed at an io.btrace class; loads cleanly, never fires, no warning)

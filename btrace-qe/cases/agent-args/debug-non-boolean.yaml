@@ -1,0 +1,17 @@
+id: agent-args.debug-non-boolean
+surface: agent-args
+intent: resilience
+title: "Agent started with debug=no (a non-boolean value the user means as 'off')"
+given:
+  mode: target
+  target: SteadyStateTarget
+  agentArgs: "script=${probeClassesDir}/io/btrace/qe/probe/QeStartupProbe.class,noServer=false,stdout=true,debug=no"
+steps:
+  - launch
+  - awaitReady
+  - canary
+  - shutdown
+  - awaitExit
+expect:
+  messageMustMention:
+    - "debug=no"

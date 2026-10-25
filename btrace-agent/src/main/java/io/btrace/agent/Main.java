@@ -451,6 +451,34 @@ public final class Main {
         : !(args.containsKey(SCRIPT) || args.containsKey(SCRIPT_DIR));
   }
 
+  /**
+   * Parses an on/off agent option. A bare option (empty value) means on.
+   *
+   * @return the flag value, or {@code null} when the value is neither {@code true} nor {@code
+   *     false}
+   */
+  static Boolean parseFlag(String value) {
+    if (value.isEmpty() || "true".equalsIgnoreCase(value)) {
+      return Boolean.TRUE;
+    }
+    if ("false".equalsIgnoreCase(value)) {
+      return Boolean.FALSE;
+    }
+    return null;
+  }
+
+  private static boolean flagOption(String key, String value) {
+    if (value == null) {
+      return false;
+    }
+    Boolean flag = parseFlag(value);
+    if (flag == null) {
+      log.warn("Ignoring {}={}; expected true or false", key, value);
+      return false;
+    }
+    return flag;
+  }
+
   private static final class LogValue {
     final String logLine;
     final Throwable throwable;
@@ -846,8 +874,7 @@ public final class Main {
   private static int startScripts() {
     int scriptCount = 0;
 
-    String p = argMap.get(STDOUT);
-    boolean traceToStdOut = p != null && !"false".equals(p);
+    boolean traceToStdOut = flagOption(STDOUT, argMap.get(STDOUT));
     if (log.isDebugEnabled()) {
       log.debug("stdout is {}", traceToStdOut);
     }
@@ -965,8 +992,12 @@ public final class Main {
     loadDefaultArguments(config);
 
     p = argMap.get(DEBUG);
-    settings.setDebug(p != null && !"false".equals(p));
+    Boolean debugFlag = p != null ? parseFlag(p) : Boolean.FALSE;
+    settings.setDebug(Boolean.TRUE.equals(debugFlag));
     DebugSupport.initLoggers(settings.isDebug(), log);
+    if (debugFlag == null) {
+      log.warn("Ignoring {}={}; expected true or false", DEBUG, p);
+    }
 
     log.debug("debugMode is {}", settings.isDebug());
 
