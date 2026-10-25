@@ -133,9 +133,10 @@ The agent takes a list of comma separated arguments.
 * **startupRetransform** - enable retransform of all the loaded classes at attach (true/false)
 * **scriptdir** - the path to a directory containing scripts to be run at the agent startup
 * **scriptOutputFile** - the path to a file the btrace agent will store its output
-* **grant** - comma-separated list of permissions to grant (e.g. `grant=NETWORK,THREADS`)
-* **deny** - comma-separated list of permissions to deny (e.g. `deny=EXEC,NATIVE`)
-* **grantAll** - grant all permissions (true/false) - use with caution
+* **allowExtensions** - comma-separated extension ids allowed to link their implementation (e.g. `allowExtensions=btrace-metrics`)
+* **denyExtensions** - comma-separated extension ids that must not link their implementation
+* **allowPrivileged** - allow every privileged extension to link (true/false) - use with caution
+* **grant** / **deny** / **grantAll** - accepted for compatibility; they have no effect in 3.0
 * **script** - colon separated list of tracing scripts to be run at the agent startup
 
 The scripts to be run must have already been compiled to bytecode (a *.class* file) by __btracec__.
@@ -748,7 +749,6 @@ BTrace uses a permission-based security model organized into three tiers:
 ###### Default Permissions (always granted)
 These permissions are safe and always available:
 * **MESSAGING** - Send messages to BTrace client
-* **AGGREGATION** - Use aggregation functions
 * **JFR_EVENTS** - Create and use JFR events
 * **PROFILING** - Use profiling functions
 
@@ -813,13 +813,16 @@ See [Permission Policy](PermissionPolicy.md) and
 
 ###### Java agent (`-javaagent`)
 ```bash
-java -javaagent:btrace.jar=script=MetricsProbe.class,grant=NETWORK,THREADS ...
+java -javaagent:btrace.jar=script=MetricsProbe.class,allowExtensions=btrace-metrics ...
 ```
 
-###### Grant all permissions (use with caution)
+###### Allow every privileged extension (use with caution)
 ```bash
-java -javaagent:btrace.jar=script=MetricsProbe.class,grantAll=true ...
+java -javaagent:btrace.jar=script=MetricsProbe.class,allowPrivileged=true ...
 ```
+
+The `grant=`, `deny=` and `grantAll=` agent arguments from earlier 3.0 builds are still accepted
+but have no effect; only the per-extension allow/deny lists and `allowPrivileged` decide linking.
 
 ##### Per-Extension Allow/Deny (Simplified Policy)
 - Allow specific extensions to link implementations via agent args:
@@ -848,13 +851,11 @@ Probe requires permissions that are not granted:
   - THREADS
     Create and manage threads. Risk: Resource exhaustion, concurrent operations.
 
-To allow these permissions, grant them on the agent side, e.g.
-  -javaagent:btrace.jar=grant=NETWORK,THREADS
+To allow the extension that declares these permissions, allow it on the agent side, e.g.
+  -javaagent:btrace.jar=allowExtensions=<extension-id>
+  or btracex policy set --allowExtensions <extension-id>
 
-or allow the extension in the permission policy
-  (btracex policy set --allowExtensions <id>, or allowPrivileged=true).
-
-Use grantAll=true to allow all permissions (not recommended).
+Use allowPrivileged=true to allow every privileged extension (not recommended).
 ```
 
 ##### Inspecting Probe Permissions
@@ -898,7 +899,11 @@ The histogram metrics extension provides high-performance in-process metrics usi
 
 Requirements:
 - Build the distribution so extensions are exploded under `BTRACE_HOME/extensions/`.
-- The agent discovers built-in extensions automatically; no additional flags are needed.
+- The agent discovers built-in extensions automatically, but `btrace-metrics` declares the
+  privileged `THREADS` permission (a background bookkeeping thread), so it is blocked until you allow
+  it: `allowExtensions=btrace-metrics` as an agent argument, or `allowExtensions=btrace-metrics` in
+  the [permission policy file](PermissionPolicy.md) read by the target JVM
+  (`~/.btrace/permissions.properties`). Without it a required `@Injected MetricsService` fails fast.
 
 Example:
 
@@ -1196,7 +1201,7 @@ This means a minimal BTrace script requires **zero import statements** — just 
 | Object | `className(o)`, `identity(o)`, `size(o)` |
 | Control | `exit(code)` |
 
-For everything else (aggregations, reflection, profiling, JFR, data structures, thread operations) use `BTraceUtils` or an injected extension service.
+For everything else (reflection, profiling, JFR, data structures, thread operations) use `BTraceUtils` or an injected extension service.
 
 ##### Writing scripts without explicit imports
 

@@ -352,22 +352,7 @@ public static void printCount() {
 }
 ```
 
-### Pattern 8: Aggregations
-```java
-private static Aggregation distrib = Aggregations.newAggregation(AggregationFunction.QUANTIZE);
-
-@OnMethod(clazz = "com.example.Service", method = "process", location = @Location(Kind.RETURN))
-public static void onReturn(@Duration long duration) {
-    Aggregations.addToAggregation(distrib, duration / 1000000);  // Convert to ms
-}
-
-@OnTimer(10000)
-public static void printDistribution() {
-    Aggregations.printAggregation("Duration distribution (ms)", distrib);
-}
-```
-
-### Pattern 9: JFR Event Recording
+### Pattern 8: JFR Event Recording
 ```java
 import io.btrace.core.jfr.JfrEvent;
 
@@ -627,13 +612,6 @@ name(Class)              // Class name
 probeClass()             // Get current probe class
 classOf(Object)          // Get object's class
 field(Class, String)     // Get field value
-```
-
-### Aggregation Functions
-```java
-newAggregation(AggregationFunction)    // Create aggregation
-addToAggregation(Aggregation, long)     // Add value
-printAggregation(String, Aggregation)   // Print distribution
 ```
 
 ### Time Functions

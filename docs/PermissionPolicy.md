@@ -13,8 +13,8 @@ are blocked.
 - `allowExtensions=<id1,id2>`: allow specific extension IDs to link implementations.
 - `denyExtensions=<id1,id2>`: block specific extension IDs (SHIM fallback only).
 - `allowPrivileged=true|false`: allow all privileged extensions to link implementations.
-- Launch-time grants (e.g., `grant=...`, `deny=...`, `grantAll=...`) remain supported but are not
-  part of the policy file and are not required for allow/deny decisions.
+- The `grant=`, `deny=` and `grantAll=` agent arguments are accepted for compatibility but have no
+  effect: only the three options above and the policy file decide whether an extension links.
 
 ## File Format (properties)
 - `allowExtensions=id1,id2`

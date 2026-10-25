@@ -89,10 +89,20 @@ cannot connect to it (see [Getting Started](GettingStarted.md#startup-modes-and-
 ## Permissions Live in Extensions, Not in Scripts
 
 2.x scripts carried no permission declarations and still need none. In 3.0 permissions are declared
-by extensions and granted on the agent side — `grant=`, `allowExtensions=`, `allowPrivileged=`
-agent arguments or the [permission policy file](PermissionPolicy.md); the `btrace` client has no
-`--grant` flag. (If you tried a 3.0 pre-release build: the probe-level `@RequestPermission(s)` /
+by extensions and granted on the agent side — the `allowExtensions=` and `allowPrivileged=` agent
+arguments or the [permission policy file](PermissionPolicy.md); the `btrace` client has no
+`--grant` flag, and the `grant=`, `deny=` and `grantAll=` agent arguments are accepted but have no
+effect on whether an extension links. (If you tried a 3.0 pre-release build: the probe-level `@RequestPermission(s)` /
 `@RequiresPermission(s)` annotations it had were removed before 3.0.0 and never existed in 2.x.)
+
+## Aggregations API: Removed
+
+The 2.x `Aggregations` API (`Aggregations.newAggregation(AggregationFunction.…)`,
+`addToAggregation`, `printAggregation`, `clearAggregation`) is not part of 3.0. Scripts that use it
+fail to compile. For latency distributions and simple stats use the bundled `btrace-metrics`
+extension (HdrHistogram histograms and `StatsMetric`, see
+[Getting Started](GettingStarted.md#quick-start-histogram-metrics-extension)); for plain counts use
+`BTraceUtils` maps and counters.
 
 ## License
 

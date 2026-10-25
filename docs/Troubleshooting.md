@@ -515,22 +515,9 @@ No methods matched for probe: ...
    }
    ```
 
-6. **Use aggregations instead of individual logs**
-   ```java
-   private static Aggregation duration =
-       Aggregations.newAggregation(AggregationFunction.QUANTIZE);
-
-   @OnMethod(..., location = @Location(Kind.RETURN))
-   public static void onReturn(@Duration long d) {
-       Aggregations.addToAggregation(duration, d / 1000000);
-   }
-
-   @OnTimer(10000)
-   public static void printStats() {
-       Aggregations.printAggregation("Durations", duration);
-       Aggregations.clearAggregation(duration);
-   }
-   ```
+6. **Record distributions with the metrics extension instead of logging every call**: inject
+   `MetricsService` from the bundled `btrace-metrics` extension and report histogram snapshots on
+   a timer (see [Getting Started](GettingStarted.md#quick-start-histogram-metrics-extension)).
 
 ## Agent Loading Problems
 

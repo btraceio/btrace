@@ -30,10 +30,11 @@ btrace-hadoop-example.enabled=true
 # btrace-hadoop-example.classpath=/opt/hadoop/share/hadoop/common
 ```
 
-Permissions (examples use reflection):
+Permissions: the examples declare `REFLECTION`, which is privileged, so allow them to link on the
+agent side (agent argument or `~/.btrace/permissions.properties`):
 
 ```
-grant=REFLECTION,SYSTEM_PROPS
+allowExtensions=btrace-spark-example,btrace-hadoop-example
 ```
 
 Notes

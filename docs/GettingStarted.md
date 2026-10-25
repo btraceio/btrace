@@ -238,7 +238,16 @@ Congratulations! You've successfully traced your first Java application with BTr
 Capture latency distributions and simple stats without external systems using the built-in histogram metrics extension (HdrHistogram-based).
 
 1. Ensure you built the distribution so extensions are available under `BTRACE_HOME/extensions/`.
-2. Create a probe that injects `MetricsService` (no special flags needed):
+2. Allow the extension to link. `btrace-metrics` declares the privileged `THREADS` permission (it
+   runs a background bookkeeping thread), so the agent blocks it until you say otherwise. On the
+   machine running the target JVM:
+   ```bash
+   mkdir -p ~/.btrace
+   echo 'allowExtensions=btrace-metrics' >> ~/.btrace/permissions.properties
+   ```
+   (For a `-javaagent` start you can pass `allowExtensions=btrace-metrics` as an agent argument
+   instead. See [Permission Policy](PermissionPolicy.md).)
+3. Create a probe that injects `MetricsService`:
 
 ```java
 import io.btrace.core.annotations.*;
@@ -285,7 +294,7 @@ public class LatencyProbe {
 }
 ```
 
-3. Attach to your running app:
+4. Attach to your running app:
 ```bash
 btrace <PID> LatencyProbe.java
 ```

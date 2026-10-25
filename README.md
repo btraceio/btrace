@@ -326,11 +326,11 @@ BTrace supports extensions (like StatsdExtension) that provide additional functi
 
 Permissions are enforced based on extension/service descriptors and agent grants specified at attach-time.
 
-Privileged permissions are granted via agent options (there is no client-side flag), e.g. when starting the target with the agent:
+An extension that declares a privileged permission links only when the operator allows it via agent options (there is no client-side flag), e.g. when starting the target with the agent:
 ```sh
-java -javaagent:btrace.jar=grant=NETWORK,THREADS ... MainClass
+java -javaagent:btrace.jar=allowExtensions=btrace-metrics ... MainClass
 ```
-or persistently via a policy file (see [PermissionPolicy](docs/PermissionPolicy.md)).
+or persistently via a policy file (see [PermissionPolicy](docs/PermissionPolicy.md)). The older `grant=`/`deny=`/`grantAll=` agent arguments are accepted but have no effect.
 
 If extensions fail to load, use `-le` to troubleshoot:
 ```sh
@@ -350,8 +350,8 @@ Note: Extension “required permissions” are informational and help operators 
 
 #### Agent Policy and Allow/Deny Lists
 - Launch-time policy can be set via agent args (operator-controlled):
-  - `-javaagent:btrace.jar=...,grant=NETWORK,THREADS,grantAll=false`
   - `-javaagent:btrace.jar=...,allowExtensions=btrace-statsd,my-metrics,denyExtensions=legacy-foo`
+  - `-javaagent:btrace.jar=...,allowPrivileged=true` (every privileged extension; use with caution)
 - Optional policy file (process-local): `-Dbtrace.permissions=/path/to/permissions.properties` or `~/.btrace/permissions.properties`.
 - When an extension impl is blocked, the API remains on bootstrap so SHIMs can be generated.
 
