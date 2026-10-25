@@ -79,7 +79,7 @@ The `libs=<profile>` agent option has been removed. The agent logs an error nami
 
 ## Wire Protocol: Mixed Versions Keep Working
 
-BTrace 3.0 defaults to the binary V2 wire protocol (faster, 2–5x smaller payloads), but every connection starts with an automatic negotiation: the receiving side inspects the first bytes of the stream for the V2 magic prefix (`BTR2`) and falls back to the V1 Java-serialization protocol when it is absent. A 2.x client can therefore talk to a 3.0 agent and vice versa — no configuration required.
+BTrace 3.0 defaults to the binary V2 wire protocol (faster, 2–5x smaller payloads), but every connection starts with an automatic negotiation: the receiving side inspects the first bytes of the stream for the V2 magic prefix (`BTR2`) and falls back to the V1 Java-serialization protocol when it is absent. A 2.x client can therefore talk to a 3.0 agent and vice versa — no configuration required. One cost to know about: a 3.0 client connecting to a 2.x agent waits for a V2 reply that never comes before it falls back, so the first connect pays the negotiation timeout (about 5 s, `-Dbtrace.protocol.negotiation.timeout=<ms>` on the client). Set `-Dbtrace.comm.protocol=v1` on the client JVM to skip the wait when you know the agent is 2.x.
 
 The one exception is *prepared mode*: a 3.0 agent started with `-javaagent:btrace.jar=port=...`
 authenticates every connection before it decodes a command and binds loopback only, so a 2.x client

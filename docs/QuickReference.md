@@ -235,10 +235,15 @@ public static void sampledHandler() { }
 ### @Level
 Control handler activation by instrumentation level.
 ```java
-@OnMethod(clazz = "...", enableAt = @Level(">=1"))  // Level 1 or higher
-@OnMethod(clazz = "...", enableAt = @Level("2..5"))  // Level 2-5 range
-@OnMethod(clazz = "...", enableAt = @Level("3"))    // Exactly level 3
+@OnMethod(clazz = "...", enableAt = @Level(">=1"))   // Level 1 or higher
+@OnMethod(clazz = "...", enableAt = @Level("(2,5)")) // Levels 2-5 inclusive ("(2;5)" also accepted)
+@OnMethod(clazz = "...", enableAt = @Level("3"))     // Level 3 or higher (a bare number means >=)
+@OnMethod(clazz = "...", enableAt = @Level("=3"))    // Exactly level 3 (also <, <=, >)
 ```
+The starting level is `0` unless the script is given a `level=N` argument (`btrace <pid> MyTrace.java level=2`,
+or `level=2` among the agent arguments for a startup script). Afterwards only a handler can change
+it, via `BTraceUtils.setInstrumentationLevel(n)` (typically from `@OnEvent`). Gating is a per-call
+`MethodHandle` guard in front of the handler; no classes are retransformed when the level changes.
 
 ### @Export
 Export data via JMX.
@@ -416,13 +421,16 @@ unexpected provider or runtime failure prevents diagnosis.
 
 | Exit | Status | Meaning |
 | ---: | --- | --- |
-| 0 | ready | A usable BTrace endpoint is published. |
-| 2 | preparation required | The target is readable but has no usable endpoint. |
-| 3 | inaccessible | Attach is unavailable or denied. |
-| 4 | unexpected failure | Invocation or provider failure prevented diagnosis. |
+| 0 | `READY` | A usable BTrace endpoint is published. |
+| 2 | `PREPARATION_REQUIRED` | The target is readable but has no usable endpoint. |
+| 3 | `INACCESSIBLE` | Attach is unavailable or denied. |
+| 4 | `UNEXPECTED_FAILURE` | Invocation or provider failure prevented diagnosis. |
+
+The human-readable report prints `Status: <STATUS> (exit <code>)`; `--json` uses the lower-case
+form (`"status": "preparation_required"`).
 
 **Common Options:**
-- `--version` - Show the version
+- `--version` - Show the version as `BTrace v.<version> (<build commit>)`; a build made outside a git checkout prints `dev` as the commit
 - `-v` - Run in verbose mode
 - `-l` - List all locally attachable JVMs
 - `-lp` - List active probes in the given JVM (expects PID or app name)
@@ -435,7 +443,7 @@ unexpected provider or runtime failure prevents diagnosis.
 - `-pd <path>` - Search path for probe XML descriptors
 - `-cp <path>` / `-classpath <path>` - User class files and annotation processors path
 - `-p <port>` - Port for btrace agent listener (default: 2020)
-- `-host <host>` - Remote host (default: localhost)
+- `-host <host>` - Connect to an already running agent on the given host without attaching (default: localhost). Skips Attach API discovery, so it cannot authenticate to a 3.0 prepared endpoint; use it only for 2.x agents or endpoints opened by a previous dynamic attach
 - `-statsd <host:port>` - StatSD server configuration
 - `-x` - Unattended mode (non-interactive)
 
@@ -538,21 +546,46 @@ Start app with BTrace agent directly.
 java -javaagent:/path/to/btrace.jar=script=<script.class>,noServer=true[,arg=value]... YourApp
 ```
 
+A plain `java -javaagent:/path/to/btrace.jar MyApp` (no arguments) is an authenticated prepared
+endpoint on port 2020. The command server starts unless `noServer=true` is given, or `script=` /
+`scriptdir=` is given and `noServer` is unset.
+
 **Agent Parameters:**
-- `script=<path>` - BTrace script class file
+- `script=<path>[:<path>...]` - Compiled BTrace script(s) to run at startup, colon-separated; must be the last argument
 - `scriptdir=<dir>` - Directory to load scripts from
-- `port=<port>` - Communication port; prepared mode accepts `0` and publishes the selected port
+- `port=<port>` - Communication port (default 2020); prepared mode accepts `0` and publishes the selected port.
+  A fixed port that is already in use is not an invalid option: binding fails with a `BindException`
+  and agent initialization aborts
 - `bindAddress=<address>` - Loopback bind address (`127.0.0.1` or `::1`); non-loopback and wildcard
   addresses are rejected in 3.0.0. An invalid `port` or `bindAddress` is reported as
-  `invalid agent option <name>=<value>` and the agent starts without a command server; the
-  application and any startup script keep running
+  `invalid agent option <name>=<value>: ...; the command server was not started` and the agent
+  starts without a command server; the application and any startup script keep running
 - `authTokenFile=<path>` - Existing owner-protected prepared-mode token file, or a path where the
   agent creates one; the token value is never passed as an argument
 - `noServer=true` - Don't start the command server; use for startup scripts that need no later
   client connection
 - `telemetry=true|false` - Explicitly enable or disable the default-off `agent_start` telemetry
   event
-- `bootClassPath=<path>` - Additional boot classpath
+- `allowExtensions=<id,...>` / `denyExtensions=<id,...>` / `allowPrivileged=true|false` - Which
+  extensions may link their implementation (see [Permission Policy](PermissionPolicy.md)).
+  `grant=`, `deny=` and `grantAll=` are accepted but have no effect
+- `trusted=true` - Trusted mode (no script verification); also required by the
+  `-Dbtrace.system.appendJar` escape hatch
+- `debug=true` - Verbose agent logging
+- `dumpClasses=true`, `dumpDir=<dir>` - Dump instrumented classes
+- `stdout=true` - Write script output to stdout instead of a file
+- `scriptOutputFile=<file>`, `scriptOutputDir=<dir>` - Script output file, or the directory for the
+  default per-script file (defaults to the script's directory)
+- `fileRollMilliseconds=<ms>`, `fileRollMaxRolls=<n>` - Roll the output file every `ms` and keep
+  `n` rolled files (default 5)
+- `cmdQueueLimit=<n>` - Pending output commands per client before output is dropped (default 100)
+- `trackRetransforms=true` - Notify the client about every class a probe retransforms
+- `startupRetransform=false` - Skip retransforming already loaded classes on probe deployment (default `true`)
+- `statsd=<host[:port]>` - StatsD server for the StatsD extension
+- `config=<name>` - Configuration section to apply from an embedded `agent.properties`
+  (fat agents; see [Fat Agent Plugin](architecture/fat-agent-plugin.md))
+- `probeDescPath=<dirs>` - Search path for `@OnProbe` descriptor XML files
+- `bootClassPath=<path>`, `systemClassPath=<path>` - Additional boot / system classpath
 
 **Examples:**
 ```bash

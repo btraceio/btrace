@@ -106,7 +106,7 @@ Optional companion to the DSL — `@ExtensionDescriptor`:
 - Declared on your API package’s `package-info.java`. Source: `btrace-core/src/main/java/io/btrace/core/extensions/ExtensionDescriptor.java`.
 - Fields: `name`, `version`, `description`, `minBTraceVersion`, `dependencies`, `permissions`.
 - **`permissions` is the field that does work.** The plugin scans it and fails the build when the annotation requires a permission the manifest does not grant, so it is a useful assertion that the code's needs and the shipped manifest agree.
-- **The other fields are not propagated.** The `btraceExtension` block is the single source of the manifest, and the manifest is what the runtime loads and what `btrace ext inspect` reports. A `version` stated only in the annotation describes nothing the build or the runtime will use — leave it unset rather than let it drift from the real artifact version.
+- **The other fields are not propagated.** The `btraceExtension` block is the single source of the manifest, and the manifest is what the runtime loads and what `btracex inspect` reports. A `version` stated only in the annotation describes nothing the build or the runtime will use — leave it unset rather than let it drift from the real artifact version.
 - The annotation is entirely optional; most of the extensions shipped with BTrace do not declare one.
 
 Outputs produced by the plugin:
@@ -463,6 +463,25 @@ Consumers are expected to resolve the standard BTrace extension artifacts from t
 - Put all runtime libraries in Impl; use `shadedPackages` to relocate and avoid conflicts.
 - Do not include BTrace modules in your Impl artifact; only external libs are shaded.
 
+## Bundled Extensions
+
+The distribution ships these seven extensions, already exploded under `$BTRACE_HOME/extensions/<id>/`
+(the published `io.btrace:btrace` Maven artifact embeds the same set). Nothing needs to be copied;
+privileged ones only need to be allowed (`allowExtensions=<id>` or the policy file).
+
+| Extension id | Manifest name | Service interface | Privileged |
+|--------------|---------------|-------------------|------------|
+| `btrace-metrics` | BTrace HDR Histogram | `io.btrace.metrics.MetricsService` | yes (`THREADS`) |
+| `btrace-statsd` | BTrace StatsD | `io.btrace.statsd.Statsd` | yes (`NETWORK`) |
+| `btrace-contracts` | BTrace Contracts | `io.btrace.contracts.ContractService` | no |
+| `btrace-llm-trace` | BTrace LLM Tracing | `io.btrace.llm.LlmTraceService` | no |
+| `btrace-rag-quality` | BTrace RAG Quality | `io.btrace.rag.RagQualityService` | no |
+| `btrace-gpu-bridge` | BTrace GPU Bridge | `io.btrace.gpu.GpuBridgeService` | no |
+| `btrace-utils` | BTrace Utilities | `io.btrace.utils.PrinterService` | no |
+
+`btracex list` prints the same information for whatever is installed; `btracex inspect <zip|dir>`
+does so for a package that is not installed yet.
+
 ## Distribution and Installation
 
 Build artifacts:
@@ -470,7 +489,8 @@ Build artifacts:
 - Impl JAR: `build/libs/<name>-<version>-impl.jar`
 - ZIP: `build/distributions/<name>-<version>-extension.zip`
 
-Install by copying the ZIP contents (API + Impl) into an extensions directory:
+Install with `btracex install <zip>` (or a Maven coordinate for a separately published third-party
+extension), or by copying the ZIP contents (API + Impl) into an extensions directory:
 
 ```bash
 # System-wide

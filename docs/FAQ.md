@@ -463,6 +463,13 @@ The warning is informational only — nothing is disabled. To suppress it, set t
 
 See the [migration guide](Migration-2.x-to-3.0.md) for details on upgrading from BTrace 2.x.
 
+### Does BTrace send any telemetry?
+Not unless you ask it to. Telemetry is opt-in only: the agent sends a single `agent_start` event
+when started with the `telemetry=true` agent argument, and otherwise creates no telemetry thread and
+performs no telemetry-related DNS or network operation. The client never sends telemetry. See
+[Getting Started: Optional agent telemetry](GettingStarted.md#optional-agent-telemetry) for what the
+event contains and how `-Dbtrace.telemetry` interacts with the agent argument.
+
 ## Advanced Topics
 
 ### Can I integrate BTrace with monitoring systems?

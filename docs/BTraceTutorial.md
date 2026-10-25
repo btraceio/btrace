@@ -102,7 +102,7 @@ You will repeat these steps while gradually enhancing the used BTrace script
 
 `btrace [opts] <pid> <btrace-script> [<args>]`
 
-* **opts** BTrace specific options; use `btrace -h` to obtain the list of all supported options
+* **opts** BTrace specific options; run `btrace` with no arguments to print the list of all supported options
 * **pid** process id of the traced Java program
 * **btrace-script** trace program. If it is a ".java", then it is compiled before submission. Or else, it is assumed to be pre-compiled [i.e., it has to be a .class] and submitted.
 * **args** trace specific arguments
@@ -119,7 +119,7 @@ The agent takes a list of comma separated arguments.
 
 * **noServer** - don't start the socket server
 * **port** - command-server port; prepared mode accepts `0` for an automatically selected port
-* **bindAddress** - explicit loopback bind address; non-loopback and wildcard addresses fail closed
+* **bindAddress** - explicit loopback bind address (`127.0.0.1` or `::1`); a non-loopback or wildcard address is reported as `invalid agent option bindAddress=<value>` and the agent starts without a command server (the application and startup scripts keep running)
 * **authTokenFile** - existing owner-protected token file, or a path where the agent creates one
 * **bootClassPath** - boot classpath to be used
 * **systemClassPath** - system classpath to be used
@@ -868,21 +868,26 @@ btracep MetricsProbe.class
 
 The output will include a "Required permissions" line listing all permissions the probe needs.
 
-##### Using the StatsdExtension
+##### Using the StatsD extension
 
-The StatsdExtension allows sending metrics to a StatsD server:
+The bundled `btrace-statsd` extension exposes the `io.btrace.statsd.Statsd` service, which sends
+counter increments (optionally tagged) to a StatsD server:
 
 ```java
+import io.btrace.statsd.Statsd;
+
 @BTrace
 public class StatsdExample {
     @Injected
-    private static StatsdExtension statsd;
+    private static Statsd statsd;
 
     @OnMethod(clazz = "com.example.API", method = "handleRequest",
               location = @Location(Kind.RETURN))
     public static void onRequest(@Duration long duration) {
         statsd.increment("api.requests");
-        statsd.timing("api.latency", duration / 1_000_000);
+        if (duration > 100_000_000L) {
+            statsd.increment("api.requests.slow", "endpoint:handleRequest");
+        }
     }
 }
 ```
@@ -1071,7 +1076,7 @@ If extensions fail to load during agent initialization (for example, due to miss
 
 ```
 [BTRACE WARN] 1 extension(s) failed to load:
-  - StatsdExtension: Missing manifest metadata (ensure Gradle plugin is applied and configured)
+  - btrace-statsd: Missing manifest metadata (ensure Gradle plugin is applied and configured)
 Use 'btrace -le <PID>' for details.
 ```
 
@@ -1087,7 +1092,7 @@ This will display all extensions that failed to load and the reasons for their f
 
 ```
 Failed Extensions:
-  1. io.btrace.statsd.StatsdExtension: Connection refused to localhost:8125
+  1. btrace-statsd: Connection refused to localhost:8125
   2. io.btrace.dtrace.DTraceExtension: DTrace not available on this platform
 ```
 
@@ -1375,7 +1380,9 @@ Please enter your option: 3
 Please enter event name: verbose
 ```
 
-The `setVerbose()` handler fires immediately and BTrace retransforms the target classes to activate the higher-detail probes.
+The `setVerbose()` handler fires immediately. No classes are retransformed: every level-gated handler sits behind a per-call `MethodHandle` guard that reads the current level, so switching levels is cheap, and handlers above the active level still cost the guard check at each probe site.
+
+The starting level is `0`. To start elsewhere, pass `level=N` as a script argument after the script on the `btrace` command line (`btrace <pid> HelloWorldTrace.java level=1`), or as an agent argument for startup scripts (`-javaagent:btrace.jar=script=HelloWorldTrace.class,level=1`). Ranges are written `(a,b)` or `(a;b)`, inclusive on both ends.
 
 ---
 
@@ -1518,7 +1525,7 @@ public class ContractCheck {
 }
 ```
 
-Copy `btrace-contracts.jar` to `$BTRACE_HOME/extensions/`, then run:
+`btrace-contracts` is bundled with the distribution (already present under `$BTRACE_HOME/extensions/btrace-contracts/`), so just run:
 
 ```bash
 btrace <PID> ContractCheck.java
@@ -1533,7 +1540,7 @@ btrace <PID> ContractCheck.java
 token/latency/cost and budget violations off a live JVM, including a build-time detail worth
 knowing before you grant either extension a permission.
 
-Modern Java applications increasingly embed LLM inference, RAG pipelines, and on-device model execution. BTrace ships three optional extension JARs that add purpose-built services for observing these workloads without modifying application code.
+Modern Java applications increasingly embed LLM inference, RAG pipelines, and on-device model execution. BTrace ships three bundled extensions that add purpose-built services for observing these workloads without modifying application code.
 
 All three extensions use the standard `@Injected` mechanism: declare a field in your BTrace script, annotate it, and BTrace wires up the implementation at deploy time. No reflection, no extra threads, no allocation on the hot path.
 
@@ -1648,7 +1655,7 @@ public class LlmTrace {
 }
 ```
 
-Copy `btrace-llm-trace.jar` to `$BTRACE_HOME/extensions/` — the agent discovers and loads it automatically. Then run as normal:
+`btrace-llm-trace` ships in the distribution's `extensions/` directory and the agent discovers it automatically (a third-party package would go in with `btracex install <zip>`). Run as normal:
 
 ```bash
 btrace <PID> LlmTrace.java
@@ -1774,7 +1781,7 @@ public class RagPipeline {
 }
 ```
 
-Copy both extension JARs to `$BTRACE_HOME/extensions/`, then run:
+Both extensions are bundled under `$BTRACE_HOME/extensions/`, so run:
 
 ```bash
 btrace <PID> RagPipeline.java
@@ -1871,7 +1878,7 @@ public class OnnxTrace {
 }
 ```
 
-Copy `btrace-gpu-bridge.jar` to `$BTRACE_HOME/extensions/`, then run:
+`btrace-gpu-bridge` is bundled under `$BTRACE_HOME/extensions/`, so run:
 
 ```bash
 btrace <PID> OnnxTrace.java
@@ -1881,12 +1888,10 @@ btrace <PID> OnnxTrace.java
 
 #### Using multiple AI extensions together
 
-All four extensions can be combined in a single script. Copy all the extension JARs you need to `$BTRACE_HOME/extensions/` — the agent discovers and loads them automatically:
+All four extensions can be combined in a single script. They are all bundled, so nothing has to be copied — the agent discovers every extension under `$BTRACE_HOME/extensions/` automatically (use `btracex list` to see them, and `btracex install <zip>` for a third-party one):
 
 ```bash
-cp btrace-llm-trace.jar btrace-rag-quality.jar \
-   btrace-gpu-bridge.jar \
-   $BTRACE_HOME/extensions/
+btracex list
 btrace <PID> MyAIObservability.java
 ```
 
@@ -2053,4 +2058,4 @@ BTrace 3.0 fully supports Java 8 through the latest release, but running it agai
 
 The warning fires at most once per JVM and never throws, so it cannot interfere with agent or client startup. If you're deliberately running a fleet on older JDKs during a gradual migration, set `-Dbtrace.suppressJavaDeprecationWarning=true` on the target JVM to silence it. Java 8–16 support itself is not going away in 3.0 — only in BTrace's *next* major release. See [Migrating from 2.x to 3.0](Migration-2.x-to-3.0.md) for the full support policy and timeline.
 
-Separately, and unrelated to the deprecation floor, BTrace 3.0 also gained a second instrumentation backend to handle newer bytecode. BTrace's primary pipeline is built on ASM, which can only parse class files up to the version its release knows about (major version 71, Java 27, for the ASM 9.10.1 bundled with 3.0.0) — an application compiled for a newer Java would be unparseable by ASM alone. When the agent itself runs on JDK 24 or newer, a second backend built on the JDK's own ClassFile API (`java.lang.classfile.*`, standardized in JDK 24) steps in for any class file version ASM can't handle; on older agent JDKs, such classes are simply skipped rather than crashing the target. The ClassFile API backend supports every probe kind and handler parameter the ASM backend does, with one exception (`@Duration` on `SYNC_ENTRY`/`SYNC_EXIT` handlers), so probes behave the same on class files newer than the bundled ASM. See [Instrumentation Backends](architecture/InstrumentationBackends.md) for the complete picture, including the backend-selection logic and current limitations.
+Separately, and unrelated to the deprecation floor, BTrace 3.0 also gained a second instrumentation backend to handle newer bytecode. BTrace's primary pipeline is built on ASM, and BTrace uses it for class files up to the version it has validated that pipeline against — major version 71, Java 27, in 3.0.0 — because an ASM release only parses class files up to the version it knows about, and each new class-file version used to need an ASM upgrade before BTrace could instrument it. When the agent itself runs on JDK 24 or newer, a second backend built on the JDK's own ClassFile API (`java.lang.classfile.*`, standardized in JDK 24) steps in for any class file newer than that ceiling (Java 28 early-access builds today); on older agent JDKs, such classes are simply skipped rather than crashing the target. The ClassFile API backend supports every probe kind and handler parameter the ASM backend does, with one exception (`@Duration` on `SYNC_ENTRY`/`SYNC_EXIT` handlers), so probes behave the same on class files newer than the ASM ceiling. See [Instrumentation Backends](architecture/InstrumentationBackends.md) for the complete picture, including the backend-selection logic and current limitations.

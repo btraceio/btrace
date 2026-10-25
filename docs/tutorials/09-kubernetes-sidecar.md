@@ -29,13 +29,13 @@ names will differ — the same way earlier tutorials mark timing numbers as illu
 BTrace publishes three image variants, each for a different job
 ([docker/README.md](../../docker/README.md)):
 
-| Variant | Base image (from the Dockerfile) | Size | Ships | Best for |
-|---|---|---|---|---|
-| `ghcr.io/btraceio/btrace:3.0.0` | `bellsoft/liberica-openjdk-debian:11.0.32.1-cds` | ~25MB | Full toolchain, shell, samples | Development, interactive debugging |
-| `ghcr.io/btraceio/btrace:3.0.0-alpine` | `alpine:3.24` + `openjdk11-jdk` | ~15MB | Full toolchain, smaller OS | Kubernetes sidecars, resource-constrained environments |
-| `ghcr.io/btraceio/btrace:3.0.0-distroless` | `gcr.io/distroless/java11-debian11` | ~10MB | Runtime JARs only — **no shell, no scripts** | Production apps using `-javaagent` |
+| Variant | Base image (from the Dockerfile) | Ships | Best for |
+|---|---|---|---|
+| `ghcr.io/btraceio/btrace:3.0.0` | `bellsoft/liberica-openjdk-debian:11.0.32.1-cds` | Full toolchain, shell, samples | Development, interactive debugging |
+| `ghcr.io/btraceio/btrace:3.0.0-alpine` | `alpine:3.24` + `openjdk11-jdk` | Full toolchain, smaller OS | Kubernetes sidecars, resource-constrained environments |
+| `ghcr.io/btraceio/btrace:3.0.0-distroless` | `gcr.io/distroless/java11-debian11` | Runtime JARs only — **no shell, no scripts** | Production apps using `-javaagent` |
 
-> **What just happened?** Those base images and sizes come straight from
+> **What just happened?** Those base images come straight from
 > [`docker/Dockerfile`](../../docker/Dockerfile), [`docker/Dockerfile.alpine`](../../docker/Dockerfile.alpine),
 > and [`docker/Dockerfile.distroless`](../../docker/Dockerfile.distroless). The first two `COPY`
 > the entire built distribution (`bin/`, `libs/`, `docs/`, `samples/`) to `/opt/btrace/` and put
@@ -186,7 +186,7 @@ worker=order-worker-2 order #3 total=414ms at 1783778034964
 > out: `kubectl get pod myapp -o yaml | grep shareProcessNamespace` is the first thing to check when
 > attach fails). The sidecar uses the **alpine** variant, not the full or distroless one — it needs
 > a shell and the full toolchain (`btrace`, `jps`) to run interactively via `kubectl exec`, but
-> doesn't need the ~10MB extra of samples/docs the full image carries. `SYS_PTRACE` is called out
+> doesn't need the samples/docs the full image carries. `SYS_PTRACE` is called out
 > explicitly in `docker/README.md`'s Best Practices as a required capability alongside
 > `shareProcessNamespace`; the rest of a hardened `securityContext` (`runAsNonRoot`,
 > `readOnlyRootFilesystem`, dropping `ALL` other capabilities) is standard Kubernetes practice, not

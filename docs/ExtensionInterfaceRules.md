@@ -8,7 +8,7 @@ This page defines the rules for authoring BTrace extension APIs (interfaces), th
 - Optional injection: A probe can mark an injected service as optional via `@Injected(optional = true)` and select the fallback mode:
   - `SHIM` (production): a no‑op object that implements the interface and returns defaults.
   - `THROW` (development): an object that throws on any method call with a clear error.
-  - Select per-field with `@Injected(mode = SHIM|THROW)`, or globally with `-Dbtrace.extension.shimMode=shim|throw` (default: `throw`).
+  - Select per-field with `@Injected(optional = true, mode = SHIM|THROW)`, or globally with `-Dbtrace.extension.shimMode=shim|throw` (default: `throw`). `mode` is only consulted when `optional = true`; a non-optional field never falls back.
 
 ## Authoring Rules
 - Form:
@@ -59,7 +59,7 @@ plugins {
 
 btraceExtension {
   id = 'btrace-metrics'
-  name = 'BTrace Metrics (HDR)'
+  name = 'BTrace HDR Histogram'
   description = 'HDR Histogram based metrics'
   services = ['io.btrace.metrics.MetricsService']
   // additionalExports = ['io.btrace.metrics.histogram.HistogramMetric']

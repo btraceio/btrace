@@ -19,7 +19,7 @@ ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:/opt/btrace/bin"
 
 ## Image Variants
 
-### `ghcr.io/btraceio/btrace:latest` (~25MB)
+### `ghcr.io/btraceio/btrace:latest`
 **Debian-based** - Full distribution with all tools and shell access
 
 - **Base:** OpenJDK 11 JDK on Debian Slim
@@ -31,7 +31,7 @@ ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:/opt/btrace/bin"
 FROM ghcr.io/btraceio/btrace:3.0.0
 ```
 
-### `ghcr.io/btraceio/btrace:latest-alpine` (~15MB)
+### `ghcr.io/btraceio/btrace:latest-alpine`
 **Alpine-based** - Smaller footprint for cloud environments
 
 - **Base:** Alpine Linux with OpenJDK 11
@@ -43,7 +43,7 @@ FROM ghcr.io/btraceio/btrace:3.0.0
 FROM ghcr.io/btraceio/btrace:3.0.0-alpine
 ```
 
-### `ghcr.io/btraceio/btrace:latest-distroless` (~10MB)
+### `ghcr.io/btraceio/btrace:latest-distroless`
 **Distroless** - Minimal attack surface for security-focused deployments
 
 - **Base:** Google Distroless Java 11
@@ -53,7 +53,7 @@ FROM ghcr.io/btraceio/btrace:3.0.0-alpine
 
 ```dockerfile
 FROM ghcr.io/btraceio/btrace:3.0.0-distroless AS btrace
-FROM gcr.io/distroless/java11
+FROM gcr.io/distroless/java11-debian11
 COPY --from=btrace /opt/btrace/libs /opt/btrace/libs
 ```
 
@@ -176,11 +176,11 @@ services:
 
 ## Image Selection Guide
 
-| Variant | Size | Shell | Scripts | Use Case |
+| Variant | Base | Shell | Scripts | Use Case |
 |---------|------|-------|---------|----------|
-| **latest** | ~25MB | ✓ | ✓ | Development, debugging |
-| **alpine** | ~15MB | ✓ | ✓ | Kubernetes sidecar |
-| **distroless** | ~10MB | ✗ | ✗ | Production agent mode |
+| **latest** | Debian (Liberica JDK 11) | ✓ | ✓ | Development, debugging |
+| **alpine** | Alpine (OpenJDK 11) | ✓ | ✓ | Kubernetes sidecar |
+| **distroless** | Distroless Java 11 | ✗ | ✗ | Production agent mode |
 
 **Recommendations:**
 - **Development:** Use `btrace:latest` for full tooling
@@ -330,7 +330,7 @@ ENV JAVA_OPTS="--add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAME
 ./gradlew :btrace-dist:buildDockerImages
 
 # Or build manually
-VERSION=3.0.0-SNAPSHOT  # Set this to your BTrace version
+VERSION=3.0.0  # Set this to your BTrace version
 cd docker
 docker build -t ghcr.io/btraceio/btrace:local -f Dockerfile ../btrace-dist/build/resources/main/v${VERSION}
 docker build -t ghcr.io/btraceio/btrace:local-alpine -f Dockerfile.alpine ../btrace-dist/build/resources/main/v${VERSION}

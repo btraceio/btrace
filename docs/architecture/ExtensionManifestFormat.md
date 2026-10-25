@@ -19,7 +19,7 @@ Using MANIFEST.MF for extension metadata provides:
 ```properties
 extension.id=btrace-metrics
 extension.version=3.0.0
-extension.name=BTrace Metrics
+extension.name=BTrace HDR Histogram
 extension.description=High-performance metrics...
 btrace.api.version=3.0+
 java.version=8+
@@ -33,7 +33,7 @@ shaded.packages=org.HdrHistogram->io.btrace.metrics.shaded.hdrhistogram
 ```
 BTrace-Extension-Id: btrace-metrics
 BTrace-Extension-Version: 3.0.0
-BTrace-Extension-Name: BTrace Metrics
+BTrace-Extension-Name: BTrace HDR Histogram
 BTrace-Extension-Description: High-performance metrics with HdrHistogram
  for percentiles and lock-free statistics
 BTrace-API-Version: 3.0+
@@ -64,7 +64,7 @@ BTrace-Extension-Permissions: NETWORK,THREADS
 
 **BTrace-Extension-Name**
 - Format: human-readable string
-- Example: `BTrace Metrics`
+- Example: `BTrace HDR Histogram`
 - Description: Display name for the extension
 
 **BTrace-Extension-Description**
@@ -156,7 +156,7 @@ jar {
     attributes(
       'BTrace-Extension-Id': 'btrace-metrics',
       'BTrace-Extension-Version': project.version,
-      'BTrace-Extension-Name': 'BTrace Metrics',
+      'BTrace-Extension-Name': 'BTrace HDR Histogram',
       'BTrace-Extension-Description': 'High-performance metrics...',
       'BTrace-API-Version': '3.0+',
       'BTrace-Java-Version': '8+',

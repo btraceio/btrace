@@ -196,7 +196,7 @@ rm docs/tutorials/demo/legacy/SlowChargeProbe.java.bak
 
 ## Go deeper
 
-- The complete picture — coordinates, packaging, `libs=` deprecation, wire protocol, license, and
+- The complete picture — coordinates, packaging, `libs=` removal, wire protocol, license, and
   the full Java support policy: [Migrating from 2.x to 3.0](../Migration-2.x-to-3.0.md)
 - Drop the imports entirely with the flat DSL: [From Oneliner to Script](02-oneliner-to-script.md)
 - Why Java < 17 is deprecated (and what BTrace itself gains from newer JDKs):

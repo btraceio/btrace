@@ -27,10 +27,10 @@ BTrace is a safe, dynamic tracing tool for the Java platform. It allows you to d
 2. **Extract** the distribution:
    ```bash
    # For .tar.gz
-   tar -xzf btrace-<version>.tar.gz
+   tar -xzf btrace-v<version>-bin.tar.gz
 
    # For .zip
-   unzip btrace-<version>.zip
+   unzip btrace-v<version>-bin.zip
    ```
 
 3. **Set environment variables** (optional but recommended):
@@ -43,12 +43,12 @@ BTrace is a safe, dynamic tracing tool for the Java platform. It allows you to d
 
 **RPM-based systems (RedHat, CentOS, Fedora):**
 ```bash
-sudo rpm -i btrace-<version>.rpm
+sudo rpm -i btrace-<version>-1.noarch.rpm
 ```
 
 **Debian-based systems (Ubuntu, Debian):**
 ```bash
-sudo dpkg -i btrace-<version>.deb
+sudo dpkg -i btrace_<version>-1_all.deb
 ```
 
 ### JBang Installation (Recommended for Quick Start)
@@ -101,10 +101,13 @@ java -javaagent:~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar
 ### Verify Installation
 
 ```bash
-btrace -h
+btrace --version
 # or with JBang
-jbang btrace@btraceio -h
+jbang btrace@btraceio --version
 ```
+
+The output is `BTrace v.<version> (<build commit>)`; a build made outside a git checkout prints
+`dev` instead of the commit.
 
 You should see the BTrace help message with available options.
 
@@ -373,7 +376,9 @@ Doctor reads target properties through the Attach API and then detaches. It repo
 JDK/vendor, Attach availability, an existing BTrace endpoint, and next-deployment remediation.
 Dynamic-agent loading permission is always reported as `not_tested`, because observing it would
 require the state-changing load that doctor deliberately avoids. Exit codes are stable: `0` ready,
-`2` preparation required, `3` inaccessible, and `4` unexpected failure or invalid invocation.
+`2` `PREPARATION_REQUIRED`, `3` `INACCESSIBLE`, and `4` `UNEXPECTED_FAILURE` or invalid invocation
+(the human report prints `Status: <STATUS> (exit <code>)`; `--json` uses lower-case names such as
+`preparation_required`).
 
 ### 3. Java Agent Mode (Pre-compiled Scripts)
 
@@ -416,6 +421,10 @@ BTrace 3.0 distinguishes launch-time startup scripts from prepared mode:
   java -javaagent:/path/to/btrace.jar=port=0 MyApp
   ```
 
+  A plain `java -javaagent:/path/to/btrace.jar MyApp` (no `port=`) is also a prepared endpoint,
+  authenticated the same way, on the default port 2020. The rule: the command server starts unless
+  `noServer=true` is given, or `script=`/`scriptdir=` is given and `noServer` is unset.
+
   The agent binds a loopback address, generates an owner-protected token file, and publishes the
   actual address, port, and token-file path through target JVM properties. A 3.0 client discovers
   those values through the Attach API when you run `btrace <pid> ...`; the token itself is never a
@@ -423,9 +432,13 @@ BTrace 3.0 distinguishes launch-time startup scripts from prepared mode:
 
   Use `authTokenFile=/owner/protected/path` to supply or create credentials at a controlled path,
   and `bindAddress=127.0.0.1` or `bindAddress=::1` to select a loopback family. Non-loopback and
-  wildcard addresses are rejected: the agent reports `invalid agent option bindAddress=<value>`
-  and starts without a command server, and the application keeps running. To keep a startup
-  script and accept later authenticated connections, set `noServer=false` explicitly.
+  wildcard addresses are rejected: the agent reports `invalid agent option bindAddress=<value>:
+  ...; the command server was not started` and starts without a command server, and the
+  application keeps running (see [Troubleshooting](Troubleshooting.md#invalid-agent-option-the-command-server-was-not-started)).
+  A fixed `port=` that is already in use is different: binding fails with a plain `BindException`
+  and agent initialization aborts, so prefer `port=0` when the port is not under your control. To
+  keep a startup script and accept later authenticated connections, set `noServer=false`
+  explicitly.
 
 Prepared-mode authentication runs before V1 or V2 negotiation and before every operational
 command. Older clients cannot connect to a 3.0 prepared endpoint. Remote prepared-mode operation
@@ -731,7 +744,9 @@ kubectl logs <pod-name> -c btrace
 ### Common Issues in K8s
 
 1. **PID Discovery**: Use `jps` or `ps aux` to find Java process ID
-2. **Port Conflicts**: BTrace uses port 2020 by default; use `-p` flag if needed
+2. **Port Conflicts**: BTrace uses port 2020 by default; use `-p` flag if needed. A fixed `port=`
+   that is already bound aborts agent initialization with a `BindException`, so prefer `port=0`
+   for prepared mode in pods
 3. **Security Policies**: Pod Security Policies may block ptrace; adjust as needed
 4. **Resource Limits**: BTrace overhead may trigger CPU/memory limits
 
@@ -739,7 +754,7 @@ For comprehensive troubleshooting, see [Troubleshooting: Kubernetes](Troubleshoo
 
 ## Fat Agent JAR (Single-JAR Deployment)
 
-For environments where managing multiple JARs is impractical (Spark executors, Hadoop nodes, minimal containers), BTrace provides a **fat agent JAR** with embedded extensions.
+For environments where even the `libs/btrace.jar` + `extensions/` directory layout is impractical (Spark executors, Hadoop nodes, minimal containers), BTrace provides a **fat agent JAR** with embedded extensions.
 
 ### Why Fat Agent?
 
@@ -853,8 +868,12 @@ Extensions embedded in a fat agent can automatically activate the right bundled 
 
 The unpublished Maven fat-agent module was removed for 3.0.0 because its pre-3.0 artifact contract
 cannot safely load published 3.0 extensions. Use the
-[`io.btrace.fat-agent` Gradle plugin](../btrace-gradle-plugin/README.md), or deploy the standard
-`io.btrace:btrace` artifact without embedded extensions.
+[`io.btrace.fat-agent` Gradle plugin](../btrace-gradle-plugin/README.md), or deploy the published
+`io.btrace:btrace` artifact directly. Note that the Maven artifact is itself a fat agent: it embeds
+the seven bundled extensions, because a Maven or JBang user has no `$BTRACE_HOME/extensions/`
+directory for the agent to discover. The distribution's `libs/btrace.jar` is the lean jar and
+relies on the `extensions/` directory next to it; the two behave the same once extensions are
+resolved.
 
 ## Common Pitfalls and Solutions
 

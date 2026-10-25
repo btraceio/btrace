@@ -115,7 +115,7 @@ btrace-hadoop.enabled=false
 ## Escape Hatch (last resort)
 
 - If absolutely unavoidable, append a single jar to the system CL:
-  - `-Dbtrace.system.appendJar=/abs/path/lib.jar -Dbtrace.trusted=true`
+  - `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM plus the `trusted=true` agent argument (`-javaagent:btrace.jar=trusted=true,...`); `-Dbtrace.trusted` has no effect
   - Restricted to `BTRACE_HOME` by default; override with `-Dbtrace.allowExternalLibs=true`.
 
 ## Hadoop Example (Sketch)

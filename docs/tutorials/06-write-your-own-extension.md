@@ -228,6 +228,10 @@ Note: This extension requires privileged permissions. You can allow all privileg
   btracex policy set --allowPrivileged true --policy-file ~/.btrace/permissions.properties
 ```
 
+> The `btracex policy edit` hint in that output is not implemented in 3.0.0: it prints
+> "Interactive editor not yet implemented; use 'btracex policy set' for now" and exits with
+> status 2. Use `btracex policy set` as shown on the next line.
+
 > **What just happened?** `btracex install` (`io.btrace.extcli.Installer`) recognized the path as
 > a local `.zip`, derived the id `order-counter` from the filename, and copied both jars into a
 > per-extension subdirectory under your extensions root — the same layout `btracex list` showed

@@ -79,7 +79,7 @@ btrace-metrics-3.0.0.jar
 # Extension identity
 extension.id=btrace-metrics
 extension.version=3.0.0
-extension.name=BTrace Metrics
+extension.name=BTrace HDR Histogram
 extension.description=High-performance metrics with HdrHistogram
 
 # API compatibility

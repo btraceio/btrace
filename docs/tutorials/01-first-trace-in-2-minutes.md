@@ -63,8 +63,10 @@ execution time: 342 ms
 > **What just happened?** BTrace compiled your one-liner into a tiny instrumentation program,
 > injected it into the running JVM, and hooked the return of `OrderService.processOrder` — all
 > while the app kept serving orders. Nothing was restarted, and when you detach, every hook is
-> cleanly removed. Curious what it generated? Re-run with `-Dbtrace.oneliner.dump=true` to see the
-> generated source.
+> cleanly removed. Curious what it generated? Re-run with
+> `JAVA_TOOL_OPTIONS="-Dbtrace.oneliner.dump=true" btrace -n ...` to see the generated source
+> (the property has to reach the client JVM; appending `-D...` to the `btrace` command line does
+> not work).
 
 Notice something? Most orders take well under 100 ms, but every now and then one takes 300+ ms.
 Let's isolate the slow ones.
@@ -136,5 +138,5 @@ terminal 1 when you're done.
 ## Go deeper
 
 - Full oneliner syntax (filters, `args`, `count`, regex patterns): [Oneliner Guide](../OnelinerGuide.md)
-- Turn a oneliner into a real script with the flat DSL: [Tutorial Lesson 7](../BTraceTutorial.md)
+- Turn a oneliner into a real script with the flat DSL: [From Oneliner to Script](02-oneliner-to-script.md)
 - Everything you can hook (`@OnMethod` locations, JFR, timers): [Quick Reference](../QuickReference.md)

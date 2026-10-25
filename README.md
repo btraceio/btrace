@@ -151,8 +151,8 @@ curl -Ls https://sh.jbang.dev | bash -s - app setup
 # Use BTrace immediately (replace <version> with desired version, e.g., 3.0.0)
 jbang io.btrace:btrace:<version> <PID> <script.java>
 
-# After first run, use shorter alias
-jbang btrace <PID> <script.java>
+# Or, after `jbang catalog add --name btraceio ...` (see above), use the catalog alias
+jbang btrace@btraceio <PID> <script.java>
 ```
 
 **Note:** Replace `<version>` with the desired BTrace version (e.g., `3.0.0`). See [releases](https://github.com/btraceio/btrace/releases) for available versions.
@@ -210,9 +210,9 @@ ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:${BTRACE_HOME}/bin"
 ```
 
 Available variants:
-- `ghcr.io/btraceio/btrace:latest` - Debian-based (~25MB)
-- `ghcr.io/btraceio/btrace:latest-alpine` - Alpine-based (~15MB)
-- `ghcr.io/btraceio/btrace:latest-distroless` - Distroless (~10MB)
+- `ghcr.io/btraceio/btrace:latest` - Debian-based, full tooling
+- `ghcr.io/btraceio/btrace:latest-alpine` - Alpine-based, smaller
+- `ghcr.io/btraceio/btrace:latest-distroless` - Distroless, agent-only (no shell)
 
 See [docker/README.md](docker/README.md) for complete Docker documentation.
 
@@ -220,8 +220,8 @@ See [docker/README.md](docker/README.md) for complete Docker documentation.
 
 **With JBang (no installation required):**
 ```sh
-# Attach to running application
-jbang btrace <PID> <trace_script.java>
+# Attach to running application (after `jbang catalog add --name btraceio ...`)
+jbang btrace@btraceio <PID> <trace_script.java>
 ```
 
 **With installed BTrace:**
@@ -245,7 +245,7 @@ Note: The legacy `libs`/profiles mechanism has been removed. Passing `libs=<prof
 - `docs/architecture/provided-style-extensions.md`
 - `docs/examples/README.md`
 
-As a last resort (discouraged), you may append a single jar to the system classpath: `-Dbtrace.system.appendJar=/abs/path/lib.jar -Dbtrace.trusted=true`.
+As a last resort (discouraged), you may append a single jar to the system classpath: set `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM together with the `trusted=true` **agent argument** (`-javaagent:btrace.jar=trusted=true,...`); the `-Dbtrace.trusted` system property has no effect and the agent ignores the jar without the agent argument.
 
 ### Fat Agent JAR (Single-JAR Deployment)
 
@@ -318,7 +318,7 @@ For comprehensive documentation, tutorials, and guides:
 * **[BTrace Wiki](https://github.com/btraceio/btrace/wiki/Home)** - External wiki with additional resources
 
 ### Extensions and Permissions
-BTrace supports extensions (like StatsdExtension) that provide additional functionality. Extensions require explicit permissions for security:
+BTrace supports extensions (like the bundled StatsD extension) that provide additional functionality. Extensions require explicit permissions for security:
 
 * **Default permissions** (always granted): MESSAGING, AGGREGATION, JFR_EVENTS, PROFILING
 * **Standard permissions** (granted unless denied): FILE_READ, SYSTEM_PROPS, THREAD_INFO, MEMORY_INFO
@@ -346,14 +346,14 @@ Extensions CLI: use `btracex` to inspect and manage extensions and the simplifie
   separately published third-party Maven coordinates. BTrace-built packages are supplied in the
   distribution's `extensions/` directory, not as individual Maven artifacts.
 
-Note: Extension “required permissions” are informational and help operators assess risk. Implementation linking is controlled by per‑extension allow/deny lists and the `allowPrivileged` flag; when blocked, APIs remain available and SHIMs are used so probes continue safely.
+Note: Extension “required permissions” are informational and help operators assess risk. Implementation linking is controlled by per‑extension allow/deny lists and the `allowPrivileged` flag. When an extension is blocked, a plain `@Injected` field fails the probe deployment fast; only `@Injected(optional = true)` falls back, and the fallback is a throwing stub by default (`mode = SHIM` or `-Dbtrace.extension.shimMode=shim` selects a no-op shim).
 
 #### Agent Policy and Allow/Deny Lists
 - Launch-time policy can be set via agent args (operator-controlled):
   - `-javaagent:btrace.jar=...,allowExtensions=btrace-statsd,my-metrics,denyExtensions=legacy-foo`
   - `-javaagent:btrace.jar=...,allowPrivileged=true` (every privileged extension; use with caution)
 - Optional policy file (process-local): `-Dbtrace.permissions=/path/to/permissions.properties` or `~/.btrace/permissions.properties`.
-- When an extension impl is blocked, the API remains on bootstrap so SHIMs can be generated.
+- When an extension impl is blocked, the API remains on bootstrap so `@Injected(optional = true)` fields can be bound to a shim or throwing stub; non-optional fields fail the probe fast.
 
 See docs/PermissionPolicy.md for details and examples.
 
@@ -385,6 +385,13 @@ because it cannot consume the published 3.0 extension layout safely. Use the
 **Script Compilation Plugin** ([external repo](https://github.com/btraceio/btrace-maven)):
 - Compilation of BTrace scripts during the build process
 - BTrace Project Archetype for quick project setup
+
+## Telemetry and privacy
+
+BTrace sends no telemetry unless you opt in. The default agent start performs no network operation
+and creates no telemetry thread; only the explicit `telemetry=true` agent argument enables a single
+`agent_start` event. See [Getting Started: Optional agent telemetry](docs/GettingStarted.md#optional-agent-telemetry)
+for what is sent and how to disable it again.
 
 ## Contributing
 

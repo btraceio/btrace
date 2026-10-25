@@ -20,9 +20,10 @@ import java.util.Collection;
 
 /**
  * The default instrumentation backend; delegates to the existing ASM-based pipeline. Handles class
- * file major versions up to {@value #MAX_ASM_MAJOR_VERSION} (Java 27), the highest version the
- * bundled ASM (9.10.1, see {@code settings.gradle}) can parse; newer class files are routed to the
- * ClassFile API backend. Bump this constant together with the ASM dependency.
+ * file major versions up to {@value #MAX_ASM_MAJOR_VERSION} (Java 27), the ceiling the ASM pipeline
+ * is validated against; newer class files are routed to the ClassFile API backend even when the
+ * bundled ASM release (see {@code settings.gradle}) could parse them. Raise this constant only
+ * after the instrumentor test data has been regenerated for the newer class-file version.
  */
 final class AsmInstrumentationBackend implements InstrumentationBackend {
 

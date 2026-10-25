@@ -18,6 +18,6 @@ COPY btrace/libs /opt/btrace/libs
 
 # Note: Distroless images don't support environment variables in the traditional way
 # Users should specify paths directly in their java command
-# Example: java -javaagent:/opt/btrace/libs/btrace-agent.jar=...
+# Example: java -javaagent:/opt/btrace/libs/btrace.jar=...
 
 WORKDIR /work

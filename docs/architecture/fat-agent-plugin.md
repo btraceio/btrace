@@ -6,12 +6,11 @@ The Fat Agent Plugin (`io.btrace.fat-agent`) creates self-contained agent JARs w
 
 ## Problem Statement
 
-Standard BTrace deployment previously required:
-1. Agent JAR (`btrace-agent.jar`)
-2. Boot JAR (`btrace-boot.jar`)
-3. Extension JARs in `$BTRACE_HOME/extensions/`
+Standard BTrace deployment consists of:
+1. The masked single jar `libs/btrace.jar` (agent, boot artifact and client in one)
+2. Extension directories under `$BTRACE_HOME/extensions/`
 
-> **Note:** The masked JAR architecture now consolidates agent and boot into a single `btrace.jar`. The multi-JAR layout above is the legacy approach.
+> **Note:** Before 3.0 this was three parts (`btrace-agent.jar`, `btrace-boot.jar`, extension JARs). That layout is gone; `btrace.jar` replaces the first two.
 
 This multi-JAR setup is problematic for:
 - **Spark/Hadoop**: Driver and executors need extensions without shared filesystem

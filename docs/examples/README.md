@@ -41,4 +41,4 @@ Notes
 - These are templates only; they are not maintained as core modules.
 - Prefer packaging application libraries with the application; avoid external classpath hints when possible.
 - For rare, short-term needs, the agent supports a single-jar escape hatch (discouraged):
-  - `-Dbtrace.system.appendJar=/abs/path/lib.jar -Dbtrace.trusted=true`
+  - `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM plus the `trusted=true` agent argument (`-Dbtrace.trusted` has no effect)

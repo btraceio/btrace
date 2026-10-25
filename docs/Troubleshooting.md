@@ -123,21 +123,27 @@ error: cannot find symbol
 
 **Common causes:**
 
-1. **Missing imports**
+1. **An explicit `BTraceUtils` import suppresses the flat-DSL auto-import**
+
+   BTrace 3.0 injects `import static io.btrace.BTrace.*` and `import io.btrace.core.annotations.*`
+   into every script, so bare `println(...)`, `@OnMethod` and the other flat-DSL helpers compile
+   without any import. If your script still carries `import static io.btrace.core.BTraceUtils.*`
+   (the 2.x style), the compiler treats that as "the script manages its own DSL import" and does
+   not inject `io.btrace.BTrace.*`; anything that exists only in the flat DSL then fails with
+   `cannot find symbol`.
    ```java
-   // Wrong
+   // Fails for flat-DSL helpers: the BTraceUtils import disables the auto-import
+   import static io.btrace.core.BTraceUtils.*;
+
    @BTrace
    public class MyTrace {
        @OnMethod(...)
        public static void handler() {
-           println("test");  // ERROR: cannot find symbol
+           println("test");
        }
    }
 
-   // Correct
-   import io.btrace.core.annotations.*;
-   import static io.btrace.core.BTraceUtils.*;
-
+   // Works: no imports at all (or `import static io.btrace.BTrace.*;` explicitly)
    @BTrace
    public class MyTrace {
        @OnMethod(...)
@@ -470,8 +476,9 @@ No methods matched for probe: ...
        // Only active when level >= 2
    }
 
-   // Control at runtime:
-   // Press Ctrl-C in btrace console, type: level 0
+   // Start at a given level with a script argument: btrace <PID> MyTrace.java level=0
+   // Change it later from a handler, e.g. @OnEvent("quiet") -> BTraceUtils.setInstrumentationLevel(0),
+   // triggered from the client console (Ctrl-C, "send event"). There is no console "level" command.
    ```
 
 3. **Avoid tracing high-frequency methods**
@@ -557,6 +564,30 @@ java -javaagent:btrace.jar=script=/absolute/path/MyTrace.class MyApp
 java -javaagent:btrace.jar=script=MyTrace.class \
      -cp /path/to/scripts:app.jar MyApp
 ```
+
+### Invalid agent option: the command server was not started
+
+**Error message:**
+```
+[BTrace Agent] invalid agent option bindAddress=0.0.0.0: BTrace 3.0 binds loopback addresses only (127.0.0.1 or ::1); the command server was not started
+```
+(or `invalid agent option port=70000: expected a port number between 0 and 65535; ...`)
+
+**Cause:** the `port=` or `bindAddress=` agent argument has a value the agent cannot use. The agent
+names the option and value on one line, skips the command server, and lets the application and any
+`script=` startup probes run; `btrace <pid>` later reports no endpoint (`btrace doctor <pid>` exits
+`2`).
+
+**Solutions:**
+- `bindAddress` must be a loopback address (`127.0.0.1` or `::1`); remote prepared mode is not
+  supported in 3.0.0
+- `port` must be `0`–`65535`; use `port=0` to let the OS pick a free port that 3.0 clients discover
+  through the Attach API
+
+A fixed port that is already in use is a different failure: binding throws a plain
+`java.net.BindException` and agent initialization aborts with
+`[BTrace Agent] FATAL: Initialization failed: java.net.BindException ...` (the application starts
+without BTrace). Pick another port or use `port=0`.
 
 ## Compatibility Issues
 
