@@ -34,6 +34,9 @@ public final class ClientLauncher {
       cmd.add("--add-exports");
       cmd.add("jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED");
     }
+    // bin/btrace points the client at <home>/libs so it finds <home>/extensions/*-api.jar when it
+    // compiles a probe that imports an extension's API
+    cmd.add("-Dbtrace.libs=" + env.btraceJarPath().getParent());
     cmd.add("-cp");
     cmd.add(env.btraceJarPath().toString());
     cmd.add("io.btrace.boot.Loader");
@@ -41,6 +44,7 @@ public final class ClientLauncher {
 
     ProcessBuilder pb = new ProcessBuilder(cmd);
     pb.environment().remove("JAVA_TOOL_OPTIONS");
+    pb.environment().put("BTRACE_HOME", env.btraceHome().toString());
     pb.directory(runDir.toFile());
     return new TargetProcess(pb.start(), -1, -1);
   }

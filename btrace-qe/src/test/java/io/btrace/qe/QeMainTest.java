@@ -22,9 +22,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.btrace.qe.exec.QeEnvironment;
 import io.btrace.qe.model.CaseDef;
+import io.btrace.qe.model.CaseVerdict;
 import io.btrace.qe.model.ExpectationDef;
+import io.btrace.qe.model.Finding;
 import io.btrace.qe.model.GivenDef;
 import io.btrace.qe.model.Intent;
+import io.btrace.qe.model.Severity;
+import io.btrace.qe.model.VerdictValue;
 import io.btrace.qe.report.ReproCommand;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -133,5 +137,75 @@ class QeMainTest {
         System.setProperty(keys[i], saved[i]);
       }
     }
+  }
+
+  private static CaseDef anyCase() {
+    return new CaseDef(
+        "x.case",
+        "x",
+        Intent.RESILIENCE,
+        "t",
+        null,
+        GivenDef.client(List.of("-p")),
+        List.of("runClient", "awaitExit"),
+        new ExpectationDef(null, Collections.<String>emptyList()),
+        CaseDef.TIER_FULL);
+  }
+
+  private static CaseVerdict withFinding(Severity severity) {
+    return new CaseVerdict(
+        anyCase(),
+        VerdictValue.FAIL,
+        VerdictValue.NA,
+        VerdictValue.NA,
+        List.of(Finding.of("x.case", severity, "s", "d")));
+  }
+
+  private static CaseVerdict clean() {
+    return new CaseVerdict(
+        anyCase(),
+        VerdictValue.PASS,
+        VerdictValue.NA,
+        VerdictValue.NA,
+        Collections.<Finding>emptyList());
+  }
+
+  private static CaseVerdict harnessError() {
+    return new CaseVerdict(
+        anyCase(),
+        VerdictValue.NA,
+        VerdictValue.NA,
+        VerdictValue.NA,
+        Collections.<Finding>emptyList(),
+        "harness: boom");
+  }
+
+  @Test
+  void withoutFailOnTheHarnessOnlyReports() {
+    assertEquals(0, QeMain.exitStatus(List.of(withFinding(Severity.S1), harnessError()), null));
+    assertEquals(0, QeMain.exitStatus(List.of(withFinding(Severity.S1)), ""));
+  }
+
+  @Test
+  void findingsAtOrAboveFailOnFailTheRun() {
+    assertEquals(1, QeMain.exitStatus(List.of(withFinding(Severity.S2)), "S2"));
+    assertEquals(1, QeMain.exitStatus(List.of(clean(), withFinding(Severity.S1)), "S2"));
+    assertEquals(0, QeMain.exitStatus(List.of(withFinding(Severity.S3)), "S2"));
+    assertEquals(0, QeMain.exitStatus(List.of(withFinding(Severity.S4), clean()), "S3"));
+    assertEquals(1, QeMain.exitStatus(List.of(withFinding(Severity.S4)), "S4"));
+    assertEquals(0, QeMain.exitStatus(Collections.<CaseVerdict>emptyList(), "S1"));
+  }
+
+  @Test
+  void harnessErrorsFailTheRunWheneverFailOnIsSet() {
+    assertEquals(1, QeMain.exitStatus(List.of(clean(), harnessError()), "S4"));
+    assertEquals(1, QeMain.exitStatus(List.of(harnessError()), "S1"));
+  }
+
+  @Test
+  void failOnAcceptsLowerCaseAndRejectsUnknownValues() {
+    assertEquals(1, QeMain.exitStatus(List.of(withFinding(Severity.S2)), "s2"));
+    assertEquals(1, QeMain.exitStatus(Collections.<CaseVerdict>emptyList(), "S9"));
+    assertEquals(1, QeMain.exitStatus(List.of(clean()), "high"));
   }
 }

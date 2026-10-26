@@ -40,6 +40,18 @@ The `demos` surface is outside the rotation: it replays the shipped demo scenari
     apps print `[demo] ... running - stop with Ctrl+C`).
   - `${targetDir}` is also substituted in `clientArgs` (`${targetDir}/LatencyHistogram.java`) and
     is only defined for `.java` targets. Sample: `cases/demos/01-oneliner-first-trace.yaml`.
+  - The harness presents the dist directory as an installation: `btrace.jar` under `<home>/libs/`,
+    the exploded extensions under `<home>/extensions/`. The client gets `-Dbtrace.libs=<home>/libs`
+    and both the client and the launched target get `BTRACE_HOME=<home>`, so a source probe that
+    imports an extension API (`io.btrace.metrics.MetricsService`, ...) compiles and the agent finds
+    the bundled extensions, as under `bin/btrace`.
+
+## Failing the build
+
+`./gradlew :btrace-qe:qe` only reports by default. `-Pqe.failOn=<S1|S2|S3|S4>` makes QeMain exit 1
+(and the task fail) when any finding is at or above that severity or any case had a harness error;
+the last `[qe] FAILED: ...` line names the counts and `build/qe-report/report.md`. An unknown value
+also fails, so a misspelled gate cannot pass silently. CI uses `-Pqe.failOn=S2`.
 
 ## Log
 

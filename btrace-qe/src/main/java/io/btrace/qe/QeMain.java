@@ -26,6 +26,7 @@ import io.btrace.qe.generate.CaseYamlWriter;
 import io.btrace.qe.model.CaseDef;
 import io.btrace.qe.model.CaseVerdict;
 import io.btrace.qe.model.Finding;
+import io.btrace.qe.model.Severity;
 import io.btrace.qe.model.VerdictValue;
 import io.btrace.qe.oracle.OracleRunner;
 import io.btrace.qe.report.EvidenceStore;
@@ -45,19 +46,22 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 public final class QeMain {
   private QeMain() {}
 
   public static void main(String[] args) {
+    int status = 1;
     try {
-      run();
+      status = run();
     } catch (Throwable t) {
       t.printStackTrace();
     } finally {
-      System.exit(0);
+      System.exit(status);
     }
   }
 
@@ -66,7 +70,10 @@ public final class QeMain {
     return raw == null || raw.isEmpty() || CaseDef.TIER_FULL.equals(raw) ? null : raw;
   }
 
-  static void run() throws Exception {
+  /**
+   * Returns the process exit status: 0, or 1 when {@code qe.failOn} is set and the run fails it.
+   */
+  static int run() throws Exception {
     System.setProperty("btrace.comm.protocol", "2");
     System.setProperty("btrace.comm.autoNegotiate", "false");
     System.setProperty("btrace.comm.forceVersion", "true");
@@ -154,6 +161,74 @@ public final class QeMain {
             + harnessErrors
             + " harness error(s). Report: "
             + reportDir.resolve("report.md"));
+    String failOn = System.getProperty("qe.failOn");
+    int status = exitStatus(verdicts, failOn);
+    if (status != 0) {
+      System.out.println(
+          "[qe] FAILED: "
+              + failureSummary(verdicts, failOn)
+              + "; see "
+              + reportDir.resolve("report.md"));
+    }
+    return status;
+  }
+
+  /**
+   * The exit status for {@code qe.failOn}: unset or empty means report only (0). Otherwise 1 when
+   * any finding is at or above that severity (S1 is the most severe) or any case had a harness
+   * error, or when the value is not a severity at all (a misconfigured gate must not pass).
+   */
+  static int exitStatus(List<CaseVerdict> verdicts, String failOn) {
+    if (failOn == null || failOn.trim().isEmpty()) {
+      return 0;
+    }
+    Severity threshold = parseSeverity(failOn);
+    if (threshold == null) {
+      return 1;
+    }
+    for (CaseVerdict v : verdicts) {
+      if (v.harnessError() != null) {
+        return 1;
+      }
+      for (Finding f : v.findings()) {
+        if (f.severity().compareTo(threshold) <= 0) {
+          return 1;
+        }
+      }
+    }
+    return 0;
+  }
+
+  private static Severity parseSeverity(String raw) {
+    try {
+      return Severity.valueOf(raw.trim().toUpperCase(Locale.ROOT));
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
+  }
+
+  private static String failureSummary(List<CaseVerdict> verdicts, String failOn) {
+    Severity threshold = parseSeverity(failOn);
+    if (threshold == null) {
+      return "unknown qe.failOn '"
+          + failOn
+          + "' (expected one of "
+          + Arrays.toString(Severity.values())
+          + ")";
+    }
+    int over = 0;
+    int harness = 0;
+    for (CaseVerdict v : verdicts) {
+      if (v.harnessError() != null) {
+        harness++;
+      }
+      for (Finding f : v.findings()) {
+        if (f.severity().compareTo(threshold) <= 0) {
+          over++;
+        }
+      }
+    }
+    return over + " finding(s) at or above " + threshold + ", " + harness + " harness error(s)";
   }
 
   /**

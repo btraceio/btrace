@@ -58,6 +58,8 @@ public final class TargetLauncher {
 
     ProcessBuilder pb = new ProcessBuilder(cmd);
     pb.environment().remove("JAVA_TOOL_OPTIONS");
+    // the agent discovers the bundled extensions from the installation root, as under bin/btrace
+    pb.environment().put("BTRACE_HOME", env.btraceHome().toString());
     pb.directory((source == null ? runDir : targetDir).toFile());
     return new TargetProcess(pb.start(), -1, port);
   }

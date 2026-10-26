@@ -101,6 +101,14 @@ public final class QeEnvironment {
     return btraceJarPath;
   }
 
+  /**
+   * The installation root the client and agent expect: {@code btrace.jar} sits in {@code
+   * <home>/libs/} and the exploded extensions in {@code <home>/extensions/}.
+   */
+  public Path btraceHome() {
+    return btraceJarPath.getParent().getParent();
+  }
+
   public Path probeClassesDir() {
     return probeClassesDir;
   }

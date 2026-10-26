@@ -65,13 +65,14 @@ task qe(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'io.btrace.qe.QeMain'
     configureQeEnvironment(it)
-    ['qe.surface', 'qe.case', 'qe.seed', 'qe.tier', 'qe.generate'].each { key ->
+    ['qe.surface', 'qe.case', 'qe.seed', 'qe.tier', 'qe.generate', 'qe.failOn'].each { key ->
         if (project.hasProperty(key)) {
             systemProperty key, project.property(key)
         }
     }
-    // an exploration tool, never a build gate
-    ignoreExitValue = true
+    // An exploration tool by default: findings are reported, never fatal. With -Pqe.failOn=<S1..S4>
+    // QeMain exits 1 on a finding at or above that severity (or a harness error) and the task fails.
+    ignoreExitValue = !project.hasProperty('qe.failOn')
 }
 
 // Unit tests stay fast and JVM-free; real-JVM self-tests run only in qeSelfTest.
