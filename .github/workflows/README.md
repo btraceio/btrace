@@ -26,6 +26,8 @@ This directory contains GitHub Actions workflows for continuous integration and 
   - Lane JDKs from actions/setup-java (newest Temurin build of each major); SDKMAN only for a major Adoptium has not published yet
   - Downloads build artifacts from previous job
   - Runs integration tests with `-Pintegration` flag
+- **qe:** Runs the `btrace-qe` harness (self tests plus every case surface, including the `demos`
+  replay of `demos/`) on Java 21 with the Java 24 toolchain
 - **publish:** Publishes artifacts to Maven Central
   - Only on `develop` branch
   - Requires GPG signing credentials
