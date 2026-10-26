@@ -16,17 +16,21 @@ These tutorials are hands-on labs; the concept-oriented companion is the
 | 02 | [From Oneliner to Script: The Flat DSL](02-oneliner-to-script.md) | turn a oneliner into a version-controllable script and add `@TLS` state | ~10 min |
 | 03 | [Upgrade from 2.x in 10 Minutes](03-upgrade-from-2x.md) | migrate scripts to the new package, and see why compiled probes need no changes at all | ~10 min |
 | 04 | [Extensions and Permissions Without Tears](04-extensions-and-permissions.md) | grant, deny, and inspect extension permissions against a live JVM | ~10 min |
-| 05 | [Let an AI Assistant Debug Your JVM in 10 Minutes](05-mcp-server.md) | find the BTrace MCP server, now shipped as the `btrace-observability` plugin in the external [agent-plugins](https://github.com/btraceio/agent-plugins) marketplace, and learn what to ask an assistant once it's installed (a short pointer, not a step-by-step lab) | ~2 min |
+| 05 | [Let an AI Assistant Debug Your JVM](05-mcp-server.md) | install the `btrace-observability` plugin from the external [agent-plugins](https://github.com/btraceio/agent-plugins) marketplace and have an AI assistant find the slow method and the swallowed exception in a live JVM, then check that it cleaned up | ~10 min |
 | 06 | [Write Your Own Extension in 30 Minutes](06-write-your-own-extension.md) | scaffold, build, install, and grant permissions for your own `io.btrace.extension` Gradle-plugin extension | ~25 min |
 | 07 | [Watch Your LLM App Think](07-llm-observability.md) | put a latency budget on an LLM call and read token/latency/cost and budget violations off one combined dashboard | ~10 min |
 | 08 | [One JAR to Rule Them All: Building a BTrace Fat Agent](08-fat-agent.md) | package BTrace plus a real extension into a single `-javaagent` JAR with the supported Gradle fat-agent plugin | ~15 min |
 | 09 | [BTrace in Kubernetes, the Sidecar Way](09-kubernetes-sidecar.md) | package BTrace into three container variants and attach across a container boundary, as a sidecar or a baked-in `-javaagent` | ~15 min |
+| 10 | [What Changed for 2.x Users, in 15 Minutes](10-whats-new-for-2x-users.md) | attach with a oneliner, run a 2.2.6-compiled probe untouched, migrate a 2.x source with one command, and swap `Aggregations` for `btrace-metrics` on one live JVM | ~15 min |
+| 11 | [Watch Your RAG Pipeline and Your Models](11-ai-workload-observability.md) | see empty retrievals, similarity scores and embedding-model latency from a live RAG answerer, using two bundled extensions in one probe | ~10 min |
+| 12 | [Attach to Production Without Fear](12-production-safe-attach.md) | start a JVM in prepared mode, check it with `btrace doctor`, attach with no flags, and watch the app's own throughput prove nothing is left behind after you exit | ~10 min |
 
-## Coming next
+## Demos
 
-This wave-2 batch closes out the planned hands-on series (tracked in
-`internal/plans/2026-07-11-v3.0.0-tutorials-plan.md`). A contingent T10 (BTrace Console TUI) exists
-only if that exploratory interface is greenlit for a future release.
+Each tutorial's commands are also packaged as a self-contained, replayable scenario under
+[`demos/`](../../demos/README.md): the target app, the probe, a `run.sh` that plays the whole story,
+and a README with the expected output. The `btrace-qe` harness replays those scenarios on every push,
+so what a tutorial promises is what the build checks.
 
 ## Conventions
 

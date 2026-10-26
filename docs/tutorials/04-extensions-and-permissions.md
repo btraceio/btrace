@@ -4,6 +4,10 @@ Give a probe a real capability — HdrHistogram-backed latency percentiles — i
 printing samples. Then see, precisely, what BTrace does when that capability isn't allowed, and
 how to inspect and manage that decision from the outside.
 
+![Demo 03: btrace-metrics blocked, explained, then allowed](images/03-metrics-and-permissions.gif)
+
+*Recorded from [`demos/03-metrics-and-permissions/run.sh`](../../demos/03-metrics-and-permissions/README.md); the MP4 is next to the GIF.*
+
 **Persona:** a Java developer who wants more than the flat DSL alone (aggregation, real metrics,
 integrations) without accidentally opening a hole in the target JVM. **Time:** ~10 minutes.
 

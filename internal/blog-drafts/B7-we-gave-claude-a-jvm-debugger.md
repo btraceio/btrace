@@ -13,18 +13,18 @@ The premise is simple: the BTrace MCP server is a small local process that speak
 stdio. No listening socket, no network exposure — your AI client launches it, manages its
 lifecycle, and calls its tools on your behalf. It no longer lives in the BTrace source tree or the
 binary distribution: it's part of the [BTrace Agent Plugins](https://github.com/btraceio/agent-plugins)
-marketplace, as the `btrace-observability` plugin. Install that plugin in your AI host and it
-registers the stdio server, which JBang launches from the plugin's bundled sources — on first use
+marketplace, as the `btrace-observability` plugin. Install that plugin in your AI host and you get a suite of skills (endpoint diagnostics, latency
+analysis, failure analysis, probe lifecycle, data safety and more) that decide how to investigate;
+underneath them it registers the stdio server, named `btrace`, which JBang launches from the plugin's bundled sources — on first use
 JBang downloads the single masked `io.btrace:btrace` jar, so there's nothing to build and no
 legacy `btrace-client.jar`/`btrace-agent.jar` layout to assemble. You need JBang and JDK 11 or
 newer, and the assistant has to run on a host that can attach to the target JVM. From then on
 you're describing symptoms instead of typing `btrace <PID> Script.java`. The
 [plugin README](https://github.com/btraceio/agent-plugins/tree/main/plugins/btrace-observability)
-has the host-specific installation steps and the current tool list.
+has the host-specific installation steps and the list of skills it bundles.
 
 ## The transcript
 
-<!-- VERIFY against btraceio/agent-plugins: the tool names (list_jvms, deploy_oneliner, detach_probe, list_probes, send_event, exit_probe), the tool output text, and the "one active session per PID" remark below were recorded against the MCP server that used to live in this repo (before ae2918d5 / #864 moved it out). Re-record or confirm against the current plugins/btrace-observability server before publishing. -->
 
 Here's what that actually looks like in practice, against the same order-processing demo app
 that's been the constant test subject of this whole tutorial series — a service with `chargeCard`
@@ -119,38 +119,41 @@ driving this tutorial series from the command line since lesson one. There's no 
 magic baked into the model's side of this — just an assistant that knows how to read a tool
 description and reach for the right one next.
 
-<!-- VERIFY against btraceio/agent-plugins: the prompt template names profile_method / diagnose_slow_endpoint / find_exception_source came from the in-repo server; confirm the plugin still ships them (and under these names) or drop this paragraph. -->
-If you'd rather skip the improvisation, the server we recorded this against also shipped ready-made
-prompt templates (at the time: `profile_method`, `diagnose_slow_endpoint`, and
-`find_exception_source`) that turn a question like "can you profile `OrderService.chargeCard`?"
-into a structured, step-by-step brief for the assistant to execute, escalating from a quick oneliner
-to a full histogram script only if needed. Same tools underneath, just sequenced by a template
-instead of invented turn by turn — check the plugin README for what the current release provides.
+The skills come first, and they are what make this more than a tool list. The plugin's skills tell
+the assistant how to scope a probe (an exact method before a package, a package before a wildcard),
+what not to print, and how long to leave the probe attached, and they point it at the server's
+tools when it needs to act. The `btrace` server also ships three ready-made prompt templates,
+`diagnose_slow_endpoint`, `find_exception_source` and `profile_method`, that turn a question like
+"can you profile `OrderService.chargeCard`?" into a structured brief for the assistant to execute.
+Same tools underneath, just sequenced by a template instead of invented turn by turn.
 
 ## The one thing to check before you rely on this
 
-<!-- VERIFY against btraceio/agent-plugins: whether the current server exposes a reconnect tool, whether list_probes shows only detached probes, and whether one session per PID is still enforced. The paragraph below is written to hold either way; tighten it once confirmed. -->
 Here's the part that's easy to skim past and shouldn't be: "detach" and "exit" are not the same
 thing, and the difference matters more when an assistant is driving. In the transcript above, the
-assistant detached from the first probe before deploying the second one. Detaching doesn't kill
-anything — the probe keeps running and collecting data on the target JVM, exactly as it does when
-you pick `6. detach client` from the CLI's `Ctrl+C` menu. On the CLI you'd get back to it with
-`btrace -r <probe id> <PID>`. When we recorded this session, the MCP server had no equivalent
-reconnect tool: it could list the detached probe, but not send it an event or shut it down. Whether
-the current plugin closes that gap is something to confirm in its README before you lean on it.
+assistant detached from the first probe before deploying the second one, because the server tracks
+one active session per PID and port. Detaching doesn't kill anything: the probe keeps running and
+collecting data on the target JVM, exactly as it does when you pick `6. detach client` from the
+CLI's `Ctrl+C` menu. On the CLI you'd get back to it with `btrace -r <probe id> <PID>`. The server
+has no resume tool. It can list detached probes (`list_probes` shows only those, not the ones still
+attached in the current session) and it can stop one (`stop_detached_probe`), but it cannot hand
+you back a live session or send a detached probe an event. The plugin's own guidance is to prefer
+`exit_probe`, to call `list_probes` before deploying so probes left by an earlier session are found
+instead of stacked on, and to stop someone else's listed probe only after you confirm it is no
+longer needed.
 
-Practically, that means you should treat a detach as potentially one-way for anything you want the
-assistant itself to clean up later. If you want the AI to be able to tear a probe down when you're
-done — rather than leaving it running until someone with shell access notices — ask it to *exit*
+Practically, that means you should treat a detach as a step that takes the probe out of the
+assistant's hands for anything but stopping it. If you want the AI to be able to tear a probe down when you're
+done — rather than leaving it running until someone remembers it — ask it to *exit*
 the probe rather than detach from it, and treat "detach" as a decision you're making on the AI's
 behalf, not a pause button. It's a small asymmetry, but it's exactly the kind of thing you want to
 know on day one rather than discover mid-incident when a probe you thought you could resume turns
-out to be reachable only by a human at a terminal.
+out to be stoppable but no longer steerable.
 
 None of this makes the tool less useful — the transcript above found a real bottleneck in five tool
 calls and zero typed oneliners. It just means the honest shape of the tool includes an edge worth
 knowing about before an AI assistant is the only thing standing between you and a probe you can't
-get back.
+steer any more.
 
 ---
 

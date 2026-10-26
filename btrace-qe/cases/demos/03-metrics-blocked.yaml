@@ -1,0 +1,21 @@
+id: demos.03-metrics-blocked
+surface: demos
+intent: conformance
+tier: smoke
+title: "demo 03: without a policy the privileged btrace-metrics extension is a throwing stub"
+spec:
+  doc: demos/03-metrics-and-permissions/README.md
+  claim: "LatencyHistogram.java on a JVM without a permission policy reports 'BTrace optional service unavailable: io.btrace.metrics.MetricsService'"
+given:
+  mode: attach
+  target: demos/01-oneliner/OrderServiceApp.java
+  readyRegex: "^\\[demo\\] order service running"
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "${pid}"
+    - "${targetDir}/../03-metrics-and-permissions/LatencyHistogram.java"
+steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "BTrace optional service unavailable: io\\.btrace\\.metrics\\.MetricsService"

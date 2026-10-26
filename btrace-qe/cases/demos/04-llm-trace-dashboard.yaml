@@ -1,0 +1,27 @@
+id: demos.04-llm-trace-dashboard
+surface: demos
+intent: conformance
+tier: smoke
+title: "demo 04: llm-trace and contracts report tokens, cost and budget checks from a timer handler"
+spec:
+  doc: demos/04-llm-trace/README.md
+  claim: "LlmTraceProbe.java prints an 'LLM + Contracts Dashboard' with the model's calls, estimated cost and the chat/latency contract every 5 seconds"
+given:
+  mode: attach
+  target: demos/04-llm-trace/LlmTicketApp.java
+  readyRegex: "^\\[demo\\] llm ticket summarizer running"
+  jvmArgs:
+    - "-Dbtrace.permissions=${targetDir}/permissions.properties"
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "${pid}"
+    - "${targetDir}/LlmTraceProbe.java"
+steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^=== LLM \\+ Contracts Dashboard ===$"
+    - "^Model: gpt-4o-mini \\(openai\\)$"
+    - "^\\s+Calls: [1-9]\\d*$"
+    - "^\\s+Est\\. cost: \\$\\d+\\.\\d+$"
+    - "^Contract: chat/latency$"

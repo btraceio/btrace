@@ -1,0 +1,23 @@
+id: demos.01-oneliner-error-stack
+surface: demos
+intent: conformance
+tier: smoke
+title: "demo 01: @error oneliner shows the swallowed exception's call path"
+spec:
+  doc: demos/01-oneliner/README.md
+  claim: "btrace -n 'OrderService::validateOrder @error { print method, stack }' prints validateOrder and the calling frames"
+given:
+  mode: attach
+  target: demos/01-oneliner/OrderServiceApp.java
+  readyRegex: "^\\[demo\\] order service running"
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "-n"
+    - "OrderService::validateOrder @error { print method, stack }"
+    - "${pid}"
+steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^validateOrder$"
+    - "^OrderService\\.processOrder\\(OrderServiceApp\\.java:\\d+\\)$"

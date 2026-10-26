@@ -1,0 +1,27 @@
+id: demos.05-rag-and-inference-dashboard
+surface: demos
+intent: conformance
+tier: smoke
+title: "demo 05: rag-quality and gpu-bridge summaries come from the same instances the handlers record into"
+spec:
+  doc: demos/05-rag-and-inference/README.md
+  claim: "AiWorkloadProbe.java prints a 'RAG + Inference Dashboard' with the vectorstore query count and the onnx/embed-small inference count"
+given:
+  mode: attach
+  target: demos/05-rag-and-inference/RagSearchApp.java
+  readyRegex: "^\\[demo\\] rag answerer running"
+  jvmArgs:
+    - "-Dbtrace.permissions=${targetDir}/permissions.properties"
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "${pid}"
+    - "${targetDir}/AiWorkloadProbe.java"
+steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^=== RAG \\+ Inference Dashboard ===$"
+    - "^Source: vectorstore$"
+    - "^\\s+Queries: [1-9]\\d*"
+    - "^Model: onnx/embed-small$"
+    - "^\\s+Inferences: [1-9]\\d*$"

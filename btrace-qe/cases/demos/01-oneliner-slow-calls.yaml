@@ -1,0 +1,23 @@
+id: demos.01-oneliner-slow-calls
+surface: demos
+intent: conformance
+tier: smoke
+title: "demo 01: wildcard oneliner with a duration filter finds chargeCard"
+spec:
+  doc: demos/01-oneliner/README.md
+  claim: "btrace -n 'OrderService::* @return if duration>200ms { print method, time }' prints only the slow calls, chargeCard first"
+given:
+  mode: attach
+  target: demos/01-oneliner/OrderServiceApp.java
+  readyRegex: "^\\[demo\\] order service running"
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "-n"
+    - "OrderService::* @return if duration>200ms { print method, time }"
+    - "${pid}"
+steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^chargeCard$"
+    - "^execution time: [2-9]\\d\\d ms$"

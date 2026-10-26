@@ -1,0 +1,24 @@
+id: demos.03-metrics-allowed
+surface: demos
+intent: conformance
+tier: smoke
+title: "demo 03: with allowExtensions=btrace-metrics the histogram reports p50/p95/p99"
+spec:
+  doc: demos/03-metrics-and-permissions/README.md
+  claim: "java -Dbtrace.permissions=permissions.properties ... then LatencyHistogram.java prints 'chargeCard p50=..ms p95=..ms p99=..ms (n=..)'"
+given:
+  mode: attach
+  target: demos/01-oneliner/OrderServiceApp.java
+  readyRegex: "^\\[demo\\] order service running"
+  jvmArgs:
+    - "-Dbtrace.permissions=${targetDir}/../03-metrics-and-permissions/permissions.properties"
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "${pid}"
+    - "${targetDir}/../03-metrics-and-permissions/LatencyHistogram.java"
+steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^=== Latency Report ===$"
+    - "^chargeCard\\s+p50=\\d+ms\\s+p95=\\d+ms\\s+p99=\\d+ms\\s+\\(n=\\d+\\)$"

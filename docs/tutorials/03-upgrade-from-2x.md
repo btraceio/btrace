@@ -4,6 +4,10 @@ Move your scripts and deployments to BTrace 3.0. For almost everything, the answ
 need to change?" is **nothing** — this tutorial proves it, and shows you the one-line fix for the
 rest.
 
+![Demo 02: a BTrace 2.2.6 probe deploys on 3.0 untouched](images/02-upgrade-from-2x.gif)
+
+*Recorded from [`demos/02-upgrade-from-2x/run.sh`](../../demos/02-upgrade-from-2x/README.md); the MP4 is next to the GIF.*
+
 **Persona:** BTrace 2.x users planning a move to 3.0. **Time:** ~10 minutes.
 
 ## What you'll need

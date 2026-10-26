@@ -3,6 +3,10 @@
 Trace a live JVM — no code changes, no restart, no config. You'll find a latency bug and an
 intermittent exception in a running application using nothing but one-line commands.
 
+![Demo 01: three oneliners against the live order service](images/01-oneliner.gif)
+
+*Recorded from [`demos/01-oneliner/run.sh`](../../demos/01-oneliner/README.md); the MP4 is next to the GIF.*
+
 **Persona:** anyone with a JVM that's misbehaving. **Time:** ~5 minutes (first trace in 2).
 
 ## What you'll need

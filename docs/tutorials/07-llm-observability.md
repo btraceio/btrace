@@ -4,6 +4,10 @@ Put a hard latency budget on an LLM call and watch token counts, cost, and budge
 up on one combined dashboard — no code changes to the app making the calls, and no SDK, log
 shipper, or external service in between.
 
+![Demo 04: tokens, cost and a latency budget on a chat client](images/04-llm-trace.gif)
+
+*Recorded from [`demos/04-llm-trace/run.sh`](../../demos/04-llm-trace/README.md); the MP4 is next to the GIF.*
+
 **Persona:** anyone instrumenting an AI-powered feature who wants token/latency/cost visibility
 without adding a tracing SDK. **Time:** ~10 minutes.
 

@@ -1,0 +1,21 @@
+id: demos.07-prepared-mode-attach
+surface: demos
+intent: conformance
+tier: smoke
+title: "demo 07: a JVM prepared with port=0 accepts a client that passes no port and no token"
+spec:
+  doc: demos/07-production-safe-attach/README.md
+  claim: "java -javaagent:btrace.jar=port=0 HotLoopApp.java, then btrace <PID> HotPathProbe.java with no flags, prints '[probe] attached'"
+given:
+  mode: attach
+  target: demos/07-production-safe-attach/HotLoopApp.java
+  readyRegex: "^\\[demo\\] hot loop running"
+  jvmArgs:
+    - "-javaagent:${btraceJar}=port=0"
+  clientArgs:
+    - "${pid}"
+    - "${targetDir}/HotPathProbe.java"
+steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^\\[probe\\] attached$"

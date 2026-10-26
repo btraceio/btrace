@@ -1,0 +1,21 @@
+id: demos.02-legacy-compiled-probe
+surface: demos
+intent: conformance
+tier: smoke
+title: "demo 02: a probe compiled with BTrace 2.2.6 deploys on the 3.0 agent untouched"
+spec:
+  doc: demos/02-upgrade-from-2x/README.md
+  claim: "legacy/SlowChargeProbe.class (org.openjdk.btrace, packed by 2.2.6 btracec) prints 'slow chargeCard: N ms'"
+given:
+  mode: attach
+  target: demos/01-oneliner/OrderServiceApp.java
+  readyRegex: "^\\[demo\\] order service running"
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "${pid}"
+    - "${targetDir}/../02-upgrade-from-2x/legacy/SlowChargeProbe.class"
+steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^slow chargeCard: \\d+ ms$"
