@@ -57,8 +57,10 @@ public final class CaseYamlWriter {
     Map<String, Object> given = new LinkedHashMap<>();
     GivenDef g = def.given();
     given.put("mode", g.mode().name().toLowerCase(Locale.ROOT));
-    if (g.mode() == GivenDef.Mode.TARGET) {
+    if (g.mode() != GivenDef.Mode.CLIENT) {
       given.put("target", g.target());
+    }
+    if (g.mode() == GivenDef.Mode.TARGET) {
       given.put("agentArgs", g.agentArgs());
     } else {
       given.put("clientArgs", g.clientArgs());
@@ -71,6 +73,9 @@ public final class CaseYamlWriter {
     }
     if (!def.expect().messageMustMention().isEmpty()) {
       expect.put("messageMustMention", def.expect().messageMustMention());
+    }
+    if (!def.expect().outputMustMatch().isEmpty()) {
+      expect.put("outputMustMatch", def.expect().outputMustMatch());
     }
     doc.put("expect", expect);
 

@@ -275,4 +275,97 @@ class OracleRunnerTest {
     assertEquals(VerdictValue.GOOD, v.guidance());
     assertTrue(v.findings().isEmpty());
   }
+
+  private static final List<String> ATTACH_STEPS =
+      List.of("launch", "awaitReady", "attach", "awaitOutput", "detach", "shutdown", "awaitExit");
+
+  private static CaseDef attach(String id, List<String> outputMustMatch) {
+    return new CaseDef(
+        id,
+        "demos",
+        Intent.RESILIENCE,
+        id,
+        null,
+        GivenDef.attach("AttachDemoTarget", List.of("-n", "X::y { print method }", "${pid}")),
+        ATTACH_STEPS,
+        new ExpectationDef(null, Collections.<String>emptyList(), outputMustMatch),
+        CaseDef.TIER_FULL);
+  }
+
+  private static ExecutionTrace attachTrace(List<String> clientOut) {
+    List<StepOutcome> steps =
+        ATTACH_STEPS.stream().map(s -> StepOutcome.ok(s, 1)).collect(Collectors.toList());
+    return new ExecutionTrace(
+        steps,
+        false,
+        false,
+        0,
+        List.of("ready:1"),
+        List.of(),
+        null,
+        null,
+        false,
+        null,
+        clientOut,
+        List.of());
+  }
+
+  @Test
+  void attachCaseWithAllOutputMatchedInOrderIsClean() {
+    CaseVerdict v =
+        new OracleRunner()
+            .evaluate(
+                attach("k", List.of("^work$", "execution time: \\d+ ms")),
+                attachTrace(List.of("work", "execution time: 7 ms", "work")));
+    assertEquals(VerdictValue.PASS, v.resilience());
+    assertTrue(v.findings().isEmpty(), "findings=" + v.findings());
+  }
+
+  @Test
+  void attachCaseMissingExpectedOutputIsS2() {
+    CaseVerdict v =
+        new OracleRunner()
+            .evaluate(
+                attach("l", List.of("^work$", "execution time: \\d+ ms")),
+                attachTrace(List.of("work", "work")));
+    assertEquals(VerdictValue.FAIL, v.resilience());
+    assertNull(v.harnessError());
+    assertEquals(1, v.findings().size(), "findings=" + v.findings());
+    assertEquals(Severity.S2, v.findings().get(0).severity());
+    assertTrue(
+        v.findings().get(0).detail().contains("execution time"), v.findings().get(0).detail());
+  }
+
+  @Test
+  void attachCaseOutputOutOfOrderIsS2() {
+    CaseVerdict v =
+        new OracleRunner()
+            .evaluate(
+                attach("m", List.of("^work$", "execution time: \\d+ ms")),
+                attachTrace(List.of("execution time: 7 ms", "work")));
+    assertEquals(VerdictValue.FAIL, v.resilience());
+    assertEquals(Severity.S2, v.findings().get(0).severity());
+  }
+
+  @Test
+  void attachCaseWhoseAwaitOutputNeverRanIsNotJudgedOnOutput() {
+    ExecutionTrace t =
+        new ExecutionTrace(
+            List.of(
+                StepOutcome.ok("launch", 10), StepOutcome.failed("awaitReady", 30000, "timed out")),
+            true,
+            false,
+            null,
+            List.of(),
+            List.of(),
+            null,
+            "Full thread dump",
+            false,
+            null,
+            List.of(),
+            List.of());
+    CaseVerdict v = new OracleRunner().evaluate(attach("n", List.of("^work$")), t);
+    assertEquals(1, v.findings().size(), "findings=" + v.findings());
+    assertEquals(Severity.S1, v.findings().get(0).severity());
+  }
 }

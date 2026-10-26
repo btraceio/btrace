@@ -52,7 +52,7 @@ public final class YamlCaseLoader {
   private static final Set<String> GIVEN_KEYS =
       new HashSet<>(Arrays.asList("mode", "target", "agentArgs", "clientArgs"));
   private static final Set<String> EXPECT_KEYS =
-      new HashSet<>(Arrays.asList("exitCode", "messageMustMention"));
+      new HashSet<>(Arrays.asList("exitCode", "messageMustMention", "outputMustMatch"));
 
   public List<CaseDef> loadAll(Path corpusDir) throws IOException {
     if (!Files.isDirectory(corpusDir)) {
@@ -151,8 +151,13 @@ public final class YamlCaseLoader {
       rejectKeys(file, given, "client", "target", "agentArgs");
       return GivenDef.client(requireStringList(file, given, "clientArgs"));
     }
+    if ("ATTACH".equals(mode)) {
+      rejectKeys(file, given, "attach", "agentArgs");
+      return GivenDef.attach(
+          requireString(file, given, "target"), requireStringList(file, given, "clientArgs"));
+    }
     throw new CaseValidationException(
-        file + ": given.mode must be 'target' or 'client', was " + mode);
+        file + ": given.mode must be 'target', 'client' or 'attach', was " + mode);
   }
 
   private void rejectKeys(Path file, Map<String, Object> given, String modeName, String... keys) {
@@ -180,7 +185,11 @@ public final class YamlCaseLoader {
         expect.containsKey("messageMustMention")
             ? requireStringList(file, expect, "messageMustMention")
             : Collections.<String>emptyList();
-    return new ExpectationDef(exitCode, mentions);
+    List<String> outputMustMatch =
+        expect.containsKey("outputMustMatch")
+            ? requireStringList(file, expect, "outputMustMatch")
+            : Collections.<String>emptyList();
+    return new ExpectationDef(exitCode, mentions, outputMustMatch);
   }
 
   private Map<String, Object> asMap(Path file, String what, Object value, Set<String> allowedKeys) {

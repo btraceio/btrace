@@ -23,13 +23,23 @@ import java.util.List;
 public final class ExpectationDef {
   private final Integer exitCode;
   private final List<String> messageMustMention;
+  private final List<String> outputMustMatch;
 
   public ExpectationDef(Integer exitCode, List<String> messageMustMention) {
+    this(exitCode, messageMustMention, null);
+  }
+
+  public ExpectationDef(
+      Integer exitCode, List<String> messageMustMention, List<String> outputMustMatch) {
     this.exitCode = exitCode;
-    this.messageMustMention =
-        messageMustMention == null
-            ? Collections.<String>emptyList()
-            : Collections.unmodifiableList(new ArrayList<>(messageMustMention));
+    this.messageMustMention = copy(messageMustMention);
+    this.outputMustMatch = copy(outputMustMatch);
+  }
+
+  private static List<String> copy(List<String> list) {
+    return list == null
+        ? Collections.<String>emptyList()
+        : Collections.unmodifiableList(new ArrayList<>(list));
   }
 
   public Integer exitCode() {
@@ -38,5 +48,13 @@ public final class ExpectationDef {
 
   public List<String> messageMustMention() {
     return messageMustMention;
+  }
+
+  /**
+   * Regular expressions that must each match a line of the attached client's output, in this order
+   * (a later pattern is only searched after the line that satisfied the previous one).
+   */
+  public List<String> outputMustMatch() {
+    return outputMustMatch;
   }
 }

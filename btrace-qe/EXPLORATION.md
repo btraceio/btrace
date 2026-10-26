@@ -7,6 +7,26 @@ Every idea explored for the corpus, kept or not, so later sessions don't repeat 
 
 agent-args → cli → (blocked surfaces: script-compile, lifecycle, protocol, extensions)
 
+The `demos` surface is outside the rotation: it replays the shipped demo scenarios (`demos/`,
+`docs/tutorials/`) rather than probing for misuse, so a finding there means a demo is broken.
+
+## Case shapes
+
+- `given.mode: target` — launch a fixture JVM with the agent (`given.target`, `given.agentArgs`);
+  steps `launch`, `awaitReady`, `canary`, `shutdown`, `awaitExit`.
+- `given.mode: client` — run the CLI on its own (`given.clientArgs`); steps `runClient`, `awaitExit`.
+- `given.mode: attach` — launch a fixture JVM *without* the agent (`given.target`) and attach the
+  real CLI to it by PID (`given.clientArgs`; `${pid}`, `${port}` and `${runDir}` are substituted,
+  so `-p ${port}` keeps concurrent runs off the default port 2020). Steps, in this order:
+  `launch`, `awaitReady`, `attach`, `awaitOutput`, `detach`, `shutdown`, `awaitExit` (`attach` needs
+  `awaitReady` first; `awaitOutput`/`detach` need `attach` first; `detach` is optional). `awaitOutput`
+  waits, within the step budget, for `expect.outputMustMatch` — regexes that must each match a line
+  of the *client's* stdout, in order — and a pattern that never shows up is an S2 finding, not a
+  hang. `detach` ends the client the way Ctrl+C would (TERM → shutdown hook → exit command), so the
+  target must still be alive for `shutdown` to stop it cleanly. Evidence adds `client-stdout.log`
+  and `client-stderr.log`. Sample: `cases/demos/attach-oneliner-smoke.yaml`; fixture:
+  `qe.targets.AttachDemoTarget` (prints `ready:<pid>`, calls `work(int)` every 50 ms).
+
 ## Log
 
 - 2026-10-25 agent-args wrong type — non-numeric fileRollMaxRolls — agent/Main.java parseArgs (NumberFormatException swallowed) — kept agent-args.fileroll-maxrolls-non-numeric (S4)

@@ -29,7 +29,9 @@ public final class GuidanceCheck implements InvariantCheck {
   public CheckResult check(CaseDef def, ExecutionTrace trace) {
     List<String> required = def.expect().messageMustMention();
     String firstFrame = null;
-    for (String line : trace.stderr()) {
+    List<String> stderr = new ArrayList<>(trace.stderr());
+    stderr.addAll(trace.clientStderr());
+    for (String line : stderr) {
       if (STACK_FRAME.matcher(line).matches()) {
         firstFrame = line.trim();
         break;
@@ -46,7 +48,12 @@ public final class GuidanceCheck implements InvariantCheck {
               + firstFrame
               + ")");
     }
-    String combined = String.join("\n", trace.stdout()) + "\n" + String.join("\n", trace.stderr());
+    String combined =
+        String.join("\n", trace.stdout())
+            + "\n"
+            + String.join("\n", stderr)
+            + "\n"
+            + String.join("\n", trace.clientStdout());
     List<String> missing = new ArrayList<>();
     for (String token : required) {
       if (!combined.contains(token)) {

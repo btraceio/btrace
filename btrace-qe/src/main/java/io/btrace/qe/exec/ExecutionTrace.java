@@ -17,6 +17,7 @@
 package io.btrace.qe.exec;
 
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.List;
 
 public final class ExecutionTrace {
@@ -30,6 +31,8 @@ public final class ExecutionTrace {
   private final String threadDumpText;
   private final boolean hasHsErrLog;
   private final Path runDir;
+  private final List<String> clientStdout;
+  private final List<String> clientStderr;
 
   public ExecutionTrace(
       List<StepOutcome> steps,
@@ -42,6 +45,35 @@ public final class ExecutionTrace {
       String threadDumpText,
       boolean hasHsErrLog,
       Path runDir) {
+    this(
+        steps,
+        timedOut,
+        exitedPrematurely,
+        exitCode,
+        stdout,
+        stderr,
+        canaryOk,
+        threadDumpText,
+        hasHsErrLog,
+        runDir,
+        Collections.<String>emptyList(),
+        Collections.<String>emptyList());
+  }
+
+  /** The two trailing lists are the attached client's output; empty outside attach mode. */
+  public ExecutionTrace(
+      List<StepOutcome> steps,
+      boolean timedOut,
+      boolean exitedPrematurely,
+      Integer exitCode,
+      List<String> stdout,
+      List<String> stderr,
+      Boolean canaryOk,
+      String threadDumpText,
+      boolean hasHsErrLog,
+      Path runDir,
+      List<String> clientStdout,
+      List<String> clientStderr) {
     this.steps = steps;
     this.timedOut = timedOut;
     this.exitedPrematurely = exitedPrematurely;
@@ -52,6 +84,8 @@ public final class ExecutionTrace {
     this.threadDumpText = threadDumpText;
     this.hasHsErrLog = hasHsErrLog;
     this.runDir = runDir;
+    this.clientStdout = clientStdout;
+    this.clientStderr = clientStderr;
   }
 
   public List<StepOutcome> steps() {
@@ -92,6 +126,16 @@ public final class ExecutionTrace {
 
   public Path runDir() {
     return runDir;
+  }
+
+  /** Stdout of the client attached by an {@code attach} step; empty in other modes. */
+  public List<String> clientStdout() {
+    return clientStdout;
+  }
+
+  /** Stderr of the client attached by an {@code attach} step; empty in other modes. */
+  public List<String> clientStderr() {
+    return clientStderr;
   }
 
   /**

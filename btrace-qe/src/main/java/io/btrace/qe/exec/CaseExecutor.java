@@ -30,6 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public final class CaseExecutor {
@@ -42,10 +43,17 @@ public final class CaseExecutor {
   /** Mutable per-case state shared with step bodies running on the watchdog thread. */
   private static final class State {
     volatile TargetProcess process;
+
+    /** The CLI attached by an {@code attach} step; null in other modes. */
+    volatile TargetProcess client;
+
     volatile Boolean canaryOk;
     volatile boolean shutdownSent;
     volatile boolean diedBeforeReady;
   }
+
+  /** How long {@code detach} gives the client to run its shutdown hook before it is killed. */
+  private static final long CLIENT_DETACH_GRACE_MS = 5_000L;
 
   public ExecutionTrace execute(final CaseDef def, final Path runDir) {
     final long stepTimeoutMs = env.defaultTimeoutMs();
@@ -100,26 +108,20 @@ public final class CaseExecutor {
       }
     }
 
+    // the client goes first: a client still attached would otherwise see the target vanish
+    TargetProcess client = state.client;
+    if (client != null) {
+      reap(client);
+    }
     TargetProcess p = state.process;
     Integer exitCode = null;
     boolean exitedPrematurely = false;
     if (p != null) {
       if (!p.isAlive()) {
         exitCode = p.process().exitValue();
-        exitedPrematurely = def.given().mode() == GivenDef.Mode.TARGET && !state.shutdownSent;
-      } else {
-        p.destroyForcibly();
-        try {
-          p.process().waitFor(5, TimeUnit.SECONDS);
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-        }
+        exitedPrematurely = def.given().mode() != GivenDef.Mode.CLIENT && !state.shutdownSent;
       }
-      try {
-        p.awaitOutputDrained(2_000L);
-      } catch (InterruptedException ie) {
-        Thread.currentThread().interrupt();
-      }
+      reap(p);
     }
     List<String> stdout = p != null ? p.stdoutSnapshot() : Collections.<String>emptyList();
     List<String> stderr = p != null ? p.stderrSnapshot() : Collections.<String>emptyList();
@@ -133,7 +135,26 @@ public final class CaseExecutor {
         state.canaryOk,
         threadDump,
         hasHsErrLog(runDir),
-        runDir);
+        runDir,
+        client != null ? client.stdoutSnapshot() : Collections.<String>emptyList(),
+        client != null ? client.stderrSnapshot() : Collections.<String>emptyList());
+  }
+
+  /** Kills a process that is still alive and drains its output so the snapshots are complete. */
+  private static void reap(TargetProcess p) {
+    if (p.isAlive()) {
+      p.destroyForcibly();
+      try {
+        p.process().waitFor(5, TimeUnit.SECONDS);
+      } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
+      }
+    }
+    try {
+      p.awaitOutputDrained(2_000L);
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   private void runStep(String step, CaseDef def, Path runDir, long timeoutMs, State state)
@@ -170,6 +191,22 @@ public final class CaseExecutor {
       case "runClient":
         state.process = new ClientLauncher().launch(def.given().clientArgs(), env, runDir);
         break;
+      case "attach":
+        state.client =
+            new ClientLauncher()
+                .launch(
+                    resolveClientArgs(def.given().clientArgs(), state.process, runDir),
+                    env,
+                    runDir);
+        break;
+      case "awaitOutput":
+        // bounded inside the step budget: a missing line is a finding for the oracle, not a hang
+        awaitOutput(
+            state.client, def.expect().outputMustMatch(), Math.max(1_000L, timeoutMs - 3_000L));
+        break;
+      case "detach":
+        detach(state.client);
+        break;
       case "awaitExit":
         if (!state.process.process().waitFor(timeoutMs, TimeUnit.MILLISECONDS)) {
           Thread.sleep(Long.MAX_VALUE);
@@ -177,6 +214,54 @@ public final class CaseExecutor {
         break;
       default:
         throw new IllegalStateException("unknown step: " + step);
+    }
+  }
+
+  /**
+   * Substitutes {@code ${pid}} (the launched target's PID), {@code ${port}} (the port the harness
+   * reserved for the target) and {@code ${runDir}} in the client arguments.
+   */
+  static List<String> resolveClientArgs(List<String> raw, TargetProcess target, Path runDir) {
+    List<String> out = new ArrayList<>(raw.size());
+    for (String arg : raw) {
+      out.add(
+          arg.replace("${pid}", String.valueOf(target.pid()))
+              .replace("${port}", String.valueOf(target.assignedPort()))
+              .replace("${runDir}", runDir.toString()));
+    }
+    return out;
+  }
+
+  /** Waits, in order, for a client stdout line matching each pattern; gives up at the deadline. */
+  private static void awaitOutput(TargetProcess client, List<String> patterns, long budgetMs)
+      throws InterruptedException {
+    long deadline = System.currentTimeMillis() + budgetMs;
+    int from = 0;
+    for (String regex : patterns) {
+      long remaining = deadline - System.currentTimeMillis();
+      if (remaining <= 0) {
+        return;
+      }
+      int at = client.awaitMatch(Pattern.compile(regex), from, remaining);
+      if (at < 0) {
+        return;
+      }
+      from = at + 1;
+    }
+  }
+
+  /**
+   * Ends the client session the way Ctrl+C would: a TERM signal runs the client's shutdown hook,
+   * which sends the exit command to the agent; a client that ignores it is killed.
+   */
+  private static void detach(TargetProcess client) throws InterruptedException {
+    if (client == null || !client.isAlive()) {
+      return;
+    }
+    client.process().destroy();
+    if (!client.process().waitFor(CLIENT_DETACH_GRACE_MS, TimeUnit.MILLISECONDS)) {
+      client.destroyForcibly();
+      client.process().waitFor(CLIENT_DETACH_GRACE_MS, TimeUnit.MILLISECONDS);
     }
   }
 

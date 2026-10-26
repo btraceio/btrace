@@ -73,6 +73,15 @@ public final class OracleRunner {
             "BTrace stopped operating after the abuse",
             findings,
             resilience);
+    resilience =
+        apply(
+            new OutputCheck(),
+            def,
+            trace,
+            Severity.S2,
+            "the attached probe did not produce the expected output",
+            findings,
+            resilience);
 
     VerdictValue conformance = VerdictValue.NA;
     // a timed-out case has no exit code by construction; the hang is already an S1

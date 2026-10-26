@@ -29,6 +29,10 @@ public final class EvidenceStore {
     Files.createDirectories(runDir);
     write(runDir.resolve("stdout.log"), String.join("\n", trace.stdout()));
     write(runDir.resolve("stderr.log"), String.join("\n", trace.stderr()));
+    if (!trace.clientStdout().isEmpty() || !trace.clientStderr().isEmpty()) {
+      write(runDir.resolve("client-stdout.log"), String.join("\n", trace.clientStdout()));
+      write(runDir.resolve("client-stderr.log"), String.join("\n", trace.clientStderr()));
+    }
     StringBuilder steps = new StringBuilder();
     for (StepOutcome s : trace.steps()) {
       steps

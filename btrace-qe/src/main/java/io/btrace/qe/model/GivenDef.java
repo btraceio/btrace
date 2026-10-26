@@ -23,7 +23,9 @@ import java.util.List;
 public final class GivenDef {
   public enum Mode {
     TARGET,
-    CLIENT
+    CLIENT,
+    /** A target launched without the agent; the real CLI attaches to it by PID. */
+    ATTACH
   }
 
   private final Mode mode;
@@ -45,6 +47,11 @@ public final class GivenDef {
   public static GivenDef client(List<String> clientArgs) {
     return new GivenDef(
         Mode.CLIENT, null, null, Collections.unmodifiableList(new ArrayList<>(clientArgs)));
+  }
+
+  public static GivenDef attach(String target, List<String> clientArgs) {
+    return new GivenDef(
+        Mode.ATTACH, target, null, Collections.unmodifiableList(new ArrayList<>(clientArgs)));
   }
 
   public Mode mode() {

@@ -20,12 +20,18 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 public final class CaseDef {
   private static final Set<String> TARGET_STEPS =
       new LinkedHashSet<>(Arrays.asList("launch", "awaitReady", "canary", "shutdown", "awaitExit"));
   private static final Set<String> CLIENT_STEPS =
       new LinkedHashSet<>(Arrays.asList("runClient", "awaitExit"));
+  private static final Set<String> ATTACH_STEPS =
+      new LinkedHashSet<>(
+          Arrays.asList(
+              "launch", "awaitReady", "attach", "awaitOutput", "detach", "shutdown", "awaitExit"));
 
   public static final String TIER_SMOKE = "smoke";
   public static final String TIER_FULL = "full";
@@ -83,23 +89,64 @@ public final class CaseDef {
           expect.exitCode() == null,
           "expect.exitCode is a documented-behavior claim and is only allowed on conformance cases");
     }
-    Set<String> allowed = given.mode() == GivenDef.Mode.TARGET ? TARGET_STEPS : CLIENT_STEPS;
+    Set<String> allowed = stepsFor(given.mode());
     for (String step : steps) {
       require(allowed.contains(step), "step '" + step + "' is not valid for mode " + given.mode());
     }
-    if (given.mode() == GivenDef.Mode.TARGET) {
-      require("launch".equals(steps.get(0)), "the first step of a target case must be 'launch'");
-      int ready = steps.indexOf("awaitReady");
-      for (String dependent : Arrays.asList("canary", "shutdown")) {
-        int at = steps.indexOf(dependent);
+    switch (given.mode()) {
+      case TARGET:
+        require("launch".equals(steps.get(0)), "the first step of a target case must be 'launch'");
+        requirePrecedes("awaitReady", Arrays.asList("canary", "shutdown"), "target");
+        break;
+      case ATTACH:
+        require("launch".equals(steps.get(0)), "the first step of an attach case must be 'launch'");
+        requirePrecedes("awaitReady", Arrays.asList("attach", "shutdown"), "attach");
+        requirePrecedes("attach", Arrays.asList("awaitOutput", "detach"), "attach");
         require(
-            at < 0 || (ready >= 0 && ready < at),
-            "'awaitReady' must precede '" + dependent + "' in a target case");
-      }
-    } else {
-      require(
-          "runClient".equals(steps.get(0)), "the first step of a client case must be 'runClient'");
+            !steps.contains("awaitOutput") || !expect.outputMustMatch().isEmpty(),
+            "'awaitOutput' needs at least one pattern in expect.outputMustMatch");
+        break;
+      default:
+        require(
+            "runClient".equals(steps.get(0)),
+            "the first step of a client case must be 'runClient'");
+        break;
     }
+    require(
+        expect.outputMustMatch().isEmpty() || given.mode() == GivenDef.Mode.ATTACH,
+        "expect.outputMustMatch is only allowed in attach mode (it matches the client's output)");
+    for (String regex : expect.outputMustMatch()) {
+      try {
+        Pattern.compile(regex);
+      } catch (PatternSyntaxException e) {
+        require(false, "expect.outputMustMatch entry is not a valid regex: " + e.getMessage());
+      }
+    }
+  }
+
+  private static Set<String> stepsFor(GivenDef.Mode mode) {
+    switch (mode) {
+      case TARGET:
+        return TARGET_STEPS;
+      case ATTACH:
+        return ATTACH_STEPS;
+      default:
+        return CLIENT_STEPS;
+    }
+  }
+
+  private void requirePrecedes(String first, List<String> dependents, String caseKind) {
+    int at = steps.indexOf(first);
+    for (String dependent : dependents) {
+      int dep = steps.indexOf(dependent);
+      require(
+          dep < 0 || (at >= 0 && at < dep),
+          "'" + first + "' must precede '" + dependent + "' in " + article(caseKind) + " case");
+    }
+  }
+
+  private static String article(String kind) {
+    return (kind.startsWith("a") ? "an " : "a ") + kind;
   }
 
   private void require(boolean condition, String message) {

@@ -1,0 +1,27 @@
+id: demos.attach-oneliner-smoke
+surface: demos
+intent: resilience
+tier: smoke
+title: "btrace -n '<Class>::<method> @return { print method, time }' <PID> against a plain JVM"
+given:
+  mode: attach
+  target: AttachDemoTarget
+  # ${pid} is the launched target's PID, ${port} a free port the harness reserved for it.
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "-n"
+    - "qe.targets.AttachDemoTarget::work @return { print method, time }"
+    - "${pid}"
+steps:
+  - launch
+  - awaitReady
+  - attach
+  - awaitOutput
+  - detach
+  - shutdown
+  - awaitExit
+expect:
+  outputMustMatch:
+    - "^work$"
+    - "^execution time: \\d+ ms$"

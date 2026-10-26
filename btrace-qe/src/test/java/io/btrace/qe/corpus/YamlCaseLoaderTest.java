@@ -126,4 +126,81 @@ class YamlCaseLoaderTest {
     Files.write(dir.resolve("notes.txt"), "ignore me".getBytes(StandardCharsets.UTF_8));
     assertEquals(1, new YamlCaseLoader().loadAll(dir).size());
   }
+
+  private static final String ATTACH_HEAD =
+      "id: fixture.attach\nsurface: demos\nintent: resilience\ntitle: t\n";
+  private static final String ATTACH_STEPS =
+      "steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]\n";
+
+  private List<CaseDef> loadYaml(String name, String yaml) throws Exception {
+    Path dir = Files.createTempDirectory("qe-corpus-attach");
+    Files.write(dir.resolve(name), yaml.getBytes(StandardCharsets.UTF_8));
+    return new YamlCaseLoader().loadAll(dir);
+  }
+
+  @Test
+  void loadsAnAttachCaseWithOutputMustMatch() throws Exception {
+    List<CaseDef> cases =
+        loadYaml(
+            "attach.yaml",
+            ATTACH_HEAD
+                + "given:\n  mode: attach\n  target: AttachDemoTarget\n"
+                + "  clientArgs: [\"-n\", \"X::y { print method }\", \"${pid}\"]\n"
+                + ATTACH_STEPS
+                + "expect:\n  outputMustMatch: [\"^work$\", \"execution time: \\\\d+ ms\"]\n");
+    assertEquals(1, cases.size());
+    CaseDef def = cases.get(0);
+    assertEquals(GivenDef.Mode.ATTACH, def.given().mode());
+    assertEquals("AttachDemoTarget", def.given().target());
+    assertEquals(List.of("-n", "X::y { print method }", "${pid}"), def.given().clientArgs());
+    assertEquals(List.of("^work$", "execution time: \\d+ ms"), def.expect().outputMustMatch());
+  }
+
+  @Test
+  void rejectsAgentArgsInAttachMode() throws Exception {
+    CaseValidationException ex =
+        assertThrows(
+            CaseValidationException.class,
+            () ->
+                loadYaml(
+                    "attach-agent-args.yaml",
+                    ATTACH_HEAD
+                        + "given:\n  mode: attach\n  target: AttachDemoTarget\n  agentArgs: \"\"\n"
+                        + "  clientArgs: [\"${pid}\"]\n"
+                        + ATTACH_STEPS
+                        + "expect:\n  outputMustMatch: [\"work\"]\n"));
+    assertTrue(ex.getMessage().contains("agentArgs"), ex.getMessage());
+    assertTrue(ex.getMessage().contains("attach-agent-args.yaml"), ex.getMessage());
+  }
+
+  @Test
+  void attachModeRequiresClientArgs() throws Exception {
+    CaseValidationException ex =
+        assertThrows(
+            CaseValidationException.class,
+            () ->
+                loadYaml(
+                    "attach-no-client-args.yaml",
+                    ATTACH_HEAD
+                        + "given:\n  mode: attach\n  target: AttachDemoTarget\n"
+                        + ATTACH_STEPS
+                        + "expect:\n  outputMustMatch: [\"work\"]\n"));
+    assertTrue(ex.getMessage().contains("clientArgs"), ex.getMessage());
+  }
+
+  @Test
+  void outputMustMatchMustBeANonEmptyList() throws Exception {
+    CaseValidationException ex =
+        assertThrows(
+            CaseValidationException.class,
+            () ->
+                loadYaml(
+                    "attach-bad-expect.yaml",
+                    ATTACH_HEAD
+                        + "given:\n  mode: attach\n  target: AttachDemoTarget\n"
+                        + "  clientArgs: [\"${pid}\"]\n"
+                        + ATTACH_STEPS
+                        + "expect:\n  outputMustMatch: work\n"));
+    assertTrue(ex.getMessage().contains("outputMustMatch"), ex.getMessage());
+  }
 }

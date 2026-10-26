@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public final class TargetProcess {
   private final Process process;
@@ -89,6 +90,29 @@ public final class TargetProcess {
         long remaining = deadline - System.currentTimeMillis();
         if (remaining <= 0 || !process.isAlive()) {
           return null;
+        }
+        stdout.wait(Math.min(remaining, 200L));
+      }
+    }
+  }
+
+  /**
+   * Waits for a stdout line at index {@code from} or later that the pattern finds; returns its
+   * index, or -1 on timeout or process death (a dead process still gets its already-pumped lines
+   * scanned).
+   */
+  public int awaitMatch(Pattern pattern, int from, long timeoutMs) throws InterruptedException {
+    long deadline = System.currentTimeMillis() + timeoutMs;
+    synchronized (stdout) {
+      while (true) {
+        for (int i = from; i < stdout.size(); i++) {
+          if (pattern.matcher(stdout.get(i)).find()) {
+            return i;
+          }
+        }
+        long remaining = deadline - System.currentTimeMillis();
+        if (remaining <= 0 || !process.isAlive()) {
+          return -1;
         }
         stdout.wait(Math.min(remaining, 200L));
       }

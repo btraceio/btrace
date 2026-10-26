@@ -26,7 +26,6 @@ public final class TargetLauncher {
 
   public TargetProcess launch(GivenDef given, QeEnvironment env, Path runDir) throws IOException {
     int port = env.allocateFreePort();
-    String agentArgs = resolveAgentArgs(given.agentArgs(), port, env.probeClassesDir(), runDir);
 
     List<String> cmd = new ArrayList<>();
     cmd.add(env.javaExecutable());
@@ -35,7 +34,11 @@ public final class TargetLauncher {
     cmd.add("-Dbtrace.comm.protocol=2");
     cmd.add("-Dbtrace.comm.autoNegotiate=false");
     cmd.add("-Dbtrace.comm.forceVersion=true");
-    cmd.add("-javaagent:" + env.btraceJarPath() + "=" + agentArgs);
+    if (given.mode() != GivenDef.Mode.ATTACH) {
+      // attach mode starts a plain JVM; the client loads the agent into it later
+      String agentArgs = resolveAgentArgs(given.agentArgs(), port, env.probeClassesDir(), runDir);
+      cmd.add("-javaagent:" + env.btraceJarPath() + "=" + agentArgs);
+    }
     cmd.add("qe.targets." + given.target());
 
     ProcessBuilder pb = new ProcessBuilder(cmd);
