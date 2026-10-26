@@ -880,6 +880,15 @@ class BTraceExtensionPlugin implements Plugin<Project> {
 
         def generateServiceShims = project.tasks.register('generateServiceShims') {
             dependsOn(authoredCompileTask)
+            // The shims mirror the authored service interfaces, so the compiled classes (and the
+            // settings that decide which interfaces get shims) are this task's inputs. Without
+            // them Gradle treated the task as up to date forever and an interface change left
+            // stale shims behind until a clean build.
+            inputs.files(project.provider { authoredClassesDirs() }).withPropertyName('authoredClasses')
+            inputs.property('btraceExtension.services', { explicitServiceTypes().join(',') })
+            inputs.property('btraceExtension.additionalExports', { extension.additionalExports.join(',') })
+            inputs.property('btraceExtension.excludedExports', { extension.excludedExports.join(',') })
+            inputs.property('btraceExtension.generateShimsReachableOnly', { extension.generateShimsReachableOnly })
             outputs.dir(shimsSrcDir)
             doLast {
                 project.delete(shimsSrcDir)

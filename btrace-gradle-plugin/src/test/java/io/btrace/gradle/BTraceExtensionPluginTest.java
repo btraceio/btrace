@@ -192,6 +192,54 @@ class BTraceExtensionPluginTest {
     }
 
     @Test
+    @DisplayName("generateServiceShims regenerates shims when a service interface changes")
+    void shimsAreRegeneratedWhenServiceInterfaceChanges() throws IOException {
+        writeExtensionProject();
+
+        BuildResult first = createRunner().withArguments(":ext:compileServiceShims").build();
+        assertEquals(TaskOutcome.SUCCESS, first.task(":ext:compileServiceShims").getOutcome());
+
+        // Add a method to the exported service: the generated shims must follow, or the second
+        // build fails with "is not abstract and does not override abstract method".
+        writeFile(
+                projectDir.resolve("ext/src/main/java/com/example/api/PublicService.java"),
+                "package com.example.api;\n"
+                        + "import io.btrace.core.extensions.Permission;\n"
+                        + "import io.btrace.core.extensions.ServiceDescriptor;\n"
+                        + "@ServiceDescriptor(permissions = {Permission.MEMORY_INFO})\n"
+                        + "public interface PublicService {\n"
+                        + "  PublicValue value();\n"
+                        + "  String name();\n"
+                        + "}\n");
+        writeFile(
+                projectDir.resolve("ext/src/main/java/com/example/impl/PublicServiceImpl.java"),
+                "package com.example.impl;\n"
+                        + "import com.example.api.PublicService;\n"
+                        + "import com.example.api.PublicValue;\n"
+                        + "public class PublicServiceImpl implements PublicService {\n"
+                        + "  private final HiddenSupport support = new HiddenSupport();\n"
+                        + "  public PublicValue value() {\n"
+                        + "    return new PublicValue(support.message());\n"
+                        + "  }\n"
+                        + "  public String name() {\n"
+                        + "    return \"renamed\";\n"
+                        + "  }\n"
+                        + "}\n");
+
+        BuildResult second = createRunner().withArguments(":ext:compileServiceShims").build();
+        assertEquals(
+                TaskOutcome.SUCCESS,
+                second.task(":ext:generateServiceShims").getOutcome(),
+                "shim generation must rerun when the authored classes change");
+        String shim =
+                Files.readString(
+                        projectDir.resolve(
+                                "ext/build/generated/sources/btraceShims/api/com/example/api/btrace/shim/NoOpPublicService.java"),
+                        StandardCharsets.UTF_8);
+        assertTrue(shim.contains("name()"), "regenerated shim should implement the new method");
+    }
+
+    @Test
     @DisplayName("published API source and javadoc artifacts stay API-only")
     void apiPublicationsStayApiOnly() throws IOException {
         writeExtensionProject();
