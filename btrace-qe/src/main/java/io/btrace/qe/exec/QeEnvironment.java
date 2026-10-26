@@ -33,6 +33,7 @@ public final class QeEnvironment {
   private final Path btraceJarPath;
   private final Path probeClassesDir;
   private final String targetsClasspath;
+  private final Path repoRoot;
   private final long defaultTimeoutMs;
 
   private QeEnvironment(
@@ -40,11 +41,13 @@ public final class QeEnvironment {
       Path btraceJarPath,
       Path probeClassesDir,
       String targetsClasspath,
+      Path repoRoot,
       long defaultTimeoutMs) {
     this.javaHome = javaHome;
     this.btraceJarPath = btraceJarPath;
     this.probeClassesDir = probeClassesDir;
     this.targetsClasspath = targetsClasspath;
+    this.repoRoot = repoRoot;
     this.defaultTimeoutMs = defaultTimeoutMs;
   }
 
@@ -56,13 +59,18 @@ public final class QeEnvironment {
     }
     Path probeClassesDir = Paths.get(require("qe.probeClassesDir"));
     String targetsClasspath = require("qe.targetsClasspath");
+    Path repoRoot = Paths.get(require("qe.repoRoot"));
+    if (!Files.isDirectory(repoRoot)) {
+      throw new IllegalStateException("qe.repoRoot is not a directory: " + repoRoot);
+    }
     long timeout =
         Long.parseLong(System.getProperty("qe.timeout", String.valueOf(DEFAULT_TIMEOUT_MS)));
     if (timeout < MIN_TIMEOUT_MS) {
       throw new IllegalStateException(
           "qe.timeout must be >= " + MIN_TIMEOUT_MS + " ms (canary budget needs headroom)");
     }
-    return new QeEnvironment(javaHome, btraceJarPath, probeClassesDir, targetsClasspath, timeout);
+    return new QeEnvironment(
+        javaHome, btraceJarPath, probeClassesDir, targetsClasspath, repoRoot, timeout);
   }
 
   private static String require(String key) {
@@ -99,6 +107,11 @@ public final class QeEnvironment {
 
   public String targetsClasspath() {
     return targetsClasspath;
+  }
+
+  /** Root of the repository checkout; source-file targets are resolved against it. */
+  public Path repoRoot() {
+    return repoRoot;
   }
 
   public long defaultTimeoutMs() {

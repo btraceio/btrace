@@ -26,6 +26,20 @@ The `demos` surface is outside the rotation: it replays the shipped demo scenari
   target must still be alive for `shutdown` to stop it cleanly. Evidence adds `client-stdout.log`
   and `client-stderr.log`. Sample: `cases/demos/attach-oneliner-smoke.yaml`; fixture:
   `qe.targets.AttachDemoTarget` (prints `ready:<pid>`, calls `work(int)` every 50 ms).
+- Launched-target options (`target` and `attach` modes), for replaying the shipped `demos/`:
+  - `given.target` may name a `.java` file relative to the repository root
+    (`demos/01-oneliner/OrderServiceApp.java`): it is run with single-file source launch (JDK 11+)
+    from the file's directory, so relative paths such as `-Dbtrace.permissions=permissions.properties`
+    work as in the demo's `run.sh`. Such a demo app is stopped by `shutdown` with a TERM signal (as
+    `run.sh` does), so its exit code is the signal's, not 0. Class-name targets are unchanged.
+  - `given.jvmArgs` (list) goes first on the java command line; `${btraceJar}` (the masked jar),
+    `${runDir}`, `${port}` and `${targetDir}` (the demo file's directory) are substituted. An attach
+    case can thus start a prepared JVM (`-javaagent:${btraceJar}=port=0`) and attach without `-p`.
+  - `given.readyRegex` (default `^ready:`): readiness is the first stdout line matching it. With the
+    default the PID is parsed from that line; otherwise it is the launched process's OS pid (demo
+    apps print `[demo] ... running - stop with Ctrl+C`).
+  - `${targetDir}` is also substituted in `clientArgs` (`${targetDir}/LatencyHistogram.java`) and
+    is only defined for `.java` targets. Sample: `cases/demos/01-oneliner-first-trace.yaml`.
 
 ## Log
 

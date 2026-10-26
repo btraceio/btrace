@@ -50,7 +50,8 @@ public final class YamlCaseLoader {
               "id", "surface", "intent", "title", "spec", "given", "steps", "expect", "tier"));
   private static final Set<String> SPEC_KEYS = new HashSet<>(Arrays.asList("doc", "claim"));
   private static final Set<String> GIVEN_KEYS =
-      new HashSet<>(Arrays.asList("mode", "target", "agentArgs", "clientArgs"));
+      new HashSet<>(
+          Arrays.asList("mode", "target", "agentArgs", "clientArgs", "jvmArgs", "readyRegex"));
   private static final Set<String> EXPECT_KEYS =
       new HashSet<>(Arrays.asList("exitCode", "messageMustMention", "outputMustMatch"));
 
@@ -144,20 +145,38 @@ public final class YamlCaseLoader {
     String mode = requireString(file, given, "mode").toUpperCase(Locale.ROOT);
     if ("TARGET".equals(mode)) {
       rejectKeys(file, given, "target", "clientArgs");
-      return GivenDef.target(
-          requireString(file, given, "target"), requireString(file, given, "agentArgs"));
+      return withLaunchOptions(
+          file,
+          given,
+          GivenDef.target(
+              requireString(file, given, "target"), requireString(file, given, "agentArgs")));
     }
     if ("CLIENT".equals(mode)) {
-      rejectKeys(file, given, "client", "target", "agentArgs");
+      rejectKeys(file, given, "client", "target", "agentArgs", "jvmArgs", "readyRegex");
       return GivenDef.client(requireStringList(file, given, "clientArgs"));
     }
     if ("ATTACH".equals(mode)) {
       rejectKeys(file, given, "attach", "agentArgs");
-      return GivenDef.attach(
-          requireString(file, given, "target"), requireStringList(file, given, "clientArgs"));
+      return withLaunchOptions(
+          file,
+          given,
+          GivenDef.attach(
+              requireString(file, given, "target"), requireStringList(file, given, "clientArgs")));
     }
     throw new CaseValidationException(
         file + ": given.mode must be 'target', 'client' or 'attach', was " + mode);
+  }
+
+  /** Applies the optional {@code jvmArgs} and {@code readyRegex} of a launched-target mode. */
+  private GivenDef withLaunchOptions(Path file, Map<String, Object> given, GivenDef base) {
+    GivenDef result = base;
+    if (given.containsKey("jvmArgs")) {
+      result = result.withJvmArgs(requireStringList(file, given, "jvmArgs"));
+    }
+    if (given.containsKey("readyRegex")) {
+      result = result.withReadyRegex(requireString(file, given, "readyRegex"));
+    }
+    return result;
   }
 
   private void rejectKeys(Path file, Map<String, Object> given, String modeName, String... keys) {

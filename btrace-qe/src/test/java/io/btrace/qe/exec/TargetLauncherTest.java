@@ -56,4 +56,35 @@ class TargetLauncherTest {
     assertEquals(
         "probePort=1,port=4242", TargetLauncher.resolveAgentArgs("probePort=1", 4242, PROBES, RUN));
   }
+
+  @Test
+  void jvmArgPlaceholdersAreSubstituted() {
+    assertEquals(
+        java.util.List.of(
+            "-javaagent:/libs/btrace.jar=port=0",
+            "-Dbtrace.permissions=/repo/demos/03/permissions.properties",
+            "-Dout=/run/x",
+            "-Dport=4242"),
+        TargetLauncher.resolvePlaceholders(
+            java.util.List.of(
+                "-javaagent:${btraceJar}=port=0",
+                "-Dbtrace.permissions=${targetDir}/permissions.properties",
+                "-Dout=${runDir}/x",
+                "-Dport=${port}"),
+            Paths.get("/libs/btrace.jar"),
+            RUN,
+            4242,
+            Paths.get("/repo/demos/03")));
+  }
+
+  @Test
+  void sourceTargetResolvesAgainstTheRepositoryRootAndItsDirectory() {
+    Path repo = Paths.get("/repo");
+    assertEquals(
+        Paths.get("/repo/demos/01-oneliner/OrderServiceApp.java"),
+        TargetLauncher.sourceFile(repo, "demos/01-oneliner/OrderServiceApp.java"));
+    assertEquals(
+        Paths.get("/repo/demos/01-oneliner"),
+        TargetLauncher.targetDir(repo, "demos/01-oneliner/OrderServiceApp.java"));
+  }
 }

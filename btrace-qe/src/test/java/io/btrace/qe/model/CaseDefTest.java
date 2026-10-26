@@ -17,6 +17,8 @@
 package io.btrace.qe.model;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -273,5 +275,72 @@ class CaseDefTest {
             CaseDef.TIER_FULL);
     CaseValidationException ex = assertThrows(CaseValidationException.class, def::validate);
     assertTrue(ex.getMessage().contains("outputMustMatch"), ex.getMessage());
+  }
+
+  private static final String DEMO_APP = "demos/01-oneliner/OrderServiceApp.java";
+
+  private static CaseDef attachCaseWith(GivenDef given, List<String> clientArgs) {
+    return new CaseDef(
+        "x.case",
+        "demos",
+        Intent.RESILIENCE,
+        "title",
+        null,
+        given,
+        ATTACH_STEPS,
+        new ExpectationDef(null, Collections.<String>emptyList(), List.of("work")),
+        CaseDef.TIER_FULL);
+  }
+
+  @Test
+  void sourceFileTargetWithJvmArgsAndReadyRegexPasses() {
+    GivenDef given =
+        GivenDef.attach(DEMO_APP, List.of("${targetDir}/Probe.java", "${pid}"))
+            .withJvmArgs(List.of("-javaagent:${btraceJar}=port=0", "-Dx=${targetDir}"))
+            .withReadyRegex("^\\[demo\\] .* running");
+    assertDoesNotThrow(attachCaseWith(given, null)::validate);
+    assertTrue(given.isSourceTarget());
+    assertFalse(GivenDef.attach("AttachDemoTarget", List.of("${pid}")).isSourceTarget());
+  }
+
+  @Test
+  void targetDirPlaceholderNeedsASourceFileTarget() {
+    GivenDef inClientArgs =
+        GivenDef.attach("AttachDemoTarget", List.of("${targetDir}/Probe.java", "${pid}"));
+    CaseValidationException ex =
+        assertThrows(CaseValidationException.class, attachCaseWith(inClientArgs, null)::validate);
+    assertTrue(ex.getMessage().contains("${targetDir}"), ex.getMessage());
+    GivenDef inJvmArgs =
+        GivenDef.attach("AttachDemoTarget", List.of("${pid}"))
+            .withJvmArgs(List.of("-Dx=${targetDir}"));
+    assertThrows(CaseValidationException.class, attachCaseWith(inJvmArgs, null)::validate);
+  }
+
+  @Test
+  void invalidReadyRegexFails() {
+    GivenDef given = GivenDef.attach(DEMO_APP, List.of("${pid}")).withReadyRegex("[demo");
+    CaseValidationException ex =
+        assertThrows(CaseValidationException.class, attachCaseWith(given, null)::validate);
+    assertTrue(ex.getMessage().contains("readyRegex"), ex.getMessage());
+  }
+
+  @Test
+  void readyRegexDefaultsToTheReadyPrefix() {
+    assertEquals(
+        GivenDef.DEFAULT_READY_REGEX, GivenDef.target("SteadyStateTarget", "").readyRegex());
+    assertEquals("^ready:", GivenDef.DEFAULT_READY_REGEX);
+    assertTrue(GivenDef.target("SteadyStateTarget", "").jvmArgs().isEmpty());
+  }
+
+  @Test
+  void sourceTargetMustBeARelativePathWithoutParentEscapes() {
+    for (String bad : List.of("/tmp/App.java", "../App.java", "demos/../../App.java")) {
+      CaseValidationException ex =
+          assertThrows(
+              CaseValidationException.class,
+              attachCaseWith(GivenDef.attach(bad, List.of("${pid}")), null)::validate,
+              bad);
+      assertTrue(ex.getMessage().contains("target"), ex.getMessage());
+    }
   }
 }

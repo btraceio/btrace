@@ -53,6 +53,21 @@ public final class TargetProcess {
     this.pid = pid;
   }
 
+  /**
+   * The OS pid of the launched process, for targets that do not print {@code ready:<pid>}. Uses
+   * {@code Process.pid()} (Java 9+) reflectively so this class still compiles for Java 8.
+   */
+  long nativePid() {
+    try {
+      return ((Number) Process.class.getMethod("pid").invoke(process)).longValue();
+    } catch (ReflectiveOperationException | RuntimeException e) {
+      throw new IllegalStateException(
+          "cannot read the target's pid: Process.pid() needs the harness to run on Java 9+ ("
+              + e
+              + ")");
+    }
+  }
+
   public long pid() {
     return pid;
   }

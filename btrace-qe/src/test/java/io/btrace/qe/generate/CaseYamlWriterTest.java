@@ -17,6 +17,7 @@
 package io.btrace.qe.generate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import io.btrace.qe.corpus.YamlCaseLoader;
 import io.btrace.qe.model.CaseDef;
@@ -58,5 +59,46 @@ class CaseYamlWriterTest {
     assertEquals(def.steps(), back.steps());
     assertEquals(List.of("^work$"), back.expect().outputMustMatch());
     assertEquals(CaseDef.TIER_SMOKE, back.tier());
+  }
+
+  @Test
+  void jvmArgsAndReadyRegexRoundTripAndDefaultsAreOmitted() throws Exception {
+    GivenDef given =
+        GivenDef.attach("demos/01-oneliner/OrderServiceApp.java", List.of("${pid}"))
+            .withJvmArgs(List.of("-javaagent:${btraceJar}=port=0"))
+            .withReadyRegex("^\\[demo\\]");
+    CaseDef def =
+        new CaseDef(
+            "demos.round-trip-2",
+            "demos",
+            Intent.RESILIENCE,
+            "round trip",
+            null,
+            given,
+            List.of("launch", "awaitReady", "attach", "awaitOutput", "shutdown", "awaitExit"),
+            new ExpectationDef(null, Collections.<String>emptyList(), List.of("x")),
+            CaseDef.TIER_FULL);
+    String yaml = CaseYamlWriter.toYaml(def);
+    Path dir = Files.createTempDirectory("qe-yaml-writer-2");
+    Files.write(dir.resolve("case.yaml"), yaml.getBytes(StandardCharsets.UTF_8));
+    GivenDef back = new YamlCaseLoader().loadAll(dir).get(0).given();
+    assertEquals(given.jvmArgs(), back.jvmArgs());
+    assertEquals(given.readyRegex(), back.readyRegex());
+    assertEquals(given.target(), back.target());
+
+    String plain =
+        CaseYamlWriter.toYaml(
+            new CaseDef(
+                "demos.plain",
+                "demos",
+                Intent.RESILIENCE,
+                "plain",
+                null,
+                GivenDef.attach("AttachDemoTarget", List.of("${pid}")),
+                List.of("launch", "awaitReady", "attach", "shutdown", "awaitExit"),
+                new ExpectationDef(null, Collections.<String>emptyList()),
+                CaseDef.TIER_FULL));
+    assertFalse(plain.contains("jvmArgs"), plain);
+    assertFalse(plain.contains("readyRegex"), plain);
   }
 }

@@ -16,6 +16,7 @@
  */
 package io.btrace.qe.model;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -112,6 +113,9 @@ public final class CaseDef {
             "the first step of a client case must be 'runClient'");
         break;
     }
+    if (given.mode() != GivenDef.Mode.CLIENT) {
+      validateTarget();
+    }
     require(
         expect.outputMustMatch().isEmpty() || given.mode() == GivenDef.Mode.ATTACH,
         "expect.outputMustMatch is only allowed in attach mode (it matches the client's output)");
@@ -121,6 +125,38 @@ public final class CaseDef {
       } catch (PatternSyntaxException e) {
         require(false, "expect.outputMustMatch entry is not a valid regex: " + e.getMessage());
       }
+    }
+  }
+
+  private void validateTarget() {
+    String target = given.target();
+    require(target != null && !target.trim().isEmpty(), "given.target is required");
+    if (given.isSourceTarget()) {
+      boolean relative = !target.startsWith("/") && !target.contains("\\");
+      boolean escapes = false;
+      for (String part : target.split("/")) {
+        escapes |= "..".equals(part);
+      }
+      require(
+          relative && !escapes,
+          "given.target source file must be a path relative to the repository root without '..', was '"
+              + target
+              + "'");
+    } else {
+      List<String> all = new ArrayList<>(given.jvmArgs());
+      all.addAll(given.clientArgs());
+      for (String arg : all) {
+        require(
+            !arg.contains("${targetDir}"),
+            "${targetDir} is only defined when given.target is a source file, found in '"
+                + arg
+                + "'");
+      }
+    }
+    try {
+      Pattern.compile(given.readyRegex());
+    } catch (PatternSyntaxException e) {
+      require(false, "given.readyRegex is not a valid regex: " + e.getMessage());
     }
   }
 

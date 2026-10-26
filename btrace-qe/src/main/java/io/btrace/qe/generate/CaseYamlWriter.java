@@ -65,6 +65,12 @@ public final class CaseYamlWriter {
     } else {
       given.put("clientArgs", g.clientArgs());
     }
+    if (!g.jvmArgs().isEmpty()) {
+      given.put("jvmArgs", g.jvmArgs());
+    }
+    if (!GivenDef.DEFAULT_READY_REGEX.equals(g.readyRegex())) {
+      given.put("readyRegex", g.readyRegex());
+    }
     doc.put("given", given);
     doc.put("steps", def.steps());
     Map<String, Object> expect = new LinkedHashMap<>();

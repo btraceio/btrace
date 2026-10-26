@@ -28,30 +28,88 @@ public final class GivenDef {
     ATTACH
   }
 
+  /** Readiness is the first stdout line matching this; the PID is parsed from such a line. */
+  public static final String DEFAULT_READY_REGEX = "^ready:";
+
   private final Mode mode;
   private final String target;
   private final String agentArgs;
   private final List<String> clientArgs;
+  private final List<String> jvmArgs;
+  private final String readyRegex;
 
-  private GivenDef(Mode mode, String target, String agentArgs, List<String> clientArgs) {
+  private GivenDef(
+      Mode mode,
+      String target,
+      String agentArgs,
+      List<String> clientArgs,
+      List<String> jvmArgs,
+      String readyRegex) {
     this.mode = mode;
     this.target = target;
     this.agentArgs = agentArgs;
     this.clientArgs = clientArgs;
+    this.jvmArgs = jvmArgs;
+    this.readyRegex = readyRegex;
   }
 
   public static GivenDef target(String target, String agentArgs) {
-    return new GivenDef(Mode.TARGET, target, agentArgs, Collections.<String>emptyList());
+    return new GivenDef(
+        Mode.TARGET,
+        target,
+        agentArgs,
+        Collections.<String>emptyList(),
+        Collections.<String>emptyList(),
+        DEFAULT_READY_REGEX);
   }
 
   public static GivenDef client(List<String> clientArgs) {
     return new GivenDef(
-        Mode.CLIENT, null, null, Collections.unmodifiableList(new ArrayList<>(clientArgs)));
+        Mode.CLIENT,
+        null,
+        null,
+        copy(clientArgs),
+        Collections.<String>emptyList(),
+        DEFAULT_READY_REGEX);
   }
 
   public static GivenDef attach(String target, List<String> clientArgs) {
     return new GivenDef(
-        Mode.ATTACH, target, null, Collections.unmodifiableList(new ArrayList<>(clientArgs)));
+        Mode.ATTACH,
+        target,
+        null,
+        copy(clientArgs),
+        Collections.<String>emptyList(),
+        DEFAULT_READY_REGEX);
+  }
+
+  /** Options placed before the main class or source file on the target's java command line. */
+  public GivenDef withJvmArgs(List<String> jvmArgs) {
+    return new GivenDef(mode, target, agentArgs, clientArgs, copy(jvmArgs), readyRegex);
+  }
+
+  public GivenDef withReadyRegex(String readyRegex) {
+    return new GivenDef(
+        mode,
+        target,
+        agentArgs,
+        clientArgs,
+        jvmArgs,
+        readyRegex == null ? DEFAULT_READY_REGEX : readyRegex);
+  }
+
+  private static List<String> copy(List<String> list) {
+    return list == null
+        ? Collections.<String>emptyList()
+        : Collections.unmodifiableList(new ArrayList<>(list));
+  }
+
+  /**
+   * A target naming a {@code .java} file (relative to the repository root) is run with single-file
+   * source launch from that file's directory; any other target is a class in {@code qe.targets}.
+   */
+  public boolean isSourceTarget() {
+    return target != null && target.endsWith(".java");
   }
 
   public Mode mode() {
@@ -68,5 +126,13 @@ public final class GivenDef {
 
   public List<String> clientArgs() {
     return clientArgs;
+  }
+
+  public List<String> jvmArgs() {
+    return jvmArgs;
+  }
+
+  public String readyRegex() {
+    return readyRegex;
   }
 }

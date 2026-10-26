@@ -165,8 +165,9 @@ public final class CaseExecutor {
         break;
       case "awaitReady":
         {
-          String ready = state.process.awaitLine("ready:", timeoutMs);
-          if (ready == null) {
+          String readyRegex = def.given().readyRegex();
+          int at = state.process.awaitMatch(Pattern.compile(readyRegex), 0, timeoutMs);
+          if (at < 0) {
             if (!state.process.isAlive()) {
               state.diedBeforeReady = true;
               return;
@@ -174,7 +175,13 @@ public final class CaseExecutor {
             // still alive but silent: block so the watchdog records a timeout with a thread dump
             Thread.sleep(Long.MAX_VALUE);
           }
-          state.process.assignPid(Long.parseLong(ready.substring("ready:".length()).trim()));
+          if (GivenDef.DEFAULT_READY_REGEX.equals(readyRegex)) {
+            String ready = state.process.stdoutSnapshot().get(at);
+            state.process.assignPid(Long.parseLong(ready.substring("ready:".length()).trim()));
+          } else {
+            // a demo app prints a banner, not its pid; ask the OS
+            state.process.assignPid(state.process.nativePid());
+          }
           break;
         }
       case "canary":
@@ -184,7 +191,12 @@ public final class CaseExecutor {
         break;
       case "shutdown":
         if (state.process.isAlive()) {
-          state.process.writeStdin("exit");
+          if (def.given().isSourceTarget()) {
+            // a demo app is stopped the way its run.sh stops it: with a TERM signal
+            state.process.process().destroy();
+          } else {
+            state.process.writeStdin("exit");
+          }
           state.shutdownSent = true;
         }
         break;
@@ -195,7 +207,13 @@ public final class CaseExecutor {
         state.client =
             new ClientLauncher()
                 .launch(
-                    resolveClientArgs(def.given().clientArgs(), state.process, runDir),
+                    resolveClientArgs(
+                        def.given().clientArgs(),
+                        state.process,
+                        runDir,
+                        def.given().isSourceTarget()
+                            ? TargetLauncher.targetDir(env.repoRoot(), def.given().target())
+                            : null),
                     env,
                     runDir);
         break;
@@ -219,15 +237,21 @@ public final class CaseExecutor {
 
   /**
    * Substitutes {@code ${pid}} (the launched target's PID), {@code ${port}} (the port the harness
-   * reserved for the target) and {@code ${runDir}} in the client arguments.
+   * reserved for the target), {@code ${runDir}} and {@code ${targetDir}} (the demo source file's
+   * directory, null for class targets) in the client arguments.
    */
-  static List<String> resolveClientArgs(List<String> raw, TargetProcess target, Path runDir) {
+  static List<String> resolveClientArgs(
+      List<String> raw, TargetProcess target, Path runDir, Path targetDir) {
     List<String> out = new ArrayList<>(raw.size());
     for (String arg : raw) {
-      out.add(
+      String resolved =
           arg.replace("${pid}", String.valueOf(target.pid()))
               .replace("${port}", String.valueOf(target.assignedPort()))
-              .replace("${runDir}", runDir.toString()));
+              .replace("${runDir}", runDir.toString());
+      if (targetDir != null) {
+        resolved = resolved.replace("${targetDir}", targetDir.toString());
+      }
+      out.add(resolved);
     }
     return out;
   }

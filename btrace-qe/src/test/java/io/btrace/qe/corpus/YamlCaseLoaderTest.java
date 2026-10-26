@@ -203,4 +203,85 @@ class YamlCaseLoaderTest {
                         + "expect:\n  outputMustMatch: work\n"));
     assertTrue(ex.getMessage().contains("outputMustMatch"), ex.getMessage());
   }
+
+  @Test
+  void loadsASourceFileTargetWithJvmArgsAndReadyRegex() throws Exception {
+    List<CaseDef> cases =
+        loadYaml(
+            "demo.yaml",
+            ATTACH_HEAD
+                + "given:\n  mode: attach\n  target: demos/01-oneliner/OrderServiceApp.java\n"
+                + "  jvmArgs: [\"-javaagent:${btraceJar}=port=0\", \"-Dbtrace.permissions=permissions.properties\"]\n"
+                + "  readyRegex: \"^\\\\[demo\\\\] order service running\"\n"
+                + "  clientArgs: [\"${targetDir}/LatencyHistogram.java\", \"${pid}\"]\n"
+                + ATTACH_STEPS
+                + "expect:\n  outputMustMatch: [\"p99=\"]\n");
+    GivenDef given = cases.get(0).given();
+    assertEquals("demos/01-oneliner/OrderServiceApp.java", given.target());
+    assertTrue(given.isSourceTarget());
+    assertEquals(
+        List.of("-javaagent:${btraceJar}=port=0", "-Dbtrace.permissions=permissions.properties"),
+        given.jvmArgs());
+    assertEquals("^\\[demo\\] order service running", given.readyRegex());
+  }
+
+  @Test
+  void jvmArgsAndReadyRegexDefaultWhenAbsent() throws Exception {
+    List<CaseDef> cases =
+        loadYaml(
+            "plain.yaml",
+            ATTACH_HEAD
+                + "given:\n  mode: attach\n  target: AttachDemoTarget\n  clientArgs: [\"${pid}\"]\n"
+                + ATTACH_STEPS
+                + "expect:\n  outputMustMatch: [\"work\"]\n");
+    assertTrue(cases.get(0).given().jvmArgs().isEmpty());
+    assertEquals(GivenDef.DEFAULT_READY_REGEX, cases.get(0).given().readyRegex());
+  }
+
+  @Test
+  void targetModeAcceptsJvmArgsAndReadyRegex() throws Exception {
+    List<CaseDef> cases =
+        loadYaml(
+            "target.yaml",
+            "id: fixture.target-jvm\nsurface: fixture\nintent: resilience\ntitle: t\n"
+                + "given:\n  mode: target\n  target: SteadyStateTarget\n  agentArgs: \"\"\n"
+                + "  jvmArgs: [\"-Xmx64m\"]\n  readyRegex: \"^ready:\"\n"
+                + "steps: [launch, awaitReady, shutdown, awaitExit]\nexpect: {}\n");
+    assertEquals(List.of("-Xmx64m"), cases.get(0).given().jvmArgs());
+  }
+
+  @Test
+  void rejectsJvmArgsAndReadyRegexInClientMode() throws Exception {
+    for (String extra : List.of("  jvmArgs: [\"-Xmx64m\"]\n", "  readyRegex: \"^x\"\n")) {
+      CaseValidationException ex =
+          assertThrows(
+              CaseValidationException.class,
+              () ->
+                  loadYaml(
+                      "client-extra.yaml",
+                      "id: fixture.client-extra\nsurface: fixture\nintent: resilience\ntitle: t\n"
+                          + "given:\n  mode: client\n  clientArgs: [\"-p\"]\n"
+                          + extra
+                          + "steps: [runClient, awaitExit]\nexpect: {}\n"),
+              extra);
+      assertTrue(
+          ex.getMessage().contains("not allowed in given for mode: client"), ex.getMessage());
+    }
+  }
+
+  @Test
+  void jvmArgsMustBeAList() throws Exception {
+    CaseValidationException ex =
+        assertThrows(
+            CaseValidationException.class,
+            () ->
+                loadYaml(
+                    "bad-jvm-args.yaml",
+                    ATTACH_HEAD
+                        + "given:\n  mode: attach\n  target: AttachDemoTarget\n  jvmArgs: -Xmx64m\n"
+                        + "  clientArgs: [\"${pid}\"]\n"
+                        + ATTACH_STEPS
+                        + "expect:\n  outputMustMatch: [\"work\"]\n"));
+    assertTrue(ex.getMessage().contains("jvmArgs"), ex.getMessage());
+  }
 }

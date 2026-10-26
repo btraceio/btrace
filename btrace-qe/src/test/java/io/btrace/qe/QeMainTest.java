@@ -84,6 +84,7 @@ class QeMainTest {
       "btrace.libs",
       "qe.probeClassesDir",
       "qe.targetsClasspath",
+      "qe.repoRoot",
       "qe.corpusDir",
       "qe.reportDir",
       "qe.tier"
@@ -91,6 +92,7 @@ class QeMainTest {
     String[] values = {
       root.toString(),
       libs.toString(),
+      root.toString(),
       root.toString(),
       root.toString(),
       corpus.toString(),

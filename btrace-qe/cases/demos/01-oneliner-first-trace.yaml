@@ -1,0 +1,27 @@
+id: demos.01-oneliner-first-trace
+surface: demos
+intent: resilience
+tier: smoke
+title: "demo 01: btrace -n 'OrderService::processOrder @return { print method, time }' <PID> on OrderServiceApp"
+given:
+  mode: attach
+  # a .java target is run with single-file source launch from its own directory
+  target: demos/01-oneliner/OrderServiceApp.java
+  readyRegex: "^\\[demo\\] order service running"
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "-n"
+    - "OrderService::processOrder @return { print method, time }"
+    - "${pid}"
+steps:
+  - launch
+  - awaitReady
+  - attach
+  - awaitOutput
+  - detach
+  - shutdown
+  - awaitExit
+expect:
+  outputMustMatch:
+    - "^execution time: \\d+ ms$"

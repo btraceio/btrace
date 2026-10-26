@@ -32,6 +32,7 @@ ext.configureQeEnvironment = { task ->
     task.systemProperty 'qe.reportDir', "${project.buildDir}/qe-report"
     task.systemProperty 'qe.btraceVersion', project.version
     task.systemProperty 'qe.targetsClasspath', sourceSets.targets.output.classesDirs.asPath
+    task.systemProperty 'qe.repoRoot', rootProject.projectDir.absolutePath
     task.systemProperty 'qe.probeClassesDir', probeClassesDir.get().asFile.absolutePath
     task.systemProperty 'qe.timeout', project.findProperty('qe.timeout') ?: '30000'
 }
