@@ -497,6 +497,8 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   }
 
   private void initialize(byte[] code) {
+    // plain probes compiled by 2.x (-nopack) reference org/openjdk/btrace; remap before verifying
+    code = ProbePackageMigrator.migrate(code);
     ClassReader cr = new ClassReader(code);
     if (debug.isDumpClasses()) {
       debug.dumpClass(cr.getClassName() + "_orig", code);

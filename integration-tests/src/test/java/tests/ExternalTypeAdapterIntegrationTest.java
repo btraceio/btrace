@@ -24,6 +24,7 @@ import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -112,6 +113,26 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
             assertTrue(
                 stdout.contains("explicit-tag=ext-data-explicit-ok"),
                 "@ExternalType explicit static dispatch changed TCCL or selected the wrong loader. stdout: "
+                    + stdout);
+          }
+        });
+  }
+
+  @Test
+  public void testInjectedServiceInstanceSharedAcrossHandlers() throws Exception {
+    configureExternalTypeExtension();
+    testDynamic(
+        "resources.Main",
+        "btrace/InjectedInstanceSharingTest.java",
+        Completion.untilMatches(Pattern.compile("shared-count=[1-9][0-9]*"), 1),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(
+                stdout.contains("FAILED"), "Probe should not have failed. stderr: " + stderr);
+            assertTrue(
+                stdout.matches("(?s).*shared-count=[1-9][0-9]*.*"),
+                "@OnTimer handler must see the count bumped by the @OnMethod handler. stdout: "
                     + stdout);
           }
         });

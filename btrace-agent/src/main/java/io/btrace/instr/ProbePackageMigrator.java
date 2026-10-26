@@ -17,6 +17,8 @@
 package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.ASM9;
+import static org.objectweb.asm.Opcodes.INVOKEINTERFACE;
+import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
 
 import java.nio.charset.StandardCharsets;
 import org.objectweb.asm.AnnotationVisitor;
@@ -27,6 +29,7 @@ import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Type;
 
 /**
  * Transparently remaps pre-compiled BTrace probe class files that still reference the legacy {@code
@@ -42,6 +45,16 @@ final class ProbePackageMigrator {
   // Descriptor prefix variants for field/method descriptor remapping
   private static final String OLD_DESC_PREFIX = "Lorg/openjdk/btrace/";
   private static final String NEW_DESC_PREFIX = "Lio/btrace/";
+
+  // 2.x probes were preprocessed against the concrete runtime class; 3.0 code reaches the runtime
+  // through the bootstrap-visible bridge interface instead.
+  private static final String OLD_RUNTIME_IMPL = "org/openjdk/btrace/runtime/BTraceRuntimeImplBase";
+  private static final String OLD_RUNTIME_IMPL_DESC = "L" + OLD_RUNTIME_IMPL + ";";
+  private static final String RUNTIME_BRIDGE = "io/btrace/core/BTraceRuntimeBridge";
+  private static final String RUNTIME_BRIDGE_DESC = "L" + RUNTIME_BRIDGE + ";";
+  private static final String OLD_RUNTIME_ACCESS = "org/openjdk/btrace/runtime/BTraceRuntimeAccess";
+  private static final String OLD_ENTER_DESC = "(Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z";
+  private static final String BRIDGE_ENTER_DESC = "(" + RUNTIME_BRIDGE_DESC + ")Z";
 
   private ProbePackageMigrator() {}
 
@@ -74,9 +87,30 @@ final class ProbePackageMigrator {
     return raw.contains(OLD_PREFIX);
   }
 
+  /**
+   * Remaps a probe class name (internal {@code a/b/C} or dotted {@code a.b.C} form) from the legacy
+   * namespace to the current one so it stays in sync with the migrated class bytes.
+   */
+  static String migrateClassName(String name) {
+    if (name == null) {
+      return null;
+    }
+    if (name.startsWith(OLD_PREFIX)) {
+      return NEW_PREFIX + name.substring(OLD_PREFIX.length());
+    }
+    String oldDotted = OLD_PREFIX.replace('/', '.');
+    if (name.startsWith(oldDotted)) {
+      return NEW_PREFIX.replace('/', '.') + name.substring(oldDotted.length());
+    }
+    return name;
+  }
+
   // --- helpers ---
 
   private static String remapInternalName(String name) {
+    if (OLD_RUNTIME_IMPL.equals(name)) {
+      return RUNTIME_BRIDGE;
+    }
     if (name != null && name.startsWith(OLD_PREFIX)) {
       return NEW_PREFIX + name.substring(OLD_PREFIX.length());
     }
@@ -85,14 +119,16 @@ final class ProbePackageMigrator {
 
   private static String remapDescriptor(String desc) {
     if (desc != null && desc.contains(OLD_DESC_PREFIX)) {
-      return desc.replace(OLD_DESC_PREFIX, NEW_DESC_PREFIX);
+      return desc.replace(OLD_RUNTIME_IMPL_DESC, RUNTIME_BRIDGE_DESC)
+          .replace(OLD_DESC_PREFIX, NEW_DESC_PREFIX);
     }
     return desc;
   }
 
   private static String remapSignature(String sig) {
     if (sig != null && sig.contains(OLD_PREFIX)) {
-      return sig.replace(OLD_PREFIX, NEW_PREFIX);
+      return sig.replace(OLD_RUNTIME_IMPL_DESC, RUNTIME_BRIDGE_DESC)
+          .replace(OLD_PREFIX, NEW_PREFIX);
     }
     return sig;
   }
@@ -274,8 +310,49 @@ final class ProbePackageMigrator {
     @Override
     public void visitMethodInsn(
         int opcode, String owner, String name, String descriptor, boolean isInterface) {
+      if (OLD_RUNTIME_IMPL.equals(owner) && opcode == INVOKEVIRTUAL) {
+        // BTraceRuntimeImplBase.leave()/start()/... became BTraceRuntimeBridge interface calls
+        super.visitMethodInsn(
+            INVOKEINTERFACE, RUNTIME_BRIDGE, name, remapDescriptor(descriptor), true);
+        return;
+      }
+      if (OLD_RUNTIME_ACCESS.equals(owner)
+          && "enter".equals(name)
+          && OLD_ENTER_DESC.equals(descriptor)) {
+        descriptor = BRIDGE_ENTER_DESC;
+      }
       super.visitMethodInsn(
           opcode, remapInternalName(owner), name, remapDescriptor(descriptor), isInterface);
+    }
+
+    @Override
+    public void visitLdcInsn(Object value) {
+      if (value instanceof Type) {
+        Type t = (Type) value;
+        if (t.getSort() == Type.OBJECT || t.getSort() == Type.ARRAY) {
+          value = Type.getType(remapDescriptor(t.getDescriptor()));
+        }
+      }
+      super.visitLdcInsn(value);
+    }
+
+    @Override
+    public void visitFrame(int type, int numLocal, Object[] local, int numStack, Object[] stack) {
+      super.visitFrame(type, numLocal, remapFrameTypes(local), numStack, remapFrameTypes(stack));
+    }
+
+    private static Object[] remapFrameTypes(Object[] types) {
+      if (types == null) {
+        return null;
+      }
+      Object[] out = types.clone();
+      for (int i = 0; i < out.length; i++) {
+        if (out[i] instanceof String) {
+          String n = (String) out[i];
+          out[i] = n.startsWith("[") ? remapDescriptor(n) : remapInternalName(n);
+        }
+      }
+      return out;
     }
 
     @Override

@@ -384,6 +384,25 @@ public class BTraceFunctionalTests extends RuntimeTest {
         });
   }
 
+  /**
+   * A probe compiled by the genuine BTrace 2.2.6 compiler (package {@code org.openjdk.btrace},
+   * packed form) must deploy unchanged; see {@code src/test/resources/legacy/README.md}.
+   */
+  @Test
+  public void testLegacyPackedProbe() throws Exception {
+    testDynamic(
+        "resources.Main",
+        "legacy/LegacyOnMethodProbe.class",
+        Completion.untilContains("legacy probe fired"),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stdout.contains("legacy probe fired"), "legacy probe did not fire");
+          }
+        });
+  }
+
   @Test
   public void testOnMethodTrackRetransform() throws Exception {
     trackRetransforms = true;
@@ -802,6 +821,37 @@ public class BTraceFunctionalTests extends RuntimeTest {
             assertFalse(stdout.contains("FAILED"), "Script should not have failed");
             assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
             assertTrue(stdout.contains("callA"), "Method entry not captured");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerMethodWildcard() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::call* @entry { print method }",
+        Completion.untilContains("callB"),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stdout.contains("callA"), "callA not captured by call*");
+            assertTrue(stdout.contains("callB"), "callB not captured by call*");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerClassWildcard() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.*::callA @entry { print method }",
+        Completion.untilContains("callA"),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stdout.contains("callA"), "callA not captured by resources.*");
           }
         });
   }

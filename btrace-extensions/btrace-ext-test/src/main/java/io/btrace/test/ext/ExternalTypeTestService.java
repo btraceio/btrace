@@ -40,6 +40,12 @@ public interface ExternalTypeTestService {
    */
   int value(Object externalData);
 
+  /** Increments this service instance's call counter (state used to verify instance sharing). */
+  void bump();
+
+  /** Returns how many times {@link #bump()} was called on this service instance. */
+  long count();
+
   /** Exercises field access, construction, and type narrowing through generated adapters. */
   String phaseFiveMarkers(Object externalData);
 }

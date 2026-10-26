@@ -79,6 +79,12 @@ for entry in \
   [[ "$manifest" == *"$entry"* ]] || fail "masked JAR manifest missing $entry"
 done
 
+# btrace.jar sits on the boot class path of instrumented JVMs; a service entry for an annotation
+# processor there is discovered by any javac running inside them (e.g. single-file source launch).
+if unzip -Z1 "$masked_jar" | grep -Fx "META-INF/services/javax.annotation.processing.Processor" >/dev/null; then
+  fail "masked JAR must not register an annotation processor service"
+fi
+
 sdkman_entries=$(unzip -Z1 "$SDKMAN_ARCHIVE") \
   || fail "could not list the SDKMAN archive"
 for entry in bin/btrace bin/btracec libs/btrace.jar; do

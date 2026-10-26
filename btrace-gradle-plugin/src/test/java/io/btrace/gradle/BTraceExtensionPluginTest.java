@@ -165,6 +165,33 @@ class BTraceExtensionPluginTest {
     }
 
     @Test
+    @DisplayName("the @ExternalType processor is passed explicitly, not discovered from a service entry")
+    void externalTypeProcessorIsPassedExplicitly() throws IOException {
+        writeExtensionProject(
+                "tasks.register('printCompilerArgs') { doLast {\n"
+                        + "  println \"COMPILER_ARGS=${compileJava.options.compilerArgs}\"\n"
+                        + "} }\n");
+        writeFile(
+                projectDir.resolve("ext/src/main/java/com/example/api/AppEvent.java"),
+                "package com.example.api;\n"
+                        + "@io.btrace.core.extensions.ExternalType(\"java.lang.String\")\n"
+                        + "public interface AppEvent {}\n");
+
+        BuildResult result =
+                createRunner().withArguments(":ext:compileJava", ":ext:printCompilerArgs").build();
+
+        assertTrue(
+                result.getOutput()
+                        .contains("-processor, io.btrace.extension.processor.ExternalTypeProcessor"),
+                "compileJava should name the processor explicitly:\n" + result.getOutput());
+        assertTrue(
+                projectDir.resolve("ext/build/classes/java/main/com/example/api/AppEvent$Ext.class")
+                        .toFile()
+                        .isFile(),
+                "the $Ext adapter should be generated");
+    }
+
+    @Test
     @DisplayName("published API source and javadoc artifacts stay API-only")
     void apiPublicationsStayApiOnly() throws IOException {
         writeExtensionProject();
@@ -227,6 +254,7 @@ class BTraceExtensionPluginTest {
     private void writeStubCoreProject() throws IOException {
         Path dir = projectDir.resolve("btrace-core");
         Files.createDirectories(dir.resolve("src/main/java/io/btrace/core/extensions"));
+        Files.createDirectories(dir.resolve("src/main/java/io/btrace/extension/processor"));
         writeFile(
                 dir.resolve("build.gradle"),
                 "plugins { id 'java-library' }\n"
@@ -277,6 +305,40 @@ class BTraceExtensionPluginTest {
                         + "@Target(ElementType.TYPE)\n"
                         + "public @interface ExternalType {\n"
                         + "  String value();\n"
+                        + "}\n");
+        writeFile(
+                dir.resolve(
+                        "src/main/java/io/btrace/extension/processor/ExternalTypeProcessor.java"),
+                "package io.btrace.extension.processor;\n"
+                        + "import java.io.Writer;\n"
+                        + "import java.util.Set;\n"
+                        + "import javax.annotation.processing.AbstractProcessor;\n"
+                        + "import javax.annotation.processing.RoundEnvironment;\n"
+                        + "import javax.annotation.processing.SupportedAnnotationTypes;\n"
+                        + "import javax.lang.model.SourceVersion;\n"
+                        + "import javax.lang.model.element.Element;\n"
+                        + "import javax.lang.model.element.TypeElement;\n"
+                        + "@SupportedAnnotationTypes(\"io.btrace.core.extensions.ExternalType\")\n"
+                        + "public final class ExternalTypeProcessor extends AbstractProcessor {\n"
+                        + "  @Override public SourceVersion getSupportedSourceVersion() {\n"
+                        + "    return SourceVersion.latestSupported();\n"
+                        + "  }\n"
+                        + "  @Override public boolean process(Set<? extends TypeElement> annotations,\n"
+                        + "      RoundEnvironment round) {\n"
+                        + "    for (TypeElement annotation : annotations) {\n"
+                        + "      for (Element e : round.getElementsAnnotatedWith(annotation)) {\n"
+                        + "        String pkg = processingEnv.getElementUtils().getPackageOf(e).getQualifiedName().toString();\n"
+                        + "        String name = e.getSimpleName() + \"$Ext\";\n"
+                        + "        try (Writer w = processingEnv.getFiler()\n"
+                        + "            .createSourceFile(pkg + \".\" + name, e).openWriter()) {\n"
+                        + "          w.write(\"package \" + pkg + \"; public final class \" + name + \" {}\");\n"
+                        + "        } catch (java.io.IOException ex) {\n"
+                        + "          throw new IllegalStateException(ex);\n"
+                        + "        }\n"
+                        + "      }\n"
+                        + "    }\n"
+                        + "    return true;\n"
+                        + "  }\n"
                         + "}\n");
     }
 

@@ -47,17 +47,41 @@ final class BTraceClassReader extends ClassReader {
   private static final Field itemsFld;
   private static final Field mslFld;
 
+  /**
+   * True when the resolved {@code readElementValues} takes the trailing {@code depth} (ASM 9.11+).
+   */
+  private static final boolean readAnnotationValuesHasDepth;
+
   static {
     Method m1 = null, m2 = null;
     Field f1 = null, f2 = null;
+    boolean hasDepth = false;
 
     try {
       m1 = ClassReader.class.getDeclaredMethod("getFirstAttributeOffset");
       m1.setAccessible(true);
 
-      m2 =
-          ClassReader.class.getDeclaredMethod(
-              "readElementValue", AnnotationVisitor.class, int.class, String.class, char[].class);
+      try {
+        // ASM 9.11+: trailing 'depth' parameter
+        m2 =
+            ClassReader.class.getDeclaredMethod(
+                "readElementValues",
+                AnnotationVisitor.class,
+                int.class,
+                boolean.class,
+                char[].class,
+                int.class);
+        hasDepth = true;
+      } catch (NoSuchMethodException e) {
+        // ASM before 9.11
+        m2 =
+            ClassReader.class.getDeclaredMethod(
+                "readElementValues",
+                AnnotationVisitor.class,
+                int.class,
+                boolean.class,
+                char[].class);
+      }
       m2.setAccessible(true);
 
       f1 = ClassReader.class.getDeclaredField("cpInfoOffsets");
@@ -66,10 +90,14 @@ final class BTraceClassReader extends ClassReader {
       f2 = ClassReader.class.getDeclaredField("maxStringLength");
       f2.setAccessible(true);
     } catch (Exception e) {
-      log.debug("Failed to initialize BTraceClassReader reflection fields", e);
+      log.warn(
+          "Failed to initialize BTraceClassReader reflection fields; annotation and class version"
+              + " reading is degraded",
+          e);
     }
     getAttributesMthd = m1;
     readAnnotationValuesMthd = m2;
+    readAnnotationValuesHasDepth = hasDepth;
     itemsFld = f1;
     mslFld = f2;
   }
@@ -194,7 +222,10 @@ final class BTraceClassReader extends ClassReader {
   private int skipAnnotationValues(int off, char[] buf) {
     try {
       if (readAnnotationValuesMthd != null) {
-        return (int) readAnnotationValuesMthd.invoke(this, null, off, null, buf);
+        return (int)
+            (readAnnotationValuesHasDepth
+                ? readAnnotationValuesMthd.invoke(this, null, off, true, buf, 0)
+                : readAnnotationValuesMthd.invoke(this, null, off, true, buf));
       }
     } catch (Exception e) {
       log.debug("Failed to read annotation values", e);

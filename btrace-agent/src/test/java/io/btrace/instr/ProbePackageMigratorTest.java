@@ -103,4 +103,87 @@ class ProbePackageMigratorTest {
     byte[] result = ProbePackageMigrator.migrate(original);
     assertEquals("io/btrace/test/NewProbe", new ClassReader(result).getClassName());
   }
+
+  @Test
+  void migratesClassNames() {
+    assertEquals(
+        "io/btrace/runtime/auxiliary/P",
+        ProbePackageMigrator.migrateClassName("org/openjdk/btrace/runtime/auxiliary/P"));
+    assertEquals(
+        "io.btrace.runtime.auxiliary.P",
+        ProbePackageMigrator.migrateClassName("org.openjdk.btrace.runtime.auxiliary.P"));
+    assertEquals("my/Probe", ProbePackageMigrator.migrateClassName("my/Probe"));
+  }
+
+  @Test
+  void rewritesLegacyRuntimeGlueToBridge() {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+    cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, "P", null, "java/lang/Object", null);
+    cw.visitField(
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
+            "runtime",
+            "Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;",
+            null,
+            null)
+        .visitEnd();
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "m", "()V", null, null);
+    mv.visitCode();
+    mv.visitFieldInsn(
+        Opcodes.GETSTATIC, "P", "runtime", "Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;");
+    mv.visitMethodInsn(
+        Opcodes.INVOKESTATIC,
+        "org/openjdk/btrace/runtime/BTraceRuntimeAccess",
+        "enter",
+        "(Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z",
+        false);
+    mv.visitInsn(Opcodes.POP);
+    mv.visitFieldInsn(
+        Opcodes.GETSTATIC, "P", "runtime", "Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;");
+    mv.visitMethodInsn(
+        Opcodes.INVOKEVIRTUAL,
+        "org/openjdk/btrace/runtime/BTraceRuntimeImplBase",
+        "leave",
+        "()V",
+        false);
+    mv.visitLdcInsn(org.objectweb.asm.Type.getObjectType("org/openjdk/btrace/runtime/auxiliary/P"));
+    mv.visitInsn(Opcodes.POP);
+    mv.visitInsn(Opcodes.RETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+    cw.visitEnd();
+
+    byte[] migrated = ProbePackageMigrator.migrate(cw.toByteArray());
+
+    final java.util.List<String> calls = new java.util.ArrayList<>();
+    new ClassReader(migrated)
+        .accept(
+            new ClassVisitor(Opcodes.ASM9) {
+              @Override
+              public MethodVisitor visitMethod(
+                  int access, String name, String d, String sig, String[] ex) {
+                return new MethodVisitor(Opcodes.ASM9) {
+                  @Override
+                  public void visitMethodInsn(
+                      int opcode, String owner, String n, String desc, boolean itf) {
+                    calls.add(opcode + " " + owner + "." + n + desc + " " + itf);
+                  }
+
+                  @Override
+                  public void visitLdcInsn(Object value) {
+                    calls.add("ldc " + value);
+                  }
+                };
+              }
+            },
+            0);
+
+    assertEquals(
+        java.util.Arrays.asList(
+            Opcodes.INVOKESTATIC
+                + " io/btrace/runtime/BTraceRuntimeAccess.enter(Lio/btrace/core/BTraceRuntimeBridge;)Z false",
+            Opcodes.INVOKEINTERFACE + " io/btrace/core/BTraceRuntimeBridge.leave()V true",
+            "ldc Lio/btrace/runtime/auxiliary/P;"),
+        calls);
+  }
 }

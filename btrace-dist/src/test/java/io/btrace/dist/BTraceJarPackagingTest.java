@@ -19,6 +19,7 @@ package io.btrace.dist;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -72,6 +73,29 @@ class BTraceJarPackagingTest {
 
       Attributes attributes = jarFile.getManifest().getMainAttributes();
       assertEquals("io.btrace.boot.Loader", attributes.getValue("Main-Class"));
+    }
+  }
+
+  @Test
+  void shipsNoAnnotationProcessorServiceEntry() throws IOException {
+    File resourcesDir = new File("build/resources/main");
+    File[] versionDirs = resourcesDir.listFiles(File::isDirectory);
+    assertNotNull(versionDirs, "Expected versioned dist directory under build/resources/main");
+    assertEquals(1, versionDirs.length, "Expected exactly one versioned dist directory");
+
+    File btraceJar = new File(versionDirs[0], "libs/btrace.jar");
+    assertTrue(btraceJar.isFile(), "Expected assembled btrace.jar to exist");
+
+    try (JarFile jarFile = new JarFile(btraceJar)) {
+      // The jar is on the boot class path of instrumented JVMs; a javac running there would
+      // discover the processor through ServiceLoader and fail. Extension builds pass it with
+      // -processor instead.
+      assertNull(
+          jarFile.getJarEntry("META-INF/services/javax.annotation.processing.Processor"),
+          "btrace.jar must not register an annotation processor service");
+      assertNotNull(
+          jarFile.getJarEntry("io/btrace/extension/processor/ExternalTypeProcessor.class"),
+          "btrace.jar must keep the processor class for explicit -processor use");
     }
   }
 

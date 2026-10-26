@@ -399,12 +399,14 @@ task btraceJar(type: Jar) {
     }
 
     // External provided-style extensions use btrace.jar directly as both their compilation and
-    // processor path. The processor service and its self-contained implementation therefore need
-    // regular root entries; the rest of the extension implementation remains masked.
+    // processor path. The self-contained processor classes therefore need regular root entries;
+    // the rest of the extension implementation remains masked. No processor service entry is
+    // shipped: this jar is on the boot class path of instrumented JVMs, where any javac would
+    // discover it and fail. Extension builds name the processor with -processor instead.
     from(zipTree(allClassesShadow.archiveFile)) {
         include 'io/btrace/extension/processor/**/*.class'
-        include 'META-INF/services/javax.annotation.processing.Processor'
     }
+    exclude 'META-INF/services/javax.annotation.processing.Processor'
 
     // 3. Include masked agent classes (as .classdata)
     into('META-INF/btrace/agent') {

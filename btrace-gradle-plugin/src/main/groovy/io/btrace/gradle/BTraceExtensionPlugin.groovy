@@ -173,6 +173,13 @@ class BTraceExtensionPlugin implements Plugin<Project> {
             }
         }
 
+        // The BTrace jar ships no javax.annotation.processing.Processor service entry (it sits on the
+        // boot class path of instrumented JVMs, where javac would discover it), so name the
+        // processor explicitly instead of relying on ServiceLoader discovery.
+        project.tasks.withType(JavaCompile).matching { it.name == 'compileJava' }.configureEach {
+            options.compilerArgs.addAll(['-processor', 'io.btrace.extension.processor.ExternalTypeProcessor'])
+        }
+
         // Configure duplicate handling for resource tasks
         project.tasks.withType(Copy).configureEach {
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE

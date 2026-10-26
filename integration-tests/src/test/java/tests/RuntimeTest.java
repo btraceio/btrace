@@ -1437,6 +1437,7 @@ public abstract class RuntimeTest {
       roots.add(projectRoot.resolve("src"));
     } else {
       roots.add(projectRoot.resolve("build/classes"));
+      roots.add(projectRoot.resolve("build/resources/test"));
       roots.add(projectRoot.resolve("../btrace-instr/build/classes"));
     }
     Path[] tracePath = new Path[1];

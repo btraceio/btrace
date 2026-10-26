@@ -19,6 +19,7 @@ package io.btrace.instr;
 import io.btrace.core.HandlerRepository;
 import io.btrace.core.SharedSettings;
 import io.btrace.runtime.BTraceRuntimes;
+import io.btrace.runtime.ExtensionIndy;
 import io.btrace.runtime.IndyDispatcher;
 import io.btrace.runtime.Interval;
 import java.lang.invoke.MethodHandle;
@@ -86,6 +87,8 @@ public final class HandlerRepositoryImpl {
     String probeName = probe.getClassName(true);
     probeMap.remove(probeName);
     IndyDispatcher.invalidateProbe(probeName);
+    // Release the probe's @Injected service instances so a redeploy starts with fresh ones.
+    ExtensionIndy.invalidateProbe(probeName);
   }
 
   /**

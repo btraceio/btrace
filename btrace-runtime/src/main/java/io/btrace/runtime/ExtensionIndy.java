@@ -80,7 +80,8 @@ public final class ExtensionIndy {
     boolean linkLog = isLinkLogEnabled();
     try {
       Class<?> serviceClass = requireServiceClass(serviceClassName);
-      Object instance = createServiceInstance(serviceClass, factoryMethod, serviceClassName);
+      Object instance =
+          serviceInstanceFor(caller.lookupClass(), serviceClass, factoryMethod, serviceClassName);
       mh = MethodHandles.constant(type.returnType(), instance);
       if (linkLog)
         logger.info("Linked service '{}' to '{}'", serviceClassName, serviceClass.getName());
@@ -92,6 +93,9 @@ public final class ExtensionIndy {
       // with no-ops when implementations are blocked by permissions.
       boolean allowShim = (effectiveMode == InjectionMode.SHIM) || isOptional;
       if (allowShim) {
+        // Fallback objects are intentionally not cached per probe: a pre-generated shim is a
+        // stateless singleton and the proxy handlers keep no state, so call sites cannot observe
+        // that they hold different instances.
         Object fallback = resolvePreGeneratedShim(type, caller, effectiveMode);
         if (fallback == null) {
           fallback = createFallbackInstance(effectiveMode, type, caller, t);
@@ -112,6 +116,47 @@ public final class ExtensionIndy {
     } catch (java.lang.invoke.WrongMethodTypeException ignored) {
     }
     return new ConstantCallSite(mh);
+  }
+
+  /**
+   * Service instances created for {@code @Injected} fields, per probe class. {@code
+   * bootstrapFieldGet} runs once per call site, so without this cache every handler reading the
+   * same field would get its own instance. Keyed weakly on the caller (probe) {@code Class}: probe
+   * classes live in per-probe loaders and may be redefined or renamed, so identity of the {@code
+   * Class} - not its simple name - is what scopes an instance to one probe deployment. Guarded by
+   * its own monitor.
+   */
+  private static final java.util.Map<Class<?>, java.util.Map<String, Object>> INSTANCES =
+      new java.util.WeakHashMap<>();
+
+  /**
+   * Drops the cached service instances of a probe so that a redeployed probe gets fresh ones and
+   * nothing is retained after unregistration. Called from the agent when a probe is unregistered.
+   *
+   * @param probeClassName the probe class name in either internal ({@code a/b/C}) or binary form
+   */
+  public static void invalidateProbe(String probeClassName) {
+    if (probeClassName == null) return;
+    String wanted = probeClassName.replace('/', '.');
+    synchronized (INSTANCES) {
+      INSTANCES.keySet().removeIf(c -> wanted.equals(c.getName()));
+    }
+  }
+
+  private static Object serviceInstanceFor(
+      Class<?> probe, Class<?> serviceClass, String factoryMethod, String serviceClassName)
+      throws Exception {
+    String key = serviceClassName + '#' + (factoryMethod == null ? "" : factoryMethod);
+    synchronized (INSTANCES) {
+      java.util.Map<String, Object> perProbe =
+          INSTANCES.computeIfAbsent(probe, k -> new java.util.HashMap<>());
+      Object instance = perProbe.get(key);
+      if (instance == null) {
+        instance = createServiceInstance(serviceClass, factoryMethod, serviceClassName);
+        perProbe.put(key, instance);
+      }
+      return instance;
+    }
   }
 
   private static Object resolvePreGeneratedShim(

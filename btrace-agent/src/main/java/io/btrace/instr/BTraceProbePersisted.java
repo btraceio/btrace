@@ -195,7 +195,7 @@ public class BTraceProbePersisted implements BTraceProbe {
    * @throws IOException
    */
   private void read_1(DataInputStream dis) throws IOException {
-    delegate.setClassName(dis.readUTF());
+    delegate.setClassName(ProbePackageMigrator.migrateClassName(dis.readUTF()));
     readServices(dis);
     readOnMethods(dis);
     readOnProbes(dis);
@@ -203,6 +203,7 @@ public class BTraceProbePersisted implements BTraceProbe {
     readDataHolderClass(dis);
     readFullData(dis);
     upgradeBytecode();
+    restoreHandlersInDataHolder();
   }
 
   /**
@@ -212,13 +213,14 @@ public class BTraceProbePersisted implements BTraceProbe {
    * @throws IOException
    */
   private void read_2(DataInputStream dis) throws IOException {
-    delegate.setClassName(dis.readUTF());
+    delegate.setClassName(ProbePackageMigrator.migrateClassName(dis.readUTF()));
     readServices(dis);
     readOnMethods(dis);
     readOnProbes(dis);
     readCallees(dis);
     readDataHolderClass(dis);
     readFullData(dis);
+    restoreHandlersInDataHolder();
   }
 
   /**
@@ -228,7 +230,7 @@ public class BTraceProbePersisted implements BTraceProbe {
    * @throws IOException
    */
   private void read_3(DataInputStream dis) throws IOException {
-    delegate.setClassName(dis.readUTF());
+    delegate.setClassName(ProbePackageMigrator.migrateClassName(dis.readUTF()));
     readServices(dis);
     readOnMethods(dis);
     readOnProbes(dis);
@@ -322,6 +324,8 @@ public class BTraceProbePersisted implements BTraceProbe {
     int fullDataLen = dis.readInt();
     fullData = new byte[fullDataLen];
     dis.readFully(fullData);
+    // 2.x packs reference org/openjdk/btrace; remap before the verifier sees the bytecode
+    fullData = ProbePackageMigrator.migrate(fullData);
     if (fullData.length > 0 && isClassRenamed()) {
       fullData = ProbeRenameVisitor.rename(getClassName(), fullData);
     }
@@ -331,6 +335,7 @@ public class BTraceProbePersisted implements BTraceProbe {
     int holderLen = dis.readInt();
     dataHolder = new byte[holderLen];
     dis.readFully(dataHolder);
+    dataHolder = ProbePackageMigrator.migrate(dataHolder);
     if (dataHolder.length > 0 && isClassRenamed()) {
       dataHolder = ProbeRenameVisitor.rename(getClassName(), dataHolder);
     }
@@ -689,6 +694,74 @@ public class BTraceProbePersisted implements BTraceProbe {
   @Override
   public Set<Permission> getRequiredPermissions() {
     return delegate.getRequiredPermissions();
+  }
+
+  /**
+   * Packs written before the handlers were dispatched via invokedynamic (BTrace 2.x) keep the
+   * handler methods out of the data holder class because they were copied straight into the
+   * instrumented classes. The current runtime resolves the handlers in the probe class defined from
+   * the data holder, so add the handler methods and everything they call to it.
+   */
+  private void restoreHandlersInDataHolder() {
+    if (fullData == null || fullData.length == 0) {
+      return;
+    }
+    Set<String> keep = new HashSet<>();
+    Set<String> roots = new HashSet<>();
+    for (OnMethod om : delegate.getOnMethods()) {
+      roots.add(CallGraph.methodId(om.getTargetName(), om.getTargetDescriptor()));
+    }
+    for (OnProbe op : delegate.getOnProbes()) {
+      roots.add(CallGraph.methodId(op.getTargetName(), op.getTargetDescriptor()));
+    }
+    keep.addAll(roots);
+    for (String root : roots) {
+      Set<String> callees = calleeMap.get(root);
+      if (callees != null) {
+        keep.addAll(callees);
+      }
+    }
+    if (dataHolder != null && dataHolder.length > 0) {
+      new ClassReader(dataHolder)
+          .accept(
+              new ClassVisitor(ASM9) {
+                @Override
+                public MethodVisitor visitMethod(
+                    int access, String name, String desc, String sig, String[] exceptions) {
+                  keep.add(CallGraph.methodId(name, desc));
+                  return null;
+                }
+              },
+              ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+    }
+    ClassReader cr = new ClassReader(fullData);
+    org.objectweb.asm.ClassWriter cw = new org.objectweb.asm.ClassWriter(0);
+    cr.accept(
+        new ClassVisitor(ASM9, cw) {
+          @Override
+          public MethodVisitor visitMethod(
+              int access, String name, String desc, String sig, String[] exceptions) {
+            String id = CallGraph.methodId(name, desc);
+            if (name.startsWith("<")) {
+              return super.visitMethod(access, name, desc, sig, exceptions);
+            }
+            if (keep.contains(id)) {
+              // handlers are invoked with Object in place of AnyType
+              boolean handler = roots.contains(id);
+              return super.visitMethod(
+                  access,
+                  name,
+                  handler ? desc.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC) : desc,
+                  handler && sig != null
+                      ? sig.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC)
+                      : sig,
+                  exceptions);
+            }
+            return null;
+          }
+        },
+        0);
+    dataHolder = cw.toByteArray();
   }
 
   private void upgradeBytecode() {

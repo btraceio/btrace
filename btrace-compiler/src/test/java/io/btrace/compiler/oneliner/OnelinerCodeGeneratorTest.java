@@ -232,4 +232,51 @@ class OnelinerCodeGeneratorTest {
     assertTrue(generated.contains("import io.btrace.core.annotations.*;"));
     assertTrue(generated.contains("import io.btrace.core.types.AnyType;"));
   }
+
+  private static String gen(String oneliner) {
+    return OnelinerCodeGenerator.generate(OnelinerParser.parse(oneliner));
+  }
+
+  @Test
+  void testMethodStarBecomesRegex() {
+    String g = gen("OrderService::* @return { print method }");
+    assertTrue(g.contains("@OnMethod(clazz=\"OrderService\", method=\"/.*/\""), g);
+  }
+
+  @Test
+  void testMethodPrefixGlobBecomesRegex() {
+    String g = gen("MyClass::get* @entry { print method }");
+    assertTrue(g.contains("clazz=\"MyClass\", method=\"/get.*/\""), g);
+  }
+
+  @Test
+  void testClassSingleSegmentGlob() {
+    String g = gen("javax.swing.*::get* @entry { print method }");
+    // backslashes are doubled by the Java string escaping of the generated source
+    assertTrue(g.contains("clazz=\"/javax\\\\.swing\\\\.[^.]*/\", method=\"/get.*/\""), g);
+  }
+
+  @Test
+  void testClassDoubleStarGlob() {
+    String g = gen("com.acme.**::* @entry { print method }");
+    assertTrue(g.contains("clazz=\"/com\\\\.acme\\\\..*/\", method=\"/.*/\""), g);
+  }
+
+  @Test
+  void testRegexPassthrough() {
+    String g = gen("/com\\.acme\\..*/::/get.*/ @entry { print method }");
+    assertTrue(g.contains("clazz=\"/com\\\\.acme\\\\..*/\", method=\"/get.*/\""), g);
+  }
+
+  @Test
+  void testInitPassthrough() {
+    String g = gen("com.acme.Foo::<init> @entry { print method }");
+    assertTrue(g.contains("clazz=\"com.acme.Foo\", method=\"<init>\""), g);
+  }
+
+  @Test
+  void testExactNamePassthrough() {
+    String g = gen("com.acme.Foo::bar @entry { print method }");
+    assertTrue(g.contains("clazz=\"com.acme.Foo\", method=\"bar\""), g);
+  }
 }

@@ -185,7 +185,7 @@ public class MyProbe {
 
 ## App-Type Adapters with `@ExternalType`
 
-When an extension's impl needs to interact with application-specific classes (Spark event objects, Hadoop types, custom framework classes), use the `@ExternalType` annotation to generate reflective adapters at build time. The extension Gradle plugin auto-registers the annotation processor. This is the normative reference for the supported adapter boundary.
+When an extension's impl needs to interact with application-specific classes (Spark event objects, Hadoop types, custom framework classes), use the `@ExternalType` annotation to generate reflective adapters at build time. The extension Gradle plugin adds the processor to `annotationProcessor` and passes `-processor io.btrace.extension.processor.ExternalTypeProcessor` to `compileJava` explicitly. The BTrace jar deliberately ships no `META-INF/services/javax.annotation.processing.Processor` entry (it is on the boot class path of instrumented JVMs, where any javac would discover it), so a hand-rolled `javac` or Maven build must pass the same `-processor` option with the BTrace jar on the processor path. This is the normative reference for the supported adapter boundary.
 
 ### How It Works
 

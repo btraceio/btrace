@@ -21,6 +21,18 @@ import io.btrace.extension.util.ClassLoadingUtil;
 
 public final class ExternalTypeTestServiceImpl extends Extension
     implements ExternalTypeTestService {
+  private long bumps;
+
+  @Override
+  public void bump() {
+    bumps++;
+  }
+
+  @Override
+  public long count() {
+    return bumps;
+  }
+
   @Override
   public String tag() {
     return ExternalDataType$Ext.tag();

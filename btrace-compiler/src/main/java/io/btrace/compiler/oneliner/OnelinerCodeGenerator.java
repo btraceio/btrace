@@ -96,8 +96,12 @@ public class OnelinerCodeGenerator {
 
     // Generate @OnMethod annotation
     sb.append(INDENT).append("@OnMethod(");
-    sb.append("clazz=\"").append(escapeJavaString(spec.classPattern)).append("\", ");
-    sb.append("method=\"").append(escapeJavaString(spec.methodPattern)).append("\"");
+    sb.append("clazz=\"")
+        .append(escapeJavaString(toProbePattern(spec.classPattern, true)))
+        .append("\", ");
+    sb.append("method=\"")
+        .append(escapeJavaString(toProbePattern(spec.methodPattern, false)))
+        .append("\"");
 
     // Add location if not ENTRY
     if (spec.location != Location.ENTRY) {
@@ -338,6 +342,48 @@ public class OnelinerCodeGenerator {
       }
     }
     return false;
+  }
+
+  /**
+   * Translates a oneliner glob into a pattern understood by the agent, which matches either an
+   * exact name or a {@code /regex/}. Regex literals and names without wildcards pass through
+   * unchanged.
+   *
+   * <p>Class patterns: {@code **} matches across packages, a single {@code *} stays within one
+   * package segment. Method patterns: {@code *} matches any characters. {@code ?} matches exactly
+   * one character in both.
+   */
+  static String toProbePattern(String pattern, boolean isClass) {
+    if (pattern.length() >= 2 && pattern.startsWith("/") && pattern.endsWith("/")) {
+      return pattern;
+    }
+    if (pattern.indexOf('*') < 0 && pattern.indexOf('?') < 0) {
+      return pattern;
+    }
+    StringBuilder re = new StringBuilder("/");
+    for (int i = 0; i < pattern.length(); i++) {
+      char c = pattern.charAt(i);
+      if (c == '*') {
+        if (isClass) {
+          if (i + 1 < pattern.length() && pattern.charAt(i + 1) == '*') {
+            re.append(".*");
+            i++;
+          } else {
+            re.append("[^.]*");
+          }
+        } else {
+          re.append(".*");
+        }
+      } else if (c == '?') {
+        re.append('.');
+      } else {
+        if ("\\.[]{}()+-^$|".indexOf(c) >= 0) {
+          re.append('\\');
+        }
+        re.append(c);
+      }
+    }
+    return re.append('/').toString();
   }
 
   private static String escapeJavaString(String str) {
