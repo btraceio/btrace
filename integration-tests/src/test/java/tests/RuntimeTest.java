@@ -134,6 +134,32 @@ public abstract class RuntimeTest {
    *
    * @return the resolved JDK home
    */
+  /**
+   * Major version of the JDK the integration tests launch targets with (from its {@code release}
+   * file; the running JVM's version when the file is missing).
+   */
+  protected static int testJavaMajor() {
+    java.nio.file.Path releaseFile = java.nio.file.Paths.get(resolveTestJavaHome(), "release");
+    if (!java.nio.file.Files.isRegularFile(releaseFile)) {
+      return Runtime.version().feature();
+    }
+    java.util.Properties release = new java.util.Properties();
+    try (java.io.InputStream in = java.nio.file.Files.newInputStream(releaseFile)) {
+      release.load(in);
+    } catch (java.io.IOException e) {
+      throw new IllegalStateException("Failed to read " + releaseFile, e);
+    }
+    String version = release.getProperty("JAVA_VERSION", "").replace("\"", "");
+    if (version.startsWith("1.")) {
+      version = version.substring(2);
+    }
+    int end = 0;
+    while (end < version.length() && Character.isDigit(version.charAt(end))) {
+      end++;
+    }
+    return end == 0 ? 0 : Integer.parseInt(version.substring(0, end));
+  }
+
   protected static String resolveTestJavaHome() {
     String[] candidates = {
       System.getenv("TEST_JAVA_HOME"),

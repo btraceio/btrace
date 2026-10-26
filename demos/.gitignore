@@ -1,1 +1,6 @@
+# captured run output, used only to render the recordings
 run.out
+.DS_Store
+# The 2.x probe compiled with BTrace 2.2.6 is a fixture, not a build output (the root .gitignore
+# excludes every *.class).
+!/02-upgrade-from-2x/legacy/SlowChargeProbe.class

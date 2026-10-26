@@ -19,6 +19,7 @@ package tests;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -43,6 +44,7 @@ public class AgentSourceLaunchIntegrationTest extends RuntimeTest {
 
   @Test
   void sourceFileLaunchWithAgentRuns() throws Exception {
+    assumeTrue(testJavaMajor() >= 11, "single-file source launch (java App.java) needs JDK 11+");
     Path agent = locateAgent();
     assertNotNull(agent, "Missing btrace.jar");
     Path source =
