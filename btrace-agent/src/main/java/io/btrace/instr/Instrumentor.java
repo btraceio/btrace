@@ -1553,6 +1553,9 @@ public class Instrumentor extends ClassVisitor {
 
             if (vr.isValid() || vr.isAny()) {
               int mid = MethodID.getMethodId(className, name, desc);
+              // Each return instruction is its own exit path: compute the duration here too, not
+              // only at the first return in bytecode order, or later returns report 0.
+              trackingCtx.resetDuration();
               trackingCtx.emitTestSample(true, mid);
 
               if (numActionArgs == 0) {

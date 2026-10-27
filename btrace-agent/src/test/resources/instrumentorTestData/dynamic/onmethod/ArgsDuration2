@@ -29,8 +29,14 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 ]
 L2
 FRAME SAME1 J
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 8
+LSUB
+LSTORE 6
+L3
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J T T] [J]
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
-IFNE L3
+IFNE L4
 DUP2
 LSTORE 12
 ALOAD 0
@@ -46,13 +52,13 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 // arguments:
 "io/btrace/runtime/auxiliary/ArgsDuration2"
 ]
-L3
-FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J T T] [J]
 L4
-LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0
-LOCALVARIABLE a Ljava/lang/String; L0 L4 1
-LOCALVARIABLE b J L0 L4 2
-LOCALVARIABLE c [Ljava/lang/String; L0 L4 4
-LOCALVARIABLE d [I L0 L4 5
+FRAME SAME1 J
+L5
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+LOCALVARIABLE a Ljava/lang/String; L0 L5 1
+LOCALVARIABLE b J L0 L5 2
+LOCALVARIABLE c [Ljava/lang/String; L0 L5 4
+LOCALVARIABLE d [I L0 L5 5
 MAXSTACK = 12
 MAXLOCALS = 14

@@ -404,6 +404,28 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   @Test
+  public void testReturnDurationWithEarlyReturn() throws Exception {
+    // earlyReturn sleeps 120 ms before its second return; an early return it never takes comes
+    // first in the bytecode. The duration must be measured on the path that runs.
+    testDynamic(
+        "resources.MultiReturnTarget",
+        "btrace/MultiReturnDurationTest.java",
+        Completion.untilContains("earlyReturn ms="),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            java.util.regex.Matcher m =
+                java.util.regex.Pattern.compile("earlyReturn ms=(\\d+)").matcher(stdout);
+            assertTrue(m.find(), "no duration printed:\n" + stdout);
+            long ms = Long.parseLong(m.group(1));
+            assertTrue(
+                ms >= 100, "duration at the second return was " + ms + " ms, expected >= 100");
+          }
+        });
+  }
+
+  @Test
   public void testOnMethodTrackRetransform() throws Exception {
     trackRetransforms = true;
     testDynamic(

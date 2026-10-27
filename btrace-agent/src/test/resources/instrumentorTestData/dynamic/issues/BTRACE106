@@ -34,8 +34,14 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 ]
 L3
 FRAME SAME
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 3
+LSUB
+LSTORE 1
+L4
+FRAME SAME
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
-IFNE L4
+IFNE L5
 ALOAD 0
 LDC "bMethod"
 LLOAD 1
@@ -45,9 +51,9 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 // arguments:
 "io/btrace/runtime/auxiliary/BTRACE106"
 ]
-L4
-FRAME SAME
 L5
-LOCALVARIABLE this Lresources/issues/BTRACE106; L0 L5 0
+FRAME SAME
+L6
+LOCALVARIABLE this Lresources/issues/BTRACE106; L0 L6 0
 MAXSTACK = 4
 MAXLOCALS = 5

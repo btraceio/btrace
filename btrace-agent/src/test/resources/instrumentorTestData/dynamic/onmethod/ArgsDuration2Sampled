@@ -40,6 +40,11 @@ L1
 FRAME SAME1 J
 ILOAD 10
 IFEQ L3
+ICONST_1
+INVOKESTATIC io/btrace/instr/MethodTracker.getEndTs (I)J
+LLOAD 8
+LSUB
+LSTORE 6
 L4
 FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T] [J]
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
