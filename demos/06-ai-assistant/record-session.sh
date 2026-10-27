@@ -8,8 +8,10 @@
 # checkout of github.com/btraceio/agent-plugins. The session runs headless (`claude -p`) from a
 # scratch copy of the service's project: its source and the binary-only ACME SDK it calls. Only the
 # btrace-observability plugin is loaded, its BTrace MCP server is the only MCP server, and only
-# that server's tools and read-only file tools are allowed, so the assistant can read the service's code but has to probe the live JVM for anything
-# that happens inside the SDK. The raw transcript is kept as session.jsonl; render it again without
+# that server's tools and read-only file tools are allowed, so the assistant can read the service's
+# code but has to probe the live JVM for anything that happens inside the SDK. The raw transcript stays in the demo's log directory; the copy kept
+# as session.jsonl goes through ../lib/redact-transcript.py first, which turns home and temp paths
+# into ~ and /tmp and drops JVMs the session never probed or mentioned. Render it again without
 # re-recording with:
 #
 #   python3 ../lib/render-chat.py session.jsonl ../../docs/tutorials/images/06-ai-assistant \
@@ -62,14 +64,15 @@ jbang build "$PLUGIN_DIR/mcp/src/main/java/io/btrace/mcp/BTraceMcpServer.java" >
   exit 2
 }
 
+RAW="$DEMO_LOG_DIR/session.raw.jsonl"
 OUT="$DEMO_DIR/session.jsonl"
-: > "$OUT"
+: > "$RAW"
 
 ask() {
   local resume=()
   [ -n "${SESSION_ID:-}" ] && resume=(--resume "$SESSION_ID")
   printf '{"type":"demo_prompt","text":%s}\n' \
-    "$("$PYTHON" -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1")" >> "$OUT"
+    "$("$PYTHON" -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1")" >> "$RAW"
   (cd "$WORK_DIR" && claude -p "$1" \
       ${resume[@]+"${resume[@]}"} \
       --model "$MODEL" \
@@ -79,7 +82,7 @@ ask() {
       --tools "Read,Grep,Glob" \
       --allowedTools "Read,Grep,Glob,mcp__btrace" \
       --permission-mode dontAsk \
-      --output-format stream-json --verbose < /dev/null) | tee -a "$OUT" | "$PYTHON" -c '
+      --output-format stream-json --verbose < /dev/null) | tee -a "$RAW" | "$PYTHON" -c '
 import json, sys
 for line in sys.stdin:
     try:
@@ -103,14 +106,16 @@ for line in open(sys.argv[1]):
         sid = json.loads(line).get("session_id") or sid
     except ValueError:
         pass
-print(sid)' "$OUT")"
+print(sid)' "$RAW")"
 }
 
 say "Recording an assistant session against pid $APP_PID (model: $MODEL)"
 ask "$PROMPT_1"
 ask "$PROMPT_2"
 
-say "Transcript: $OUT"
+# Keep only a redacted transcript in the repository: no home or temp paths, no unrelated JVMs.
+"$PYTHON" "$DEMO_DIR/../lib/redact-transcript.py" "$RAW" "$OUT" --home "$HOME" --tmp "${TMPDIR:-/tmp}"
+say "Transcript: $OUT (raw: $RAW)"
 if "$PYTHON" -c 'import PIL' 2>/dev/null; then
   "$PYTHON" "$DEMO_DIR/../lib/render-chat.py" "$OUT" "$DEMO_DIR/../../docs/tutorials/images/06-ai-assistant" \
     "claude  —  checkout service on call"

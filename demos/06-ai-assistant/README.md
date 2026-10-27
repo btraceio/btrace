@@ -59,9 +59,12 @@ Requirements:
 The model is `DEMO_MODEL` (default `sonnet`). The script copies only the service source and the SDK
 JAR into a scratch project directory and runs a headless session (`claude -p`) there with only the
 `btrace-observability` plugin, `--strict-mcp-config` with the BTrace MCP server as the only MCP
-server, and only `Read`, `Grep`, `Glob` and the BTrace MCP tools allowed. It sends two prompts, saves
-the transcript as `session.jsonl`, and renders `docs/tutorials/images/06-ai-assistant.gif` and
-`.mp4` with `demos/lib/render-chat.py`. To re-render without re-recording:
+server, and only `Read`, `Grep`, `Glob` and the BTrace MCP tools allowed. It sends two prompts and keeps
+the raw transcript in the demo's log directory. The copy saved as `session.jsonl` goes through
+`demos/lib/redact-transcript.py` first: home and temp paths become `~` and `/tmp`, and JVM listings
+keep only the processes the session probed or mentioned. The script then renders
+`docs/tutorials/images/06-ai-assistant.gif` and `.mp4` with `demos/lib/render-chat.py`. To
+re-render without re-recording:
 
 ```sh
 python3 ../lib/render-chat.py session.jsonl ../../docs/tutorials/images/06-ai-assistant \
