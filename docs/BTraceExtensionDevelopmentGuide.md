@@ -434,9 +434,48 @@ At runtime, the agent consults this metadata to validate and enforce permissions
 
 ## Publishing and Registry Listing
 
-If you want users to discover your extension through the public catalog, publish the extension artifacts to Maven Central first and then add the extension to the BTrace registry.
+If you want users to discover your extension through the public catalog, publish the extension artifacts to Maven Central first and then add the extension to the [BTrace extension registry](https://github.com/btraceio/btrace-extensions).
 
-The extension registry is planned to live in a dedicated GitHub repository with GitHub Pages hosting; until it is published, treat the entry shape shown below as the working draft.
+### The Maven publication
+
+The plugin applies `maven-publish` and creates a publication named `mavenExtension` with the project's `group`, `name` and `version` as `groupId`, `artifactId` and `version`:
+
+| File | Content |
+|------|---------|
+| `<artifactId>-<version>.jar` | The API jar. Scripts can compile against `<groupId>:<artifactId>:<version>` |
+| `<artifactId>-<version>-sources.jar` | API sources |
+| `<artifactId>-<version>-javadoc.jar` | API javadoc |
+| `<artifactId>-<version>-extension.zip` | API and impl jars; what `btracex install <groupId>:<artifactId>:<version>` downloads |
+
+Name the Gradle project after the extension `id`: `btracex install` derives the installed extension id from the artifact name.
+
+Maven Central also requires POM metadata the plugin cannot know, and signatures on every file. Add them to the same publication:
+
+```gradle
+plugins {
+  id 'io.btrace.extension' version '<btraceVersion>'
+  id 'signing'
+}
+
+publishing {
+  publications.named('mavenExtension') {
+    pom {
+      url = 'https://github.com/example-org/my-extension'
+      licenses { license { name = 'The Apache License, Version 2.0'; url = 'https://www.apache.org/licenses/LICENSE-2.0.txt' } }
+      developers { developer { id = 'me'; name = 'My Name' } }
+      scm { url = 'https://github.com/example-org/my-extension'; connection = 'scm:git:https://github.com/example-org/my-extension.git' }
+    }
+  }
+}
+
+signing {
+  sign publishing.publications.mavenExtension
+}
+```
+
+The extensions bundled with BTrace are published the same way, as `io.btrace:<id>:<version>`, by the release workflow; `gradle/extension-publishing.gradle` holds their POM metadata and signing, and `./gradlew verifyReleaseExtensionPublications` (part of `check`) validates the publications before every release.
+
+### Registry entry
 
 Registry entries store a single recommended base coordinate:
 
@@ -455,7 +494,7 @@ Registry entries store a single recommended base coordinate:
 }
 ```
 
-Consumers are expected to resolve the standard BTrace extension artifacts from that base coordinate.
+Consumers resolve the artifacts listed above from that base coordinate.
 
 ## Dependency Management
 

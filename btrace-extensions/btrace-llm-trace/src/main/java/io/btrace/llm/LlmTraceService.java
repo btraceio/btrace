@@ -28,7 +28,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>Thread-safe. All methods can be called concurrently from instrumented threads.
  *
- * <h3>Quick start — latency only (works with any SDK)</h3>
+ * <h2>Quick start — latency only (works with any SDK)</h2>
  *
  * <pre>
  * &#64;Injected private static LlmTraceService llm;
@@ -40,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
  * }
  * </pre>
  *
- * <h3>Full metrics with fluent builder</h3>
+ * <h2>Full metrics with fluent builder</h2>
  *
  * <pre>
  * llm.call("claude-sonnet-4-20250514")

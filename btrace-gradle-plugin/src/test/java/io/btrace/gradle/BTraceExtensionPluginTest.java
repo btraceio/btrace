@@ -3,6 +3,7 @@ package io.btrace.gradle;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -12,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
 import java.util.jar.JarFile;
+import java.util.zip.ZipFile;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.TaskOutcome;
@@ -296,6 +298,86 @@ class BTraceExtensionPluginTest {
                                             entry.getName()
                                                     .equals("com/example/impl/PublicServiceImpl.html")),
                     "Implementation implementation javadocs should not leak into api-javadoc");
+        }
+    }
+
+    @Test
+    @DisplayName("the Maven publication has the API jar as its main artifact plus sources, javadoc and the extension zip")
+    void publicationIsCentralShaped() throws IOException {
+        writeExtensionProject(
+                // The fixture's PublicValue has a public constructor; not what this test is about
+                "btraceExtension { apiCtorSeverity = 'off' }\n"
+                        + "apply plugin: 'signing'\n"
+                        // The Central metadata and signing snippet from BTraceExtensionDevelopmentGuide.md
+                        + "publishing {\n"
+                        + "  publications.named('mavenExtension') {\n"
+                        + "    pom {\n"
+                        + "      url = 'https://github.com/example-org/my-extension'\n"
+                        + "      licenses { license { name = 'The Apache License, Version 2.0'; url = 'https://www.apache.org/licenses/LICENSE-2.0.txt' } }\n"
+                        + "      developers { developer { id = 'me'; name = 'My Name' } }\n"
+                        + "      scm { url = 'https://github.com/example-org/my-extension'; connection = 'scm:git:https://github.com/example-org/my-extension.git' }\n"
+                        + "    }\n"
+                        + "  }\n"
+                        + "  repositories {\n"
+                        + "    maven { name = 'fixture'; url = layout.buildDirectory.dir('repo') }\n"
+                        + "  }\n"
+                        + "}\n"
+                        + "signing {\n"
+                        // No key in the test; the guide's builds sign for real
+                        + "  required = false\n"
+                        + "  sign publishing.publications.mavenExtension\n"
+                        + "}\n");
+        // Packaging validates that each service has an implementation it can locate
+        writeFile(
+                projectDir.resolve(
+                        "ext/src/main/resources/META-INF/services/com.example.api.PublicService"),
+                "com.example.impl.PublicServiceImpl\n");
+
+        BuildResult result = createRunner()
+                .withArguments(":ext:publishMavenExtensionPublicationToFixtureRepository")
+                .build();
+        assertEquals(
+                TaskOutcome.SUCCESS,
+                result.task(":ext:publishMavenExtensionPublicationToFixtureRepository").getOutcome());
+
+        Path dir = projectDir.resolve("ext/build/repo/com/example/ext/1.0");
+        File mainJar = dir.resolve("ext-1.0.jar").toFile();
+        assertTrue(
+                mainJar.isFile(),
+                () -> "main artifact should be published without a classifier; published: " + listFiles(projectDir.resolve("ext/build/repo")));
+        try (JarFile jar = new JarFile(mainJar)) {
+            assertNotNull(jar.getEntry("com/example/api/PublicService.class"), "main jar is the API jar");
+            assertNull(jar.getEntry("com/example/impl/PublicServiceImpl.class"), "no impl classes in the main jar");
+        }
+        try (JarFile jar = new JarFile(dir.resolve("ext-1.0-sources.jar").toFile())) {
+            assertNotNull(jar.getEntry("com/example/api/PublicService.java"));
+        }
+        try (JarFile jar = new JarFile(dir.resolve("ext-1.0-javadoc.jar").toFile())) {
+            assertNotNull(jar.getEntry("com/example/api/PublicService.html"));
+        }
+        try (ZipFile zip = new ZipFile(dir.resolve("ext-1.0-extension.zip").toFile())) {
+            assertNotNull(zip.getEntry("ext-1.0-api.jar"), "extension zip keeps the installable layout");
+            assertNotNull(zip.getEntry("ext-1.0-impl.jar"), "extension zip keeps the installable layout");
+        }
+        assertFalse(dir.resolve("ext-1.0-api.jar").toFile().exists(), "no duplicate classified API jar");
+
+        String pom = new String(Files.readAllBytes(dir.resolve("ext-1.0.pom")), StandardCharsets.UTF_8);
+        // Absent <packaging> means jar; "pom" packaging would hide the artifacts from consumers
+        assertFalse(pom.contains("<packaging>"), pom);
+        assertTrue(pom.contains("<name>Test Extension</name>"), pom);
+        assertTrue(pom.contains("<description>Fixture for extension plugin tests</description>"), pom);
+        assertTrue(pom.contains("<url>https://github.com/example-org/my-extension</url>"), pom);
+        assertTrue(pom.contains("<licenses>") && pom.contains("<developers>") && pom.contains("<scm>"), pom);
+    }
+
+    private static String listFiles(Path root) {
+        try (java.util.stream.Stream<Path> files = Files.walk(root)) {
+            return files.filter(Files::isRegularFile)
+                    .map(f -> root.relativize(f).toString())
+                    .sorted()
+                    .collect(java.util.stream.Collectors.joining(", "));
+        } catch (IOException e) {
+            return "<" + e + ">";
         }
     }
 
