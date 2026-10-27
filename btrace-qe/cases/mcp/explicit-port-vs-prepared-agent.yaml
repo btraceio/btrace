@@ -1,0 +1,24 @@
+id: mcp.explicit-port-vs-prepared-agent
+surface: mcp
+intent: resilience
+title: "btrace -p <other port> -n '<oneliner>' <PID> against a JVM prepared with port=0 (MCP always passes a port, default 2020)"
+# The MCP server constructs Client(port) with the per-call port (default 2020) and then attaches.
+# Grounding: client/Client.java attach(pid, agentPath, ...) reads btrace.port from the target and,
+# when an agent is already running, calls configureConnection, which replaces the requested port
+# with the discovered one (Client.java configureConnection, replacementPort = discoveredPort).
+given:
+  mode: attach
+  target: AttachDemoTarget
+  jvmArgs:
+    - "-javaagent:${btraceJar}=port=0"
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "-n"
+    - "qe.targets.AttachDemoTarget::work @return { print method, time }"
+    - "${pid}"
+steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^work$"
+    - "^execution time: \\d+ ms$"
