@@ -134,6 +134,7 @@ This directory contains GitHub Actions workflows for continuous integration and 
 - Waits up to 30 minutes for manual release via Central Portal
 - Creates GitHub release only after Maven artifacts are available
 - Updates SDKMan and manages milestones
+- Release candidates (`release_type: rc`, version `X.Y.Z-RCn`) publish to Maven Central and a GitHub pre-release only; see [Releasing: Release Candidates](../../docs/releasing.md#release-candidates)
 
 **Manual Checkpoint:** After staging, you must release via [Central Portal](https://central.sonatype.com/publishing/deployments). This allows reviewing artifacts before they become permanent.
 

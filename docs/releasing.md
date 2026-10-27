@@ -17,6 +17,7 @@ BTrace uses an automated release process via GitHub Actions. The release is trig
 | **major** | Breaking changes, major new features | 2.3.0-SNAPSHOT → 3.0.0 |
 | **minor** | New features, non-breaking changes | 2.3.0-SNAPSHOT → 2.3.0 |
 | **patch** | Bug fixes on release branch | 2.3.1-SNAPSHOT → 2.3.1 |
+| **rc** | Release candidate before a release | 3.0.0-SNAPSHOT → 3.0.0-RC1 (nothing is bumped) |
 
 The type is a version *operation* on the snapshot currently in the root `build.gradle`, not a
 description of the release. `major` always bumps the major number, so when `develop` has already
@@ -37,9 +38,40 @@ release it with `minor` (`3.0.0-SNAPSHOT → 3.0.0`, next develop `3.1.0-SNAPSHO
 # Patch release from a release branch
 ./scripts/release.sh patch release/2.3
 
+# Release candidate of the current version from develop (3.0.0-RC1, then RC2, ...)
+./scripts/release.sh rc
+
 # Dry run (see what would happen without triggering)
 DRY_RUN=true ./scripts/release.sh minor
 ```
+
+### Release Candidates
+
+`./scripts/release.sh rc [source-ref]` publishes `X.Y.Z-RCn` for the version in the source
+reference's `build.gradle`, numbered after the existing `vX.Y.Z-RCn` tags (override with
+`RC_NUMBER=n`). It runs the same validation, build, test, integration, Maven Central, distribution
+and release-smoke stages as a release, so `io.btrace:btrace:X.Y.Z-RCn` and every bundled
+extension's `io.btrace:<id>:X.Y.Z-RCn` can be installed and tested before `X.Y.Z` exists. The
+deb and rpm packages are versioned `X.Y.Z~RCn`, which both package managers sort before `X.Y.Z`.
+
+A candidate stays out of every channel that tracks the latest release:
+
+| Channel | Release | Release candidate |
+|---------|---------|-------------------|
+| Maven Central | `X.Y.Z` | `X.Y.Z-RCn` |
+| GitHub | release, marked latest | pre-release, never latest |
+| Container images | `<version>` and `latest` tags | `<version>` tags only |
+| Gradle Plugin Portal | published | not published |
+| JBang catalog, SDKMAN | updated | unchanged |
+| Release branch, version bumps, milestone | created, bumped, closed | none |
+
+The version commit is tagged `vX.Y.Z-RCn` on a detached commit; no branch is created or pushed.
+Maven Central artifacts are permanent, so a broken candidate is superseded by the next one
+(`RC2`), not deleted. When a candidate is good, release `X.Y.Z` from the same commit with the
+usual `minor` or `patch` type.
+
+The workflow's internal `vX.Y.Z_RC` tag (created before the smoke tests and replaced by the final
+tag) is unrelated: it exists for every run, candidates included.
 
 ### What Happens During Release
 
@@ -57,7 +89,7 @@ The release workflow performs these steps:
    archive, container, version, and license paths against the release candidate
 10. **GitHub Release**: Creates release with artifacts and changelog
 10b. **Container images**: Builds the Debian, Alpine, and distroless variants for `linux/amd64` and `linux/arm64` from the candidate distribution and pushes them to `ghcr.io/btraceio/btrace` (tags `<version>`, `latest`, `-alpine`, `-distroless`) using the workflow's `GITHUB_TOKEN`; no registry account or secret is needed
-11. **SDKMan Update**: Announces new version to SDKMan
+11. **SDKMan Update**: Announces new version to SDKMan (not for release candidates; see above)
 12. **JBang**: Verifies both the Maven coordinate and catalog alias
 13. **Version Bumps**: Updates develop and release branch to next snapshots
 14. **Milestones**: Creates/closes milestone, associates merged PRs
