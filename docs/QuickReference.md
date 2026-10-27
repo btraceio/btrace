@@ -143,15 +143,15 @@ Specify where to inject code within a method using `@Location(Kind.XXX)`.
 |------|-------------|------|-------------------|
 | `ENTRY` | Method entry | Default | Method args |
 | `RETURN` | Method return | Normal exit | `@Return`, `@Duration` |
-| `ERROR` | Exception thrown | Uncaught exception | `Throwable`, `@Duration` |
+| `ERROR` | Exception thrown | Uncaught exception | `Throwable` (plain or `@TargetInstance`), `@Duration` |
 | `CALL` | Method call | Before/after call | `@TargetInstance`, `@TargetMethodOrField` |
 | `LINE` | Source line | Specific line | Line number |
 | `FIELD_GET` | Field read | Getting field value | `@TargetInstance`, `@TargetMethodOrField` |
 | `FIELD_SET` | Field write | Setting field value | New value, `@TargetInstance` |
 | `NEW` | Object creation | After `new` | Object type name |
 | `NEWARRAY` | Array creation | After `new[]` | Array type, dimensions |
-| `CATCH` | Exception catch | Entering catch block | `Throwable` |
-| `THROW` | Throwing exception | Before throw | `Throwable` |
+| `CATCH` | Exception catch | Entering catch block | `@TargetInstance` exception |
+| `THROW` | Throwing exception | Before throw | `@TargetInstance Throwable` |
 | `ARRAY_GET` | Array read | Getting array element | Array, index |
 | `ARRAY_SET` | Array write | Setting array element | Array, index, value |
 | `SYNC_ENTRY` | Enter synchronized | Acquiring lock | Lock object |
@@ -178,8 +178,13 @@ Inject context information into probe handler parameters.
 | `@Duration` | long | Duration in nanoseconds | `RETURN`, `ERROR`, `CALL` (after) |
 | `@ProbeClassName` | String | Enclosing class name | All |
 | `@ProbeMethodName` | String | Enclosing method name | All |
-| `@TargetInstance` | Object | Target object | `CALL`, `FIELD_GET/SET` |
+| `@TargetInstance` | Object | Target object; the exception at `ERROR`, `CATCH`, `THROW` | `CALL`, `FIELD_GET/SET`, `ERROR`, `CATCH`, `THROW` |
 | `@TargetMethodOrField` | String | Target name | `CALL`, `FIELD_GET/SET` |
+
+At `ERROR`, a handler can also take the exception as a plain `Throwable` parameter: when no
+parameter is annotated `@TargetInstance`, the last unannotated parameter declared as
+`java.lang.Throwable` receives it. At `CATCH` and `THROW` the exception parameter must be annotated
+`@TargetInstance`.
 
 **Examples:**
 ```java

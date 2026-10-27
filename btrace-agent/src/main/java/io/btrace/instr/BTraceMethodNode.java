@@ -23,12 +23,14 @@ import java.util.Comparator;
 import java.util.Set;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.MethodNode;
 
 /**
  * @author Jaroslav Bachorik
  */
 public class BTraceMethodNode extends MethodNode {
+  private static final String THROWABLE_DESC = "Ljava/lang/Throwable;";
   public static final Comparator<MethodNode> COMPARATOR =
       (o1, o2) -> (o1.name + "#" + o1.desc).compareTo(o2.name + "#" + o2.desc);
   private final BTraceProbeNode cn;
@@ -61,6 +63,7 @@ public class BTraceMethodNode extends MethodNode {
   @Override
   public void visitEnd() {
     if (om != null) {
+      bindBareThrowableAtError(om);
       verifySpecialParameters(om);
       cn.addOnMethod(om);
     }
@@ -347,6 +350,38 @@ public class BTraceMethodNode extends MethodNode {
       ph.setDurationParameter(parameter);
     }
     return av;
+  }
+
+  /**
+   * At {@code Kind.ERROR} the thrown exception is delivered to the {@code @TargetInstance}
+   * parameter. Handlers are commonly written with a plain {@code Throwable} parameter instead, as
+   * the documentation shows; without a binding, that parameter is matched against the target
+   * method's own arguments, fails to match, and the handler is silently never applied. When no
+   * parameter is annotated {@code @TargetInstance}, bind the last unannotated parameter declared
+   * exactly as {@code java.lang.Throwable} to the exception.
+   */
+  private void bindBareThrowableAtError(OnMethod om) {
+    if (om.getLocation() == null
+        || om.getLocation().getValue() != Kind.ERROR
+        || om.getTargetInstanceParameter() != -1) {
+      return;
+    }
+    Type[] params = Type.getArgumentTypes(desc);
+    for (int i = params.length - 1; i >= 0; i--) {
+      if (THROWABLE_DESC.equals(params[i].getDescriptor()) && !isSpecialParameter(om, i)) {
+        om.setTargetInstanceParameter(i);
+        return;
+      }
+    }
+  }
+
+  private static boolean isSpecialParameter(OnMethod om, int index) {
+    return index == om.getSelfParameter()
+        || index == om.getClassNameParameter()
+        || index == om.getMethodParameter()
+        || index == om.getReturnParameter()
+        || index == om.getTargetMethodOrFieldParameter()
+        || index == om.getDurationParameter();
   }
 
   private void verifySpecialParameters(OnMethod om) {

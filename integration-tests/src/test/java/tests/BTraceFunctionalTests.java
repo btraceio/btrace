@@ -404,6 +404,27 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   @Test
+  public void testErrorHandlerWithBareThrowable() throws Exception {
+    // The tutorials declare the exception at Kind.ERROR as a plain Throwable parameter, without
+    // @TargetInstance; the handler must still run and receive the thrown exception.
+    testDynamic(
+        "resources.FailingTarget",
+        "btrace/BareThrowableErrorTest.java",
+        Completion.untilContains("error in resources.FailingTarget"),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(
+                stdout.contains(
+                    "error in resources.FailingTarget: java.lang.IllegalStateException: order failed"
+                        + " validation: order-42"),
+                "the handler did not receive the thrown exception:\n" + stdout);
+          }
+        });
+  }
+
+  @Test
   public void testReturnDurationWithEarlyReturn() throws Exception {
     // earlyReturn sleeps 120 ms before its second return; an early return it never takes comes
     // first in the bytecode. The duration must be measured on the path that runs.
