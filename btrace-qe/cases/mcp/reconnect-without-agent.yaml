@@ -1,7 +1,10 @@
 id: mcp.reconnect-without-agent
 surface: mcp
-intent: resilience
-title: "btrace -r <probe id> exit <PID> against a JVM with no BTrace agent (MCP stop_detached_probe on the wrong PID) ends cleanly"
+intent: conformance
+title: "btrace -r <probe id> exit <PID> against a JVM with no BTrace agent (MCP stop_detached_probe on the wrong PID) reports it and exits 1"
+spec:
+  doc: docs/QuickReference.md
+  claim: "If the probe id is unknown, or the JVM has no BTrace control endpoint, `-r` prints the reason and exits with code 1"
 # Grounding: client/Main.java -r branch calls Client.discoverPreparedAgent, which throws
 # IOException("No BTrace control endpoint is available for PID <pid>") when the target has no
 # btrace.port property; Main prints it via errorExit. No messageMustMention: the distinctive user
@@ -15,4 +18,5 @@ given:
     - "exit"
     - "${pid}"
 steps: [launch, awaitReady, attach, awaitClientExit, shutdown, awaitExit]
-expect: {}
+expect:
+  clientExitCode: 1
