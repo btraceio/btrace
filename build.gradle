@@ -20,6 +20,97 @@ subprojects {
     apply from: rootProject.file('common.gradle')
 }
 
+// The extensions that ship with a release: the distribution's extensions/ directory, the set the
+// fat agent embeds by default (both in btrace-dist/build.gradle) and the set published to Maven
+// Central as io.btrace:<id>:<version>. Example and test extensions are deliberately absent.
+ext.releaseExtensionProjects = [
+    ':btrace-extensions:btrace-contracts',
+    ':btrace-extensions:btrace-gpu-bridge',
+    ':btrace-extensions:btrace-llm-trace',
+    ':btrace-extensions:btrace-metrics',
+    ':btrace-extensions:btrace-otel',
+    ':btrace-extensions:btrace-rag-quality',
+    ':btrace-extensions:btrace-statsd',
+    ':btrace-extensions:btrace-utils'
+]
+
+releaseExtensionProjects.each { path ->
+    project(path) {
+        apply from: rootProject.file('gradle/extension-publishing.gradle')
+    }
+}
+
+// Staged by the release workflow together with :btrace-dist, in the same Gradle invocation so
+// all artifacts land in one Central deployment.
+tasks.register('publishReleaseExtensionsToSonatype') {
+    group = 'publishing'
+    description = 'Publishes every release extension as io.btrace:<id>:<version> to Sonatype'
+    dependsOn releaseExtensionProjects.collect { "${it}:publishMavenExtensionPublicationToSonatypeRepository" }
+}
+
+// Publishes the release extensions to a scratch repository and checks what Maven Central and
+// `btracex install` rely on. Runs with `check`, and before any publication to Sonatype.
+def releaseCheckRepo = layout.buildDirectory.dir('release-extension-repo')
+// Emptied first so files left by an earlier run cannot satisfy the checks
+tasks.register('cleanReleaseExtensionRepo', Delete) {
+    delete releaseCheckRepo
+}
+tasks.register('verifyReleaseExtensionPublications') {
+    group = 'verification'
+    description = 'Checks the Maven publications of the release extensions'
+    dependsOn releaseExtensionProjects.collect { "${it}:publishMavenExtensionPublicationToReleaseCheckRepository" }
+    doFirst {
+        def failures = []
+        releaseExtensionProjects.each { path ->
+            def p = project(path)
+            def id = p.extensions.getByName('btraceExtension').id
+            if (p.name != id) {
+                // btracex install derives the extension id from the artifact name
+                failures << "${path}: artifactId '${p.name}' differs from extension id '${id}'"
+            }
+            def dir = releaseCheckRepo.get().dir("${p.group.toString().replace('.', '/')}/${p.name}/${p.version}").asFile
+            def files = (dir.listFiles() ?: []) as List
+            def base = java.util.regex.Pattern.quote(p.name) + '-' + java.util.regex.Pattern.quote(p.version.toString().replace('-SNAPSHOT', '')) + '(?:-SNAPSHOT|-[0-9.]+-[0-9]+)?'
+            def find = { String suffix -> files.find { it.name ==~ (base + java.util.regex.Pattern.quote(suffix)) } }
+            ['.jar', '-sources.jar', '-javadoc.jar', '-extension.zip', '.pom'].each { suffix ->
+                if (find(suffix) == null) {
+                    failures << "${path}: missing ${p.name}-<version>${suffix} in ${dir}"
+                }
+            }
+            def pom = find('.pom')
+            if (pom != null) {
+                def xml = new groovy.xml.XmlSlurper().parse(pom)
+                if (!xml.packaging.isEmpty() && xml.packaging.text() != 'jar') {
+                    failures << "${path}: POM packaging is '${xml.packaging.text()}', expected jar"
+                }
+                ['name', 'description', 'url'].each { e ->
+                    if (xml."${e}".text().trim().isEmpty()) {
+                        failures << "${path}: POM has no <${e}>"
+                    }
+                }
+                if (xml.licenses.license.size() == 0) failures << "${path}: POM has no <licenses>"
+                if (xml.developers.developer.size() == 0) failures << "${path}: POM has no <developers>"
+                if (xml.scm.url.text().trim().isEmpty()) failures << "${path}: POM has no <scm>"
+            }
+            def zip = find('-extension.zip')
+            if (zip != null) {
+                def entries = new java.util.zip.ZipFile(zip).withCloseable { z -> z.entries().collect { it.name } }
+                if (!entries.any { it.endsWith('-api.jar') } || !entries.any { it.endsWith('-impl.jar') }) {
+                    failures << "${path}: ${zip.name} must contain the -api.jar and -impl.jar btracex install expects, has ${entries}"
+                }
+            }
+        }
+        if (failures) {
+            throw new GradleException('Release extension publications are not publishable:\n  ' + failures.join('\n  '))
+        }
+        logger.lifecycle("[release] Verified Maven publications of ${releaseExtensionProjects.size()} release extensions")
+    }
+}
+
+tasks.named('check') {
+    dependsOn 'verifyReleaseExtensionPublications'
+}
+
 task mergedJavadoc(type: Javadoc, description: 'Creates Javadoc from all the projects.') {
     title = 'All modules'
     destinationDir = new File(project.buildDir, 'merged-javadoc')

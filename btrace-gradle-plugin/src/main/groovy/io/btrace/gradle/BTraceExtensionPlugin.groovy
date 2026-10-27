@@ -1404,13 +1404,18 @@ class BTraceExtensionPlugin implements Plugin<Project> {
             project.publishing {
                 publications {
                     mavenExtension(org.gradle.api.publish.maven.MavenPublication) {
-                        groupId = project.group as String
-                        artifactId = project.name
-                        version = project.version as String
+                        // groupId/artifactId/version are left to Gradle's defaults, which read
+                        // project.group/name/version when publishing. Copying them here would
+                        // capture their values at plugin application, before a build script's
+                        // `group = ...` / `version = ...` lines run.
 
-                        artifact(buildApiJar) { classifier = 'api' }
-                        artifact(apiSourcesJar)
-                        artifact(apiJavadocJar)
+                        // The API jar is the main artifact, so the publication has the default
+                        // jar packaging and scripts can compile against <group>:<id>:<version>.
+                        // Maven Central requires -sources and -javadoc next to a main jar.
+                        artifact(buildApiJar) { classifier = null }
+                        artifact(apiSourcesJar) { classifier = 'sources' }
+                        artifact(apiJavadocJar) { classifier = 'javadoc' }
+                        // What `btracex install <group>:<id>:<version>` downloads
                         artifact(packageExtension) { classifier = 'extension' }
 
                         pom {

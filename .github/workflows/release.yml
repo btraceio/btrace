@@ -541,7 +541,8 @@ jobs:
           echo "Staging artifacts to Central Portal..."
           echo "After this job completes, go to https://central.sonatype.com/publishing/deployments"
           echo "to review and release the staged artifacts."
-          ./gradlew :btrace-dist:publishAllPublicationsToSonatypeRepository --no-daemon
+          # One invocation, so the distribution and the release extensions share a deployment
+          ./gradlew :btrace-dist:publishAllPublicationsToSonatypeRepository publishReleaseExtensionsToSonatype --no-daemon
 
       - name: Staging complete
         run: |
@@ -551,6 +552,7 @@ jobs:
           echo ""
           echo "Staged artifacts:"
           echo "  - io.btrace:btrace:${{ inputs.release_version }}"
+          echo "  - io.btrace:<extension-id>:${{ inputs.release_version }} for each release extension"
           echo ""
           echo "Next steps:"
           echo "  1. Go to https://central.sonatype.com/publishing/deployments"

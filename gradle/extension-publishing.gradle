@@ -1,0 +1,63 @@
+// Maven Central requirements for the extensions BTrace publishes itself. Applied from the root
+// build.gradle to every project in releaseExtensionProjects. The io.btrace.extension plugin
+// creates the `mavenExtension` publication (API jar, sources, javadoc, extension zip); this adds
+// the POM metadata and signatures Central requires but third-party extensions must not inherit.
+
+pluginManager.withPlugin('maven-publish') {
+    publishing {
+        publications.withType(MavenPublication).matching { it.name == 'mavenExtension' }.configureEach {
+            pom {
+                url = 'https://github.com/btraceio/btrace'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'jbachorik'
+                        name = 'Jaroslav Bachorik'
+                        email = 'j.bachorik@btrace.io'
+                    }
+                }
+                scm {
+                    url = 'https://github.com/btraceio/btrace'
+                    connection = 'scm:git:https://github.com/btraceio/btrace.git'
+                    developerConnection = 'scm:git:https://github.com/btraceio/btrace.git'
+                }
+            }
+        }
+        repositories {
+            // Scratch target for :verifyReleaseExtensionPublications
+            maven {
+                name = 'releaseCheck'
+                url = rootProject.layout.buildDirectory.dir('release-extension-repo')
+            }
+        }
+    }
+
+    apply plugin: 'signing'
+    // Deferred: signing a publication resolves its artifacts, which must not happen while the
+    // extension plugin is still wiring the impl jar and the extension zip
+    afterEvaluate {
+        signing {
+            def signingKey = findProperty('gpg.signing.key') ?: System.getenv('GPG_SIGNING_KEY')
+            def signingPwd = findProperty('gpg.signing.pwd') ?: System.getenv('GPG_SIGNING_PWD')
+            if (signingKey) {
+                useInMemoryPgpKeys(signingKey, signingPwd)
+            }
+            // Central rejects unsigned files, so a Sonatype publication without a key fails here
+            // instead of in the Central portal; local and check publications stay unsigned.
+            required = { gradle.taskGraph.allTasks.any { it.name.endsWith('ToSonatypeRepository') } }
+            sign publishing.publications
+        }
+    }
+
+    tasks.matching { it.name.endsWith('ToReleaseCheckRepository') }.configureEach {
+        dependsOn rootProject.tasks.named('cleanReleaseExtensionRepo')
+    }
+    tasks.matching { it.name.endsWith('ToSonatypeRepository') }.configureEach {
+        dependsOn rootProject.tasks.named('verifyReleaseExtensionPublications')
+    }
+}
