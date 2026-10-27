@@ -170,7 +170,7 @@ BTrace-Agent-Main: io.btrace.agent.Main
 Can-Redefine-Classes: true
 Can-Retransform-Classes: true
 Boot-Class-Path: demo-btrace-agent.jar
-BTrace-Embedded-Extensions: btrace-contracts,btrace-gpu-bridge,btrace-llm-trace,btrace-metrics,btrace-rag-quality,btrace-statsd,btrace-utils
+BTrace-Embedded-Extensions: btrace-contracts,btrace-gpu-bridge,btrace-llm-trace,btrace-metrics,btrace-otel,btrace-rag-quality,btrace-statsd,btrace-utils
 ```
 
 `Boot-Class-Path` and `BTrace-Embedded-Extensions` are the two attributes `fatAgentJar` sets
@@ -178,7 +178,7 @@ itself; everything else (you'll also see `Main-Class`, `BTrace-Version`, and `BT
 is copied verbatim from the engine jar's manifest by `seedManifestFromEngine()`. The embedded list
 is *merged*, not replaced: the public `io.btrace:btrace:3.0.0` artifact is itself a fat agent —
 `btrace-dist/build.gradle` publishes `fatAgentJar` under that coordinate — and already embeds
-BTrace's seven default extensions, `btrace-metrics` included. Your `file()` source is deduplicated
+BTrace's eight default extensions, `btrace-metrics` included. Your `file()` source is deduplicated
 by id against that list; it's the mechanism for adding an extension the engine *doesn't* carry
 (your own, from [Tutorial 6](06-write-your-own-extension.md), or a third-party one).
 
