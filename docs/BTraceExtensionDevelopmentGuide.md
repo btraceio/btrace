@@ -597,7 +597,7 @@ Build the fat agent:
 
 The plugin stages your extension:
 1. **API classes** → copied as `.class` files (loaded via bootstrap)
-2. **Impl classes** → renamed to `.classdata` (loaded at runtime by `ClassDataLoader`)
+2. **Impl classes** → renamed to `.classdata` and placed under `META-INF/btrace-extensions/{id}/` (loaded at runtime by a `ClassDataLoader` bound to your extension id, so your implementation classes never clash with another embedded extension's)
 3. **Metadata** → written to `META-INF/btrace-extensions/{id}/extension.properties`
 
 At agent startup, embedded extensions are automatically discovered from the JAR manifest attribute `BTrace-Embedded-Extensions`.

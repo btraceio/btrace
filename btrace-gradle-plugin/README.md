@@ -100,7 +100,7 @@ Build self-contained fat agent JARs with embedded extensions for single-JAR depl
 - Embeds extensions directly into the agent JAR
 - Auto-discovers extension projects in multi-project builds
 - Supports project references, separately published third-party Maven coordinates, and local files
-- API classes as `.class` files (bootstrap), impl as `.classdata` (runtime loaded)
+- API classes as `.class` files (bootstrap), impl as `.classdata` under `META-INF/btrace-extensions/<id>/` (runtime loaded, isolated per extension)
 - Integrates with ShadowJar for package relocation
 
 ### Apply the Plugin
@@ -261,7 +261,7 @@ btraceFatAgent {
 
 ### Tasks
 
-- `stageExtensions`: Resolves and stages extension content (API as `.class`, impl as `.classdata`)
+- `stageExtensions`: Resolves and stages extension content (API as `.class` at the root, impl as `.classdata` under `META-INF/btrace-extensions/<id>/`); fails if two extensions provide the same API class
 - `stageProbes`: Stages bundled probes to `META-INF/btrace-probes/`
 - `fatAgentJar`: Creates the fat agent JAR with all embedded content
 
@@ -279,14 +279,15 @@ btrace-agent-fat.jar
 │   │   └── BTrace-Embedded-Extensions: ext1,ext2,ext3
 │   └── btrace-extensions/
 │       ├── ext1/
-│       │   └── extension.properties
+│       │   ├── extension.properties
+│       │   └── org/example/ext1/impl/...   # ext1 impl classes (.classdata)
 │       ├── ext2/
-│       │   └── extension.properties
+│       │   ├── extension.properties
+│       │   └── org/example/ext2/impl/...   # ext2 impl classes (.classdata)
 │       └── ext3/
 │           └── extension.properties
 ├── io/btrace/...                   # Agent + boot classes
-├── org/example/ext/api/...         # Extension API classes (.class)
-└── org/example/ext/impl/...        # Extension impl classes (.classdata)
+└── org/example/ext/api/...         # Extension API classes (.class)
 ```
 
 `fatAgentJar` validates this masked-JAR structure after assembly and fails if the loader, masked

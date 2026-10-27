@@ -263,7 +263,8 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
    * Load an embedded extension using ClassDataLoader.
    *
    * <p>For embedded extensions: - API classes are already on bootstrap (flattened into agent JAR as
-   * .class files) - Impl classes are stored as .classdata files and loaded via ClassDataLoader
+   * .class files) - Impl classes are stored as .classdata files under {@code
+   * META-INF/btrace-extensions/<id>/} and loaded via a ClassDataLoader bound to that id
    *
    * @param descriptor embedded extension descriptor
    * @return true if loaded successfully

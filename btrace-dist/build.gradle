@@ -478,9 +478,9 @@ test {
  * │   ├── MANIFEST.MF (BTrace-Embedded-Extensions: ext1,ext2)
  * │   └── btrace-extensions/
  * │       └── ext-id/
- * │           └── extension.properties
- * ├── io/btrace/...           # Agent + API classes (.class)
- * └── io/btrace/ext/impl/...  # Impl classes (.classdata)
+ * │           ├── extension.properties
+ * │           └── io/btrace/ext/impl/...  # Impl classes (.classdata), per extension
+ * └── io/btrace/...           # Agent + API classes (.class)
  *
  * Usage:
  *   ./gradlew :btrace-dist:fatAgentJar -PembedExtensions=btrace-spark,btrace-metrics

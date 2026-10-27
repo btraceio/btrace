@@ -22,7 +22,8 @@ This multi-JAR setup is problematic for:
 A single JAR containing:
 - All agent and boot classes
 - Embedded extension API classes (as `.class` files for bootstrap)
-- Embedded extension impl classes (as `.classdata` for runtime loading)
+- Embedded extension impl classes (as `.classdata` for runtime loading, under
+  `META-INF/btrace-extensions/<id>/` so that no two extensions share class data)
 - Extension metadata in `META-INF/btrace-extensions/`
 
 ## Architecture
@@ -41,15 +42,15 @@ A single JAR containing:
 │  │  org/example/ext/api/...          (extension API)     │  │
 │  └───────────────────────────────────────────────────────┘  │
 ├─────────────────────────────────────────────────────────────┤
-│  Runtime-Loaded (via ClassDataLoader)                       │
+│  Runtime-Loaded (one ClassDataLoader per extension id)      │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │  org/example/ext/impl/...classdata (extension impl)   │  │
+│  │  META-INF/btrace-extensions/                          │  │
+│  │  ├── ext1/extension.properties                        │  │
+│  │  ├── ext1/org/example/ext1/...classdata  (ext1 impl)  │  │
+│  │  ├── ext2/extension.properties                        │  │
+│  │  ├── ext2/org/example/ext2/...classdata  (ext2 impl)  │  │
+│  │  └── ext3/extension.properties                        │  │
 │  └───────────────────────────────────────────────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│  META-INF/btrace-extensions/                                │
-│  ├── ext1/extension.properties                              │
-│  ├── ext2/extension.properties                              │
-│  └── ext3/extension.properties                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -89,7 +90,9 @@ Agent Startup
 ┌─────────────────────────┐
 │ Impl classes loaded on  │
 │ demand via ClassData-   │
-│ Loader (from .classdata)│
+│ Loader bound to the id  │
+│ (META-INF/btrace-       │
+│  extensions/<id>/...)   │
 └─────────────────────────┘
 ```
 
@@ -140,9 +143,14 @@ class ResolvedExtension {
    - These end up on bootstrap classpath
    - Visible to BTrace scripts and the agent
 
-2. **Impl Classes**: Extracted from impl JAR and renamed to `.classdata`
-   - Loaded at runtime by `ClassDataLoader`
-   - Isolated from target application classpath
+2. **Impl Classes**: Extracted from impl JAR, renamed to `.classdata`, and staged under
+   `META-INF/btrace-extensions/{id}/` at their package path
+   - Loaded at runtime by the `ClassDataLoader` created for that extension id, which never looks
+     outside its own prefix
+   - Isolated from target application classpath and from every other embedded extension: two
+     extensions may each carry `com/example/Helper`, and each loader sees only its own copy
+   - API classes are flattened into one bootstrap namespace, so an API class provided by two
+     extensions fails `stageExtensions` with a message naming both
 
 3. **Metadata**: Written to `META-INF/btrace-extensions/{id}/extension.properties`
 
@@ -218,7 +226,7 @@ At agent startup:
 4. For each extension ID, loads `META-INF/btrace-extensions/{id}/extension.properties`
 5. Creates `ExtensionDescriptorDTO` with `embedded=true`
 6. API classes are already on bootstrap (no loading needed)
-7. Impl classes loaded on-demand via `ClassDataLoader`
+7. Impl classes loaded on-demand via a `ClassDataLoader` bound to the extension id
 
 ### ClassDataLoader
 
@@ -232,7 +240,9 @@ public class ClassDataLoader {
 
     public Class<?> findClass(String className) {
         synchronized (getClassLoadingLock(className)) {
-            String resourceName = className.replace('.', '/') + ".classdata";
+            String resourceName =
+                "META-INF/btrace-extensions/" + extensionId + "/"
+                    + className.replace('.', '/') + ".classdata";
             InputStream is = getResourceAsStream(resourceName);
             byte[] bytes = is.readAllBytes();
             return defineClass(className, bytes, 0, bytes.length);
