@@ -141,6 +141,14 @@ class BTraceRuntimeImplBaseTest {
     assertTrue(marker < exit);
     assertEquals(1, exits);
 
+    // handleExit returns once the Exit command is dispatched; the command thread closes the
+    // speculation manager afterwards, when its drain loop ends, and then marks the runtime
+    // disabled. Wait for that (bounded) before asserting that speculation is closed.
+    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+    while (!runtime.isDisabled() && System.nanoTime() < deadline) {
+      Thread.sleep(10);
+    }
+    assertTrue(runtime.isDisabled(), "command thread did not finish within 5 s of the exit");
     assertEquals(-1, runtime.speculation());
     runtime.send(new MessageCommand("post-exit"));
     assertFalse(postExitMessage.await(250, TimeUnit.MILLISECONDS));
