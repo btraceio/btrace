@@ -112,7 +112,10 @@ and the handler dispatch in `instrument(...)`):
 - Handler parameters: `@ProbeClassName`, `@ProbeMethodName`, `@Self`, ordinary probed-method
   arguments (including `AnyType[]`), `@Return`, `@TargetInstance` (caught/escaping throwable for
   `CATCH`/`ERROR`, lock object for `SYNC_*`), and `@Duration` where the kind defines it.
-- **Remaining limitation:** `@Duration` is not supported on `SYNC_ENTRY`/`SYNC_EXIT` handlers.
+- `@Duration` is defined only for `RETURN`, `ERROR`, and `CALL` with `Where.AFTER`. The probe
+  verifier (`BTraceMethodNode.verifySpecialParameters`) rejects it on any other kind, including
+  `SYNC_ENTRY`/`SYNC_EXIT`, before either backend sees the handler, so this is a probe-language
+  rule and not a backend difference.
 - Classes the ClassFile API fails to parse are skipped (warning logged) rather than failing class
   loading.
 

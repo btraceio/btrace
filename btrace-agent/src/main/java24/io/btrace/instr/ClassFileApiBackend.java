@@ -90,8 +90,8 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Synchronization probe kinds ({@code SYNC_ENTRY}, {@code SYNC_EXIT}) instrument
  * {@code monitorenter}/{@code monitorexit} bytecodes and {@code synchronized} methods.
- * {@code @TargetInstance} receives the lock object. {@code @Duration} is not supported for
- * synchronization probes.
+ * {@code @TargetInstance} receives the lock object. {@code @Duration} is not defined for
+ * synchronization probes; the probe verifier rejects it before handlers reach any backend.
  *
  * <p>Level guards are enforced at the MethodHandle layer ({@code HandlerRepositoryImpl}); the
  * INVOKEDYNAMIC instruction is always emitted and the guard fires at runtime. Const sampling calls

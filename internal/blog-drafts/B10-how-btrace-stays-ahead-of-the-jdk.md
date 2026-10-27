@@ -53,15 +53,14 @@ the class directly — the whole mechanism leans on reflection to keep the Java 
 
 We want to be plain about where this backend actually stands today, because "ClassFile API backend"
 is easy to over-read as "drop-in ASM replacement," and the honest answer is: closer than you might
-expect, with one documented gap. Every probe kind BTrace defines is supported — `ENTRY`, `RETURN`,
+expect. Every probe kind BTrace defines is supported — `ENTRY`, `RETURN`,
 `CALL`, `LINE`, `FIELD_GET`, `FIELD_SET`, `ARRAY_GET`, `ARRAY_SET`, `CHECKCAST`, `INSTANCEOF`,
 `THROW`, `CATCH`, `ERROR`, `NEWARRAY`, `NEW`, `SYNC_ENTRY`, and `SYNC_EXIT`. Method matching covers
 exact names, `/regex/` patterns, and type-constrained matching (a non-empty `type` in `@OnMethod`).
 Handler parameters are wired up too: `@ProbeClassName`, `@ProbeMethodName`, `@Self`, the probed
 method's own arguments (including `AnyType[]`), `@Return`, `@TargetInstance` (the caught or
 escaping throwable for `CATCH`/`ERROR`, the lock object for `SYNC_*`), and `@Duration` wherever the
-probe kind defines it. The remaining limitation is narrow and specific: `@Duration` is not supported
-on `SYNC_ENTRY`/`SYNC_EXIT` handlers. Classes the ClassFile API itself can't parse are skipped with
+probe kind defines it. Classes the ClassFile API itself can't parse are skipped with
 a warning rather than crashing the target JVM. And it's still worth calling this what it is in the
 selection logic: a forward-compatibility safety net that only engages for the specific case where
 ASM would otherwise refuse to touch a class at all — for everything ASM can parse, ASM is still the
