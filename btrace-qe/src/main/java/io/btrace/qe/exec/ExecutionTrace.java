@@ -33,6 +33,7 @@ public final class ExecutionTrace {
   private final Path runDir;
   private final List<String> clientStdout;
   private final List<String> clientStderr;
+  private final Integer clientExitCode;
 
   public ExecutionTrace(
       List<StepOutcome> steps,
@@ -74,6 +75,40 @@ public final class ExecutionTrace {
       Path runDir,
       List<String> clientStdout,
       List<String> clientStderr) {
+    this(
+        steps,
+        timedOut,
+        exitedPrematurely,
+        exitCode,
+        stdout,
+        stderr,
+        canaryOk,
+        threadDumpText,
+        hasHsErrLog,
+        runDir,
+        clientStdout,
+        clientStderr,
+        null);
+  }
+
+  /**
+   * {@code clientExitCode} is the attached client's exit code when it ended before the harness
+   * reaped it; null outside attach mode or when the harness had to kill it.
+   */
+  public ExecutionTrace(
+      List<StepOutcome> steps,
+      boolean timedOut,
+      boolean exitedPrematurely,
+      Integer exitCode,
+      List<String> stdout,
+      List<String> stderr,
+      Boolean canaryOk,
+      String threadDumpText,
+      boolean hasHsErrLog,
+      Path runDir,
+      List<String> clientStdout,
+      List<String> clientStderr,
+      Integer clientExitCode) {
     this.steps = steps;
     this.timedOut = timedOut;
     this.exitedPrematurely = exitedPrematurely;
@@ -86,6 +121,7 @@ public final class ExecutionTrace {
     this.runDir = runDir;
     this.clientStdout = clientStdout;
     this.clientStderr = clientStderr;
+    this.clientExitCode = clientExitCode;
   }
 
   public List<StepOutcome> steps() {
@@ -136,6 +172,14 @@ public final class ExecutionTrace {
   /** Stderr of the client attached by an {@code attach} step; empty in other modes. */
   public List<String> clientStderr() {
     return clientStderr;
+  }
+
+  /**
+   * Exit code of the client attached by an {@code attach} step, if it ended before the harness
+   * reaped it (on its own, or through {@code detach}); null in other modes or when it was killed.
+   */
+  public Integer clientExitCode() {
+    return clientExitCode;
   }
 
   /**

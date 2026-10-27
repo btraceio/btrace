@@ -23,6 +23,7 @@ steps: [...]                          # target: launch, awaitReady, [canary], sh
                                       # client: runClient, awaitExit
 expect:                               # mapping, may be {}
   exitCode: <int>                     # conformance only
+  clientExitCode: <int>               # conformance + attach mode only; needs an awaitClientExit step
   messageMustMention: ["<token>", ...]
 ```
 

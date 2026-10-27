@@ -368,4 +368,67 @@ class OracleRunnerTest {
     assertEquals(1, v.findings().size(), "findings=" + v.findings());
     assertEquals(Severity.S1, v.findings().get(0).severity());
   }
+
+  private static final List<String> CLIENT_EXIT_STEPS =
+      List.of("launch", "awaitReady", "attach", "awaitClientExit", "shutdown", "awaitExit");
+
+  private static CaseDef clientExitConformance(String id, int clientExit) {
+    return new CaseDef(
+        id,
+        "mcp",
+        Intent.CONFORMANCE,
+        id,
+        new SpecRef("docs/QuickReference.md", "a failed reconnect exits 1"),
+        GivenDef.attach("AttachDemoTarget", List.of("-r", "x", "exit", "${pid}")),
+        CLIENT_EXIT_STEPS,
+        new ExpectationDef(null, Collections.<String>emptyList(), List.of(), clientExit),
+        CaseDef.TIER_FULL);
+  }
+
+  private static ExecutionTrace clientExitTrace(Integer clientExit) {
+    List<StepOutcome> steps =
+        CLIENT_EXIT_STEPS.stream().map(s -> StepOutcome.ok(s, 1)).collect(Collectors.toList());
+    return new ExecutionTrace(
+        steps,
+        false,
+        false,
+        0,
+        List.of("ready:1"),
+        List.of(),
+        null,
+        null,
+        false,
+        null,
+        List.of(),
+        List.of(),
+        clientExit);
+  }
+
+  @Test
+  void matchingClientExitCodeConforms() {
+    CaseVerdict v = new OracleRunner().evaluate(clientExitConformance("m", 1), clientExitTrace(1));
+    assertEquals(VerdictValue.PASS, v.conformance());
+    assertTrue(v.findings().isEmpty(), "findings=" + v.findings());
+  }
+
+  @Test
+  void differentClientExitCodeIsS3() {
+    CaseVerdict v = new OracleRunner().evaluate(clientExitConformance("n", 1), clientExitTrace(0));
+    assertEquals(VerdictValue.FAIL, v.conformance());
+    assertEquals(1, v.findings().size(), "findings=" + v.findings());
+    assertEquals(Severity.S3, v.findings().get(0).severity());
+    assertTrue(
+        v.findings().get(0).detail().contains("expected client exit code 1, observed 0"),
+        v.findings().get(0).detail());
+  }
+
+  @Test
+  void aClientTheHarnessKilledDoesNotConform() {
+    CaseVerdict v =
+        new OracleRunner().evaluate(clientExitConformance("o", 1), clientExitTrace(null));
+    assertEquals(VerdictValue.FAIL, v.conformance());
+    assertTrue(
+        v.findings().stream().anyMatch(f -> f.detail().contains("observed null")),
+        "findings=" + v.findings());
+  }
 }

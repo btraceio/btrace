@@ -18,13 +18,22 @@ The `demos` surface is outside the rotation: it replays the shipped demo scenari
 - `given.mode: attach` — launch a fixture JVM *without* the agent (`given.target`) and attach the
   real CLI to it by PID (`given.clientArgs`; `${pid}`, `${port}` and `${runDir}` are substituted,
   so `-p ${port}` keeps concurrent runs off the default port 2020). Steps, in this order:
-  `launch`, `awaitReady`, `attach`, `awaitOutput`, `detach`, `shutdown`, `awaitExit` (`attach` needs
-  `awaitReady` first; `awaitOutput`/`detach` need `attach` first; `detach` is optional). `awaitOutput`
+  `launch`, `awaitReady`, `attach`, `awaitOutput`, `awaitClientExit`, `detach`, `shutdown`,
+  `awaitExit` (`attach` needs `awaitReady` first; `awaitOutput`/`awaitClientExit`/`detach` need
+  `attach` first; each of the three is optional). `awaitClientExit` waits, within the step budget,
+  for a client that should end by itself (an error on stderr only, `-l`, `-lp`, `-x`); one that never
+  exits times out and is reported as a hang. Use it instead of `awaitOutput` when the client's
+  answer goes to stderr, so `shutdown` does not reap the client before it reports. `awaitOutput`
   waits, within the step budget, for `expect.outputMustMatch` — regexes that must each match a line
   of the *client's* stdout, in order — and a pattern that never shows up is an S2 finding, not a
   hang. `detach` ends the client the way Ctrl+C would (TERM → shutdown hook → exit command), so the
   target must still be alive for `shutdown` to stop it cleanly. Evidence adds `client-stdout.log`
-  and `client-stderr.log`. Sample: `cases/demos/attach-oneliner-smoke.yaml`; fixture:
+  and `client-stderr.log`, and the last line of `steps.log` adds `clientExitCode=` — the client's
+  own exit code when it ended before the harness reaped it (on its own, or 143 after `detach`'s
+  TERM), `null` when the harness had to kill it. A conformance attach case can assert it with
+  `expect.clientExitCode: <int>` (needs an `awaitClientExit` step); a mismatch, or a client the
+  harness had to kill, is an S3 conformance finding. Sample: `cases/demos/attach-oneliner-smoke.yaml`;
+  fixture:
   `qe.targets.AttachDemoTarget` (prints `ready:<pid>`, calls `work(int)` every 50 ms).
 - Launched-target options (`target` and `attach` modes), for replaying the shipped `demos/`:
   - `given.target` may name a `.java` file relative to the repository root
