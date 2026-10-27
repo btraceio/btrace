@@ -25,6 +25,9 @@ dependencies {
     implImplementation project(':btrace-core')
 
     testImplementation libs.junit.jupiter
+    // Decodes exported payloads with the official OTLP schema (OTLP/JSON conformance tests)
+    testImplementation 'io.opentelemetry.proto:opentelemetry-proto:1.9.0-alpha'
+    testImplementation 'com.google.protobuf:protobuf-java-util:4.33.1'
 }
 
 test {
