@@ -87,6 +87,10 @@ class OTelOtlpConformanceTest {
     otel.span("plain", 1_000);
     otel.span("attr", "k", "v", 2_000);
     otel.spanInTrace("4bf92f3577b34da6a3ce929d0e0e4736", "00f067aa0ba902b7", "linked", 3_000);
+    String parentTrace = otel.newTraceId();
+    String parentId = otel.newSpanId();
+    otel.spanInTrace(parentTrace, parentId, "child", 1_000);
+    otel.spanWithIds(parentTrace, parentId, null, "parent", 4_000);
     otel.close();
 
     List<Span> spans = new ArrayList<>();
@@ -96,10 +100,13 @@ class OTelOtlpConformanceTest {
       assertEquals(1, req.getResourceSpansCount());
       assertEquals(
           "svc", attr(req.getResourceSpans(0).getResource().getAttributesList(), "service.name"));
+      String instanceId =
+          attr(req.getResourceSpans(0).getResource().getAttributesList(), "service.instance.id");
+      assertEquals(36, instanceId.length(), instanceId);
       assertEquals("io.btrace.otel", req.getResourceSpans(0).getScopeSpans(0).getScope().getName());
       spans.addAll(req.getResourceSpans(0).getScopeSpans(0).getSpansList());
     }
-    assertEquals(3, spans.size());
+    assertEquals(5, spans.size());
     for (Span s : spans) {
       assertEquals(16, s.getTraceId().size(), s.toString());
       assertEquals(8, s.getSpanId().size(), s.toString());
@@ -113,6 +120,11 @@ class OTelOtlpConformanceTest {
     assertEquals("4bf92f3577b34da6a3ce929d0e0e4736", hex(linked.getTraceId().toByteArray()));
     assertEquals("00f067aa0ba902b7", hex(linked.getParentSpanId().toByteArray()));
     assertEquals(0, find(spans, "plain").getParentSpanId().size());
+    Span parent = find(spans, "parent");
+    Span child = find(spans, "child");
+    assertEquals(parent.getTraceId(), child.getTraceId());
+    assertEquals(parent.getSpanId(), child.getParentSpanId());
+    assertEquals(0, parent.getParentSpanId().size());
   }
 
   @Test

@@ -135,6 +135,25 @@ public class OTelExtensionIntegrationTest extends RuntimeTest {
             .matcher(String.join("\n", traces))
             .find(),
         "linked span not exported: " + traces);
+    // A child recorded under ids the script allocated on entry nests under the parent recorded
+    // with the same ids on return
+    String all = String.join("\n", traces);
+    Matcher child =
+        Pattern.compile(
+                "\\{\"traceId\":\"([0-9a-f]{32})\",\"spanId\":\"[0-9a-f]{16}\","
+                    + "\"parentSpanId\":\"([0-9a-f]{16})\",\"name\":\"Main\\.callB\\.child\"")
+            .matcher(all);
+    boolean nested = false;
+    while (child.find() && !nested) {
+      nested =
+          all.contains(
+              "{\"traceId\":\""
+                  + child.group(1)
+                  + "\",\"spanId\":\""
+                  + child.group(2)
+                  + "\",\"name\":\"Main.callA\"");
+    }
+    assertTrue(nested, "no Main.callB.child nested under a Main.callA span: " + traces);
   }
 
   private int countSpans() {

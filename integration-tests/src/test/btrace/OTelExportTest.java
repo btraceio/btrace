@@ -25,6 +25,7 @@ import io.btrace.core.annotations.Injected;
 import io.btrace.core.annotations.Kind;
 import io.btrace.core.annotations.Location;
 import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.TLS;
 import io.btrace.otel.OTel;
 
 @BTrace
@@ -33,10 +34,25 @@ public class OTelExportTest {
 
   @Injected private static OTel otel;
 
+  @TLS private static String traceId;
+  @TLS private static String requestSpanId;
+
+  @OnMethod(clazz = "resources.Main", method = "callA")
+  public static void onCallA() {
+    traceId = otel.newTraceId();
+    requestSpanId = otel.newSpanId();
+  }
+
+  @OnMethod(clazz = "resources.Main", method = "callA", location = @Location(Kind.RETURN))
+  public static void onCallAReturn(@Duration long dur) {
+    otel.spanWithIds(traceId, requestSpanId, null, "Main.callA", dur);
+  }
+
   @OnMethod(clazz = "resources.Main", method = "callB", location = @Location(Kind.RETURN))
   public static void onCallB(@Duration long dur) {
     otel.span("Main.callB", "probe", "OTelExportTest", dur);
     otel.spanInTrace("4bf92f3577b34da6a3ce929d0e0e4736", "00f067aa0ba902b7", "Main.callB.linked", dur);
+    otel.spanInTrace(traceId, requestSpanId, "Main.callB.child", dur);
     otel.counter("main.callB.calls", 1);
     calls++;
     if (calls == 3) {

@@ -30,20 +30,26 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import org.jctools.queues.atomic.MpscAtomicArrayQueue;
 
 /**
  * {@link OTel} implementation exporting OTLP/HTTP JSON from a single background thread.
  *
- * <p>The recording methods run on instrumented application threads and never block or perform I/O.
- * One instance exists per script; {@link #close()} stops the exporter after a final, time-bounded
- * export.
+ * <p>The recording methods run on instrumented application threads. They never perform I/O and,
+ * once a metric name has been registered, never take a lock: spans go to a lock-free MPSC queue and
+ * metrics to per-name atomics. One instance exists per script; {@link #close()} stops the exporter
+ * after a final, time-bounded export.
+ *
+ * <p>Shutdown uses a lock-free {@link ShutdownGuard}: nothing recorded before {@link #close()}
+ * returns misses the final export, unless the wait exceeds its budget, which is reported to the
+ * client.
  */
 public final class OTelImpl extends Extension implements OTel {
   static final String DEFAULT_ENDPOINT = "http://localhost:4318";
@@ -63,6 +69,7 @@ public final class OTelImpl extends Extension implements OTel {
 
   private static final int HTTP_TIMEOUT_MS = 5000;
   private static final long CLOSE_EXPORT_BUDGET_MS = 2000;
+  private static final long CLOSE_GUARD_BUDGET_MS = 500;
 
   private static final char[] HEX = "0123456789abcdef".toCharArray();
 
@@ -70,25 +77,24 @@ public final class OTelImpl extends Extension implements OTel {
   private final AtomicBoolean failureReported = new AtomicBoolean();
   private final CountDownLatch stopSignal = new CountDownLatch(1);
   private final ConcurrentHashMap<String, AtomicLong> counters = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, Long> gauges = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, GaugeCell> gauges = new ConcurrentHashMap<>();
+  private final ShutdownGuard guard = new ShutdownGuard();
   private final AtomicLong droppedSpans = new AtomicLong();
   private final AtomicLong droppedMetricUpdates = new AtomicLong();
 
   private ExtensionContext ctx;
   private String endpoint;
   private String serviceName;
+  private String serviceInstanceId;
   private int flushIntervalMs;
   private int batchSize;
   private int maxMetrics;
-  private ArrayBlockingQueue<SpanRecord> spans;
+  private MpscAtomicArrayQueue<SpanRecord> spans;
   private long epochBaseNanos;
   private long monotonicBaseNanos;
   // Only accessed from the exporter thread after initialization
   private long lastMetricExportNanos;
   private Thread exporter;
-
-  // Written last in initialize(); readers check it before touching the fields above
-  private volatile boolean running;
 
   @Override
   public void initialize(ExtensionContext ctx) throws ExtensionException {
@@ -97,11 +103,14 @@ public final class OTelImpl extends Extension implements OTel {
     ArgsMap args = ctx != null ? ctx.getArgs() : null;
     endpoint = stripTrailingSlash(setting(args, "otel.endpoint", DEFAULT_ENDPOINT));
     serviceName = setting(args, "otel.service.name", DEFAULT_SERVICE_NAME);
+    serviceInstanceId = UUID.randomUUID().toString();
     flushIntervalMs = intSetting(args, "otel.flush.interval.ms", DEFAULT_FLUSH_INTERVAL_MS);
     batchSize = intSetting(args, "otel.batch.size", DEFAULT_BATCH_SIZE);
     maxMetrics = intSetting(args, "otel.max.metrics", DEFAULT_MAX_METRICS);
+    // Rounded up to a power of two by the queue
     spans =
-        new ArrayBlockingQueue<>(intSetting(args, "otel.queue.capacity", DEFAULT_QUEUE_CAPACITY));
+        new MpscAtomicArrayQueue<>(
+            Math.max(2, intSetting(args, "otel.queue.capacity", DEFAULT_QUEUE_CAPACITY)));
 
     epochBaseNanos = TimeUnit.MILLISECONDS.toNanos(System.currentTimeMillis());
     monotonicBaseNanos = System.nanoTime();
@@ -112,7 +121,8 @@ public final class OTelImpl extends Extension implements OTel {
     // Do not pin the loader of whichever application thread triggered the injection
     t.setContextClassLoader(null);
     exporter = t;
-    running = true;
+    // Opened last: recordings check the guard before touching the fields above
+    guard.open();
     t.start();
   }
 
@@ -121,7 +131,18 @@ public final class OTelImpl extends Extension implements OTel {
     if (!closed.compareAndSet(false, true)) {
       return;
     }
-    running = false;
+    long pending =
+        guard.close(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(CLOSE_GUARD_BUDGET_MS));
+    if (pending > 0) {
+      ExtensionContext c = ctx;
+      if (c != null) {
+        c.send(
+            "btrace-otel: "
+                + pending
+                + " recording(s) still in progress at shutdown may be missing from the final"
+                + " export");
+      }
+    }
     stopSignal.countDown();
     Thread t = exporter;
     if (t != null && t != Thread.currentThread()) {
@@ -135,67 +156,140 @@ public final class OTelImpl extends Extension implements OTel {
 
   @Override
   public void span(String name, long durationNanos) {
-    span(name, null, null, durationNanos);
+    recordSpan(null, null, null, name, null, null, durationNanos);
   }
 
   @Override
   public void span(String name, String attrKey, String attrValue, long durationNanos) {
-    record(null, null, name, attrKey, attrValue, durationNanos);
+    recordSpan(null, null, null, name, attrKey, attrValue, durationNanos);
   }
 
   @Override
   public void spanInTrace(String traceId, String parentSpanId, String name, long durationNanos) {
-    record(traceId, parentSpanId, name, null, null, durationNanos);
+    recordSpan(traceId, null, parentSpanId, name, null, null, durationNanos);
   }
 
-  private void record(
+  @Override
+  public void spanWithIds(
+      String traceId, String spanId, String parentSpanId, String name, long durationNanos) {
+    recordSpan(traceId, spanId, parentSpanId, name, null, null, durationNanos);
+  }
+
+  @Override
+  public String newTraceId() {
+    ThreadLocalRandom rnd = ThreadLocalRandom.current();
+    StringBuilder sb = new StringBuilder(32);
+    appendHex(sb, nonZero(rnd.nextLong()));
+    appendHex(sb, rnd.nextLong());
+    return sb.toString();
+  }
+
+  @Override
+  public String newSpanId() {
+    StringBuilder sb = new StringBuilder(16);
+    appendHex(sb, nonZero(ThreadLocalRandom.current().nextLong()));
+    return sb.toString();
+  }
+
+  @Override
+  public void counter(String name, long value) {
+    recordCounter(name, value);
+  }
+
+  @Override
+  public void gauge(String name, long value) {
+    recordGauge(name, value);
+  }
+
+  /** Returns whether the span was accepted for export. */
+  boolean recordSpan(
       String traceId,
+      String spanId,
       String parentSpanId,
       String name,
       String attrKey,
       String attrValue,
       long durationNanos) {
-    if (name == null || !running) {
-      return;
+    if (name == null) {
+      return false;
     }
-    // Ids are validated on the exporter thread to keep the instrumented path to a queue offer
-    SpanRecord r =
-        new SpanRecord(traceId, parentSpanId, name, attrKey, attrValue, nowNanos(), durationNanos);
-    if (!spans.offer(r)) {
+    int ticket = guard.enter();
+    if (ticket < 0) {
+      return false;
+    }
+    try {
+      // Ids are validated on the exporter thread to keep the instrumented path short
+      SpanRecord r =
+          new SpanRecord(
+              traceId, spanId, parentSpanId, name, attrKey, attrValue, nowNanos(), durationNanos);
+      if (spans.offer(r)) {
+        return true;
+      }
       droppedSpans.incrementAndGet();
+      return false;
+    } finally {
+      guard.exit(ticket);
     }
   }
 
-  @Override
-  public void counter(String name, long value) {
-    if (name == null || value < 0 || !running) {
-      return;
+  /** Returns whether the increment was accepted for export. */
+  boolean recordCounter(String name, long value) {
+    if (name == null || value < 0) {
+      return false;
     }
-    AtomicLong sum = counters.get(name);
-    if (sum == null) {
-      if (counters.size() >= maxMetrics) {
-        droppedMetricUpdates.incrementAndGet();
-        return;
-      }
-      AtomicLong created = new AtomicLong();
-      sum = counters.putIfAbsent(name, created);
+    int ticket = guard.enter();
+    if (ticket < 0) {
+      return false;
+    }
+    try {
+      AtomicLong sum = counters.get(name);
       if (sum == null) {
-        sum = created;
+        if (counters.size() >= maxMetrics) {
+          droppedMetricUpdates.incrementAndGet();
+          return false;
+        }
+        AtomicLong created = new AtomicLong();
+        sum = counters.putIfAbsent(name, created);
+        if (sum == null) {
+          sum = created;
+        }
       }
+      sum.addAndGet(value);
+      return true;
+    } finally {
+      guard.exit(ticket);
     }
-    sum.addAndGet(value);
   }
 
-  @Override
-  public void gauge(String name, long value) {
-    if (name == null || !running) {
-      return;
+  /** Returns whether the value was accepted for export. */
+  boolean recordGauge(String name, long value) {
+    if (name == null) {
+      return false;
     }
-    if (gauges.size() >= maxMetrics && !gauges.containsKey(name)) {
-      droppedMetricUpdates.incrementAndGet();
-      return;
+    int ticket = guard.enter();
+    if (ticket < 0) {
+      return false;
     }
-    gauges.put(name, value);
+    try {
+      GaugeCell cell = gauges.get(name);
+      if (cell == null) {
+        if (gauges.size() >= maxMetrics) {
+          droppedMetricUpdates.incrementAndGet();
+          return false;
+        }
+        GaugeCell created = new GaugeCell();
+        cell = gauges.putIfAbsent(name, created);
+        if (cell == null) {
+          cell = created;
+        }
+      }
+      // Value first: the exporter clears the flag and then reads the value
+      cell.value = value;
+      cell.dirty.set(true);
+      return true;
+    } finally {
+      guard.exit(ticket);
+    }
   }
 
   private void runExporter() {
@@ -226,11 +320,10 @@ public final class OTelImpl extends Extension implements OTel {
 
   private void exportSpans(long deadline) {
     List<SpanRecord> batch = new ArrayList<>(Math.min(batchSize, 64));
-    while (spans.drainTo(batch, batchSize) > 0) {
+    while (spans.drain(batch::add, batchSize) > 0) {
       if (deadline != 0 && System.nanoTime() - deadline >= 0) {
         // Out of time on shutdown; account for what will not be sent
-        droppedSpans.addAndGet(batch.size() + spans.size());
-        spans.clear();
+        droppedSpans.addAndGet(batch.size() + spans.drain(r -> {}));
         return;
       }
       post("/v1/traces", spansJson(batch), deadline);
@@ -249,12 +342,12 @@ public final class OTelImpl extends Extension implements OTel {
     }
     appendSum(metrics, SPANS_DROPPED_METRIC, droppedSpans.getAndSet(0), start, now);
     appendSum(metrics, METRICS_DROPPED_METRIC, droppedMetricUpdates.getAndSet(0), start, now);
-    for (Map.Entry<String, Long> e : gauges.entrySet()) {
-      String name = e.getKey();
-      Long value = e.getValue();
-      // Report each gauge once per update; a concurrent update keeps the entry for the next export
-      gauges.remove(name, value);
-      appendGauge(metrics, name, value, now);
+    for (Map.Entry<String, GaugeCell> e : gauges.entrySet()) {
+      GaugeCell cell = e.getValue();
+      // Report each gauge once per update; an update racing with this export sets the flag again
+      if (cell.dirty.compareAndSet(true, false)) {
+        appendGauge(metrics, e.getKey(), cell.value, now);
+      }
     }
     if (metrics.length() == 0) {
       return;
@@ -293,7 +386,12 @@ public final class OTelImpl extends Extension implements OTel {
         appendHex(sb, rnd.nextLong());
       }
       sb.append("\",\"spanId\":\"");
-      appendHex(sb, nonZero(rnd.nextLong()));
+      String spanId = normalizeId(r.spanId, 16);
+      if (spanId != null) {
+        sb.append(spanId);
+      } else {
+        appendHex(sb, nonZero(rnd.nextLong()));
+      }
       sb.append('"');
       String parentSpanId = normalizeId(r.parentSpanId, 16);
       if (parentSpanId != null) {
@@ -347,6 +445,9 @@ public final class OTelImpl extends Extension implements OTel {
     sb.append("\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{");
     sb.append("\"stringValue\":");
     appendString(sb, serviceName);
+    // A distinct writer identity per instance (data model: single-writer principle)
+    sb.append("}},{\"key\":\"service.instance.id\",\"value\":{\"stringValue\":");
+    appendString(sb, serviceInstanceId);
     sb.append("}}]}");
   }
 
@@ -494,8 +595,14 @@ public final class OTelImpl extends Extension implements OTel {
     return s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
   }
 
+  private static final class GaugeCell {
+    final AtomicBoolean dirty = new AtomicBoolean();
+    volatile long value;
+  }
+
   private static final class SpanRecord {
     final String traceId;
+    final String spanId;
     final String parentSpanId;
     final String name;
     final String attrKey;
@@ -505,6 +612,7 @@ public final class OTelImpl extends Extension implements OTel {
 
     SpanRecord(
         String traceId,
+        String spanId,
         String parentSpanId,
         String name,
         String attrKey,
@@ -512,6 +620,7 @@ public final class OTelImpl extends Extension implements OTel {
         long endNanos,
         long durationNanos) {
       this.traceId = traceId;
+      this.spanId = spanId;
       this.parentSpanId = parentSpanId;
       this.name = name;
       this.attrKey = attrKey;

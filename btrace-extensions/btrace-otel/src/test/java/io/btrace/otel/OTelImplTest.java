@@ -38,8 +38,10 @@ import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -156,6 +158,54 @@ class OTelImplTest {
     }
     assertEquals(ids.length, count, json);
     assertFalse(json.contains("4bf92f3577b34da6a3ce929d0e0e47"), json);
+  }
+
+  @Test
+  void nestsSpansThroughCallerAllocatedIds() throws Exception {
+    otel = start(context("otel.flush.interval.ms=60000"));
+    String traceId = otel.newTraceId();
+    String parentId = otel.newSpanId();
+    assertTrue(traceId.matches("[0-9a-f]{32}"), traceId);
+    assertTrue(parentId.matches("[0-9a-f]{16}"), parentId);
+
+    // Children end (and are recorded) before their parent, as with nested method returns
+    otel.spanInTrace(traceId, parentId, "child", 10);
+    otel.spanWithIds(traceId, parentId, null, "parent", 20);
+    otel.close();
+
+    String json = traces.poll(5, TimeUnit.SECONDS);
+    assertNotNull(json);
+    Matcher m = SPAN.matcher(json);
+    assertTrue(m.find(), json);
+    assertEquals("child", m.group(4));
+    assertEquals(traceId, m.group(1));
+    assertEquals(parentId, m.group(3));
+    assertTrue(m.find(), json);
+    assertEquals("parent", m.group(4));
+    assertEquals(traceId, m.group(1));
+    assertEquals(parentId, m.group(2), "parent must carry the id its child referenced");
+    assertNull(m.group(3), json);
+  }
+
+  @Test
+  void eachInstanceIsADistinctWriter() throws Exception {
+    OTelImpl first = start(context("otel.flush.interval.ms=60000"));
+    OTelImpl second = start(context("otel.flush.interval.ms=60000"));
+    first.counter("shared", 1);
+    second.counter("shared", 1);
+    first.close();
+    second.close();
+
+    Set<String> instanceIds = new HashSet<>();
+    for (String json : drainAll(metrics)) {
+      Matcher m =
+          Pattern.compile(
+                  "\\{\"key\":\"service\\.instance\\.id\",\"value\":\\{\"stringValue\":\"([0-9a-f-]{36})\"\\}\\}")
+              .matcher(json);
+      assertTrue(m.find(), json);
+      instanceIds.add(m.group(1));
+    }
+    assertEquals(2, instanceIds.size(), instanceIds.toString());
   }
 
   @Test

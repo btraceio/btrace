@@ -931,11 +931,16 @@ btrace <pid> OTelExample.class otel.endpoint=http://collector:4318 otel.service.
   the target JVM (for example `-Dbtrace.otel.endpoint=...`): `otel.endpoint` (default
   `http://localhost:4318`), `otel.service.name` (default `btrace`), `otel.flush.interval.ms`
   (default `5000`), `otel.batch.size` (spans per request, default `512`), `otel.queue.capacity`
-  (buffered spans, default `2048`) and `otel.max.metrics` (distinct counter and gauge names, default
-  `1000`).
-- Recording never blocks the instrumented thread. Spans are buffered in a bounded queue and dropped
-  when it is full; counters and gauges are aggregated per name. One background thread per script
-  exports them every flush interval and once more, within two seconds, when the script exits.
+  (buffered spans, default `2048`, rounded up to a power of two) and `otel.max.metrics` (distinct
+  counter and gauge names, default `1000`).
+- Recording never blocks the instrumented thread and, once a metric name has been seen, takes no
+  lock. Spans are buffered in a bounded lock-free queue and dropped when it is full; counters and
+  gauges are aggregated per name. One background thread per script exports them every flush
+  interval and once more, within two seconds, when the script exits. Everything recorded before
+  the script exits is part of that final export; if a recording is still in progress after 500 ms,
+  the client is told it may be missing.
+- Every script reports a random `service.instance.id` resource attribute, so two scripts or two
+  JVMs exporting the same counter name are distinct writers rather than one corrupted stream.
 - Counters are exported as monotonic sums with DELTA temporality: each data point carries the
   increments recorded since the previous export. Gauges export the last value set since the
   previous export.
@@ -945,6 +950,33 @@ btrace <pid> OTelExample.class otel.endpoint=http://collector:4318 otel.service.
   use `spanInTrace(traceId, parentSpanId, name, durationNanos)` with W3C Trace Context ids (32 and
   16 hex digits, for example taken from a `traceparent` header). A malformed trace id is replaced
   by a random one and a malformed parent id makes the span a root span.
+- To nest spans recorded by the script itself, allocate the parent's ids when it starts and record
+  it with them when it ends. Children end first, so they reference ids the parent has not used yet:
+
+  ```java
+  @TLS private static String traceId;
+  @TLS private static String requestSpanId;
+
+  @OnMethod(clazz = "com.example.API", method = "handleRequest")
+  public static void onEnter() {
+      traceId = otel.newTraceId();
+      requestSpanId = otel.newSpanId();
+  }
+
+  @OnMethod(clazz = "com.example.Dao", method = "query", location = @Location(Kind.RETURN))
+  public static void onQuery(@Duration long duration) {
+      otel.spanInTrace(traceId, requestSpanId, "Dao.query", duration);
+  }
+
+  @OnMethod(clazz = "com.example.API", method = "handleRequest",
+            location = @Location(Kind.RETURN))
+  public static void onExit(@Duration long duration) {
+      otel.spanWithIds(traceId, requestSpanId, null, "API.handleRequest", duration);
+  }
+  ```
+- Spans are recorded complete, ending at the call. Work that starts on one thread and ends on
+  another is recorded by the thread that sees the end, with a duration measured from a start time
+  the script stored where both threads can reach it (for example a map from `newWeakMap()`).
 - The first failed export is reported to the BTrace client as a `btrace-otel: export failed: ...`
   message; later failures are not reported.
 
