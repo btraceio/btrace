@@ -2,10 +2,10 @@ id: demos.06-checkout-swallowed-failure
 surface: demos
 intent: conformance
 tier: smoke
-title: "demo 06: @error on the SDK's fraud screen shows the failure the service swallows"
+title: "demo 06: @error inside the binary-only SDK shows the timeout its fraud screen swallows"
 spec:
   doc: demos/06-ai-assistant/README.md
-  claim: "btrace -n 'com.acme.risk.FraudScreen::screen @error { print method, stack }' shows screen failing under CheckoutService.checkout"
+  claim: "btrace -n 'com.acme.risk.FraudScreen::deepScore @error { print method, stack }' shows the private deepScore throwing inside screen, under CheckoutService.checkout, although screen itself only returns HOLD"
 given:
   mode: attach
   target: demos/06-ai-assistant/checkout-service/CheckoutServiceApp.java
@@ -17,10 +17,11 @@ given:
     - "-p"
     - "${port}"
     - "-n"
-    - "com.acme.risk.FraudScreen::screen @error { print method, stack }"
+    - "com.acme.risk.FraudScreen::deepScore @error { print method, stack }"
     - "${pid}"
 steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
 expect:
   outputMustMatch:
-    - "^screen$"
+    - "^deepScore$"
+    - "^com\\.acme\\.risk\\.FraudScreen\\.screen\\(FraudScreen\\.java:\\d+\\)$"
     - "^CheckoutService\\.checkout\\(CheckoutServiceApp\\.java:\\d+\\)$"

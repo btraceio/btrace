@@ -7,7 +7,7 @@ assistant did so you can trust (or veto) it.
 
 ![Demo 06: an assistant diagnoses the checkout service through the BTrace MCP server](images/06-ai-assistant.gif)
 
-*An unedited, real session against [demo 06](../../demos/06-ai-assistant/README.md), rendered from its transcript; the MP4 is next to the GIF.*
+*An unedited, real session against [demo 06](../../demos/06-ai-assistant/README.md), rendered from its transcript. The panel beside the chat is drawn from the service's own per-second metrics: completed and held checkouts, p50 and p99 latency, and shaded bands while a probe was attached. The MP4 is next to the GIF.*
 
 **Persona:** anyone who would rather describe a problem than type a probe. **Time:** ~10 minutes.
 
@@ -45,7 +45,7 @@ From the BTrace repository root:
 java demos/01-oneliner/OrderServiceApp.java
 ```
 
-Demo 06 (`demos/06-ai-assistant/run.sh`) is a separate, harder scenario: a checkout service whose cause sits partly in a binary-only SDK. It has its own prompts in [PROMPTS.md](../../demos/06-ai-assistant/PROMPTS.md); the walkthrough below uses the order service.
+Demo 06 (`demos/06-ai-assistant/run.sh`) is a separate, harder scenario: a checkout service that is slow and sends many orders to manual review, with both causes inside a binary-only SDK. It has its own prompts in [PROMPTS.md](../../demos/06-ai-assistant/PROMPTS.md); the walkthrough below uses the order service.
 
 **You should see** (numbers will vary):
 

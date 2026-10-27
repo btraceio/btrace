@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 """Render a recorded AI-assistant session as a chat-style GIF (and MP4 via ffmpeg).
 
-    python3 demos/lib/render-chat.py demos/06-ai-assistant/session.jsonl docs/tutorials/images/06-ai-assistant [title]
+    python3 demos/lib/render-chat.py demos/06-ai-assistant/session.jsonl docs/tutorials/images/06-ai-assistant \
+        [title] [--metrics demos/06-ai-assistant/metrics.log]
 
 The input is the `claude -p --output-format stream-json --verbose` transcript written by
 demos/06-ai-assistant/record-session.sh, with one {"type":"demo_prompt","text":...} line before
 each prompt. Nothing is invented: every message, tool call and tool result on screen comes from the
 transcript. Long tool results are shortened to their first lines, and the assistant's private
 reasoning is not shown. Requires Pillow; the MP4 also needs ffmpeg.
+
+With --metrics, a panel beside the chat plots the service's own per-second metrics lines
+("[metrics] ts=<epoch ms> completed=N held=N p50=MS p99=MS") over the 90 seconds before the event on
+screen, lined up by the demo_ts receive times record-session.sh stamps on every event, and shades
+the time a probe was attached. A caption above the chat names the current step after the tool in
+use.
 """
 import json
 import os
@@ -19,13 +26,24 @@ import tempfile
 
 from PIL import Image, ImageDraw, ImageFont
 
-W, H = 1280, 760
+W, H = 1280, 760          # without a metrics panel
+CHAT_W = W                # right edge of the chat column
+PANEL_W, PANEL_H = 1640, 880  # with a metrics panel
+CHAT_W_PANEL = 1120
+CAPTION_H = 0
 TITLE_H = 40
 STATUS_H = 34
 MARGIN = 28
 LINE_H = 25
 CHAT_TOP = TITLE_H + 14
 CHAT_BOTTOM = H - STATUS_H - 10
+
+
+def use_panel_layout():
+    global W, H, CHAT_W, CAPTION_H, CHAT_TOP, CHAT_BOTTOM
+    W, H, CHAT_W, CAPTION_H = PANEL_W, PANEL_H, CHAT_W_PANEL, 40
+    CHAT_TOP = TITLE_H + 14 + CAPTION_H
+    CHAT_BOTTOM = H - STATUS_H - 10
 CARD_PAD = 12
 
 BG = (24, 24, 37)
@@ -44,10 +62,11 @@ ERR = (243, 139, 168)
 CODE = (249, 226, 175)
 KEYWORD = (245, 194, 231)
 TYPE = (137, 220, 235)
+SHADE = (58, 52, 86)
 
 TOOL_PREFIX = re.compile(r"^mcp__.*?btrace__")
 RESULT_LINES = 9
-SCRIPT_LINES = 14
+SCRIPT_LINES = 10
 
 SANS = ["/System/Library/Fonts/SFNS.ttf", "/System/Library/Fonts/Helvetica.ttc",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]
@@ -78,6 +97,8 @@ F_BOLD = font(SANS_BOLD, 17, bold=True)
 F_LABEL = font(SANS_BOLD, 14, bold=True)
 F_MONO = font(MONO, 15)
 F_SMALL = font(MONO, 13)
+F_TINY = font(MONO, 11)
+F_BIG = font(SANS_BOLD, 26, bold=True)
 
 
 # --- transcript ---------------------------------------------------------------------------------
@@ -96,32 +117,35 @@ def load_events(path):
             except ValueError:
                 continue
             kind = ev.get("type")
+            ts = ev.get("demo_ts")
             if kind == "demo_prompt":
-                items.append({"kind": "user", "text": ev["text"]})
+                items.append({"kind": "user", "text": ev["text"], "ts": ts})
             elif kind == "system" and ev.get("subtype") == "init":
                 if not any(i["kind"] == "init" for i in items):
                     servers = [s["name"].split(":")[-1] for s in ev.get("mcp_servers", [])
                                if s.get("status") == "connected"]
-                    items.append({"kind": "init", "model": ev.get("model", ""), "servers": servers})
+                    items.append({"kind": "init", "model": ev.get("model", ""), "servers": servers, "ts": ts})
             elif kind == "assistant":
                 for block in ev["message"].get("content", []):
                     if block.get("type") == "text" and block["text"].strip():
-                        items.append({"kind": "assistant", "text": block["text"].strip()})
+                        items.append({"kind": "assistant", "text": block["text"].strip(), "ts": ts})
                     elif block.get("type") == "tool_use":
                         name = block["name"]
                         if name == "Skill":
-                            items.append({"kind": "skill", "name": block["input"].get("skill", "")})
+                            items.append({"kind": "skill", "name": block["input"].get("skill", ""), "ts": ts})
                             continue
                         if name in ("Read", "Grep", "Glob"):
                             inp = block.get("input") or {}
                             target = inp.get("file_path") or inp.get("pattern") or ""
                             items.append({"kind": "file", "name": name.lower(),
-                                          "target": os.path.basename(target) if name == "Read" else target})
+                                          "target": os.path.basename(target) if name == "Read" else target,
+                                          "ts": ts})
                             continue
                         if not TOOL_PREFIX.match(name):
                             continue
                         item = {"kind": "tool", "name": TOOL_PREFIX.sub("", name),
-                                "input": block.get("input") or {}, "result": None, "error": False}
+                                "input": block.get("input") or {}, "result": None, "error": False,
+                                "ts": ts, "done_ts": ts}
                         tools[block["id"]] = item
                         items.append(item)
             elif kind == "user":
@@ -135,6 +159,7 @@ def load_events(path):
                             content = "".join(c.get("text", "") for c in content if isinstance(c, dict))
                         item["result"] = content or ""
                         item["error"] = bool(block.get("is_error"))
+                        item["done_ts"] = ts or item["ts"]
     items = collapse_empty_reads(items)
     # JVMs the session probed or mentioned by PID stay visible; the rest of the machine is summarised.
     probed = {str(i["input"].get("pid")) for i in items if i["kind"] == "tool" and i["input"].get("pid")}
@@ -161,6 +186,7 @@ def collapse_empty_reads(items):
         prev = out[-1] if out else None
         if prev is not None and is_empty_read(item) and is_empty_read(prev):
             prev["repeat"] = prev.get("repeat", 1) + 1
+            prev["done_ts"] = item.get("done_ts") or prev.get("done_ts")
             continue
         out.append(item)
     return out
@@ -235,7 +261,7 @@ def wrap_runs(runs, width):
 
 
 def markdown_lines(text, indent):
-    width = W - 2 * MARGIN - indent - 10
+    width = CHAT_W - 2 * MARGIN - indent - 10
     out = []
     in_code = False
     for raw in text.splitlines():
@@ -314,7 +340,7 @@ def tool_header(item):
 def tool_arg_lines(item, indent):
     args = dict(item["input"])
     lines = []
-    width = W - 2 * MARGIN - indent - 40
+    width = CHAT_W - 2 * MARGIN - indent - 40
     for key in ("oneliner", "script", "source"):
         if key in args:
             body = str(args.pop(key))
@@ -342,8 +368,9 @@ def result_lines(item):
     color = ERR if item["error"] else SUBTLE
     for l in shown:
         l = l.replace("\t", "    ")
-        if len(l) > 140:
-            l = l[:139] + "…"
+        limit = int((CHAT_W - 2 * MARGIN - 80) / F_SMALL.getlength("M"))
+        if len(l) > limit:
+            l = l[:limit - 1] + "…"
         out.append([(l, F_SMALL, color)])
     if len(raw) > RESULT_LINES:
         out.append([("… +%d lines" % (len(raw) - RESULT_LINES), F_SMALL, DIM)])
@@ -359,6 +386,95 @@ def card(rows, indent):
     return lines
 
 
+# --- service metrics and step captions -----------------------------------------------------------
+
+METRIC_LINE = re.compile(r"ts=(\d+) completed=(\d+) held=(\d+) p50=(\d+) p99=(\d+)")
+WINDOW_MS = 90_000
+
+
+def load_metrics(path):
+    rows = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            m = METRIC_LINE.search(line)
+            if m:
+                rows.append(tuple(int(g) for g in m.groups()))
+    return rows
+
+
+def probe_spans(items):
+    """(start, end) receive times during which a probe deployed by the session was attached."""
+    spans, start = [], None
+    for item in items:
+        if item["kind"] != "tool" or item["error"]:
+            continue
+        if item["name"].startswith("deploy_") and start is None:
+            start = item.get("done_ts")
+        elif item["name"] in ("exit_probe", "detach_probe") and start is not None:
+            spans.append((start, item.get("done_ts")))
+            start = None
+    if start is not None:
+        spans.append((start, None))
+    return spans
+
+
+def probe_log(items):
+    """Each successful deploy with its target and the receive time of the exit that removed it."""
+    log, current = [], None
+    for item in items:
+        if item["kind"] != "tool" or item["error"]:
+            continue
+        if item["name"].startswith("deploy_"):
+            current = {"target": probe_targets(item), "start": item.get("done_ts"), "end": None}
+            log.append(current)
+        elif item["name"] in ("exit_probe", "detach_probe") and current is not None:
+            current["end"] = item.get("done_ts")
+            current = None
+    return log
+
+
+def short_class(name):
+    if name.startswith("/"):  # a regex pattern: show it readably, e.g. com.acme.*
+        return name.strip("/").replace("\\.", ".").replace(".*", "*").replace("\\", "")
+    return name.split(".")[-1].split("$")[0]
+
+
+def probe_targets(item):
+    inp = item["input"]
+    if "oneliner" in inp:
+        target = str(inp["oneliner"]).split("@")[0].strip()
+        cls, _, method = target.partition("::")
+        return short_class(cls) + ("::" + method if method else "")
+    names = []
+    for cls in re.findall(r'clazz\s*=\s*"([^"]+)"', str(inp.get("script", ""))):
+        if short_class(cls) not in names:
+            names.append(short_class(cls))
+    return ", ".join(names) or "the JVM"
+
+
+def caption_for(item, last_text):
+    kind = item["kind"]
+    if kind == "init":
+        return "Session start"
+    if kind == "user":
+        return "The incident"
+    if kind == "file":
+        return "Reading the code"
+    if kind == "skill":
+        return "Loading BTrace know-how"
+    if kind == "assistant":
+        return "Conclusion" if item is last_text else "Thinking it through"
+    name = item["name"]
+    return {
+        "list_jvms": "Finding the JVM",
+        "read_probe_output": "Reading what the probe saw",
+        "exit_probe": "Removing the probe",
+        "detach_probe": "Detaching from the probe",
+        "list_probes": "Checking nothing is left behind",
+        "send_event": "Asking the probe for a report",
+    }.get(name, "Probing " + probe_targets(item) if name.startswith("deploy_") else name)
+
+
 # --- frames -------------------------------------------------------------------------------------
 
 class Screen:
@@ -369,6 +485,12 @@ class Screen:
         self.probes = 0
         self.status = "starting"
         self.spinner = None
+        self.caption = ""
+        self.start = None
+        self.now = None
+        self.metrics = None
+        self.spans = []
+        self.probe_log = []
 
     def draw(self):
         img = Image.new("RGB", (W, H), BG)
@@ -380,6 +502,18 @@ class Screen:
             d.ellipse((18 + k * 22, 14, 30 + k * 22, 26), fill=c)
         tw = F_LABEL.getlength(self.title)
         d.text(((W - tw) / 2, 12), self.title, font=F_LABEL, fill=DIM)
+
+        if CAPTION_H and self.caption:
+            cy = TITLE_H + 12
+            elapsed = (self.now - self.start) / 1000 if self.start and self.now else 0
+            label = "%d:%02d" % (elapsed // 60, elapsed % 60)
+            d.rounded_rectangle((MARGIN, cy, MARGIN + F_LABEL.getlength(label) + 20, cy + 26), radius=6,
+                                fill=CARD_EDGE)
+            d.text((MARGIN + 10, cy + 5), label, font=F_LABEL, fill=FG)
+            d.text((MARGIN + F_LABEL.getlength(label) + 34, cy + 3), self.caption, font=F_BOLD, fill=FG)
+            d.line((MARGIN, cy + CAPTION_H - 6, CHAT_W - MARGIN, cy + CAPTION_H - 6), fill=CARD_EDGE)
+        if self.metrics:
+            self.draw_panel(d)
 
         lines = list(self.lines)
         if self.spinner is not None:
@@ -399,7 +533,7 @@ class Screen:
                 top = y - (2 if line.card in ("top", "single") else 0)
                 bottom = y + line.height + (4 if line.card in ("bottom", "single") else 0)
                 x0 = line.indent - CARD_PAD
-                d.rectangle((x0, top, W - MARGIN, bottom), fill=CARD)
+                d.rectangle((x0, top, CHAT_W - MARGIN, bottom), fill=CARD)
                 d.line((x0, top, x0, bottom), fill=TOOL, width=3)
             x = line.indent
             for text, f, color in line.runs:
@@ -418,6 +552,105 @@ class Screen:
         st = self.status
         d.text((W - MARGIN - F_SMALL.getlength(st), H - STATUS_H + 8), st, font=F_SMALL, fill=DIM)
         return img
+
+    def draw_panel(self, d):
+        x0, x1 = CHAT_W + 8, W - MARGIN
+        y0 = TITLE_H + 12
+        d.rounded_rectangle((x0, y0, x1, H - STATUS_H - 12), radius=10, fill=CARD)
+        d.text((x0 + 18, y0 + 14), "checkout service", font=F_BOLD, fill=FG)
+        d.text((x0 + 18, y0 + 38), "live, from the service's own metrics log", font=F_SMALL, fill=DIM)
+        now = self.now
+        rows = [r for r in self.metrics if now is None or r[0] <= now]
+        if not rows:
+            return
+        now = now or rows[-1][0]
+        recent = [r for r in rows if r[0] > now - 5_000] or rows[-1:]
+        done = sum(r[1] for r in recent) / len(recent)
+        held = sum(r[2] for r in recent) / len(recent)
+        held_pct = 100.0 * held / (done + held) if done + held else 0.0
+        p99 = sorted(r[4] for r in recent)[len(recent) // 2]
+
+        # headline numbers
+        tiles = [("completed / s", "%.0f" % done, OK), ("held for review", "%.0f%%" % held_pct, ASSISTANT),
+                 ("p99 latency", "%d ms" % p99, ERR if p99 > 200 else OK)]
+        tw = (x1 - x0 - 36 - 2 * 12) / 3
+        for k, (label, value, color) in enumerate(tiles):
+            tx = x0 + 18 + k * (tw + 12)
+            d.rounded_rectangle((tx, y0 + 66, tx + tw, y0 + 136), radius=8, fill=WINDOW)
+            d.text((tx + 12, y0 + 74), label, font=F_SMALL, fill=DIM)
+            d.text((tx + 12, y0 + 96), value, font=F_BIG, fill=color)
+
+        window = [r for r in rows if r[0] > now - WINDOW_MS]
+        cx0, cx1 = x0 + 18, x1 - 18
+
+        def xpos(ts):
+            return cx0 + (cx1 - cx0) * (1 - (now - ts) / WINDOW_MS)
+
+        def shade(top, bottom):
+            for start, end in self.spans:
+                if start is None or start > now:
+                    continue
+                a = max(xpos(start), cx0)
+                b = xpos(min(end if end is not None else now, now))
+                if b > a:
+                    d.rectangle((a, top, b, bottom), fill=SHADE)
+                    if b - a > 70:
+                        d.text((a + 6, top + 4), "probe attached", font=F_TINY, fill=TOOL)
+
+        # throughput: completed and held per second
+        ty0, ty1 = y0 + 176, y0 + 326
+        d.text((cx0, ty0 - 24), "checkouts per second", font=F_SMALL, fill=SUBTLE)
+        d.text((cx0 + 190, ty0 - 24), "■ completed", font=F_SMALL, fill=OK)
+        d.text((cx0 + 300, ty0 - 24), "■ held", font=F_SMALL, fill=ASSISTANT)
+        d.rectangle((cx0, ty0, cx1, ty1), fill=WINDOW)
+        shade(ty0, ty1)
+        top = max([r[1] + r[2] for r in window] + [10])
+        bw = max(2.0, (cx1 - cx0) / (WINDOW_MS / 1000.0) - 1)
+        for r in window:
+            x = xpos(r[0])
+            hc = (ty1 - ty0 - 18) * r[1] / top
+            hh = (ty1 - ty0 - 18) * r[2] / top
+            d.rectangle((x - bw, ty1 - hc, x, ty1), fill=OK)
+            d.rectangle((x - bw, ty1 - hc - hh, x, ty1 - hc), fill=ASSISTANT)
+
+        # latency: p99 and p50
+        ly0, ly1 = ty1 + 60, ty1 + 220
+        d.text((cx0, ly0 - 24), "checkout latency (ms)", font=F_SMALL, fill=SUBTLE)
+        d.text((cx0 + 190, ly0 - 24), "— p99", font=F_SMALL, fill=ERR)
+        d.text((cx0 + 260, ly0 - 24), "— p50", font=F_SMALL, fill=TYPE)
+        d.rectangle((cx0, ly0, cx1, ly1), fill=WINDOW)
+        shade(ly0, ly1)
+        lmax = max([r[4] for r in window] + [100])
+        for guide in (100, 200, 400):
+            if guide < lmax:
+                gy = ly1 - (ly1 - ly0 - 10) * guide / lmax
+                d.line((cx0, gy, cx1, gy), fill=CARD_EDGE)
+                d.text((cx0 + 4, gy - 15), "%d" % guide, font=F_TINY, fill=DIM)
+        for idx, color in ((4, ERR), (3, TYPE)):
+            pts = [(xpos(r[0]), ly1 - (ly1 - ly0 - 10) * r[idx] / lmax) for r in window]
+            if len(pts) > 1:
+                d.line(pts, fill=color, width=2)
+        d.text((cx0, ly1 + 8), "-90 s", font=F_TINY, fill=DIM)
+        d.text((cx1 - 26, ly1 + 8), "now", font=F_TINY, fill=DIM)
+
+        # the probes the session has deployed so far
+        py = ly1 + 40
+        d.text((cx0, py), "probes", font=F_SMALL, fill=SUBTLE)
+        shown = [p for p in self.probe_log if p["start"] is not None and p["start"] <= now]
+        bottom = H - STATUS_H - 30
+        for k, p in enumerate(shown[-max(1, int((bottom - py - 24) / 22)):]):
+            y = py + 24 + k * 22
+            if p["end"] is not None and p["end"] <= now:
+                state, color = "removed after %ds" % max(1, round((p["end"] - p["start"]) / 1000)), OK
+            else:
+                state, color = "attached %ds" % max(0, round((now - p["start"]) / 1000)), ASSISTANT
+            label = p["target"]
+            room = int((cx1 - cx0 - F_TINY.getlength(state) - 40) / F_TINY.getlength("M"))
+            if len(label) > room:
+                label = label[:room - 1] + "…"
+            d.ellipse((cx0, y + 4, cx0 + 8, y + 12), fill=color)
+            d.text((cx0 + 16, y), label, font=F_TINY, fill=FG)
+            d.text((cx1 - F_TINY.getlength(state), y), state, font=F_TINY, fill=color)
 
     def snap(self, seconds):
         self.frames.append((self.draw(), max(40, int(seconds * 1000))))
@@ -445,10 +678,20 @@ def typed(screen, prefix_lines, runs_lines, indent, cps=90):
     screen.lines[base + len(prefix_lines):] = shown
 
 
-def render(items, out, title):
+def render(items, out, title, metrics=None):
     screen = Screen(title)
+    screen.metrics = metrics
+    screen.spans = probe_spans(items)
+    screen.probe_log = probe_log(items)
+    texts = [i for i in items if i["kind"] == "assistant"]
+    last_text = texts[-1] if texts else None
     indent = MARGIN + 28
     for item in items:
+        screen.caption = caption_for(item, last_text)
+        if item.get("ts"):
+            screen.now = item["ts"]
+            if item["kind"] == "user" and screen.start is None:
+                screen.start = item["ts"]
         if item["kind"] == "init":
             servers = ", ".join(item["servers"]) or "none"
             screen.status = item["model"]
@@ -457,7 +700,7 @@ def render(items, out, title):
                              MARGIN, height=22), Line([], MARGIN, height=10)], 1.0)
         elif item["kind"] == "user":
             header = [Line([("› ", F_MONO, USER), ("you", F_LABEL, USER)], MARGIN)]
-            wrapped = wrap_runs([(item["text"], F_TEXT, FG)], W - 2 * MARGIN - indent)
+            wrapped = wrap_runs([(item["text"], F_TEXT, FG)], CHAT_W - 2 * MARGIN - indent)
             typed(screen, header, wrapped, indent)
             screen.add([Line([], MARGIN, height=12)], 1.2)
         elif item["kind"] == "file":
@@ -480,6 +723,8 @@ def render(items, out, title):
                 screen.spinner = k
                 screen.snap(0.12)
             screen.spinner = None
+            if item.get("done_ts"):
+                screen.now = item["done_ts"]
             res = result_lines(item)
             mark = ("✗ " if item["error"] else "✓ ", F_SMALL, ERR if item["error"] else OK)
             res = [[mark] + res[0]] + res[1:] if res else [[mark, ("done", F_SMALL, SUBTLE)]]
@@ -527,12 +772,23 @@ def write(frames, out):
 
 
 def main():
-    if len(sys.argv) not in (3, 4):
+    args = [a for a in sys.argv[1:]]
+    metrics_path = None
+    if "--metrics" in args:
+        k = args.index("--metrics")
+        if k + 1 >= len(args):
+            sys.exit(__doc__)
+        metrics_path = args[k + 1]
+        del args[k:k + 2]
+    if len(args) not in (2, 3):
         sys.exit(__doc__)
-    items = load_events(sys.argv[1])
+    items = load_events(args[0])
     if not any(i["kind"] == "user" for i in items):
-        sys.exit("no prompts in %s; was it written by record-session.sh?" % sys.argv[1])
-    render(items, sys.argv[2], sys.argv[3] if len(sys.argv) == 4 else "claude  —  on call")
+        sys.exit("no prompts in %s; was it written by record-session.sh?" % args[0])
+    metrics = load_metrics(metrics_path) if metrics_path else None
+    if metrics:
+        use_panel_layout()
+    render(items, args[1], args[2] if len(args) == 3 else "claude  —  on call", metrics)
 
 
 if __name__ == "__main__":

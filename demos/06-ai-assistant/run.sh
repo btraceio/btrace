@@ -6,8 +6,9 @@
 # unattended instead, use record-session.sh.
 source "$(dirname "$0")/../lib/common.sh"
 
-say "A checkout service is running. Some checkouts are slow and some orders never complete, with nothing in the logs."
-start_app checkout-service/CheckoutServiceApp.java -cp checkout-service/lib/acme-sdk.jar
+say "A checkout service is running. Some checkouts are slow and many orders end up in manual review, with nothing in the error logs."
+start_app checkout-service/CheckoutServiceApp.java \
+  -Dbtrace.permissions=checkout-service/btrace-permissions.properties -cp checkout-service/lib/acme-sdk.jar
 wait_for_line "$APP_LOG" 'checkouts completed' 10
 tail -n 1 "$APP_LOG"
 

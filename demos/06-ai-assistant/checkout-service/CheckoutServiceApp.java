@@ -17,20 +17,26 @@
 
 import com.acme.payments.PaymentClient;
 import com.acme.risk.FraudScreen;
-import com.acme.risk.RiskServiceException;
+import com.acme.risk.Verdict;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Checkout service: screens each order for fraud, reserves stock and takes the card payment.
- * Payments and fraud screening come from the ACME SDK (lib/acme-sdk.jar).
+ * Payments and fraud screening come from the ACME SDK (lib/acme-sdk.jar). Orders the fraud screen
+ * holds go to the manual review queue.
  *
  * <p>Run with {@code java -cp lib/acme-sdk.jar CheckoutServiceApp.java} (JDK 11+).
  */
 public class CheckoutServiceApp {
   public static void main(String[] args) throws Exception {
+    Metrics metrics = new Metrics();
     CheckoutService service =
-        new CheckoutService(new FraudScreen(), new Inventory(), new PaymentClient("shop-eu-1"));
+        new CheckoutService(
+            new FraudScreen(), new Inventory(), new PaymentClient("shop-eu-1"), new ReviewQueue());
     for (int i = 0; i < 4; i++) {
       Thread worker =
           new Thread(
@@ -41,7 +47,9 @@ public class CheckoutServiceApp {
                   String orderId = Thread.currentThread().getName() + "-" + (++seq);
                   long amountCents = 500 + rnd.nextInt(90_000);
                   try {
-                    service.checkout(orderId, amountCents);
+                    long start = System.nanoTime();
+                    boolean completed = service.checkout(orderId, amountCents);
+                    metrics.record(completed, System.nanoTime() - start);
                     Thread.sleep(20 + rnd.nextInt(60));
                   } catch (InterruptedException e) {
                     return;
@@ -53,9 +61,12 @@ public class CheckoutServiceApp {
       worker.start();
     }
     System.out.println("[demo] checkout service running - stop with Ctrl+C");
-    while (true) {
-      Thread.sleep(5_000);
-      System.out.printf("[demo] %d checkouts completed%n", service.completed());
+    for (int second = 1; ; second++) {
+      Thread.sleep(1_000);
+      metrics.report();
+      if (second % 5 == 0) {
+        System.out.printf("[demo] %d checkouts completed%n", service.completed());
+      }
     }
   }
 }
@@ -64,28 +75,39 @@ class CheckoutService {
   private final FraudScreen fraud;
   private final Inventory inventory;
   private final PaymentClient payments;
+  private final ReviewQueue review;
   private final AtomicLong completed = new AtomicLong();
 
-  CheckoutService(FraudScreen fraud, Inventory inventory, PaymentClient payments) {
+  CheckoutService(FraudScreen fraud, Inventory inventory, PaymentClient payments, ReviewQueue review) {
     this.fraud = fraud;
     this.inventory = inventory;
     this.payments = payments;
+    this.review = review;
   }
 
-  void checkout(String orderId, long amountCents) throws InterruptedException {
-    try {
-      fraud.screen(orderId, amountCents);
-    } catch (RiskServiceException e) {
-      // The risk service is flaky; unscreened orders are picked up again by the nightly batch.
-      return;
+  /** Returns whether the order completed; held orders wait in the manual review queue. */
+  boolean checkout(String orderId, long amountCents) throws InterruptedException {
+    if (fraud.screen(orderId, amountCents) == Verdict.HOLD) {
+      review.add(orderId);
+      return false;
     }
     inventory.reserve(orderId);
     payments.authorize(orderId, amountCents);
     completed.incrementAndGet();
+    return true;
   }
 
   long completed() {
     return completed.get();
+  }
+}
+
+/** Orders the fraud screen held, waiting for a person to look at them. */
+class ReviewQueue {
+  private final List<String> pending = Collections.synchronizedList(new ArrayList<>());
+
+  void add(String orderId) {
+    pending.add(orderId);
   }
 }
 
@@ -94,5 +116,41 @@ class Inventory {
 
   void reserve(String orderId) throws InterruptedException {
     Thread.sleep(5 + rnd.nextInt(20));
+  }
+}
+
+/** Per-second throughput and latency, printed as one line for the dashboard scraper. */
+class Metrics {
+  private final List<Long> latencies = new ArrayList<>();
+  private long completed;
+  private long held;
+
+  synchronized void record(boolean done, long nanos) {
+    latencies.add(nanos);
+    if (done) {
+      completed++;
+    } else {
+      held++;
+    }
+  }
+
+  void report() {
+    List<Long> window;
+    long done;
+    long hold;
+    synchronized (this) {
+      window = new ArrayList<>(latencies);
+      done = completed;
+      hold = held;
+      latencies.clear();
+      completed = 0;
+      held = 0;
+    }
+    Collections.sort(window);
+    long p50 = window.isEmpty() ? 0 : window.get(window.size() / 2) / 1_000_000;
+    long p99 = window.isEmpty() ? 0 : window.get((int) Math.min(window.size() - 1, Math.ceil(window.size() * 0.99) - 1)) / 1_000_000;
+    System.out.printf(
+        "[metrics] ts=%d completed=%d held=%d p50=%d p99=%d%n",
+        System.currentTimeMillis(), done, hold, p50, p99);
   }
 }

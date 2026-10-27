@@ -20,19 +20,26 @@ import java.util.Random;
 
 /**
  * Stand-in for a third-party fraud-screening SDK, shipped to the checkout service as a compiled JAR
- * only. Orders of 500.00 or more go through deep scoring, which times out about half the time.
+ * only. Orders of 500.00 or more go through deep scoring, which times out about half the time. The
+ * SDK fails closed and quietly: a timed-out score becomes a {@link Verdict#HOLD}, exactly like a
+ * suspicious order, and nothing is logged. From the caller's side, a hold is a hold.
  */
 public final class FraudScreen {
   private static final long DEEP_SCORING_CENTS = 50_000;
 
   private final Random rnd = new Random();
 
-  /** Screens an order; returns normally when it may proceed. */
-  public void screen(String orderId, long amountCents) throws RiskServiceException, InterruptedException {
+  /** Screens an order. */
+  public Verdict screen(String orderId, long amountCents) throws InterruptedException {
     Thread.sleep(3 + rnd.nextInt(7));
     if (amountCents >= DEEP_SCORING_CENTS) {
-      deepScore(orderId);
+      try {
+        deepScore(orderId);
+      } catch (RiskServiceException e) {
+        return Verdict.HOLD;
+      }
     }
+    return Verdict.APPROVE;
   }
 
   private void deepScore(String orderId) throws RiskServiceException, InterruptedException {

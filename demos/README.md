@@ -13,7 +13,7 @@ promises is what the harness checks.
 | [03-metrics-and-permissions](03-metrics-and-permissions/) | p50/p95/p99 from `btrace-metrics`; a blocked extension is explained by `-le`, then allowed by policy | [tutorial 04](../docs/tutorials/04-extensions-and-permissions.md) |
 | [04-llm-trace](04-llm-trace/) | tokens, cost and a latency budget on a mocked chat-completion client | [tutorial 07](../docs/tutorials/07-llm-observability.md) |
 | [05-rag-and-inference](05-rag-and-inference/) | empty retrievals and inference timing from `btrace-rag-quality` and `btrace-gpu-bridge` | [tutorial 11](../docs/tutorials/11-ai-workload-observability.md) |
-| [06-ai-assistant](06-ai-assistant/) | a coding agent with the `btrace-observability` plugin diagnoses a checkout service that drops orders and stalls on a binary-only SDK | [tutorial 05](../docs/tutorials/05-mcp-server.md) |
+| [06-ai-assistant](06-ai-assistant/) | a coding agent with the `btrace-observability` plugin diagnoses a slow checkout service whose stalls and manual-review holds both come from a binary-only SDK | [tutorial 05](../docs/tutorials/05-mcp-server.md) |
 | [07-production-safe-attach](07-production-safe-attach/) | prepared mode, `btrace doctor`, token auth with no flags, and no overhead once the client exits | [tutorial 12](../docs/tutorials/12-production-safe-attach.md) |
 
 ## Running a scenario
