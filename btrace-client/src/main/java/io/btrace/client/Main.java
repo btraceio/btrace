@@ -272,9 +272,18 @@ public final class Main {
     }
 
     String pidArg = args[count];
-    Integer pid = JpsUtils.findVmByName(pidArg);
+    Integer pid = null;
+    try {
+      pid = JpsUtils.findVmByName(pidArg, unattended ? null : terminalChooser());
+    } catch (IllegalArgumentException e) {
+      errorExit(e.getMessage(), 1);
+    }
     if (pid == null) {
-      errorExit("Unable to find JVM with either PID or name: " + pidArg, 1);
+      errorExit(
+          JpsUtils.isRegexTarget(pidArg)
+              ? "Unable to find JVM whose command line matches: " + pidArg
+              : "Unable to find JVM with either PID or name: " + pidArg,
+          1);
     } else {
       log.info("Attaching BTrace to PID: {}", pid);
     }
@@ -409,6 +418,19 @@ public final class Main {
     } catch (IOException exp) {
       errorExit(exp.getMessage(), 1);
     }
+  }
+
+  /**
+   * Asks on the terminal which JVM to use when a target matches several; {@code null} without a
+   * terminal, so scripted runs fail instead of blocking on input. Uses {@link System#console()}
+   * even where {@link #con} is suppressed - routing the prompt to stderr there is harmless.
+   */
+  private static JpsUtils.VmChooser terminalChooser() {
+    Console console = System.console();
+    if (console == null) {
+      return null;
+    }
+    return JpsUtils.promptingChooser(prompt -> console.readLine("%s", prompt), console.writer());
   }
 
   static boolean scriptArgumentMissing(String[] args, int pidIndex) {

@@ -56,11 +56,11 @@ java -Dbtrace.permissions=permissions.properties RagSearchApp.java
 
 ## Step 2 — Deploy the probe
 
-In terminal 2, find the app's PID and attach
-[AiWorkloadProbe.java](../../demos/05-rag-and-inference/AiWorkloadProbe.java) in one go:
+In terminal 2, attach
+[AiWorkloadProbe.java](../../demos/05-rag-and-inference/AiWorkloadProbe.java) to the JVM whose command line matches `RagSearchApp`:
 
 ```sh
-btrace $(jps | awk '/RagSearchApp/ {print $1}') AiWorkloadProbe.java
+btrace '~RagSearchApp' AiWorkloadProbe.java
 ```
 
 (Run it from `demos/05-rag-and-inference` so the file name resolves, or pass its path.) The probe

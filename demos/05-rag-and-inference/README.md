@@ -16,7 +16,7 @@ cd demos/05-rag-and-inference
 java -Dbtrace.permissions=permissions.properties RagSearchApp.java
 
 # terminal 2: attach the probe
-btrace $(jps | awk '/RagSearchApp/ {print $1}') AiWorkloadProbe.java
+btrace '~RagSearchApp' AiWorkloadProbe.java
 ```
 
 Or run both unattended: `demos/05-rag-and-inference/run.sh`.

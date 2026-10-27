@@ -103,7 +103,11 @@ You will repeat these steps while gradually enhancing the used BTrace script
 `btrace [opts] <pid> <btrace-script> [<args>]`
 
 * **opts** BTrace specific options; run `btrace` with no arguments to print the list of all supported options
-* **pid** process id of the traced Java program
+* **pid** the traced Java program: a process id, its exact main class name (as `jps` shows it), or
+  `~<regex>` searched in the JVM command line (main class or jar plus arguments) - eg.
+  `btrace '~RagSearchApp' Probe.java`. When the pattern matches more than one JVM, `btrace` lists them
+  and asks which to use; in unattended mode (`-x`) or without a terminal it fails with that list
+  instead. Quote the pattern so the shell does not tilde-expand it.
 * **btrace-script** trace program. If it is a ".java", then it is compiled before submission. Or else, it is assumed to be pre-compiled [i.e., it has to be a .class] and submitted.
 * **args** trace specific arguments
 
