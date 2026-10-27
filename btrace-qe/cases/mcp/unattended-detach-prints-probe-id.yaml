@@ -1,0 +1,22 @@
+id: mcp.unattended-detach-prints-probe-id
+surface: mcp
+intent: resilience
+title: "btrace -x -n '<oneliner>' <PID> (the MCP detach_probe path) prints the probe id a later -r needs"
+# MCP detach_probe / stop_detached_probe rely on a detached probe reporting its id.
+# Grounding: client/Main.java unattended branch calls client.disconnect() after STATUS OK;
+# agent/RemoteClient.java DISCONNECT sets the probe id; core/comm/DisconnectCommand.java:60
+# prints "BTrace Probe: <id>", and createCommandListener exits 0 on DISCONNECT.
+given:
+  mode: attach
+  target: AttachDemoTarget
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "-x"
+    - "-n"
+    - "qe.targets.AttachDemoTarget::work @return { print method, time }"
+    - "${pid}"
+steps: [launch, awaitReady, attach, awaitOutput, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^BTrace Probe: \\S+"

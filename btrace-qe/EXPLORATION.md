@@ -18,13 +18,22 @@ The `demos` surface is outside the rotation: it replays the shipped demo scenari
 - `given.mode: attach` — launch a fixture JVM *without* the agent (`given.target`) and attach the
   real CLI to it by PID (`given.clientArgs`; `${pid}`, `${port}` and `${runDir}` are substituted,
   so `-p ${port}` keeps concurrent runs off the default port 2020). Steps, in this order:
-  `launch`, `awaitReady`, `attach`, `awaitOutput`, `detach`, `shutdown`, `awaitExit` (`attach` needs
-  `awaitReady` first; `awaitOutput`/`detach` need `attach` first; `detach` is optional). `awaitOutput`
+  `launch`, `awaitReady`, `attach`, `awaitOutput`, `awaitClientExit`, `detach`, `shutdown`,
+  `awaitExit` (`attach` needs `awaitReady` first; `awaitOutput`/`awaitClientExit`/`detach` need
+  `attach` first; each of the three is optional). `awaitClientExit` waits, within the step budget,
+  for a client that should end by itself (an error on stderr only, `-l`, `-lp`, `-x`); one that never
+  exits times out and is reported as a hang. Use it instead of `awaitOutput` when the client's
+  answer goes to stderr, so `shutdown` does not reap the client before it reports. `awaitOutput`
   waits, within the step budget, for `expect.outputMustMatch` — regexes that must each match a line
   of the *client's* stdout, in order — and a pattern that never shows up is an S2 finding, not a
   hang. `detach` ends the client the way Ctrl+C would (TERM → shutdown hook → exit command), so the
   target must still be alive for `shutdown` to stop it cleanly. Evidence adds `client-stdout.log`
-  and `client-stderr.log`. Sample: `cases/demos/attach-oneliner-smoke.yaml`; fixture:
+  and `client-stderr.log`, and the last line of `steps.log` adds `clientExitCode=` — the client's
+  own exit code when it ended before the harness reaped it (on its own, or 143 after `detach`'s
+  TERM), `null` when the harness had to kill it. A conformance attach case can assert it with
+  `expect.clientExitCode: <int>` (needs an `awaitClientExit` step); a mismatch, or a client the
+  harness had to kill, is an S3 conformance finding. Sample: `cases/demos/attach-oneliner-smoke.yaml`;
+  fixture:
   `qe.targets.AttachDemoTarget` (prints `ready:<pid>`, calls `work(int)` every 50 ms).
 - Launched-target options (`target` and `attach` modes), for replaying the shipped `demos/`:
   - `given.target` may name a `.java` file relative to the repository root
@@ -79,3 +88,17 @@ also fails, so a misspelled gate cannot pass silently. CI uses `-Pqe.failOn=S2`.
 - 2026-10-25 agent-args separator injection — `statsd=localhost:8125:9` — agent/Main.java:1080-1091 (3-part split matches neither branch; only the 2-part bad-port path warns) — kept agent-args.statsd-extra-separator (S4: silently ignored)
 - 2026-10-25 agent-args wrong type — `debug=no` (and `stdout=no`) — agent/Main.java parseArgs `!"false".equals(p)` — kept agent-args.debug-non-boolean (was S4: debug=no silently enabled debug; fixed — values other than true/false now warn and leave the option off; token is the literal `debug=no`, since "debug"/"no" alone match unrelated output)
 - 2026-10-25 agent-args doc claim — probe targeting an io.btrace.* class — instr/BTraceTransformer.java:129 — blocked (needs a probe aimed at an io.btrace class; loads cleanly, never fires, no warning)
+- 2026-10-27 mcp doc claim — `btrace -x -n '<oneliner>' <PID>` (the MCP detach_probe path) prints the probe id that `-r`/stop_detached_probe needs — client/Main.java unattended branch (`client.disconnect()` after STATUS OK) + agent/RemoteClient.java DISCONNECT `setProbeId` + core/comm/DisconnectCommand.java:60 — kept mcp.unattended-detach-prints-probe-id (clean: `BTrace Probe: <uuid>` printed, client exits, target with the detached probe still shuts down)
+- 2026-10-27 mcp conflicting keys — explicit `-p <free port>` against a JVM prepared with `port=0` (the MCP server always passes a per-call port, default 2020) — client/Client.java attach (agentAlreadyRunning → configureConnection replaces the requested port with the published `btrace.port`) — kept mcp.explicit-port-vs-prepared-agent (clean: the requested port is overridden, the probe output arrives)
+- 2026-10-27 mcp doc claim — `btrace -l` marks a prepared JVM with `(+)`, the same `btrace.port` signal MCP list_jvms uses for its attachment status — client/JpsUtils.java listVms/hasBTraceServer — kept mcp.list-jvms-marks-prepared-agent (conformance pass)
+- 2026-10-27 mcp path to missing value — `-r <unknown probe id> exit <PID>` (stop_detached_probe with a stale id) — client/Client.java reconnect: `IOException("Unable to reconnect to an active probe: <id>")` → Main errorExit to stderr — blocked (attach mode can only wait on client *stdout* via awaitOutput; needs an `awaitClientExit` step so a stderr-only error path isn't reaped by `shutdown`)
+- 2026-10-27 mcp missing value — `-r <id> exit <PID>` against a JVM with no BTrace agent — client/Client.java discoverPreparedAgent: "No BTrace control endpoint is available for PID <pid>" — blocked (same stderr-only path as above; also the only distinctive user token is the PID, and messageMustMention does not substitute `${pid}`)
+- 2026-10-27 mcp order dependence — detach (`-x`) then `-lp` then `-r <id> exit`: the full MCP detach_probe → list_probes → stop_detached_probe round trip — agent/Client.java listProbes lists only disconnected RemoteClients — blocked (needs a second sequential `attach` step against the same target, with the first client's probe id fed into the second's args)
+- 2026-10-27 mcp missing value — `-lp <PID>` on a JVM with no detached probes — client/Main.java listProbes branch (attaches, which dynamically loads an agent as a side effect, then prints nothing) — blocked (empty stdout gives awaitOutput nothing to wait on; needs `awaitClientExit` + client exit-code expectation)
+- 2026-10-27 mcp unknown key — MCP send_event with a named event on a live session — client/Client.java sendEvent(String) — blocked (the CLI only reaches it through the interactive Ctrl+C console or `-r <id> event <name>`, which needs a detached probe first; see the round-trip entry)
+- 2026-10-27 mcp path to missing value — `-r <unknown probe id> exit <PID>` on a prepared JVM (stop_detached_probe with a stale id; was blocked, unblocked by `awaitClientExit`) — client/Client.java reconnect failure → Main errorExit — kept mcp.reconnect-unknown-probe-id (clean: stderr `Unable to reconnect to an active probe: qe-no-such-probe`, client exits in ~0.6 s)
+- 2026-10-27 mcp missing value — `-r <id> exit <PID>` against a JVM with no BTrace agent (was blocked) — client/Client.java discoverPreparedAgent — kept mcp.reconnect-without-agent (clean, resilience only: stderr `No BTrace control endpoint is available for PID <pid>`; no token because the PID is the only distinctive input and is not substitutable)
+- 2026-10-27 mcp missing value — `-lp <PID>` on a JVM with no detached probes (was blocked) — client/Main.java listProbes branch + agent/Client.java listProbes — kept mcp.list-probes-none-detached (clean: client returns in ~1.3 s)
+- 2026-10-27 mcp missing value — `-lp` with nothing to list prints nothing at all (no "no probes" line), and loads an agent into the JVM as a side effect — client/Main.java listProbes + ListProbesCommand.print — lead (observed in mcp.list-probes-none-detached; empty output is indistinguishable from a silent failure; no case until the expected message is a documented claim)
+- 2026-10-27 mcp doc claim — the `-r` path logs `Attaching BTrace to PID: <pid>` although it only reads properties and never attaches — client/Main.java (log before the -r branch) — lead (cosmetic; misleading when the JVM has no agent)
+- 2026-10-27 mcp doc claim — `-r` failures exit 1: documented in docs/QuickReference.md ("If the probe id is unknown, or the JVM has no BTrace control endpoint, `-r` prints the reason and exits with code 1") after confirming both paths end in client/Main.java:409-410 `errorExit(exp.getMessage(), 1)` — mcp.reconnect-unknown-probe-id and mcp.reconnect-without-agent promoted to conformance with `expect.clientExitCode: 1` (both PASS, clientExitCode=1)

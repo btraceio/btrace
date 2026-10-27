@@ -53,7 +53,8 @@ public final class YamlCaseLoader {
       new HashSet<>(
           Arrays.asList("mode", "target", "agentArgs", "clientArgs", "jvmArgs", "readyRegex"));
   private static final Set<String> EXPECT_KEYS =
-      new HashSet<>(Arrays.asList("exitCode", "messageMustMention", "outputMustMatch"));
+      new HashSet<>(
+          Arrays.asList("exitCode", "messageMustMention", "outputMustMatch", "clientExitCode"));
 
   public List<CaseDef> loadAll(Path corpusDir) throws IOException {
     if (!Files.isDirectory(corpusDir)) {
@@ -190,16 +191,8 @@ public final class YamlCaseLoader {
 
   private ExpectationDef parseExpect(Path file, Object rawExpect) {
     Map<String, Object> expect = asMap(file, "expect", rawExpect, EXPECT_KEYS);
-    Object rawExit = expect.get("exitCode");
-    Integer exitCode = null;
-    if (rawExit != null) {
-      try {
-        exitCode = Integer.valueOf(rawExit.toString());
-      } catch (NumberFormatException e) {
-        throw new CaseValidationException(
-            file + ": expect.exitCode must be an integer, was '" + rawExit + "'");
-      }
-    }
+    Integer exitCode = optionalInt(file, expect, "exitCode");
+    Integer clientExitCode = optionalInt(file, expect, "clientExitCode");
     List<String> mentions =
         expect.containsKey("messageMustMention")
             ? requireStringList(file, expect, "messageMustMention")
@@ -208,7 +201,20 @@ public final class YamlCaseLoader {
         expect.containsKey("outputMustMatch")
             ? requireStringList(file, expect, "outputMustMatch")
             : Collections.<String>emptyList();
-    return new ExpectationDef(exitCode, mentions, outputMustMatch);
+    return new ExpectationDef(exitCode, mentions, outputMustMatch, clientExitCode);
+  }
+
+  private static Integer optionalInt(Path file, Map<String, Object> expect, String key) {
+    Object raw = expect.get(key);
+    if (raw == null) {
+      return null;
+    }
+    try {
+      return Integer.valueOf(raw.toString());
+    } catch (NumberFormatException e) {
+      throw new CaseValidationException(
+          file + ": expect." + key + " must be an integer, was '" + raw + "'");
+    }
   }
 
   private Map<String, Object> asMap(Path file, String what, Object value, Set<String> allowedKeys) {

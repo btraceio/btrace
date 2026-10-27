@@ -83,6 +83,9 @@ public final class CaseYamlWriter {
     if (!def.expect().outputMustMatch().isEmpty()) {
       expect.put("outputMustMatch", def.expect().outputMustMatch());
     }
+    if (def.expect().clientExitCode() != null) {
+      expect.put("clientExitCode", def.expect().clientExitCode());
+    }
     doc.put("expect", expect);
 
     DumperOptions options = new DumperOptions();

@@ -24,6 +24,7 @@ import io.btrace.qe.model.CaseDef;
 import io.btrace.qe.model.ExpectationDef;
 import io.btrace.qe.model.GivenDef;
 import io.btrace.qe.model.Intent;
+import io.btrace.qe.model.SpecRef;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -100,5 +101,25 @@ class CaseYamlWriterTest {
                 CaseDef.TIER_FULL));
     assertFalse(plain.contains("jvmArgs"), plain);
     assertFalse(plain.contains("readyRegex"), plain);
+  }
+
+  @Test
+  void clientExitCodeRoundTripsThroughTheLoader() throws Exception {
+    CaseDef def =
+        new CaseDef(
+            "mcp.round-trip",
+            "mcp",
+            Intent.CONFORMANCE,
+            "round trip",
+            new SpecRef("docs/QuickReference.md", "claim"),
+            GivenDef.attach("AttachDemoTarget", List.of("-l")),
+            List.of("launch", "awaitReady", "attach", "awaitClientExit", "shutdown", "awaitExit"),
+            new ExpectationDef(null, Collections.<String>emptyList(), List.of(), 1),
+            CaseDef.TIER_FULL);
+    Path dir = Files.createTempDirectory("qe-yaml-writer-client-exit");
+    Files.write(
+        dir.resolve("case.yaml"), CaseYamlWriter.toYaml(def).getBytes(StandardCharsets.UTF_8));
+    assertEquals(
+        Integer.valueOf(1), new YamlCaseLoader().loadAll(dir).get(0).expect().clientExitCode());
   }
 }

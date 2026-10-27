@@ -224,6 +224,42 @@ class CaseDefTest {
   }
 
   @Test
+  void attachCaseAwaitClientExitAfterAttachPasses() {
+    assertDoesNotThrow(
+        attachCase(
+                List.of(
+                    "launch", "awaitReady", "attach", "awaitClientExit", "shutdown", "awaitExit"),
+                List.of())
+            ::validate);
+  }
+
+  @Test
+  void attachCaseAwaitClientExitBeforeAttachFails() {
+    CaseValidationException ex =
+        assertThrows(
+            CaseValidationException.class,
+            attachCase(
+                    List.of("launch", "awaitReady", "awaitClientExit", "attach", "shutdown"),
+                    List.of())
+                ::validate);
+    assertTrue(
+        ex.getMessage().contains("'attach' must precede 'awaitClientExit'"), ex.getMessage());
+  }
+
+  @Test
+  void targetCaseRejectsAwaitClientExit() {
+    CaseDef def =
+        caseOf(
+            Intent.RESILIENCE,
+            null,
+            GivenDef.target("SteadyStateTarget", ""),
+            List.of("launch", "awaitReady", "awaitClientExit", "shutdown", "awaitExit"),
+            null);
+    CaseValidationException ex = assertThrows(CaseValidationException.class, def::validate);
+    assertTrue(ex.getMessage().contains("awaitClientExit"), ex.getMessage());
+  }
+
+  @Test
   void attachCaseAwaitOutputWithoutExpectationFails() {
     CaseValidationException ex =
         assertThrows(CaseValidationException.class, attachCase(ATTACH_STEPS, List.of())::validate);
@@ -342,5 +378,62 @@ class CaseDefTest {
               bad);
       assertTrue(ex.getMessage().contains("target"), ex.getMessage());
     }
+  }
+
+  private static final List<String> CLIENT_EXIT_STEPS =
+      List.of("launch", "awaitReady", "attach", "awaitClientExit", "shutdown", "awaitExit");
+
+  private static CaseDef clientExitCase(Intent intent, GivenDef given, List<String> steps) {
+    return new CaseDef(
+        "x.client-exit",
+        "mcp",
+        intent,
+        "title",
+        intent == Intent.CONFORMANCE ? new SpecRef("docs/QuickReference.md", "claim") : null,
+        given,
+        steps,
+        new ExpectationDef(null, Collections.<String>emptyList(), List.of(), 1),
+        CaseDef.TIER_FULL);
+  }
+
+  @Test
+  void clientExitCodeOnAConformanceAttachCasePasses() {
+    assertDoesNotThrow(
+        clientExitCase(Intent.CONFORMANCE, attachGiven(), CLIENT_EXIT_STEPS)::validate);
+  }
+
+  @Test
+  void clientExitCodeOnAResilienceCaseFails() {
+    CaseValidationException ex =
+        assertThrows(
+            CaseValidationException.class,
+            clientExitCase(Intent.RESILIENCE, attachGiven(), CLIENT_EXIT_STEPS)::validate);
+    assertTrue(ex.getMessage().contains("clientExitCode"), ex.getMessage());
+  }
+
+  @Test
+  void clientExitCodeOutsideAttachModeFails() {
+    CaseValidationException ex =
+        assertThrows(
+            CaseValidationException.class,
+            clientExitCase(
+                    Intent.CONFORMANCE,
+                    GivenDef.client(List.of("-l")),
+                    List.of("runClient", "awaitExit"))
+                ::validate);
+    assertTrue(ex.getMessage().contains("attach mode"), ex.getMessage());
+  }
+
+  @Test
+  void clientExitCodeWithoutAwaitClientExitFails() {
+    CaseValidationException ex =
+        assertThrows(
+            CaseValidationException.class,
+            clientExitCase(
+                    Intent.CONFORMANCE,
+                    attachGiven(),
+                    List.of("launch", "awaitReady", "attach", "shutdown", "awaitExit"))
+                ::validate);
+    assertTrue(ex.getMessage().contains("awaitClientExit"), ex.getMessage());
   }
 }

@@ -1,0 +1,21 @@
+id: mcp.list-jvms-marks-prepared-agent
+surface: mcp
+intent: conformance
+title: "btrace -l marks a JVM prepared with -javaagent:btrace.jar=port=0 as having BTrace (parity with MCP list_jvms)"
+spec:
+  doc: docs/QuickReference.md
+  claim: "`-l` - List all locally attachable JVMs"
+# Grounding: client/JpsUtils.java listVms prints "(+|-) <pid> <mainClass> [...]", with "+" when
+# hasBTraceServer finds btrace.port in the target's system properties - the same property the MCP
+# list_jvms handler uses for its attachment status.
+given:
+  mode: attach
+  target: AttachDemoTarget
+  jvmArgs:
+    - "-javaagent:${btraceJar}=port=0"
+  clientArgs:
+    - "-l"
+steps: [launch, awaitReady, attach, awaitOutput, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^\\(\\+\\) \\d+ \\S*AttachDemoTarget"

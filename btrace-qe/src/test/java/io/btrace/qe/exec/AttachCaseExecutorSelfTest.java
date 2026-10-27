@@ -45,13 +45,18 @@ class AttachCaseExecutorSelfTest {
   private static final List<String> OUTPUT = List.of("^work$", "execution time: \\d+ ms");
 
   private static CaseDef attachCase(String id, List<String> steps, List<String> output) {
+    return attachCase(id, ONELINER_ARGS, steps, output);
+  }
+
+  private static CaseDef attachCase(
+      String id, List<String> clientArgs, List<String> steps, List<String> output) {
     return new CaseDef(
         id,
         "fixture",
         Intent.RESILIENCE,
         id,
         null,
-        GivenDef.attach("AttachDemoTarget", ONELINER_ARGS),
+        GivenDef.attach("AttachDemoTarget", clientArgs),
         steps,
         new ExpectationDef(null, Collections.<String>emptyList(), output),
         CaseDef.TIER_FULL);
@@ -149,5 +154,75 @@ class AttachCaseExecutorSelfTest {
         "^this line is never printed$",
         OutputCheck.firstUnmatched(def.expect().outputMustMatch(), trace.clientStdout()));
     assertTrue(elapsed < 10_000 + 25_000, "elapsed=" + elapsed);
+  }
+
+  @Test
+  void awaitClientExitWaitsForAClientThatEndsOnItsOwn() throws Exception {
+    // -l lists the local JVMs and exits; the target must be among them by the time the step ends
+    CaseDef def =
+        attachCase(
+            "a.client-exit",
+            List.of("-l"),
+            List.of("launch", "awaitReady", "attach", "awaitClientExit", "shutdown", "awaitExit"),
+            Collections.<String>emptyList());
+    ExecutionTrace trace =
+        new CaseExecutor(QeEnvironment.fromSystemProperties())
+            .execute(def, Files.createTempDirectory("qe-exec-client-exit"));
+    assertNull(trace.harnessError(), "client=" + trace.clientStderr());
+    assertFalse(trace.timedOut(), "steps=" + trace.steps());
+    assertTrue(
+        trace.steps().stream().anyMatch(s -> "awaitClientExit".equals(s.step()) && s.success()),
+        "steps=" + trace.steps());
+    assertTrue(
+        trace.clientStdout().stream().anyMatch(l -> l.contains("AttachDemoTarget")),
+        "client stdout=" + trace.clientStdout());
+    assertEquals(Integer.valueOf(0), trace.exitCode(), "target exit code");
+    assertEquals(Integer.valueOf(0), trace.clientExitCode(), "client exit code");
+  }
+
+  @Test
+  void clientExitCodeIsRecordedWhenTheClientFails() throws Exception {
+    // the target has no agent, so -r cannot find a control endpoint and the client exits 1
+    CaseDef def =
+        attachCase(
+            "a.client-fails",
+            List.of("-r", "qe-some-probe", "exit", "${pid}"),
+            List.of("launch", "awaitReady", "attach", "awaitClientExit", "shutdown", "awaitExit"),
+            Collections.<String>emptyList());
+    ExecutionTrace trace =
+        new CaseExecutor(QeEnvironment.fromSystemProperties())
+            .execute(def, Files.createTempDirectory("qe-exec-client-fails"));
+    assertNull(trace.harnessError(), "client=" + trace.clientStderr());
+    assertEquals(
+        Integer.valueOf(1), trace.clientExitCode(), "client stderr=" + trace.clientStderr());
+  }
+
+  @Test
+  void awaitClientExitOnAClientThatNeverEndsIsAHang() throws Exception {
+    String previous = System.getProperty("qe.timeout");
+    System.setProperty("qe.timeout", "10000");
+    QeEnvironment env;
+    try {
+      env = QeEnvironment.fromSystemProperties();
+    } finally {
+      if (previous == null) {
+        System.clearProperty("qe.timeout");
+      } else {
+        System.setProperty("qe.timeout", previous);
+      }
+    }
+    // an attached oneliner keeps tracing until it is detached, so it never exits by itself
+    CaseDef def =
+        attachCase(
+            "a.client-hang",
+            List.of("launch", "awaitReady", "attach", "awaitClientExit", "shutdown", "awaitExit"),
+            Collections.<String>emptyList());
+    ExecutionTrace trace =
+        new CaseExecutor(env).execute(def, Files.createTempDirectory("qe-exec-client-hang"));
+    assertTrue(trace.timedOut(), "steps=" + trace.steps());
+    StepOutcome last = trace.steps().get(trace.steps().size() - 1);
+    assertEquals("awaitClientExit", last.step());
+    assertFalse(last.success());
+    assertNull(trace.clientExitCode(), "a client the harness killed has no exit code of its own");
   }
 }

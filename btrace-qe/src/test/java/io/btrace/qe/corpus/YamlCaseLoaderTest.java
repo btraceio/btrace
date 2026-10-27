@@ -284,4 +284,31 @@ class YamlCaseLoaderTest {
                         + "expect:\n  outputMustMatch: [\"work\"]\n"));
     assertTrue(ex.getMessage().contains("jvmArgs"), ex.getMessage());
   }
+
+  private static final String CLIENT_EXIT_CASE =
+      "id: fixture.client-exit\nsurface: mcp\nintent: conformance\ntitle: t\n"
+          + "spec:\n  doc: docs/QuickReference.md\n  claim: c\n"
+          + "given:\n  mode: attach\n  target: AttachDemoTarget\n"
+          + "  clientArgs: [\"-l\"]\n"
+          + "steps: [launch, awaitReady, attach, awaitClientExit, shutdown, awaitExit]\n";
+
+  @Test
+  void loadsClientExitCode() throws Exception {
+    List<CaseDef> cases =
+        loadYaml("client-exit.yaml", CLIENT_EXIT_CASE + "expect:\n  clientExitCode: 1\n");
+    assertEquals(Integer.valueOf(1), cases.get(0).expect().clientExitCode());
+  }
+
+  @Test
+  void rejectsANonIntegerClientExitCode() throws Exception {
+    CaseValidationException ex =
+        assertThrows(
+            CaseValidationException.class,
+            () ->
+                loadYaml(
+                    "client-exit.yaml", CLIENT_EXIT_CASE + "expect:\n  clientExitCode: one\n"));
+    assertTrue(
+        ex.getMessage().contains("expect.clientExitCode must be an integer"), ex.getMessage());
+    assertTrue(ex.getMessage().contains("client-exit.yaml"), ex.getMessage());
+  }
 }

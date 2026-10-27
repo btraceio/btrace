@@ -88,7 +88,6 @@ public final class OracleRunner {
     if (def.intent() == Intent.CONFORMANCE && !trace.timedOut()) {
       Integer expected = def.expect().exitCode();
       boolean ok = expected == null || expected.equals(trace.exitCode());
-      conformance = ok ? VerdictValue.PASS : VerdictValue.FAIL;
       if (!ok) {
         findings.add(
             Finding.of(
@@ -97,6 +96,20 @@ public final class OracleRunner {
                 "behavior does not match " + def.spec().doc() + ": " + def.spec().claim(),
                 "expected exit code " + expected + ", observed " + trace.exitCode()));
       }
+      Integer expectedClient = def.expect().clientExitCode();
+      boolean clientOk = expectedClient == null || expectedClient.equals(trace.clientExitCode());
+      if (!clientOk) {
+        findings.add(
+            Finding.of(
+                def.id(),
+                Severity.S3,
+                "behavior does not match " + def.spec().doc() + ": " + def.spec().claim(),
+                "expected client exit code "
+                    + expectedClient
+                    + ", observed "
+                    + trace.clientExitCode()));
+      }
+      conformance = ok && clientOk ? VerdictValue.PASS : VerdictValue.FAIL;
     }
 
     CheckResult guidance = new GuidanceCheck().check(def, trace);

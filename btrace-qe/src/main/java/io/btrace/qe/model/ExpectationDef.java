@@ -24,6 +24,7 @@ public final class ExpectationDef {
   private final Integer exitCode;
   private final List<String> messageMustMention;
   private final List<String> outputMustMatch;
+  private final Integer clientExitCode;
 
   public ExpectationDef(Integer exitCode, List<String> messageMustMention) {
     this(exitCode, messageMustMention, null);
@@ -31,9 +32,18 @@ public final class ExpectationDef {
 
   public ExpectationDef(
       Integer exitCode, List<String> messageMustMention, List<String> outputMustMatch) {
+    this(exitCode, messageMustMention, outputMustMatch, null);
+  }
+
+  public ExpectationDef(
+      Integer exitCode,
+      List<String> messageMustMention,
+      List<String> outputMustMatch,
+      Integer clientExitCode) {
     this.exitCode = exitCode;
     this.messageMustMention = copy(messageMustMention);
     this.outputMustMatch = copy(outputMustMatch);
+    this.clientExitCode = clientExitCode;
   }
 
   private static List<String> copy(List<String> list) {
@@ -56,5 +66,10 @@ public final class ExpectationDef {
    */
   public List<String> outputMustMatch() {
     return outputMustMatch;
+  }
+
+  /** The exit code the attached client must end with (attach mode, conformance only), or null. */
+  public Integer clientExitCode() {
+    return clientExitCode;
   }
 }

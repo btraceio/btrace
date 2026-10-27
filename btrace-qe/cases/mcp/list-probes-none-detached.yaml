@@ -1,0 +1,17 @@
+id: mcp.list-probes-none-detached
+surface: mcp
+intent: resilience
+title: "btrace -lp <PID> on a JVM with no detached probes (MCP list_probes on a fresh JVM) returns instead of hanging"
+# Grounding: client/Main.java listProbes branch: client.attach (loads the agent if absent) →
+# Client.connectAndListProbes, whose command loop ends on the LIST_PROBES reply → System.exit(0).
+# agent/Client.java listProbes returns only disconnected RemoteClients, so the reply is empty.
+given:
+  mode: attach
+  target: AttachDemoTarget
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "-lp"
+    - "${pid}"
+steps: [launch, awaitReady, attach, awaitClientExit, shutdown, awaitExit]
+expect: {}

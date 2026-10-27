@@ -110,7 +110,12 @@ public final class CaseExecutor {
 
     // the client goes first: a client still attached would otherwise see the target vanish
     TargetProcess client = state.client;
+    Integer clientExitCode = null;
     if (client != null) {
+      // read before reaping: a client the harness has to kill has no exit code of its own
+      if (!client.isAlive()) {
+        clientExitCode = client.process().exitValue();
+      }
       reap(client);
     }
     TargetProcess p = state.process;
@@ -137,7 +142,8 @@ public final class CaseExecutor {
         hasHsErrLog(runDir),
         runDir,
         client != null ? client.stdoutSnapshot() : Collections.<String>emptyList(),
-        client != null ? client.stderrSnapshot() : Collections.<String>emptyList());
+        client != null ? client.stderrSnapshot() : Collections.<String>emptyList(),
+        clientExitCode);
   }
 
   /** Kills a process that is still alive and drains its output so the snapshots are complete. */
@@ -221,6 +227,12 @@ public final class CaseExecutor {
         // bounded inside the step budget: a missing line is a finding for the oracle, not a hang
         awaitOutput(
             state.client, def.expect().outputMustMatch(), Math.max(1_000L, timeoutMs - 3_000L));
+        break;
+      case "awaitClientExit":
+        // a client that should end on its own (an error path, -l, -x) but never does is a hang
+        if (!state.client.process().waitFor(timeoutMs, TimeUnit.MILLISECONDS)) {
+          Thread.sleep(Long.MAX_VALUE);
+        }
         break;
       case "detach":
         detach(state.client);

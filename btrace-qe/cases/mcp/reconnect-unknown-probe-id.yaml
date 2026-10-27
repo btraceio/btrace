@@ -1,0 +1,25 @@
+id: mcp.reconnect-unknown-probe-id
+surface: mcp
+intent: conformance
+title: "btrace -r <unknown probe id> exit <PID> (MCP stop_detached_probe with a stale id) names the id it could not find"
+spec:
+  doc: docs/QuickReference.md
+  claim: "If the probe id is unknown, or the JVM has no BTrace control endpoint, `-r` prints the reason and exits with code 1"
+# Grounding: client/Main.java -r branch (probe id, then "exit" as the probe command) →
+# Client.discoverPreparedAgent → Client.reconnect: a failed ReconnectCommand status raises
+# IOException("Unable to reconnect to an active probe: <id>"), which Main prints via errorExit.
+# The target is prepared (port=0) so the request reaches the agent rather than failing discovery.
+given:
+  mode: attach
+  target: AttachDemoTarget
+  jvmArgs:
+    - "-javaagent:${btraceJar}=port=0"
+  clientArgs:
+    - "-r"
+    - "qe-no-such-probe"
+    - "exit"
+    - "${pid}"
+steps: [launch, awaitReady, attach, awaitClientExit, shutdown, awaitExit]
+expect:
+  clientExitCode: 1
+  messageMustMention: ["qe-no-such-probe"]

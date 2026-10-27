@@ -56,6 +56,8 @@ public final class EvidenceStore {
         .append(trace.exitedPrematurely())
         .append(" canaryOk=")
         .append(trace.canaryOk())
+        .append(" clientExitCode=")
+        .append(trace.clientExitCode())
         .append('\n');
     write(runDir.resolve("steps.log"), steps.toString());
     if (trace.threadDumpText() != null) {

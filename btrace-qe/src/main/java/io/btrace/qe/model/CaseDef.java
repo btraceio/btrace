@@ -32,7 +32,14 @@ public final class CaseDef {
   private static final Set<String> ATTACH_STEPS =
       new LinkedHashSet<>(
           Arrays.asList(
-              "launch", "awaitReady", "attach", "awaitOutput", "detach", "shutdown", "awaitExit"));
+              "launch",
+              "awaitReady",
+              "attach",
+              "awaitOutput",
+              "awaitClientExit",
+              "detach",
+              "shutdown",
+              "awaitExit"));
 
   public static final String TIER_SMOKE = "smoke";
   public static final String TIER_FULL = "full";
@@ -89,6 +96,10 @@ public final class CaseDef {
       require(
           expect.exitCode() == null,
           "expect.exitCode is a documented-behavior claim and is only allowed on conformance cases");
+      require(
+          expect.clientExitCode() == null,
+          "expect.clientExitCode is a documented-behavior claim and is only allowed on conformance"
+              + " cases");
     }
     Set<String> allowed = stepsFor(given.mode());
     for (String step : steps) {
@@ -102,7 +113,8 @@ public final class CaseDef {
       case ATTACH:
         require("launch".equals(steps.get(0)), "the first step of an attach case must be 'launch'");
         requirePrecedes("awaitReady", Arrays.asList("attach", "shutdown"), "attach");
-        requirePrecedes("attach", Arrays.asList("awaitOutput", "detach"), "attach");
+        requirePrecedes(
+            "attach", Arrays.asList("awaitOutput", "awaitClientExit", "detach"), "attach");
         require(
             !steps.contains("awaitOutput") || !expect.outputMustMatch().isEmpty(),
             "'awaitOutput' needs at least one pattern in expect.outputMustMatch");
@@ -115,6 +127,16 @@ public final class CaseDef {
     }
     if (given.mode() != GivenDef.Mode.CLIENT) {
       validateTarget();
+    }
+    if (expect.clientExitCode() != null) {
+      require(
+          given.mode() == GivenDef.Mode.ATTACH,
+          "expect.clientExitCode is only allowed in attach mode (it is the attached client's exit"
+              + " code)");
+      // without the step the client may still be running when the harness reaps it
+      require(
+          steps.contains("awaitClientExit"),
+          "expect.clientExitCode needs an 'awaitClientExit' step, or the client may not have exited");
     }
     require(
         expect.outputMustMatch().isEmpty() || given.mode() == GivenDef.Mode.ATTACH,

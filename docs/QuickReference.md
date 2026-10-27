@@ -435,7 +435,7 @@ form (`"status": "preparation_required"`).
 - `-l` - List all locally attachable JVMs
 - `-lp` - List active probes in the given JVM (expects PID or app name)
 - `-le` - List failed extensions in the given JVM (expects PID or app name)
-- `-r <probe-id>` - Reconnect to an active disconnected probe
+- `-r <probe-id>` - Reconnect to an active disconnected probe. If the probe id is unknown, or the JVM has no BTrace control endpoint, `-r` prints the reason and exits with code 1
 - `-r help` - Show help on remote commands
 - `-o <file>` - Output to file (disables console output)
 - `-u` - Run in trusted/unsafe mode
