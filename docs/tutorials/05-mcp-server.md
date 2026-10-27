@@ -5,6 +5,10 @@ method and the swallowed exception, and remove its probe afterwards. You will in
 `btrace-observability` plugin, ask four questions in plain English, and learn how to read what the
 assistant did so you can trust (or veto) it.
 
+![Demo 06: an assistant diagnoses the checkout service through the BTrace MCP server](images/06-ai-assistant.gif)
+
+*An unedited, real session against [demo 06](../../demos/06-ai-assistant/README.md), rendered from its transcript; the MP4 is next to the GIF.*
+
 **Persona:** anyone who would rather describe a problem than type a probe. **Time:** ~10 minutes.
 
 ## What you'll need
@@ -41,7 +45,7 @@ From the BTrace repository root:
 java demos/01-oneliner/OrderServiceApp.java
 ```
 
-(or run `demos/06-ai-assistant/run.sh`, which starts the same app and leaves it running).
+Demo 06 (`demos/06-ai-assistant/run.sh`) is a separate, harder scenario: a checkout service whose cause sits partly in a binary-only SDK. It has its own prompts in [PROMPTS.md](../../demos/06-ai-assistant/PROMPTS.md); the walkthrough below uses the order service.
 
 **You should see** (numbers will vary):
 
@@ -55,8 +59,8 @@ while the app swallows the exception. Find the PID with `jps`; you will give it 
 
 ## Step 3 — Ask the four questions
 
-Open your AI host in any directory and ask these, one at a time. The same script, with notes on
-what a good answer looks like, is in
+Open your AI host in any directory and ask these, one at a time. For the same kind of script, with
+notes on what a good answer looks like, for the harder checkout-service scenario, see
 [demos/06-ai-assistant/PROMPTS.md](../../demos/06-ai-assistant/PROMPTS.md).
 
 1. `What Java processes are running on this machine?`
@@ -69,7 +73,8 @@ assistant and differ every run):
 
 - Prompt 1: a call to `list_jvms` and a list of JVMs, with `OrderServiceApp` marked as having no
   BTrace attached.
-- Prompt 2: one or more `deploy_oneliner` calls, then a conclusion that `chargeCard` takes roughly
+- Prompt 2: one or more `deploy_oneliner` calls, then a `read_probe_output` call to collect what the
+  probe printed, then a conclusion that `chargeCard` takes roughly
   250-400 ms on about one call in ten and drags `processOrder` with it, then a probe removal.
 - Prompt 3: a probe on the error path of `validateOrder` and the call stack leading to it.
 - Prompt 4: a `list_probes` check and a plain statement that nothing is left.
@@ -90,14 +95,20 @@ loose on something that matters.
   credentials are not.
 - **The verifier.** BTrace's verifier stays on by default. If the assistant asks for trusted or
   unsafe mode, say no.
-- **The cleanup.** A probe should be ended with `exit_probe`, which stops and removes it.
+- **The output.** The assistant gets probe results from `read_probe_output`, which returns what an
+  active probe printed since the last read. With `wait_seconds` (0-30) it returns as soon as a report
+  arrives. The server keeps up to 64 KB of unread output per probe and says how many of the oldest
+  lines it dropped beyond that. Output is kept only for probes deployed in the current session. If the
+  answer cites numbers, they should come from there.
+- **The cleanup.** A probe should be ended with `exit_probe`, which stops and removes it and returns
+  any output not yet read.
   `detach_probe` leaves the probe running on the JVM; it can then only be found with `list_probes`
   and stopped with `stop_detached_probe`, and only after you confirm it is no longer needed.
 
 ## Step 5 — Clean up
 
 Make sure no probe is left (prompt 4 does exactly this), then stop the demo app with `Ctrl+C` in its
-terminal, or `kill <PID>` if you used `run.sh`. To remove the plugin, use `/plugin` in Claude Code.
+terminal, or `kill <PID>`. To remove the plugin, use `/plugin` in Claude Code.
 
 ## Troubleshooting
 
@@ -116,5 +127,5 @@ terminal, or `kill <PID>` if you used `run.sh`. To remove the plugin, use `/plug
 
 - The plugin and its skills: [btrace-observability README](https://github.com/btraceio/agent-plugins/tree/main/plugins/btrace-observability)
 - The MCP server and how it relates to BTrace: [MCP Server](../MCPServer.md)
-- The scripted demo, with a "do not record if" list: [PROMPTS.md](../../demos/06-ai-assistant/PROMPTS.md)
+- The harder scenario, with a recorded session and a "do not record if" list: [demo 06](../../demos/06-ai-assistant/README.md) and its [PROMPTS.md](../../demos/06-ai-assistant/PROMPTS.md)
 - Doing the same by hand: [Your First Trace in 2 Minutes](01-first-trace-in-2-minutes.md)

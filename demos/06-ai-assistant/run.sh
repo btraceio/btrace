@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 # Demo 06 - Let an AI assistant debug your JVM.
-# Starts the order service from demo 01 and leaves it running. The rest of the demo happens in an
-# AI coding host (Claude Code, Codex or Pi) with the btrace-observability plugin installed; the
-# rehearsed prompts are in PROMPTS.md.
+# Starts the checkout service and leaves it running. The rest of the demo happens in an AI coding
+# host (Claude Code, Codex or Pi) with the btrace-observability plugin installed, opened in the
+# checkout-service directory; the rehearsed prompts are in PROMPTS.md. To record a session
+# unattended instead, use record-session.sh.
 source "$(dirname "$0")/../lib/common.sh"
 
-say "An order service is running. Some orders are slow and some fail silently. We will not trace it by hand."
-start_app ../01-oneliner/OrderServiceApp.java
-wait_for_line "$APP_LOG" 'processed [0-9]+ orders' 10
-tail -n 2 "$APP_LOG"
+say "A checkout service is running. Some checkouts are slow and some orders never complete, with nothing in the logs."
+start_app checkout-service/CheckoutServiceApp.java -cp checkout-service/lib/acme-sdk.jar
+wait_for_line "$APP_LOG" 'checkouts completed' 10
+tail -n 1 "$APP_LOG"
 
-say "The demo app is running as pid $APP_PID, and it stays running: the AI host does the rest."
-say "Open your AI host with the btrace-observability plugin installed and follow:"
+say "The service is running as pid $APP_PID, and it stays running: the AI host does the rest."
+say "Open your AI host in $DEMO_DIR/checkout-service with the btrace-observability plugin installed and follow:"
 echo "$DEMO_DIR/PROMPTS.md"
-say "When you are done, stop the app with: kill $APP_PID"
+say "When you are done, stop the service with: kill $APP_PID"
 
 DEMO_KEEP=1
 finish

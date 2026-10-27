@@ -4,3 +4,5 @@ run.out
 # The 2.x probe compiled with BTrace 2.2.6 is a fixture, not a build output (the root .gitignore
 # excludes every *.class).
 !/02-upgrade-from-2x/legacy/SlowChargeProbe.class
+# The demo-06 "vendor SDK" ships binary-only on purpose; rebuild it with vendor/build-sdk.sh.
+!/06-ai-assistant/checkout-service/lib/acme-sdk.jar

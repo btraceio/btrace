@@ -1,0 +1,25 @@
+id: demos.06-checkout-sdk-slow-path
+surface: demos
+intent: conformance
+tier: smoke
+title: "demo 06: a oneliner inside the binary-only SDK finds the slow private session refresh"
+spec:
+  doc: demos/06-ai-assistant/README.md
+  claim: "btrace -n 'com.acme.payments.PaymentClient::* @return if duration>200ms { print method, duration }' names refreshSession, a private method of a library shipped without source"
+given:
+  mode: attach
+  target: demos/06-ai-assistant/checkout-service/CheckoutServiceApp.java
+  jvmArgs:
+    - "-cp"
+    - "lib/acme-sdk.jar"
+  readyRegex: "^\\[demo\\] checkout service running"
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "-n"
+    - "com.acme.payments.PaymentClient::* @return if duration>200ms { print method, duration }"
+    - "${pid}"
+steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^refreshSession [2-9]\\d{8}$"

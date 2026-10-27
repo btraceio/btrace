@@ -1,0 +1,25 @@
+id: demos.06-checkout-early-return-duration
+surface: demos
+intent: conformance
+tier: smoke
+title: "demo 06: @return duration is measured on the normal path of a method with an early return"
+spec:
+  doc: demos/06-ai-assistant/README.md
+  claim: "CheckoutService.checkout returns early from a catch block; checkouts slowed by the payment SDK still report durations over 200 ms"
+given:
+  mode: attach
+  target: demos/06-ai-assistant/checkout-service/CheckoutServiceApp.java
+  jvmArgs:
+    - "-cp"
+    - "lib/acme-sdk.jar"
+  readyRegex: "^\\[demo\\] checkout service running"
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "-n"
+    - "CheckoutService::checkout @return if duration>200ms { print method, duration }"
+    - "${pid}"
+steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^checkout [2-9]\\d{8}$"

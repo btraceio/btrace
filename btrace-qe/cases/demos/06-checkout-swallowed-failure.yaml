@@ -1,0 +1,26 @@
+id: demos.06-checkout-swallowed-failure
+surface: demos
+intent: conformance
+tier: smoke
+title: "demo 06: @error on the SDK's fraud screen shows the failure the service swallows"
+spec:
+  doc: demos/06-ai-assistant/README.md
+  claim: "btrace -n 'com.acme.risk.FraudScreen::screen @error { print method, stack }' shows screen failing under CheckoutService.checkout"
+given:
+  mode: attach
+  target: demos/06-ai-assistant/checkout-service/CheckoutServiceApp.java
+  jvmArgs:
+    - "-cp"
+    - "lib/acme-sdk.jar"
+  readyRegex: "^\\[demo\\] checkout service running"
+  clientArgs:
+    - "-p"
+    - "${port}"
+    - "-n"
+    - "com.acme.risk.FraudScreen::screen @error { print method, stack }"
+    - "${pid}"
+steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
+expect:
+  outputMustMatch:
+    - "^screen$"
+    - "^CheckoutService\\.checkout\\(CheckoutServiceApp\\.java:\\d+\\)$"
