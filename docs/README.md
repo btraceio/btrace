@@ -77,6 +77,7 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 - **Level Control** → [Quick Reference: @Level](QuickReference.md#level)
 - **Latency histograms and stats** → [Getting Started: Histogram Metrics Extension](GettingStarted.md#quick-start-histogram-metrics-extension)
 - **Periodic Events** → [Quick Reference: @OnTimer](QuickReference.md#ontimer), [@PeriodicEvent](QuickReference.md#periodicevent)
+- **OpenTelemetry export** → [Tutorial Lesson 6: Using the OpenTelemetry extension](BTraceTutorial.md#using-the-opentelemetry-extension-btrace-otel) — spans, counters and gauges to an OTLP/HTTP collector
 - **Runtime Contracts** → [Tutorial Lesson 11](BTraceTutorial.md#lesson-11--runtime-contracts-btrace-contracts) — latency budgets, call-rate limits, assertions, tagged path profiling
 
 ### AI/LLM Observability
@@ -113,7 +114,7 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 - **Masked JAR** → [Masked JAR Architecture](architecture/MaskedJarArchitecture.md) — single-JAR distribution with classdata masking
 - **v2 Binary Protocol** → [Version 2 Protocol Architecture](architecture/Version2ProtocolArchitecture.md) — custom binary serialization
 - **Extension Framework** → [Extension invokedynamic Bridge](architecture/ExtensionInvokeDynamicBridge.md), [Extension Configuration](architecture/ExtensionConfiguration.md), [Extension Manifest](architecture/ExtensionManifestFormat.md), [Extension Storage](architecture/ExtensionStorageDesign.md)
-- **Bundled Extensions** → [Extension Development Guide: Bundled Extensions](BTraceExtensionDevelopmentGuide.md#bundled-extensions) — the seven shipped extensions, their services and privilege status
+- **Bundled Extensions** → [Extension Development Guide: Bundled Extensions](BTraceExtensionDevelopmentGuide.md#bundled-extensions) — the eight shipped extensions, their services and privilege status
 - **Instrumentation Backends (ASM / ClassFile API)** → [Instrumentation Backends](architecture/InstrumentationBackends.md) — automatic backend selection for future JDK class files
 - **Agent Library Attributes** → [Agent Manifest Library Attributes](architecture/agent-manifest-libs.md) — declaring boot/system JARs via the agent manifest
 

@@ -1,0 +1,32 @@
+plugins {
+    id 'io.btrace.extension'
+    alias(libs.plugins.shadow)
+}
+
+compileJava {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+btraceExtension {
+    id = 'btrace-otel'
+    name = 'BTrace OpenTelemetry'
+    description = 'OpenTelemetry span and metric export for BTrace via OTLP/HTTP JSON'
+    services = ['io.btrace.otel.OTel']
+}
+
+dependencies {
+    apiCompileOnly 'org.jetbrains:annotations:26.1.0'
+    apiCompileOnly project(':btrace-core')
+    implCompileOnly 'org.jetbrains:annotations:26.1.0'
+    implImplementation project(':btrace-core')
+
+    testImplementation libs.junit.jupiter
+}
+
+test {
+    useJUnitPlatform()
+}

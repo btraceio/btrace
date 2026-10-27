@@ -870,7 +870,7 @@ The unpublished Maven fat-agent module was removed for 3.0.0 because its pre-3.0
 cannot safely load published 3.0 extensions. Use the
 [`io.btrace.fat-agent` Gradle plugin](../btrace-gradle-plugin/README.md), or deploy the published
 `io.btrace:btrace` artifact directly. Note that the Maven artifact is itself a fat agent: it embeds
-the seven bundled extensions, because a Maven or JBang user has no `$BTRACE_HOME/extensions/`
+the eight bundled extensions, because a Maven or JBang user has no `$BTRACE_HOME/extensions/`
 directory for the agent to discover. The distribution's `libs/btrace.jar` is the lean jar and
 relies on the `extensions/` directory next to it; the two behave the same once extensions are
 resolved.

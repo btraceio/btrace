@@ -898,6 +898,56 @@ btracex policy set --allowExtensions btrace-statsd
 btrace -statsd localhost:8125 <pid> StatsdExample.class
 ```
 
+##### Using the OpenTelemetry extension (btrace-otel)
+
+The bundled `btrace-otel` extension exposes the `io.btrace.otel.OTel` service, which exports spans,
+counters and gauges to an OpenTelemetry collector over OTLP/HTTP with JSON encoding
+(`<endpoint>/v1/traces` and `<endpoint>/v1/metrics`):
+
+```java
+import io.btrace.otel.OTel;
+
+@BTrace
+public class OTelExample {
+    @Injected
+    private static OTel otel;
+
+    @OnMethod(clazz = "com.example.API", method = "handleRequest",
+              location = @Location(Kind.RETURN))
+    public static void onRequest(@Duration long duration) {
+        otel.span("API.handleRequest", "endpoint", "handleRequest", duration);
+        otel.counter("api.requests", 1);
+    }
+}
+```
+
+Run with (after allowing the extension, which needs `NETWORK`, `THREADS` and `SYSTEM_PROPS`):
+```bash
+btracex policy set --allowExtensions btrace-otel
+btrace <pid> OTelExample.class otel.endpoint=http://collector:4318 otel.service.name=checkout
+```
+
+- Configuration comes from script arguments, falling back to `btrace.`-prefixed system properties of
+  the target JVM (for example `-Dbtrace.otel.endpoint=...`): `otel.endpoint` (default
+  `http://localhost:4318`), `otel.service.name` (default `btrace`), `otel.flush.interval.ms`
+  (default `5000`), `otel.batch.size` (spans per request, default `512`), `otel.queue.capacity`
+  (buffered spans, default `2048`) and `otel.max.metrics` (distinct counter and gauge names, default
+  `1000`).
+- Recording never blocks the instrumented thread. Spans are buffered in a bounded queue and dropped
+  when it is full; counters and gauges are aggregated per name. One background thread per script
+  exports them every flush interval and once more, within two seconds, when the script exits.
+- Counters are exported as monotonic sums with DELTA temporality: each data point carries the
+  increments recorded since the previous export. Gauges export the last value set since the
+  previous export.
+- Drops are themselves reported as the counters `btrace.otel.spans.dropped` and
+  `btrace.otel.metric.updates.dropped`.
+- `span(...)` starts a new trace for every span. To correlate with the application's own tracing,
+  use `spanInTrace(traceId, parentSpanId, name, durationNanos)` with W3C Trace Context ids (32 and
+  16 hex digits, for example taken from a `traceparent` header). A malformed trace id is replaced
+  by a random one and a malformed parent id makes the span a root span.
+- The first failed export is reported to the BTrace client as a `btrace-otel: export failed: ...`
+  message; later failures are not reported.
+
 ##### Using the Histogram Metrics Extension (btrace-metrics)
 
 The histogram metrics extension provides high-performance in-process metrics using HdrHistogram. It does not require network permissions and runs entirely inside the target JVM.
