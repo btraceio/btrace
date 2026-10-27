@@ -6,12 +6,13 @@
 # release workflow via the gh CLI.
 #
 # Usage:
-#   ./scripts/release.sh <major|minor|patch> [commit-or-branch]
+#   ./scripts/release.sh <major|minor|patch|rc> [commit-or-branch]
 #
 # Examples:
 #   ./scripts/release.sh minor                    # Minor release from develop
 #   ./scripts/release.sh major                    # Major release from develop
 #   ./scripts/release.sh patch release/2.3._      # Patch release from release/2.3._
+#   ./scripts/release.sh rc                       # Next release candidate (e.g. 3.0.0-RC1) from develop
 #
 # Environment variables:
 #   DRY_RUN=true    Show what would be done without triggering workflow
@@ -64,10 +65,11 @@ Usage:
   $(basename "$0") <release-type> [source-ref]
 
 Arguments:
-  release-type    Type of release: major, minor, or patch
+  release-type    Type of release: major, minor, patch, or rc
   source-ref      Git reference (branch/commit) to release from (optional)
                   - For major/minor: defaults to 'develop'
                   - For patch: must be a release/X.Y branch
+                  - For rc: any reference; defaults to 'develop'
                   - If omitted in interactive mode, shows a commit picker
 
 Release Types:
@@ -83,13 +85,20 @@ Release Types:
           Next release branch: 2.3.2-SNAPSHOT
           Requires: release/X.Y._ branch as source
 
+  rc      Release candidate of the current version (e.g., 3.0.0-SNAPSHOT -> 3.0.0-RC1),
+          numbered after the existing vX.Y.Z-RCn tags (or RC_NUMBER=n)
+          Published to Maven Central and as a GitHub pre-release only: no release
+          branch, version bumps, Plugin Portal, JBang, SDKMAN or latest container tags
+
 Examples:
   $(basename "$0") minor                    # Release 2.3.0 from develop
   $(basename "$0") major                    # Release 3.0.0 from develop
   $(basename "$0") patch release/2.3._      # Release 2.3.1 from release/2.3._
+  $(basename "$0") rc                       # Release 3.0.0-RC1 (or the next RC) from develop
 
 Environment:
   DRY_RUN=true    Show what would happen without triggering the workflow
+  RC_NUMBER=n     Use RCn instead of the next unused release candidate number
 
 EOF
     exit 1
@@ -403,7 +412,8 @@ parse_version() {
 #######################################
 # Calculate release versions
 # Args: release_type current_version
-# Outputs: release_version next_develop_snapshot next_release_snapshot release_branch
+# Outputs: release_version|next_develop_snapshot|next_release_snapshot|release_branch
+#   '|'-separated: fields can be empty, and whitespace-splitting `read` would shift the rest
 #######################################
 calculate_versions() {
     local release_type=$1
@@ -438,13 +448,35 @@ calculate_versions() {
             next_release_snapshot="${major}.${minor}.$((patch + 1))-SNAPSHOT"
             release_branch="release/${major}.${minor}._"
             ;;
+        rc)
+            # Release candidate: X.Y.Z-SNAPSHOT -> X.Y.Z-RCn; nothing is bumped or branched
+            release_version="${major}.${minor}.${patch}-RC${3:?rc needs a candidate number}"
+            ;;
         *)
             error "Invalid release type: ${release_type}"
             exit 1
             ;;
     esac
 
-    echo "${release_version} ${next_develop_snapshot} ${next_release_snapshot} ${release_branch}"
+    echo "${release_version}|${next_develop_snapshot}|${next_release_snapshot}|${release_branch}"
+}
+
+#######################################
+# Next unused release candidate number for a version
+# Args: base version (X.Y.Z)
+# Outputs: n such that vX.Y.Z-RCn is not tagged locally or on origin
+#######################################
+next_rc_number() {
+    local base=$1
+    local highest=0
+    local tag n
+    while read -r tag; do
+        [[ "${tag}" =~ ^v${base//./\.}-RC([0-9]+)$ ]] || continue
+        n=${BASH_REMATCH[1]}
+        (( n > highest )) && highest=$n
+    done < <({ git tag -l "v${base}-RC*"; git ls-remote --tags origin "refs/tags/v${base}-RC*" 2>/dev/null \
+                | sed -E 's|.*refs/tags/||; s|\^\{\}$||'; } | sort -u)
+    echo $((highest + 1))
 }
 
 #######################################
@@ -496,6 +528,9 @@ validate_source_ref() {
                 error "Got: ${source_ref}"
                 exit 1
             fi
+            ;;
+        rc)
+            # A candidate can come from develop or from a release branch
             ;;
     esac
 
@@ -563,12 +598,18 @@ confirm_release() {
     echo -e "  Commit:           ${commit_sha:0:12}"
     echo ""
     echo -e "  Release Version:  ${GREEN}v${release_version}${NC}"
-    echo -e "  Release Branch:   ${BLUE}${release_branch}${NC}"
+    if [[ "${release_type}" == "rc" ]]; then
+        echo -e "  Published as:     ${YELLOW}Maven Central + GitHub pre-release; no branch or version bumps${NC}"
+    else
+        echo -e "  Release Branch:   ${BLUE}${release_branch}${NC}"
+    fi
     echo ""
     if [[ -n "${next_develop}" ]]; then
         echo -e "  Next develop:     ${YELLOW}${next_develop}${NC}"
     fi
-    echo -e "  Next release:     ${YELLOW}${next_release}${NC}"
+    if [[ -n "${next_release}" ]]; then
+        echo -e "  Next release:     ${YELLOW}${next_release}${NC}"
+    fi
     echo ""
     echo "========================================"
     echo ""
@@ -648,11 +689,11 @@ main() {
 
     # Validate release type
     case "${release_type}" in
-        major|minor|patch)
+        major|minor|patch|rc)
             ;;
         *)
             error "Invalid release type: ${release_type}"
-            echo "Valid types: major, minor, patch"
+            echo "Valid types: major, minor, patch, rc"
             exit 1
             ;;
     esac
@@ -662,7 +703,7 @@ main() {
         if ! is_interactive; then
             # Non-interactive: use defaults or error
             case "${release_type}" in
-                major|minor)
+                major|minor|rc)
                     source_ref="develop"
                     ;;
                 patch)
@@ -674,7 +715,7 @@ main() {
         else
             # Interactive: show picker
             case "${release_type}" in
-                major|minor)
+                major|minor|rc)
                     source_ref=$(pick_commit "develop")
                     ;;
                 patch)
@@ -709,8 +750,8 @@ main() {
     # Validate source reference
     validate_source_ref "${release_type}" "${source_ref}"
 
-    # For patch releases, we need to get the version from the release branch/commit
-    if [[ "${release_type}" == "patch" ]]; then
+    # For patch releases and candidates, take the version from the released reference itself
+    if [[ "${release_type}" == "patch" || "${release_type}" == "rc" ]]; then
         # Get version from the source reference (branch or commit)
         local version_source="${source_ref}"
         local branch_version
@@ -726,7 +767,17 @@ main() {
     fi
 
     # Calculate versions
-    read -r release_version next_develop next_release release_branch <<< "$(calculate_versions "${release_type}" "${current_version}")"
+    local rc_number=""
+    if [[ "${release_type}" == "rc" ]]; then
+        read -r major minor patch _ <<< "$(parse_version "${current_version}")"
+        rc_number="${RC_NUMBER:-$(next_rc_number "${major}.${minor}.${patch}")}"
+        if [[ ! "${rc_number}" =~ ^[1-9][0-9]*$ ]]; then
+            error "RC_NUMBER must be a positive integer, got '${rc_number}'"
+            exit 1
+        fi
+    fi
+    IFS='|' read -r release_version next_develop next_release release_branch \
+        <<< "$(calculate_versions "${release_type}" "${current_version}" "${rc_number}")"
 
     # Check if tag already exists
     check_tag_exists "${release_version}"
@@ -744,6 +795,7 @@ main() {
     if [[ "${release_type}" == "patch" ]]; then
         workflow_next_snapshot="${next_release}"
     else
+        # Empty for rc, which bumps nothing
         workflow_next_snapshot="${next_develop}"
     fi
 
