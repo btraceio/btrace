@@ -845,6 +845,16 @@ btraceFatAgent {
 }
 ```
 
+#### What ends up in the jar
+
+Each embedded extension's API classes are copied into the jar root as plain `.class` files, so
+they are on the bootstrap classpath for probes to link against. Its implementation classes are
+renamed to `.classdata` and placed under `META-INF/btrace-extensions/<id>/` at their package
+path, where only the classloader created for that extension looks for them. Two extensions can
+therefore each carry a class of the same name without one replacing the other. API classes have
+no such isolation: an API class provided by two extensions fails `stageExtensions` with a message
+naming both. See [Fat Agent Plugin Architecture](architecture/fat-agent-plugin.md) for the layout.
+
 #### Writing Extensions That Integrate With App Types (@ExternalType)
 
 When your extension needs to interact with application-specific classes (Spark events, Hadoop objects, etc.), use `@ExternalType` to generate lazy reflective dispatchers at build time:

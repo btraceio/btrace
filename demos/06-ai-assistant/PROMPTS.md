@@ -75,8 +75,8 @@ Watch for: "I believe it is gone" with no tool call; reading "BTrace: attached" 
 
 ## Do not record if
 
-- The assistant uses trusted or unsafe mode (the verifier is supposed to stay on), or asks you to
-  turn it on.
+- The assistant asks you to run BTrace in trusted or unsafe mode by hand (the MCP tools have no
+  such switch, and the verifier is supposed to stay on).
 - It widens the scope to `*::*`, a whole package, or the JVM when a class or method was enough.
 - It leaves a probe attached at the end of any prompt, or detaches where it should exit.
 - It prints argument values, request bodies, or other data you would not want on screen.

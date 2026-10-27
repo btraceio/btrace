@@ -103,7 +103,7 @@ fatAgentJar
 ├── stageExtensions
 │   ├── resolveExtensions()  → ResolvedExtension[]
 │   ├── stageApiClasses()    → copy as .class
-│   ├── stageImplClasses()   → copy as .classdata
+│   ├── stageImplClasses()   → copy as .classdata under META-INF/btrace-extensions/{id}/
 │   └── writeMetadata()      → extension.properties
 ├── stageProbes (optional)
 │   ├── copyCompiledProbes() → META-INF/btrace-probes/
