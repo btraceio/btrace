@@ -141,18 +141,20 @@ META-INF/MANIFEST.MF
 META-INF/btrace-extensions/btrace-contracts/extension.properties
 ...
 META-INF/btrace-extensions/btrace-metrics/extension.properties
+META-INF/btrace-extensions/btrace-metrics/io/btrace/metrics/MetricsServiceImpl.classdata
 ...
 io/btrace/metrics/MetricsService.class
-io/btrace/metrics/MetricsServiceImpl.classdata
 ```
 
 (The exact class list depends on `btrace-metrics`' declared API surface — the two load-bearing
 facts, verified against `BTraceFatAgentPlugin.groovy`'s `stageExtension()`, are: API interfaces stay
 plain `.class` files flattened at the jar root for bootstrap loading, and implementation classes are
-renamed to `.classdata` — also at the jar root, next to their package path, *not* nested under
-`META-INF/btrace-extensions/<id>/` — so they're found by
-`io.btrace.extension.impl.ClassDataLoader`, which resolves `.classdata` resources by exact class
-name from the jar root, per `ExtensionLoaderImpl.loadEmbedded()`.)
+renamed to `.classdata` and nested under `META-INF/btrace-extensions/<id>/` at their package path.
+`io.btrace.extension.impl.ClassDataLoader` is created per extension id by
+`ExtensionLoaderImpl.loadEmbedded()` and resolves `.classdata` resources only below that prefix, so
+two embedded extensions can each carry a class of the same name without one replacing the other.
+An API class claimed by two extensions is a different matter: API classes share the bootstrap
+namespace, and `stageExtensions` fails the build naming both extensions.)
 
 Check the manifest:
 

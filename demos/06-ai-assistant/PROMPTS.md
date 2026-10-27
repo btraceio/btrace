@@ -76,8 +76,8 @@ means the agent is still loaded in the JVM until it restarts, not that a probe i
 
 ## Do not record if
 
-- The assistant uses trusted or unsafe mode (the verifier is supposed to stay on), or asks you to
-  turn it on.
+- The assistant asks you to run BTrace in trusted or unsafe mode by hand (the MCP tools have no
+  such switch, and the verifier is supposed to stay on).
 - It widens the scope to `*::*`, a whole package, or the JVM when a class or method was enough.
 - It leaves a probe attached at the end of the session, or detaches where it should exit.
 - It deploys a new probe without removing the previous one.

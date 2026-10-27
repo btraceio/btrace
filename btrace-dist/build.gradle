@@ -478,26 +478,17 @@ test {
  * │   ├── MANIFEST.MF (BTrace-Embedded-Extensions: ext1,ext2)
  * │   └── btrace-extensions/
  * │       └── ext-id/
- * │           └── extension.properties
- * ├── io/btrace/...           # Agent + API classes (.class)
- * └── io/btrace/ext/impl/...  # Impl classes (.classdata)
+ * │           ├── extension.properties
+ * │           └── io/btrace/ext/impl/...  # Impl classes (.classdata), per extension
+ * └── io/btrace/...           # Agent + API classes (.class)
  *
  * Usage:
  *   ./gradlew :btrace-dist:fatAgentJar -PembedExtensions=btrace-spark,btrace-metrics
  */
-// The extensions that ship with a release. This drives both the distribution's extensions/
-// directory and the set the fat agent embeds by default, so the two cannot disagree about what
-// "default" means. Declared here because the btraceFatAgent block below reads it.
-def releaseExtensionProjects = [
-    ':btrace-extensions:btrace-contracts',
-    ':btrace-extensions:btrace-gpu-bridge',
-    ':btrace-extensions:btrace-llm-trace',
-    ':btrace-extensions:btrace-metrics',
-    ':btrace-extensions:btrace-otel',
-    ':btrace-extensions:btrace-rag-quality',
-    ':btrace-extensions:btrace-statsd',
-    ':btrace-extensions:btrace-utils'
-]
+// The extensions that ship with a release, declared in the root build.gradle. It drives the
+// distribution's extensions/ directory, the set the fat agent embeds by default and the set
+// published to Maven Central, so none of them can disagree about what "default" means.
+def releaseExtensionProjects = rootProject.ext.releaseExtensionProjects
 
 btraceFatAgent {
     baseName = 'btrace-agent-fat'

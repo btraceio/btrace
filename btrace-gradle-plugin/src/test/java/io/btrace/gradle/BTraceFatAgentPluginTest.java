@@ -18,7 +18,9 @@
 
 package io.btrace.gradle;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,6 +32,7 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
@@ -701,6 +704,101 @@ class BTraceFatAgentPluginTest {
             Files.readString(
                 projectDir.resolve(
                     "build/fat-agent-staging/META-INF/services/com.example.SampleService")));
+    }
+
+    @Test
+    @DisplayName("Embedded impl classes are staged under their extension's own prefix")
+    void embeddedImplClassesAreNamespacedByExtensionId() throws IOException {
+        // Two extensions, each carrying an implementation class of the same name.
+        byte[] helperA = "A".getBytes(StandardCharsets.UTF_8);
+        byte[] helperB = "B".getBytes(StandardCharsets.UTF_8);
+        writeExtensionDir("ext-a", "com.example.a.ServiceA", null,
+            Map.of("com/example/Helper.class", helperA));
+        writeExtensionDir("ext-b", "com.example.b.ServiceB", null,
+            Map.of("com/example/Helper.class", helperB));
+        writeFile(buildFile,
+            "plugins { id 'io.btrace.fat-agent' }\n"
+                + "btraceFatAgent {\n"
+                + "    autoDiscover = false\n"
+                + "    embedExtensions {\n"
+                + "        file('ext-a')\n"
+                + "        file('ext-b')\n"
+                + "    }\n"
+                + "}\n");
+
+        BuildResult result = createRunner().withArguments("stageExtensions").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":stageExtensions").getOutcome());
+        Path staging = projectDir.resolve("build/fat-agent-staging");
+        assertArrayEquals(helperA, Files.readAllBytes(
+            staging.resolve("META-INF/btrace-extensions/ext-a/com/example/Helper.classdata")));
+        assertArrayEquals(helperB, Files.readAllBytes(
+            staging.resolve("META-INF/btrace-extensions/ext-b/com/example/Helper.classdata")));
+        assertFalse(Files.exists(staging.resolve("com/example/Helper.classdata")),
+            "impl class data must not be flattened into the shared root");
+    }
+
+    @Test
+    @DisplayName("An API class claimed by two extensions fails the build")
+    void conflictingApiClassesFailTheBuild() throws IOException {
+        byte[] stub = "API".getBytes(StandardCharsets.UTF_8);
+        writeExtensionDir("ext-a", "com.example.a.ServiceA",
+            Map.of("com/example/Shared.class", stub), null);
+        writeExtensionDir("ext-b", "com.example.b.ServiceB",
+            Map.of("com/example/Shared.class", stub), null);
+        writeFile(buildFile,
+            "plugins { id 'io.btrace.fat-agent' }\n"
+                + "btraceFatAgent {\n"
+                + "    autoDiscover = false\n"
+                + "    embedExtensions {\n"
+                + "        file('ext-a')\n"
+                + "        file('ext-b')\n"
+                + "    }\n"
+                + "}\n");
+
+        BuildResult result = createRunner().withArguments("stageExtensions").buildAndFail();
+
+        assertTrue(result.getOutput().contains(
+            "API class com/example/Shared.class is provided by both extension 'ext-a' and extension 'ext-b'"),
+            result.getOutput());
+    }
+
+    /**
+     * Writes an extension directory usable as a {@code file(...)} source: an API jar whose
+     * manifest carries the canonical metadata plus the given API class entries, and an impl jar
+     * with the given entries.
+     */
+    private void writeExtensionDir(
+            String id, String service, Map<String, byte[]> apiEntries, Map<String, byte[]> implEntries)
+            throws IOException {
+        Path dir = projectDir.resolve(id);
+        Files.createDirectories(dir);
+        Manifest manifest = new Manifest();
+        Attributes attributes = manifest.getMainAttributes();
+        attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        attributes.putValue("BTrace-Extension-Id", id);
+        attributes.putValue("BTrace-Extension-Version", "1.0.0");
+        attributes.putValue("BTrace-Extension-Name", id);
+        attributes.putValue("BTrace-Extension-Services", service);
+        attributes.putValue("BTrace-Extension-Permissions", "");
+        try (JarOutputStream jar =
+                new JarOutputStream(Files.newOutputStream(dir.resolve(id + "-api.jar")), manifest)) {
+            writeEntries(jar, apiEntries);
+        }
+        try (JarOutputStream jar =
+                new JarOutputStream(Files.newOutputStream(dir.resolve(id + "-impl.jar")))) {
+            writeEntries(jar, implEntries);
+        }
+    }
+
+    private static void writeEntries(JarOutputStream jar, Map<String, byte[]> entries)
+            throws IOException {
+        if (entries == null) return;
+        for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
+            jar.putNextEntry(new JarEntry(entry.getKey()));
+            jar.write(entry.getValue());
+            jar.closeEntry();
+        }
     }
 
     private GradleRunner createRunner() {

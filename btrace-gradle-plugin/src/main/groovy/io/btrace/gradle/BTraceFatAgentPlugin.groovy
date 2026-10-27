@@ -33,10 +33,15 @@ import java.util.jar.Manifest
  * </pre>
  *
  * <p>Extension API classes are flattened as {@code .class} files (bootstrap),
- * while impl classes are renamed to {@code .classdata} (loaded at runtime
- * via {@code ClassDataLoader}).
+ * while impl classes are renamed to {@code .classdata} and staged under
+ * {@code META-INF/btrace-extensions/<id>/} (loaded at runtime via a
+ * {@code ClassDataLoader} bound to that id). The per-extension prefix is what
+ * lets two embedded extensions carry classes of the same name without one
+ * silently replacing the other; API classes share the bootstrap namespace, so
+ * an API class claimed by two extensions fails the build instead.
  */
 class BTraceFatAgentPlugin implements Plugin<Project> {
+    private static final String EXTENSIONS_BASE = 'META-INF/btrace-extensions/'
     private static final String LOADER_CLASS = 'io.btrace.boot.Loader'
     private static final String AGENT_MAIN_CLASS = 'io.btrace.agent.Main'
     private static final String LOADER_ENTRY = 'io/btrace/boot/Loader.class'
@@ -119,10 +124,14 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
 
                 def resolvedExtensions = resolveExtensionsFromExt(project, ext)
                 def embeddedExtIds = []
+                // Staged API class path -> id of the extension that put it there. API classes are
+                // flattened into one bootstrap namespace, so a second claim on a path is a
+                // conflict to report, not a duplicate to drop.
+                Map<String, String> apiClassOwners = new LinkedHashMap<>()
 
                 resolvedExtensions.each { resolved ->
                     embeddedExtIds << resolved.id
-                    stageExtension(project, stagingDir, resolved)
+                    stageExtension(project, stagingDir, resolved, apiClassOwners)
                 }
 
                 // Write embedded extensions list for manifest
@@ -450,10 +459,30 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
 
     /**
      * Stage a resolved extension to the staging directory.
+     *
+     * <p>API classes go to the staging root as {@code .class} files; a path already staged by
+     * another extension fails the build. Implementation classes go under
+     * {@code META-INF/btrace-extensions/<id>/} as {@code .classdata} files, where only the
+     * {@code ClassDataLoader} created for that id looks for them.
+     *
+     * @param apiClassOwners staged API class path to owning extension id, shared across the
+     *     extensions of one staging run
      */
-    private void stageExtension(Project project, File stagingDir, ResolvedExtension ext) {
+    private void stageExtension(
+        Project project, File stagingDir, ResolvedExtension ext, Map<String, String> apiClassOwners) {
         // Stage API classes as .class files (for bootstrap)
         if (ext.apiJar?.exists()) {
+            project.zipTree(ext.apiJar).matching { include '**/*.class' }.visit { details ->
+                if (details.directory) return
+                String path = details.relativePath.pathString
+                String owner = apiClassOwners.putIfAbsent(path, ext.id)
+                if (owner != null && owner != ext.id) {
+                    throw new GradleException(
+                        "[fat-agent] API class ${path} is provided by both extension '${owner}' " +
+                            "and extension '${ext.id}'. API classes share the bootstrap namespace, " +
+                            "so the two cannot be embedded in the same fat agent.")
+                }
+            }
             project.copy {
                 from project.zipTree(ext.apiJar)
                 into stagingDir
@@ -462,11 +491,14 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             project.logger.info("[fat-agent] Staged API from: ${ext.apiJar.name}")
         }
 
-        // Stage impl classes as .classdata files (for ClassDataLoader)
+        // Stage impl classes as .classdata files under the extension's own prefix. The prefix is
+        // what keeps the implementation of one embedded extension from being read by the
+        // ClassDataLoader of another: without it, two extensions carrying a class of the same
+        // name would collapse into one file and one of them would silently run the other's code.
         if (ext.implJar?.exists()) {
             project.copy {
                 from project.zipTree(ext.implJar)
-                into stagingDir
+                into new File(stagingDir, EXTENSIONS_BASE + ext.id)
                 include '**/*.class'
                 rename '(.+)\\.class', '$1.classdata'
             }

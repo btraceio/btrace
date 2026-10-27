@@ -12,6 +12,12 @@
 # 8. Updates version numbers for next development cycle
 # 9. Manages milestones
 #
+# Release candidates (release_type 'rc', version X.Y.Z-RCn) run the same build, test, Maven
+# Central, distribution and smoke stages and are published as a GitHub pre-release, so the
+# artifacts can be tried under their final coordinates' shape before X.Y.Z. They are kept out of
+# every channel that tracks "the latest release": no Gradle Plugin Portal, JBang catalog, SDKMAN
+# or `latest` container tags, no release branch, version bumps or milestones.
+#
 # IMPORTANT: Maven artifacts are STAGED, not released automatically.
 # After staging, go to https://central.sonatype.com/publishing/deployments
 # to review and release. The workflow will wait up to 30 minutes.
@@ -31,8 +37,9 @@ on:
           - major
           - minor
           - patch
+          - rc
       release_version:
-        description: 'Release version (e.g., 2.3.0)'
+        description: 'Release version (e.g., 2.3.0, or 3.0.0-RC1 for release_type rc)'
         required: true
         type: string
       commit_sha:
@@ -40,12 +47,12 @@ on:
         required: true
         type: string
       release_branch:
-        description: 'Release branch (e.g., release/2.3._)'
-        required: true
+        description: 'Release branch (e.g., release/2.3._); not used for rc'
+        required: false
         type: string
       next_snapshot:
-        description: 'Next snapshot version (e.g., 2.4.0-SNAPSHOT)'
-        required: true
+        description: 'Next snapshot version (e.g., 2.4.0-SNAPSHOT); not used for rc'
+        required: false
         type: string
       dry_run:
         description: 'Dry run (skip publishing and tagging)'
@@ -61,6 +68,7 @@ env:
   RELEASE_VERSION: ${{ inputs.release_version }}
   RELEASE_TAG: v${{ inputs.release_version }}
   RC_TAG: v${{ inputs.release_version }}_RC
+  IS_RC: ${{ inputs.release_type == 'rc' }}
 
 jobs:
   # ============================================================
@@ -89,16 +97,27 @@ jobs:
           echo "  Next Snapshot: ${{ inputs.next_snapshot }}"
           echo "  Dry Run: ${{ inputs.dry_run }}"
 
-          # Validate version format (X.Y.Z)
-          if [[ ! "${{ inputs.release_version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Invalid version format. Expected X.Y.Z"
+          # Validate release type
+          if [[ ! "${{ inputs.release_type }}" =~ ^(major|minor|patch|rc)$ ]]; then
+            echo "::error::Invalid release type. Expected major, minor, patch, or rc"
             exit 1
           fi
 
-          # Validate release type
-          if [[ ! "${{ inputs.release_type }}" =~ ^(major|minor|patch)$ ]]; then
-            echo "::error::Invalid release type. Expected major, minor, or patch"
-            exit 1
+          # Validate version format: X.Y.Z for releases, X.Y.Z-RCn for release candidates
+          if [[ "${IS_RC}" == "true" ]]; then
+            if [[ ! "${{ inputs.release_version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-RC[1-9][0-9]*$ ]]; then
+              echo "::error::Invalid release candidate version. Expected X.Y.Z-RCn (e.g., 3.0.0-RC1)"
+              exit 1
+            fi
+          else
+            if [[ ! "${{ inputs.release_version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::Invalid version format. Expected X.Y.Z (use release_type rc for X.Y.Z-RCn)"
+              exit 1
+            fi
+            if [[ -z "${{ inputs.release_branch }}" || -z "${{ inputs.next_snapshot }}" ]]; then
+              echo "::error::release_branch and next_snapshot are required for ${{ inputs.release_type }} releases"
+              exit 1
+            fi
           fi
 
           # Validate commit exists
@@ -437,6 +456,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Create or checkout release branch
+        # A release candidate is tagged on a detached commit; it creates no release branch
+        if: ${{ inputs.release_type != 'rc' }}
         run: |
           BRANCH="${{ inputs.release_branch }}"
           if git show-ref --verify --quiet "refs/remotes/origin/${BRANCH}"; then
@@ -477,9 +498,11 @@ jobs:
       - name: Push branch and RC tag
         if: ${{ inputs.dry_run != true }}
         run: |
-          git push origin "${{ inputs.release_branch }}"
+          if [[ "${IS_RC}" != "true" ]]; then
+            git push origin "${{ inputs.release_branch }}"
+          fi
           git push origin "${RC_TAG}"
-          echo "Pushed branch and RC tag"
+          echo "Pushed release commit and RC tag"
 
       - name: Dry run summary
         if: ${{ inputs.dry_run == true }}
@@ -541,7 +564,8 @@ jobs:
           echo "Staging artifacts to Central Portal..."
           echo "After this job completes, go to https://central.sonatype.com/publishing/deployments"
           echo "to review and release the staged artifacts."
-          ./gradlew :btrace-dist:publishAllPublicationsToSonatypeRepository --no-daemon
+          # One invocation, so the distribution and the release extensions share a deployment
+          ./gradlew :btrace-dist:publishAllPublicationsToSonatypeRepository publishReleaseExtensionsToSonatype --no-daemon
 
       - name: Staging complete
         run: |
@@ -551,6 +575,7 @@ jobs:
           echo ""
           echo "Staged artifacts:"
           echo "  - io.btrace:btrace:${{ inputs.release_version }}"
+          echo "  - io.btrace:<extension-id>:${{ inputs.release_version }} for each release extension"
           echo ""
           echo "Next steps:"
           echo "  1. Go to https://central.sonatype.com/publishing/deployments"
@@ -633,7 +658,13 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
 
+      - name: Skip Plugin Portal for release candidates
+        if: ${{ inputs.release_type == 'rc' }}
+        # Plugin Portal versions cannot be withdrawn and the newest becomes the default
+        run: echo "::notice::Release candidate ${{ inputs.release_version }}; Gradle plugins are not published"
+
       - name: Validate Plugin Portal publications
+        if: ${{ inputs.release_type != 'rc' }}
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
@@ -642,6 +673,7 @@ jobs:
             publishPlugins --validate-only --no-daemon
 
       - name: Publish Plugin Portal artifacts
+        if: ${{ inputs.release_type != 'rc' }}
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
@@ -650,6 +682,7 @@ jobs:
             publishPlugins --no-daemon
 
       - name: Verify Plugin Portal availability
+        if: ${{ inputs.release_type != 'rc' }}
         run: |
           mkdir -p plugin-portal-smoke
           cat > plugin-portal-smoke/settings.gradle <<'EOF'
@@ -676,7 +709,13 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.dry_run != true }}
     steps:
+      - name: Skip the JBang catalog for release candidates
+        if: ${{ inputs.release_type == 'rc' }}
+        # The catalog's btrace and btrace-latest aliases point at the latest release
+        run: echo "::notice::Release candidate ${{ inputs.release_version }}; JBang catalog unchanged"
+
       - name: Checkout jbang-catalog
+        if: ${{ inputs.release_type != 'rc' }}
         continue-on-error: true
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -685,6 +724,7 @@ jobs:
           path: catalog
 
       - name: Update catalog files
+        if: ${{ inputs.release_type != 'rc' }}
         continue-on-error: true
         run: |
           VERSION="${{ inputs.release_version }}"
@@ -710,6 +750,7 @@ jobs:
           git diff
 
       - name: Commit and push catalog updates
+        if: ${{ inputs.release_type != 'rc' }}
         continue-on-error: true
         run: |
           VERSION="${{ inputs.release_version }}"
@@ -920,6 +961,10 @@ jobs:
           export PATH="$HOME/.jbang/bin:$PATH"
           jbang "io.btrace:btrace:${RELEASE_VERSION}" --version | tee jbang-coordinate.log
           grep -F "${RELEASE_VERSION}" jbang-coordinate.log
+          if [[ "${IS_RC}" == "true" ]]; then
+            echo "Release candidate: the JBang catalog alias still points at the latest release"
+            exit 0
+          fi
           jbang catalog add --name btraceio \
             https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
           jbang btrace@btraceio --version | tee jbang-catalog.log
@@ -1005,7 +1050,8 @@ jobs:
           tag_name: ${{ env.RELEASE_TAG }}
           name: BTrace ${{ inputs.release_version }}
           draft: false
-          prerelease: false
+          prerelease: ${{ inputs.release_type == 'rc' }}
+          make_latest: ${{ inputs.release_type != 'rc' }}
           body_path: release-body/body.md
           generate_release_notes: true
           files: |
@@ -1085,6 +1131,11 @@ jobs:
         run: |
           image="${IMAGE_REPOSITORY,,}"   # registry paths must be lowercase
           for variant in "" "-alpine" "-distroless"; do
+            # A release candidate gets its version tags only; `latest` stays on the last release
+            latest_tag=()
+            if [[ "${IS_RC}" != "true" ]]; then
+              latest_tag=(--tag "${image}:latest${variant}")
+            fi
             case "${variant}" in
               "")          dockerfile=docker/Dockerfile ;;
               -alpine)     dockerfile=docker/Dockerfile.alpine ;;
@@ -1095,7 +1146,7 @@ jobs:
               --build-arg "BTRACE_VERSION=${RELEASE_VERSION}" \
               --file "${dockerfile}" \
               --tag "${image}:${RELEASE_VERSION}${variant}" \
-              --tag "${image}:latest${variant}" \
+              "${latest_tag[@]}" \
               --provenance=false \
               --push \
               release-container
@@ -1104,8 +1155,11 @@ jobs:
       - name: Verify the published manifests and OCI labels
         run: |
           image="${IMAGE_REPOSITORY,,}"
-          for tag in "${RELEASE_VERSION}" "${RELEASE_VERSION}-alpine" "${RELEASE_VERSION}-distroless" \
-                     latest latest-alpine latest-distroless; do
+          tags=("${RELEASE_VERSION}" "${RELEASE_VERSION}-alpine" "${RELEASE_VERSION}-distroless")
+          if [[ "${IS_RC}" != "true" ]]; then
+            tags+=(latest latest-alpine latest-distroless)
+          fi
+          for tag in "${tags[@]}"; do
             docker buildx imagetools inspect "${image}:${tag}" | tee "manifest-${tag}.log"
             grep -q 'linux/amd64' "manifest-${tag}.log"
             grep -q 'linux/arm64' "manifest-${tag}.log"
@@ -1119,7 +1173,7 @@ jobs:
             "${image}:${RELEASE_VERSION}")
           test "${version_label}" = "${RELEASE_VERSION}"
           test "${license_label}" = "Apache-2.0"
-          echo "Published ${image}:{${RELEASE_VERSION},latest}{,-alpine,-distroless} for linux/amd64 and linux/arm64"
+          echo "Published ${image}: ${tags[*]} for linux/amd64 and linux/arm64"
 
   # ============================================================
   # Job 8: Update SDKMan
@@ -1128,7 +1182,8 @@ jobs:
     name: Update SDKMan
     needs: create-github-release
     runs-on: ubuntu-latest
-    if: ${{ inputs.dry_run != true }}
+    # SDKMAN makes an announced version the default for `sdk install btrace`
+    if: ${{ inputs.dry_run != true && inputs.release_type != 'rc' }}
     steps:
       - name: Checkout release tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -1167,7 +1222,7 @@ jobs:
     name: Update Develop Branch
     needs: prepare-release
     runs-on: ubuntu-latest
-    if: ${{ inputs.release_type != 'patch' && inputs.dry_run != true }}
+    if: ${{ inputs.release_type != 'patch' && inputs.release_type != 'rc' && inputs.dry_run != true }}
     steps:
       - name: Checkout develop
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -1206,7 +1261,7 @@ jobs:
     name: Update Release Branch
     needs: [prepare-release, create-github-release]
     runs-on: ubuntu-latest
-    if: ${{ inputs.dry_run != true }}
+    if: ${{ inputs.dry_run != true && inputs.release_type != 'rc' }}
     steps:
       - name: Checkout release branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -1257,7 +1312,8 @@ jobs:
     name: Update Milestones
     needs: create-github-release
     runs-on: ubuntu-latest
-    if: ${{ inputs.dry_run != true }}
+    # The X.Y.Z milestone closes with X.Y.Z, not with one of its candidates
+    if: ${{ inputs.dry_run != true && inputs.release_type != 'rc' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -1302,7 +1358,8 @@ jobs:
           fi
 
           # Find the previous release tag
-          PREV_TAG=$(git describe --tags --abbrev=0 "${RELEASE_TAG}^" 2>/dev/null || echo "")
+          # Release candidates are not releases: the X.Y.Z milestone spans back to the last X.Y.Z
+          PREV_TAG=$(git describe --tags --abbrev=0 --exclude '*-RC*' "${RELEASE_TAG}^" 2>/dev/null || echo "")
 
           if [[ -z "${PREV_TAG}" ]]; then
             echo "No previous tag found, skipping PR association"

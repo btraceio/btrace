@@ -52,15 +52,18 @@ import org.slf4j.LoggerFactory;
  *   btrace-extensions/
  *     ext1/
  *       extension.properties
+ *       com/example/ext1/Impl.classdata
  *       probes/
  *         Probe1.class
  *     ext2/
  *       extension.properties
+ *       com/example/ext2/Impl.classdata
  * </pre>
  *
  * <p>API classes are flattened as {@code .class} files in the JAR root (loaded via bootstrap).
- * Implementation classes are stored as {@code .classdata} files and loaded by {@link
- * ClassDataLoader}.
+ * Implementation classes are stored as {@code .classdata} files under the extension's own directory
+ * and loaded by a {@link ClassDataLoader} bound to that extension id, so two embedded extensions
+ * never share class data even when they contain classes of the same name.
  */
 public final class EmbeddedExtensionRepository implements ExtensionRepository {
   private static final Logger log = LoggerFactory.getLogger(EmbeddedExtensionRepository.class);

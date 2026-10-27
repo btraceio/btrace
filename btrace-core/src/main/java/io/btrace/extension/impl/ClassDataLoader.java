@@ -26,12 +26,15 @@ import java.util.concurrent.ConcurrentMap;
  * ClassLoader that loads classes from {@code .classdata} resources.
  *
  * <p>This approach is inspired by dd-trace-java: implementation classes are renamed from {@code
- * .class} to {@code .classdata} at build time, allowing them to be flattened into the agent JAR
- * without polluting the bootstrap classloader or requiring temp file extraction.
+ * .class} to {@code .classdata} at build time, allowing them to be stored in the agent JAR without
+ * polluting the bootstrap classloader or requiring temp file extraction.
  *
  * <p>API classes remain as {@code .class} files and are loaded normally via bootstrap
- * (Boot-Class-Path). Implementation classes are stored as {@code .classdata} and loaded by this
- * custom classloader.
+ * (Boot-Class-Path). Implementation classes are stored as {@code .classdata} under the extension's
+ * own prefix, {@code META-INF/btrace-extensions/<id>/<package path>.classdata}, and loaded by this
+ * custom classloader. The prefix is what keeps embedded extensions apart: two extensions may each
+ * ship a class of the same name, and every loader only ever sees the class data of the extension it
+ * was created for. A {@code .classdata} resource outside the prefix is never consulted.
  *
  * <p>Benefits:
  *
@@ -51,6 +54,9 @@ public final class ClassDataLoader extends ClassLoader {
     ClassLoader.registerAsParallelCapable();
   }
 
+  /** Root of the per-extension class data trees inside an embedding JAR. */
+  public static final String EXTENSIONS_BASE = "META-INF/btrace-extensions/";
+
   private static final String CLASSDATA_SUFFIX = ".classdata";
   private static final int BUFFER_SIZE = 8192;
 
@@ -61,12 +67,22 @@ public final class ClassDataLoader extends ClassLoader {
   /**
    * Creates a ClassDataLoader for loading embedded extension implementation classes.
    *
-   * @param extensionId extension identifier for diagnostics
+   * @param extensionId extension identifier; selects the {@code META-INF/btrace-extensions/<id>/}
+   *     tree this loader reads class data from
    * @param resourceLoader classloader to read {@code .classdata} resources from
    * @param parent parent classloader (typically BTrace boot classloader with API classes)
+   * @throws IllegalArgumentException if {@code extensionId} is null, empty, or contains a path
+   *     separator (an id is a single path segment of the resource prefix)
    */
   public ClassDataLoader(String extensionId, ClassLoader resourceLoader, ClassLoader parent) {
     super(parent);
+    if (extensionId == null || extensionId.isEmpty()) {
+      throw new IllegalArgumentException("extensionId must not be null or empty");
+    }
+    if (extensionId.indexOf('/') >= 0 || extensionId.indexOf('\\') >= 0) {
+      throw new IllegalArgumentException(
+          "extensionId must be a single path segment, got '" + extensionId + "'");
+    }
     this.extensionId = extensionId;
     this.resourceLoader =
         resourceLoader != null ? resourceLoader : ClassLoader.getSystemClassLoader();
@@ -84,7 +100,7 @@ public final class ClassDataLoader extends ClassLoader {
     synchronized (getClassLoadingLock(name)) {
       cached = loadedClasses.get(name);
       if (cached != null) return cached;
-      String resourcePath = name.replace('.', '/') + CLASSDATA_SUFFIX;
+      String resourcePath = resourcePath(extensionId, name);
       byte[] classBytes;
       try {
         classBytes = loadClassData(resourcePath);
@@ -101,6 +117,17 @@ public final class ClassDataLoader extends ClassLoader {
       loadedClasses.put(name, clazz);
       return clazz;
     }
+  }
+
+  /**
+   * Returns the resource path a class of an embedded extension is stored at.
+   *
+   * @param extensionId extension identifier
+   * @param className binary class name
+   * @return {@code META-INF/btrace-extensions/<id>/<package path>.classdata}
+   */
+  public static String resourcePath(String extensionId, String className) {
+    return EXTENSIONS_BASE + extensionId + '/' + className.replace('.', '/') + CLASSDATA_SUFFIX;
   }
 
   private byte[] loadClassData(String resourcePath) throws IOException {

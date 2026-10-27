@@ -93,8 +93,9 @@ loose on something that matters.
   match only as an explicit, time-bounded escalation.
 - **The data.** Method names, durations and stacks are fine; argument values, request bodies and
   credentials are not.
-- **The verifier.** BTrace's verifier stays on by default. If the assistant asks for trusted or
-  unsafe mode, say no.
+- **The verifier.** BTrace's verifier stays on. The MCP tools take a PID, a probe and a port and
+  have no switch for trusted or unsafe mode, so the assistant cannot turn the verifier off through
+  them. If it suggests that *you* run `btrace -u` by hand, say no.
 - **The output.** The assistant gets probe results from `read_probe_output`, which returns what an
   active probe printed since the last read. With `wait_seconds` (0-30) it returns as soon as a report
   arrives. The server keeps up to 64 KB of unread output per probe and says how many of the oldest
