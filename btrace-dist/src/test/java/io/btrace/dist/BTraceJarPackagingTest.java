@@ -49,6 +49,7 @@ class BTraceJarPackagingTest {
                   "btrace-gpu-bridge",
                   "btrace-llm-trace",
                   "btrace-metrics",
+                  "btrace-otel",
                   "btrace-rag-quality",
                   "btrace-statsd",
                   "btrace-utils")));

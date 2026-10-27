@@ -465,7 +465,7 @@ Consumers are expected to resolve the standard BTrace extension artifacts from t
 
 ## Bundled Extensions
 
-The distribution ships these seven extensions, already exploded under `$BTRACE_HOME/extensions/<id>/`
+The distribution ships these eight extensions, already exploded under `$BTRACE_HOME/extensions/<id>/`
 (the published `io.btrace:btrace` Maven artifact embeds the same set). Nothing needs to be copied;
 privileged ones only need to be allowed (`allowExtensions=<id>` or the policy file).
 
@@ -473,6 +473,7 @@ privileged ones only need to be allowed (`allowExtensions=<id>` or the policy fi
 |--------------|---------------|-------------------|------------|
 | `btrace-metrics` | BTrace HDR Histogram | `io.btrace.metrics.MetricsService` | yes (`THREADS`) |
 | `btrace-statsd` | BTrace StatsD | `io.btrace.statsd.Statsd` | yes (`NETWORK`) |
+| `btrace-otel` | BTrace OpenTelemetry | `io.btrace.otel.OTel` | yes (`NETWORK`, `THREADS`) |
 | `btrace-contracts` | BTrace Contracts | `io.btrace.contracts.ContractService` | no |
 | `btrace-llm-trace` | BTrace LLM Tracing | `io.btrace.llm.LlmTraceService` | no |
 | `btrace-rag-quality` | BTrace RAG Quality | `io.btrace.rag.RagQualityService` | no |

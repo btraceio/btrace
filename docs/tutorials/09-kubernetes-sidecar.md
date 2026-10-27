@@ -239,7 +239,7 @@ context:
 # Option A: your own fat agent with exactly the extensions you chose (Tutorial 8, Steps 1-3)
 cp ~/fat-agent-demo/build/libs/demo-btrace-agent.jar ./btrace-agent-fat.jar
 
-# Option B: BTrace's release fat agent (all seven default extensions), from a source checkout.
+# Option B: BTrace's release fat agent (all eight default extensions), from a source checkout.
 # It's the same jar Maven Central serves as io.btrace:btrace:3.0.0.
 ./gradlew :btrace-dist:fatAgentJar
 cp btrace-dist/build/fat-agent/btrace-agent-fat.jar ./btrace-agent-fat.jar
