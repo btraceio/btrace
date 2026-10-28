@@ -14,9 +14,9 @@ The runaway calls show up as budget violations; no code change, no restart.
 # Terminal 1: the app, with the two extensions allowed for this JVM only
 java -Dbtrace.permissions=permissions.properties LlmTicketApp.java
 
-# Terminal 2: look at the extension, then attach the probe (PID from `jps`)
+# Terminal 2: look at the extension, then attach the probe
 btracex inspect btrace-llm-trace
-btrace <PID> LlmTraceProbe.java
+btrace '~LlmTicketApp' LlmTraceProbe.java
 ```
 
 ## You should see
@@ -29,7 +29,7 @@ Privileged: true
 Required : [THREADS]
 Services : io.btrace.llm.LlmTraceService
 
-$ btrace <PID> LlmTraceProbe.java
+$ btrace '~LlmTicketApp' LlmTraceProbe.java
 === LLM + Contracts Dashboard ===
 === LLM Trace Summary ===
 Model: gpt-4o-mini (openai)

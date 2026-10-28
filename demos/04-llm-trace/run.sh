@@ -14,7 +14,7 @@ say "What does the llm-trace extension declare?"
 tool_run btracex inspect btrace-llm-trace
 
 say "Attach the probe. It records every chat() call: tokens, latency, cost, and a 500 ms budget."
-btrace_until 'VIOLATIONS: [1-9]' 40 "$APP_PID" LlmTraceProbe.java
+btrace_until 'VIOLATIONS: [1-9]' 40 "$APP_TARGET" LlmTraceProbe.java
 
 say "Read the dashboard: token totals, estimated cost, and the latency-budget violations."
 say "The violations are the runaway calls - the same ones that inflate max latency and the cost line."

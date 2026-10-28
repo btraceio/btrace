@@ -33,7 +33,7 @@ kill "$PLAIN_PID" 2>/dev/null; wait "$PLAIN_PID" 2>/dev/null
 
 say "Attach with no flags: the client finds the endpoint and token through the Attach API."
 say "The probe handler is empty, so any slowdown is pure call-site dispatch."
-btrace_until '\[probe\] attached' 30 "$APP_PID" HotPathProbe.java
+btrace_until '\[probe\] attached' 30 "$APP_TARGET" HotPathProbe.java
 say "Throughput while the probe was attached:"
 tail -n 3 "$APP_LOG"
 

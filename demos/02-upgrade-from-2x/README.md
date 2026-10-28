@@ -15,10 +15,10 @@ does that for you. This demo does both against the order service from demo 01.
 
 ```sh
 java ../01-oneliner/OrderServiceApp.java          # terminal 1
-btrace <PID> legacy/SlowChargeProbe.class         # terminal 2: 2.x class, untouched
+btrace '~OrderServiceApp' legacy/SlowChargeProbe.class  # terminal 2: 2.x class, untouched
 cp legacy/SlowChargeProbe.java /tmp/
 ../../scripts/migrate-btrace-script.sh /tmp/SlowChargeProbe.java
-btrace <PID> /tmp/SlowChargeProbe.java            # migrated source
+btrace '~OrderServiceApp' /tmp/SlowChargeProbe.java     # migrated source
 ```
 
 The migration script lives in the BTrace repository (`scripts/`), not in the binary distribution.

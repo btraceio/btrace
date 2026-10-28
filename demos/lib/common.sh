@@ -5,7 +5,8 @@
 #   BTRACE_HOME  BTrace 3.0 installation (defaults to the parent of the `btrace` on PATH)
 #   JAVA_HOME    JDK 11+ used for both the demo app and the BTrace client
 #   DEMO_PORT    optional: pass `-p $DEMO_PORT` to every btrace command so several demos can run
-#                side by side (the default agent port is 2020)
+#                side by side (the default agent port is 2020); demos sharing an app (02 and 03
+#                both run OrderServiceApp) can not, since btrace finds the app by its main class
 #   DEMO_KEEP    set by `run.sh --keep`: leave the demo app running at the end for a live demo
 #
 # Every helper prints the command it runs, prefixed with `$`, so a recording reads like a shell.
@@ -44,13 +45,28 @@ PORT_OPT=()
 [ -n "${DEMO_PORT:-}" ] && PORT_OPT=(-p "$DEMO_PORT")
 
 APP_PID=""
+APP_TARGET=""
 APP_LOG=""
 
 say() { printf '\n# %s\n' "$*"; }
 show() { printf '$ %s\n' "$*"; }
 
+# show_btrace <btrace args...>: echoes a btrace command, quoting `~<regex>` targets so the line
+# can be pasted into a shell without tilde expansion.
+show_btrace() {
+  local line="btrace" arg
+  for arg in ${PORT_OPT[@]+"${PORT_OPT[@]}"} "$@"; do
+    case "$arg" in
+      "~"*) line="$line '$arg'" ;;
+      *) line="$line $arg" ;;
+    esac
+  done
+  show "$line"
+}
+
 # start_app <Main.java> [java options...]: launches the demo app in the background from this
-# demo's directory and waits for its "[demo]" banner. Sets APP_PID and APP_LOG.
+# demo's directory and waits for its "[demo]" banner. Sets APP_PID, APP_LOG and APP_TARGET, the
+# `~<regex>` btrace target naming the app by its main class instead of its PID.
 start_app() {
   local main="$1"; shift
   APP_LOG="$DEMO_LOG_DIR/app.log"
@@ -58,6 +74,7 @@ start_app() {
   show "java $* $main"
   (cd "$DEMO_DIR" && exec "$JAVA_HOME/bin/java" "$@" "$main") >"$APP_LOG" 2>&1 &
   APP_PID=$!
+  APP_TARGET="~$(basename "$main" .java)"
   wait_for_line "$APP_LOG" '\[demo\]' 30 || { echo "demo app did not start; see $APP_LOG" >&2; exit 1; }
   echo "[demo app] pid $APP_PID"
 }
@@ -93,7 +110,7 @@ btrace_until() {
   local out="$DEMO_LOG_DIR/btrace-$RANDOM.log"
   local fifo="$DEMO_LOG_DIR/stdin-$RANDOM"
   mkfifo "$fifo"
-  show "btrace ${PORT_OPT[*]+${PORT_OPT[*]} }$*"
+  show_btrace "$@"
   (cd "$DEMO_DIR" && exec "$BTRACE_HOME/bin/btrace" ${PORT_OPT[@]+"${PORT_OPT[@]}"} "$@") <"$fifo" >"$out" 2>&1 &
   local pid=$!
   exec 3>"$fifo"
@@ -125,7 +142,7 @@ btrace_until() {
 
 # btrace_run <btrace args...>: runs a one-shot btrace command to completion and echoes its output.
 btrace_run() {
-  show "btrace ${PORT_OPT[*]+${PORT_OPT[*]} }$*"
+  show_btrace "$@"
   (cd "$DEMO_DIR" && "$BTRACE_HOME/bin/btrace" ${PORT_OPT[@]+"${PORT_OPT[@]}"} "$@" 2>&1)
   echo
 }

@@ -2,7 +2,7 @@
 
 The JVM was started with the BTrace agent in prepared mode (`port=0`): a loopback, token-protected
 endpoint, nothing instrumented. `btrace doctor <pid>` says whether the JVM is ready without loading
-anything. `btrace <pid> ...` finds the endpoint and token through the Attach API, no flags needed.
+anything. `btrace '~HotLoopApp' ...` finds the endpoint and token through the Attach API, no flags needed.
 The app reports its own throughput, so the cost of the probe is visible as a number, and so is
 what happens after the client exits.
 
@@ -19,7 +19,7 @@ By hand, in three terminals:
 ```bash
 java -javaagent:$BTRACE_HOME/libs/btrace.jar=port=0 HotLoopApp.java
 btrace doctor <PID>
-btrace <PID> HotPathProbe.java
+btrace '~HotLoopApp' HotPathProbe.java
 ```
 
 ## You should see

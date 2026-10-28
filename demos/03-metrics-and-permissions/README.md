@@ -3,7 +3,7 @@
 **Story.** The `Aggregations` API is gone in 3.0; histograms come from the bundled
 `btrace-metrics` extension (HdrHistogram). It is a privileged extension, so it links only when
 the agent-side policy allows it. Deployed without a policy, the probe runs with a throwing stub
-and `btrace -le <PID>` tells you exactly why. Allow it and the same probe prints p50/p95/p99.
+and `btrace -le '~OrderServiceApp'` tells you exactly why. Allow it and the same probe prints p50/p95/p99.
 
 | File | Role |
 |---|---|
@@ -15,11 +15,11 @@ and `btrace -le <PID>` tells you exactly why. Allow it and the same probe prints
 
 ```sh
 java ../01-oneliner/OrderServiceApp.java                          # terminal 1
-btrace <PID> LatencyHistogram.java                                # terminal 2: blocked
-btrace -le <PID>                                                  # why
+btrace '~OrderServiceApp' LatencyHistogram.java                   # terminal 2: blocked
+btrace -le '~OrderServiceApp'                                     # why
 # restart terminal 1 with the policy:
 java -Dbtrace.permissions=permissions.properties ../01-oneliner/OrderServiceApp.java
-btrace <NEW_PID> LatencyHistogram.java                            # histogram
+btrace '~OrderServiceApp' LatencyHistogram.java                   # histogram
 ```
 
 The policy can also live in `~/.btrace/permissions.properties` (`btracex policy set
