@@ -586,6 +586,16 @@ tasks.named('test').configure {
     dependsOn explodeExtensions
 }
 
+// Gradle archive tasks normalise file permissions for reproducibility, so the mode set on disk by
+// fixPermissions does not reach the archives. Set the mode of the Unix launchers explicitly.
+def makeLaunchersExecutable = { AbstractArchiveTask archive ->
+    archive.filesMatching('bin/*') { FileCopyDetails details ->
+        if (!details.name.endsWith('.bat')) {
+            details.permissions { unix(0755) }
+        }
+    }
+}
+
 task buildZip(type: Zip) {
     dependsOn btraceJar, fixPermissions, explodeExtensions
     from "${distTarget}"
@@ -595,6 +605,7 @@ task buildZip(type: Zip) {
     archiveVersion.set("v${project.version}")
     archiveClassifier.set("bin")
     destinationDirectory = layout.buildDirectory.dir("distributions")
+    makeLaunchersExecutable(it)
 }
 
 task buildSdkmanZip(type: Zip) {
@@ -607,6 +618,7 @@ task buildSdkmanZip(type: Zip) {
     archiveVersion.set("v${project.version}")
     archiveClassifier.set("sdkman-bin")
     destinationDirectory = layout.buildDirectory.dir("distributions")
+    makeLaunchersExecutable(it)
 }
 
 task buildTgz(type: Tar) {
@@ -621,6 +633,7 @@ task buildTgz(type: Tar) {
     destinationDirectory = layout.buildDirectory.dir("distributions")
     archiveExtension.set('tar.gz')
     compression = Compression.GZIP
+    makeLaunchersExecutable(it)
 }
 
 ospackage {
@@ -632,7 +645,7 @@ ospackage {
 
     from("${distTarget}/bin") {
         into 'bin'
-        fileMode 0550
+        fileMode 0755
     }
 
     from("${distTarget}/libs") {
