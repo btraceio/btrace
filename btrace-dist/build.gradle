@@ -582,6 +582,11 @@ task explodeExtensions {
     }
 }
 
+// copyExtensions deletes the exploded directories, and tasks such as compileTestJava and shadowJar
+// depend on it alone; without this, they leave the distribution with archives the compiler can
+// not resolve extension classes from.
+copyExtensions.finalizedBy explodeExtensions
+
 tasks.named('test').configure {
     dependsOn explodeExtensions
 }
