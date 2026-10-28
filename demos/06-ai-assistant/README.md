@@ -65,7 +65,7 @@ Requirements:
 - JBang
 - a checkout of [btraceio/agent-plugins](https://github.com/btraceio/agent-plugins)
   (`AGENT_PLUGINS_DIR`, default `../../../agent-plugins` relative to this directory)
-- `JAVA_HOME` and `BTRACE_HOME` set as for the other demos
+- `JAVA_HOME` set and the distribution built, as for the other demos
 - Python 3 with Pillow (`PYTHON` picks the interpreter) and ffmpeg for the MP4
 
 To run the MCP server against a local BTrace build, install the fat agent, which embeds the

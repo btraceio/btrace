@@ -10,7 +10,6 @@ what happens after the client exits.
 
 ```bash
 export JAVA_HOME=/path/to/jdk11+
-export BTRACE_HOME=/path/to/btrace-3.0.0
 ./run.sh            # add --keep to leave the app running
 ```
 

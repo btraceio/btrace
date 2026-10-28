@@ -19,14 +19,16 @@ promises is what the harness checks.
 ## Running a scenario
 
 ```sh
+./gradlew :btrace-dist:build                   # the demos run the distribution built here
 export JAVA_HOME=/path/to/jdk-11-or-newer
-export BTRACE_HOME=/path/to/btrace-3.0.0      # or put bin/btrace on PATH
 demos/01-oneliner/run.sh                       # plays the scenario and stops the app
 demos/01-oneliner/run.sh --keep                # leaves the app running for a live demo
 ```
 
-Each `run.sh` prints the commands it runs, prefixed with `$`, and exits non-zero if an expected
-output line never appears. `DEMO_PORT=<port>` adds `-p <port>` to every `btrace` command so two
+Each `run.sh` uses the distribution under `btrace-dist/build/resources/main/v<version>`, not a
+`btrace` on PATH or an exported `BTRACE_HOME`, which may be an older release without the features
+being shown; set `DEMO_BTRACE_HOME` to use another installation. Each `run.sh` prints the
+commands it runs, prefixed with `$`, and exits non-zero if an expected output line never appears. `DEMO_PORT=<port>` adds `-p <port>` to every `btrace` command so two
 scenarios can run side by side (the default agent port is 2020). Logs land in
 `$TMPDIR/btrace-demo-<name>/`.
 

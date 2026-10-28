@@ -8,7 +8,8 @@
 
 ## Run it
 
-Needs a BTrace 3.0 install (`BTRACE_HOME`) and JDK 11+ (`JAVA_HOME`).
+Needs a BTrace 3.0 install and JDK 11+ (`JAVA_HOME`); `run.sh` uses the one built from this
+checkout (see [Running a scenario](../README.md#running-a-scenario)).
 
 ```bash
 # terminal 1: the app (extensions must be allowed for the target JVM)

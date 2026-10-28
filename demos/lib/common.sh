@@ -2,7 +2,9 @@
 # Shared helpers for the BTrace demo scenarios. Sourced by each demos/<nn>-<name>/run.sh.
 #
 # Environment:
-#   BTRACE_HOME  BTrace 3.0 installation (defaults to the parent of the `btrace` on PATH)
+#   DEMO_BTRACE_HOME  optional BTrace installation to use instead of the distribution built from
+#                this checkout (btrace-dist/build/resources/main/v<version>); BTRACE_HOME and the
+#                `btrace` on PATH are ignored, since they may point at an older release
 #   JAVA_HOME    JDK 11+ used for both the demo app and the BTrace client
 #   DEMO_PORT    optional: pass `-p $DEMO_PORT` to every btrace command so several demos can run
 #                side by side (the default agent port is 2020); demos sharing an app (02 and 03
@@ -25,13 +27,20 @@ if [ -z "${JAVA_HOME:-}" ]; then
   echo "JAVA_HOME must point to a JDK 11 or newer" >&2
   exit 2
 fi
-if [ -z "${BTRACE_HOME:-}" ]; then
-  if command -v btrace >/dev/null 2>&1; then
-    BTRACE_HOME="$(cd "$(dirname "$(command -v btrace)")/.." && pwd)"
-  else
-    echo "BTRACE_HOME must point to a BTrace 3.0 installation (or put bin/btrace on PATH)" >&2
-    exit 2
-  fi
+# The demos exercise features of this branch, so they run the distribution built from this
+# checkout. A `btrace` on PATH or an exported BTRACE_HOME may be an older release and is ignored;
+# DEMO_BTRACE_HOME overrides the choice explicitly.
+if [ -n "${DEMO_BTRACE_HOME:-}" ]; then
+  BTRACE_HOME="$DEMO_BTRACE_HOME"
+else
+  REPO_DIR="$(cd "$DEMO_DIR/../.." && pwd)"
+  BTRACE_VERSION="$(sed -n "s/^ *version *= *'\(.*\)'.*/\1/p" "$REPO_DIR/build.gradle" | head -n1)"
+  BTRACE_HOME="$REPO_DIR/btrace-dist/build/resources/main/v$BTRACE_VERSION"
+fi
+if [ ! -x "$BTRACE_HOME/bin/btrace" ] || [ ! -f "$BTRACE_HOME/libs/btrace.jar" ]; then
+  echo "No BTrace distribution at $BTRACE_HOME" >&2
+  echo "Build it from the repository root with: ./gradlew :btrace-dist:build" >&2
+  exit 2
 fi
 export BTRACE_HOME JAVA_HOME
 PATH="$BTRACE_HOME/bin:$JAVA_HOME/bin:$PATH"
