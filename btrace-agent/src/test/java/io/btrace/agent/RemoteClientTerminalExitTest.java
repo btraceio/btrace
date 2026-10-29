@@ -28,12 +28,14 @@ import io.btrace.core.comm.BinaryWireProtocol;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.ExitCommand;
 import io.btrace.core.comm.MessageCommand;
+import io.btrace.core.comm.ProtocolVersion;
 import io.btrace.core.comm.WireProtocol;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
@@ -115,6 +117,85 @@ class RemoteClientTerminalExitTest {
       } finally {
         executor.shutdownNow();
       }
+    }
+  }
+
+  @Test
+  void terminalExitFinalizesWhenTheExitEchoCannotBeWritten() throws Exception {
+    try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+      CountDownLatch finalizerCalled = new CountDownLatch(1);
+      AtomicInteger finalizerExitCode = new AtomicInteger(Integer.MIN_VALUE);
+      BTraceRuntime.Impl runtime = runtimeProxy(exitCode -> {});
+      ExecutorService executor = Executors.newSingleThreadExecutor();
+      try {
+        Future<RemoteClient> accepted =
+            executor.submit(
+                () -> {
+                  Socket socket = server.accept();
+                  // A client that has already closed its socket: echoing the Exit fails.
+                  WireProtocol protocol =
+                      new ExitWriteFailingProtocol(
+                          new BinaryWireProtocol(
+                              socket.getInputStream(), socket.getOutputStream()));
+                  ClientContext context =
+                      new ClientContext(null, null, new ArgsMap(), new SharedSettings());
+                  return RemoteClient.createForTerminalTest(
+                      context,
+                      protocol,
+                      socket,
+                      runtime,
+                      exitCode -> {
+                        finalizerExitCode.set(exitCode);
+                        finalizerCalled.countDown();
+                      });
+                });
+        try (Socket socket = new Socket(server.getInetAddress(), server.getLocalPort())) {
+          RemoteClient remote = accepted.get(5, TimeUnit.SECONDS);
+
+          remote.onCommand(new ExitCommand(FIRST_EXIT_CODE));
+
+          assertTrue(finalizerCalled.await(5, TimeUnit.SECONDS));
+          assertEquals(FIRST_EXIT_CODE, finalizerExitCode.get());
+        }
+      } finally {
+        executor.shutdownNow();
+      }
+    }
+  }
+
+  private static final class ExitWriteFailingProtocol implements WireProtocol {
+    private final WireProtocol delegate;
+
+    ExitWriteFailingProtocol(WireProtocol delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public Command read() throws IOException, ClassNotFoundException {
+      return delegate.read();
+    }
+
+    @Override
+    public void write(Command command) throws IOException {
+      if (command instanceof ExitCommand) {
+        throw new SocketException("Broken pipe");
+      }
+      delegate.write(command);
+    }
+
+    @Override
+    public void flush() throws IOException {
+      delegate.flush();
+    }
+
+    @Override
+    public ProtocolVersion getVersion() {
+      return delegate.getVersion();
+    }
+
+    @Override
+    public void close() throws IOException {
+      delegate.close();
     }
   }
 

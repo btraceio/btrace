@@ -423,11 +423,17 @@ class RemoteClient extends Client {
     try {
       switch (cmd.getType()) {
         case Command.EXIT:
-          if (isConnected) {
-            synchronized (output) {
-              output.write(cmd);
-              output.flush();
+          // The echo is best effort: a client that exits right away may have closed its socket
+          // already, and failing here must not skip the cleanup that retracts the probe.
+          try {
+            if (isConnected) {
+              synchronized (output) {
+                output.write(cmd);
+                output.flush();
+              }
             }
+          } catch (IOException e) {
+            log.debug("Unable to echo exit to the client", e);
           }
           completeTerminalExit(((ExitCommand) cmd).getExitCode());
           break;
