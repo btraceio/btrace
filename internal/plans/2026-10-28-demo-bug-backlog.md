@@ -115,6 +115,27 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 - `:btrace-agent:classFileApiBackendTest` needs a JDK 28 toolchain and fails `./gradlew build` on a
   machine without one instead of being skipped with a message.
 
+### O9. A probe exit that overlaps the probe's own install can leave classes instrumented
+
+- **Where:** `Client.retransformLoaded` (install, on `Main`'s `serializedExecutor`) and
+  `Client.onExit` (on the runtime's command thread); not synchronized with each other.
+- **What:** not observed; found while root-causing F11. If an exit arrives while the install
+  retransform is still running, the install thread's redefinition can land after the restoring
+  one and reinstall the instrumented bytes. The same can happen between one client's exit and
+  another client's install, since exits are not serialized with installs.
+- **Suggested fix:** run the restoring retransform through the same serialized executor, or have
+  `retransformLoaded` re-check `isShuttingDown()` and retransform again after the install finishes.
+
+### O10. Intermittent "Class verification failed" on a repeated oneliner against the same class
+
+- **Where:** agent instrumentation (not root-caused).
+- **What:** demo 01's third probe on `OrderService`
+  (`btrace -n 'OrderService::validateOrder @error { print method, stack }'`, after two earlier
+  probes on the same class were retracted) logged `[BTRACE WARN] Class verification failed:
+  OrderService (null)` and produced no output, though the client reported the probe started. Seen
+  1 of 4 runs on JDK 17.0.19; the `(null)` means the cause is not reported either.
+- **Repro:** run `demos/01-oneliner/run.sh` repeatedly on JDK 17.
+
 ## Fixed
 
 | # | Defect | Fix |
@@ -129,3 +150,4 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F8 | `@Duration` at `Kind.RETURN` was 0 at every return after the first in bytecode order | `c81a2d43` |
 | F9 | `BTraceRuntimeImplBaseTest` raced the command thread and failed on slow CI runners | `d6065f3b` |
 | F10 | A plain `Throwable` parameter at `Kind.ERROR` was silently ignored | `068e1a81` |
+| F11 | A client that exited right away could leave its probe installed: the failed exit echo skipped `Client.onExit` (demo 07 throughput stuck at a third of baseline) | `8ab60867` |
