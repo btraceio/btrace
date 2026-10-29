@@ -1,0 +1,43 @@
+/* Production layout and accessibility adjustments to the supplied design. */
+bt-list { display: contents; }
+body { overflow-wrap: break-word; }
+pre { max-width: 100%; overflow-x: auto; }
+button, input, a { -webkit-tap-highlight-color: transparent; }
+button:disabled { cursor: default !important; }
+.skip-link { position: fixed; top: 8px; left: 8px; z-index: 100; padding: 12px; background: var(--color-bg); color: var(--color-text); transform: translateY(-160%); }
+.skip-link:focus { transform: none; }
+.no-script { padding: 24px; }
+.nav > div { min-width: 0; }
+.nav-brand { flex-shrink: 0; }
+#oneliner input { min-width: 0; width: 100%; }
+#oneliner input[type="radio"] { width: 0; }
+#oneliner .seg-opt { color: var(--color-neutral-300); }
+#oneliner .seg-opt:has(input:checked) { color: var(--color-bg); }
+@media (max-width: 760px) {
+  .nav { flex-wrap: wrap; gap: 12px !important; }
+  .nav > div { order: 3; flex: 1 0 100%; gap: 18px !important; }
+  .nav > .btn { margin-left: auto; padding: 8px; font-size: 10px !important; }
+  .nav-brand { font-size: 16px !important; }
+  section[id] { scroll-margin-top: 140px !important; }
+  #agent > div { padding-top: 48px !important; }
+}
+@media (max-width: 420px) {
+  .nav > .btn { display: none; }
+  #agent h1 { font-size: 38px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 760px) {
+  .plugin-row { grid-template-columns: minmax(0, 1fr) auto !important; gap: 8px 12px !important; }
+  .plugin-row > span:first-of-type { grid-column: 1; grid-row: 2; }
+  .plugin-row > span:last-child { grid-column: 2; grid-row: 1; }
+  .plugin-row code { overflow-wrap: anywhere; }
+}
+#oneliner .seg-opt { position: relative; }
+#oneliner .seg-opt input[type="radio"] { inset: 0; width: 100% !important; height: 100% !important; margin: 0; cursor: pointer; }
+#oneliner .seg-opt input[type="radio"] { pointer-events: auto; }
+@media (max-width: 760px) {
+  .agent-step { grid-template-columns: 14px minmax(0, 1fr) !important; gap: 4px 10px !important; }
+  .agent-step > span:last-child { grid-column: 2; }
+}

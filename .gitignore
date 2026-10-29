@@ -13,7 +13,9 @@ hs_err_pid*
 
 build
 dist
-docs
+/docs/*
+!/docs/README.md
+!/docs/Website.md
 nbproject/private
 TEST-*
 make/junit*
@@ -22,3 +24,5 @@ junit*
 _site
 /_site/benchmark/target/
 /_site/nbproject/private/
+
+node_modules/

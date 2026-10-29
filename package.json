@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build-site.mjs"
+  },
+  "devDependencies": {
+    "linkedom": "0.18.12"
+  }
+}

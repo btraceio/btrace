@@ -1,0 +1,15 @@
+
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{animation:none!important}}
+body{margin:0;background:var(--color-text);color:var(--color-bg);text-wrap:pretty}
+a{color:var(--color-accent-400)}
+a:hover{color:var(--color-bg)}
+::selection{background:var(--color-accent);color:var(--color-bg)}
+@keyframes bt-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes bt-blink{50%{opacity:0}}
+@keyframes bt-pulse{50%{opacity:.25}}
+@keyframes bt-ticker{to{transform:translateX(-50%)}}
+@keyframes bt-scan{0%{transform:translateY(-10vh)}100%{transform:translateY(110vh)}}
+@keyframes bt-flicker{0%,100%{opacity:1}92%{opacity:1}93%{opacity:.4}94%{opacity:1}96%{opacity:.6}97%{opacity:1}}
+@keyframes bt-glitch{0%,86%,100%{clip-path:inset(0 0 100% 0);transform:none}87%{clip-path:inset(12% 0 64% 0);transform:translate(-6px,0)}89%{clip-path:inset(58% 0 18% 0);transform:translate(5px,0)}91%{clip-path:inset(30% 0 46% 0);transform:translate(-3px,0)}93%{clip-path:inset(0 0 100% 0)}}
+@keyframes bt-glitch2{0%,87%,100%{clip-path:inset(0 0 100% 0);transform:none}88%{clip-path:inset(70% 0 8% 0);transform:translate(6px,0)}90%{clip-path:inset(20% 0 60% 0);transform:translate(-5px,0)}92%{clip-path:inset(0 0 100% 0)}}

@@ -1,46 +1,749 @@
----
-layout: default
----
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BTrace 3.0 — Trace the live JVM</title>
+  <meta name="description" content="Trace a running Java application with BTrace 3.0. One-line probes, coding-agent workflows, AI observability, and production-safe attach.">
+  <meta name="theme-color" content="#201e1d">
+  <link rel="icon" type="image/svg+xml" href="icon/btrace-icon-small.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icon/png/btrace-icon-32.png">
+  <link rel="apple-touch-icon" href="icon/png/btrace-icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="assets/design.css">
+  <link rel="stylesheet" href="assets/landing.css">
+  <link rel="stylesheet" href="assets/hover.css">
+  <link rel="stylesheet" href="assets/site.css">
+  <script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#top">Skip to content</a>
+<div id="landing"><div aria-hidden="true" style="position:fixed;inset:0;pointer-events:none;z-index:60;background:repeating-linear-gradient(to bottom,color-mix(in srgb,black 22%,transparent) 0 1px,transparent 1px 3px);opacity:.55"></div>
+<div aria-hidden="true" style="position:fixed;left:0;right:0;top:0;height:14vh;pointer-events:none;z-index:61;background:linear-gradient(to bottom,transparent,color-mix(in srgb,var(--color-accent) 6%,transparent),transparent);animation:bt-scan 9s linear infinite"></div>
 
-<div class="article">
-    <div class="well">
-        <h1>BTrace - a safe, dynamic tracing tool for the Java platform</h1>
-        <div style="font-size: larger">BTrace is a safe, dynamic tracing tool for the Java platform.</div>
-
-        BTrace can be used to dynamically trace a running Java program 
-        (similar to DTrace for OpenSolaris applications and OS). 
-        BTrace dynamically instruments the classes of the target 
-        application to inject tracing code ("bytecode tracing").
-        {% if site.github != '' %}
-            <a href="https://github.com/{{ site.github }}/wiki">[more]</a>
-        {% endif %}
-    </div>
+<div style="background:var(--color-accent);color:var(--color-bg);overflow:hidden;border-bottom:2px solid var(--color-accent-700)">
+  <div style="display:flex;width:max-content;gap:28px;padding:9px 0;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;animation:bt-ticker 70s linear infinite"><span style="display:flex;align-items:center;gap:28px">Trace a live JVM in one line<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Your coding agent writes, attaches and removes the probe<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">No overhead after you detach<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Scripts half the size with the flat DSL<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">LLM, RAG and inference observability from inside the JVM<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Extensions with permissions you grant<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">One jar, Apache 2.0<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Ready for class files newer than ASM supports<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">2.x probes run unchanged<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Java 8 through 27<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Trace a live JVM in one line<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Your coding agent writes, attaches and removes the probe<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">No overhead after you detach<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Scripts half the size with the flat DSL<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">LLM, RAG and inference observability from inside the JVM<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Extensions with permissions you grant<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">One jar, Apache 2.0<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Ready for class files newer than ASM supports<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">2.x probes run unchanged<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Java 8 through 27<span style="width:6px;height:6px;background:var(--color-bg)"></span></span></div>
 </div>
 
-{% for post in paginator.posts %}
-<div class="article">
-    <div class="well">
-        <h1><a href="{{ site.baseurl}}{{ post.url }}">{{ post.date | date: "%b %-d, %Y" }} - {{ post.title }}</a></h1>
-        {% if site.comments == true and post.comments == true and site.disqus != '' %}
-        <p class="author"><a href="{{ site.baseurl }}{{ post.url }}/#disqus_thread">Comments</a></p>
-        {% endif %}
-        <div class="content">
-            {{ post.content }}
+<div style="position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--color-text) 88%,transparent);backdrop-filter:blur(8px)">
+  <nav aria-label="Main navigation" class="nav" style="padding:12px max(clamp(20px,5vw,72px), calc((100% - 1240px) / 2 + clamp(20px,5vw,72px)));gap:24px;border-bottom:2px solid var(--color-neutral-800)">
+    <a href="#top" class="nav-brand" style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:18px;letter-spacing:.02em;color:var(--color-bg);display:flex;align-items:center;gap:10px;margin-right:0">
+      <img src="icon/btrace-icon-small.svg" alt="" width="28" height="28" style="display:block;outline:1px solid var(--color-neutral-700)">BTRACE<span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;font-weight:600;font-stretch:100%;color:var(--color-accent-400);border:1px solid var(--color-accent);padding:2px 6px">v3.0.0</span>
+    </a>
+    <div style="display:flex;gap:22px;overflow-x:auto;margin-right:auto;scrollbar-width:none;padding:4px 0;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-transform:uppercase;letter-spacing:.06em">
+      <bt-list style="display:contents">
+        <a href="#agent" aria-current="page" style="white-space:nowrap;font-size:12px">Agent</a>
+
+        <a href="#start" aria-current="" style="white-space:nowrap;font-size:12px">Start here</a>
+
+        <a href="#plugins" aria-current="" style="white-space:nowrap;font-size:12px">Plugins</a>
+
+        <a href="#oneliner" aria-current="" style="white-space:nowrap;font-size:12px">Oneliner</a>
+
+        <a href="#ai" aria-current="" style="white-space:nowrap;font-size:12px">AI workloads</a>
+
+        <a href="#production" aria-current="" style="white-space:nowrap;font-size:12px">Production</a>
+
+        <a href="#demos" aria-current="" style="white-space:nowrap;font-size:12px">Demos</a>
+
+        <a href="#tutorials" aria-current="" style="white-space:nowrap;font-size:12px">Tutorials</a>
+
+        <a href="#install" aria-current="" style="white-space:nowrap;font-size:12px">Install</a>
+
+        <a href="#docs" aria-current="" style="white-space:nowrap;font-size:12px">Docs</a>
+      </bt-list>
+    </div>
+    <a href="#install-plugin" class="btn btn-primary bt-hover-0" style="white-space:nowrap;color:var(--color-bg);font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;box-shadow:0 0 20px color-mix(in srgb,var(--color-accent) 45%,transparent)">Install agent plugin</a>
+  </nav>
+  <div style="height:2px;position:relative;margin-top:-2px">
+    <div data-bt-ref="progRef" style="height:2px;width:0;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></div>
+  </div>
+</div>
+
+<main id="top" tabindex="-1" style="background-image:linear-gradient(color-mix(in srgb,var(--color-bg) 4%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--color-bg) 4%,transparent) 1px,transparent 1px);background-size:64px 64px">
+
+<section data-spy="1" id="agent" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-top:88px;padding-bottom:56px">
+    <div data-hero="0" style="display:flex;flex-wrap:wrap;gap:8px 24px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-neutral-400);margin-bottom:28px">
+      <span style="color:var(--color-accent-400)">SYS:// btrace 3.0.0</span><span>first major since 2.2.6</span><span>status: <span style="color:var(--color-accent-400);animation:bt-flicker 3s infinite">online</span></span>
+    </div>
+    <h1 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(40px,7.2vw,112px);line-height:.92;letter-spacing:-0.015em;margin:0 0 0 -0.04em">
+      <span data-hero="0" style="display:block;position:relative">Ask your agent.<span aria-hidden="true" style="position:absolute;inset:0;color:var(--color-accent);mix-blend-mode:screen;animation:bt-glitch 4.2s steps(1) infinite 0s;pointer-events:none">Ask your agent.</span><span aria-hidden="true" style="position:absolute;inset:0;color:var(--color-neutral-300);mix-blend-mode:screen;animation:bt-glitch2 4.2s steps(1) infinite 0s;pointer-events:none">Ask your agent.</span></span>
+      <span data-hero="1" style="display:block;position:relative"><span style="color:var(--color-accent);text-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 60%,transparent)">It traces</span> the live JVM.<span aria-hidden="true" style="position:absolute;inset:0;color:var(--color-accent);mix-blend-mode:screen;animation:bt-glitch 4.2s steps(1) infinite 0.7s;pointer-events:none"><span style="color:var(--color-accent);text-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 60%,transparent)">It traces</span> the live JVM.</span><span aria-hidden="true" style="position:absolute;inset:0;color:var(--color-neutral-300);mix-blend-mode:screen;animation:bt-glitch2 4.2s steps(1) infinite 0.7s;pointer-events:none"><span style="color:var(--color-accent);text-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 60%,transparent)">It traces</span> the live JVM.</span></span>
+    </h1>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:40px 72px;align-items:start;margin-top:40px">
+      <div>
+        <p data-hero="2" style="font-size:19px;line-height:30px;max-width:56ch;margin:0;color:var(--color-neutral-300)">BTrace adds instrumentation to a JVM while it runs. You do not restart it. In 3.0, your coding agent can operate it. Describe the symptom. The <strong style="color:var(--color-bg);font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:600">btrace-observability</strong> plugin writes a narrow probe, attaches it, reads the output and removes it.</p>
+        <div data-hero="3" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:32px">
+          <a href="#install-plugin" class="btn btn-primary bt-hover-1" style="min-width:260px;justify-content:space-between;padding:14px 16px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-bg);box-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 50%,transparent)">Install the agent plugin <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a>
+          <a href="#oneliner" class="btn btn-secondary bt-hover-2" style="padding:14px 16px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-bg);border-color:var(--color-neutral-600)">&gt;_ Trace it in one line</a>
         </div>
+      </div>
+      <ol data-hero="4" style="list-style:none;margin:0;padding:0;border-top:2px solid var(--color-neutral-800)">
+        <li style="border-bottom:2px solid var(--color-neutral-800)"><a class="bt-hover-3" href="#oneliner" style="display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:baseline;padding:18px 0;color:var(--color-bg);text-decoration:none"><span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400)">[01]</span><span><strong style="display:block;font-size:18px">No file, no compile.</strong><span style="font-size:14px;color:var(--color-neutral-400)">One command attaches to a live JVM.</span></span><span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span></a></li>
+        <li style="border-bottom:2px solid var(--color-neutral-800)"><a class="bt-hover-4" href="#plugins" style="display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:baseline;padding:18px 0;color:var(--color-bg);text-decoration:none"><span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400)">[02]</span><span><strong style="display:block;font-size:18px">Your coding agent can run it.</strong><span style="font-size:14px;color:var(--color-neutral-400)">In Claude Code, Codex and Pi.</span></span><span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span></a></li>
+        <li style="border-bottom:2px solid var(--color-neutral-800)"><a class="bt-hover-5" href="#production" style="display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:baseline;padding:18px 0;color:var(--color-bg);text-decoration:none"><span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400)">[03]</span><span><strong style="display:block;font-size:18px">Production-safe attach.</strong><span style="font-size:14px;color:var(--color-neutral-400)">Check the JVM first. No overhead after you detach.</span></span><span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span></a></li>
+      </ol>
     </div>
-</div>
-{% endfor %}
 
-<div class="pagination">
-    {% if paginator.previous_page %}
-    {% if paginator.previous_page == 1 %}
-    <a class="btn btn-default" href="{{ site.baseurl}}/index.html" class="previous">Newer</a>
-    {% else %}
-    <a class="btn btn-default" href="{{ site.baseurl}}/page{{ paginator.previous_page }}" class="previous">Newer</a>
-    {% endif %}
-    {% endif %}
-    <span class="page_number ">Page: {{ paginator.page }} of {{ paginator.total_pages }}</span>
-    {% if paginator.next_page %}
-    <a class="btn btn-default" href="{{ site.baseurl}}/page{{ paginator.next_page }}" class="next">Older</a>
-    {% endif %}
+    <div data-reveal="0" style="position:relative;margin-top:72px;border:2px solid var(--color-neutral-700);background:color-mix(in srgb,var(--color-text) 80%,transparent);box-shadow:0 0 60px color-mix(in srgb,var(--color-accent) 12%,transparent)">
+      <span style="position:absolute;top:-2px;left:-2px;width:18px;height:18px;border-top:2px solid var(--color-accent);border-left:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-top:2px solid var(--color-accent);border-right:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;bottom:-2px;left:-2px;width:18px;height:18px;border-bottom:2px solid var(--color-accent);border-left:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-bottom:2px solid var(--color-accent);border-right:2px solid var(--color-accent);pointer-events:none"></span>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:10px 16px;border-bottom:2px solid var(--color-neutral-700);font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">
+        <span style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-300)">[ claude :: checkout-service :: on-call ]</span>
+        <span style="display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-400)">
+          <span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 8px var(--color-accent);animation:none"></span>done // probe removed
+        </span>
+        <button class="bt-hover-6" type="button" data-bt-click="0" style="margin-left:auto;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.08em;display:flex;gap:6px;align-items:center;background:transparent;color:var(--color-accent-400);border:1px solid var(--color-accent);padding:5px 10px;cursor:pointer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>Replay
+        </button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr))">
+        <div style="padding:24px;min-height:460px;display:flex;flex-direction:column;gap:14px;border-right:2px solid var(--color-neutral-700)">
+          <div style="border:1px solid var(--color-neutral-700);border-left:2px solid var(--color-bg);padding:14px 16px;font-size:15px;line-height:23px">
+            <span style="display:block;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-400);margin-bottom:6px">&gt; you</span>
+            Checkout is sometimes slow, and some orders do not complete. The logs show nothing. We cannot restart the service. Find the cause.
+          </div>
+          <bt-list style="display:contents">
+            <div class="agent-step" style="display:grid;grid-template-columns:14px 150px minmax(0,1fr);gap:10px;align-items:baseline;font-size:14px;line-height:21px;animation:bt-in .35s ease both">
+              <span style="width:8px;height:8px;background:var(--color-neutral-500);display:block;transform:translateY(-1px)"></span>
+              <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;color:var(--color-accent-400)">list_jvms</code>
+              <span style="color:var(--color-neutral-300)">Found CheckoutServiceApp</span>
+            </div>
+
+            <div class="agent-step" style="display:grid;grid-template-columns:14px 150px minmax(0,1fr);gap:10px;align-items:baseline;font-size:14px;line-height:21px;animation:bt-in .35s ease both">
+              <span style="width:8px;height:8px;background:var(--color-neutral-500);display:block;transform:translateY(-1px)"></span>
+              <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;color:var(--color-accent-400)">Read</code>
+              <span style="color:var(--color-neutral-300)">PaymentClient and FraudScreen come from acme-sdk.jar, which has no source</span>
+            </div>
+
+            <div class="agent-step" style="display:grid;grid-template-columns:14px 150px minmax(0,1fr);gap:10px;align-items:baseline;font-size:14px;line-height:21px;animation:bt-in .35s ease both">
+              <span style="width:8px;height:8px;background:var(--color-neutral-500);display:block;transform:translateY(-1px)"></span>
+              <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;color:var(--color-accent-400)">deploy_script</code>
+              <span style="color:var(--color-neutral-300)">Measure FraudScreen.screen (return, error) and PaymentClient.authorize. Report every 5 s.</span>
+            </div>
+
+            <div class="agent-step" style="display:grid;grid-template-columns:14px 150px minmax(0,1fr);gap:10px;align-items:baseline;font-size:14px;line-height:21px;animation:bt-in .35s ease both">
+              <span style="width:8px;height:8px;background:var(--color-neutral-500);display:block;transform:translateY(-1px)"></span>
+              <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;color:var(--color-accent-400)">read_probe_output</code>
+              <span style="color:var(--color-neutral-300)">wait_seconds: 12</span>
+            </div>
+
+            <div class="agent-step" style="display:grid;grid-template-columns:14px 150px minmax(0,1fr);gap:10px;align-items:baseline;font-size:14px;line-height:21px;animation:bt-in .35s ease both">
+              <span style="width:8px;height:8px;background:var(--color-neutral-500);display:block;transform:translateY(-1px)"></span>
+              <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;color:var(--color-accent-400)">exit_probe</code>
+              <span style="color:var(--color-neutral-300)">Probe removed</span>
+            </div>
+
+            <div class="agent-step" style="display:grid;grid-template-columns:14px 150px minmax(0,1fr);gap:10px;align-items:baseline;font-size:14px;line-height:21px;animation:bt-in .35s ease both">
+              <span style="width:8px;height:8px;background:var(--color-neutral-500);display:block;transform:translateY(-1px)"></span>
+              <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;color:var(--color-accent-400)">list_probes</code>
+              <span style="color:var(--color-neutral-300)">No probes running</span>
+            </div>
+          </bt-list>
+
+            <div style="margin-top:auto;border:1px solid var(--color-accent);background:color-mix(in srgb,var(--color-accent) 10%,transparent);padding:14px 16px;font-size:15px;line-height:23px;animation:bt-in .4s ease both">
+              <span style="display:block;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:6px">&gt; agent // diagnosis</span>
+              <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px">FraudScreen.screen</code> calls threw <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px">RiskServiceException</code> : 22 of 104 (21%). <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px">checkout</code> swallows it, so those orders are dropped without a log line. <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px">PaymentClient.authorize</code>: 129 ms average, 449 ms worst. Probe removed.
+            </div>
+
+        </div>
+        <div style="background:color-mix(in oklch,var(--color-text),black 45%);padding:24px;min-height:460px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;line-height:22px;overflow-x:auto">
+          <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-500);margin-bottom:12px">// live probe output</div>
+          <bt-list style="display:contents">
+            <div style="white-space:pre;color:var(--color-bg);animation:bt-in .25s ease both">$ list_jvms</div>
+
+            <div style="white-space:pre;color:var(--color-neutral-300);animation:bt-in .25s ease both">48211  CheckoutServiceApp</div>
+
+            <div style="white-space:pre;color:var(--color-bg);animation:bt-in .25s ease both">$ deploy_script CheckoutProbe.java → 48211</div>
+
+            <div style="white-space:pre;color:var(--color-neutral-500);animation:bt-in .25s ease both">probe attached, @OnTimer(5000)</div>
+
+            <div style="white-space:pre;color:var(--color-bg);animation:bt-in .25s ease both">$ read_probe_output --wait 12</div>
+
+            <div style="white-space:pre;color:var(--color-neutral-300);animation:bt-in .25s ease both">=== checkout probe ===</div>
+
+            <div style="white-space:pre;color:var(--color-accent-400);animation:bt-in .25s ease both">FraudScreen.screen        104 calls  22 errors (21%)</div>
+
+            <div style="white-space:pre;color:var(--color-neutral-300);animation:bt-in .25s ease both">  RiskServiceException, swallowed by checkout</div>
+
+            <div style="white-space:pre;color:var(--color-neutral-300);animation:bt-in .25s ease both">  avg 15 ms   max 41 ms</div>
+
+            <div style="white-space:pre;color:var(--color-accent-400);animation:bt-in .25s ease both">PaymentClient.authorize    76 calls</div>
+
+            <div style="white-space:pre;color:var(--color-neutral-300);animation:bt-in .25s ease both">  avg 129 ms  max 449 ms</div>
+
+            <div style="white-space:pre;color:var(--color-bg);animation:bt-in .25s ease both">$ exit_probe</div>
+
+            <div style="white-space:pre;color:var(--color-neutral-500);animation:bt-in .25s ease both">probe removed; no overhead remains</div>
+
+            <div style="white-space:pre;color:var(--color-bg);animation:bt-in .25s ease both">$ list_probes</div>
+
+            <div style="white-space:pre;color:var(--color-neutral-500);animation:bt-in .25s ease both">(none)</div>
+          </bt-list>
+          <span style="display:inline-block;width:9px;height:17px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent);vertical-align:middle;animation:bt-blink 1s steps(1) infinite"></span>
+        </div>
+      </div>
+    </div>
+    <p style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:20px;margin:12px 0 0;color:var(--color-neutral-500)">// Condensed from a recorded Claude Code session (<a href="https://github.com/btraceio/btrace/tree/develop/demos/06-ai-assistant">demos/06-ai-assistant</a>). The vendor SDK has no source, so only a live probe could find the cause.</p>
+
+    <div id="install-plugin" data-reveal="1" style="scroll-margin-top:96px;margin-top:56px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:24px 48px;align-items:start">
+      <div>
+        <span style="display:flex;align-items:center;gap:10px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>Install the agent plugin</span>
+        <p style="font-size:16px;line-height:26px;margin:0;max-width:44ch;color:var(--color-neutral-300)">Ships from <a href="https://github.com/btraceio/agent-plugins">btraceio/agent-plugins</a>. Needs JBang and JDK 11+ on the machine that runs the target JVM.</p>
+      </div>
+      <div>
+        <div style="display:flex;border:1px solid var(--color-neutral-700);border-bottom:0;width:fit-content"><bt-list style="display:contents"><button type="button" aria-pressed="true" data-bt-click="1" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:9px 16px;border:0;border-right:1px solid var(--color-neutral-700);cursor:pointer;background:var(--color-accent);color:var(--color-bg)">Claude Code</button><button type="button" aria-pressed="false" data-bt-click="2" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:9px 16px;border:0;border-right:1px solid var(--color-neutral-700);cursor:pointer;background:transparent;color:var(--color-neutral-300)">Codex</button><button type="button" aria-pressed="false" data-bt-click="3" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:9px 16px;border:0;border-right:1px solid var(--color-neutral-700);cursor:pointer;background:transparent;color:var(--color-neutral-300)">Pi</button></bt-list></div>
+        <div style="background:color-mix(in oklch,var(--color-text),black 45%);border:1px solid var(--color-neutral-700);border-left:2px solid var(--color-accent);padding:16px 16px 16px 20px;display:flex;gap:16px;align-items:flex-start">
+          <div style="flex:1;min-width:0;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;line-height:24px;overflow-x:auto">
+            <bt-list style="display:contents">
+              <div style="white-space:pre"><span style="color:var(--color-accent-400)">› </span>/plugin marketplace add btraceio/agent-plugins</div>
+
+              <div style="white-space:pre"><span style="color:var(--color-accent-400)">› </span>/plugin install btrace-observability@btraceio-agent-plugins</div>
+            </bt-list>
+          </div>
+          <button class="bt-hover-7" type="button" aria-live="polite" data-bt-click="4" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;background:transparent;color:var(--color-bg);border:1px solid var(--color-neutral-600);padding:6px 10px;cursor:pointer">Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="start" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px)">
+    <div style="height:2px;background:var(--color-neutral-800)"></div>
+    <div style="padding:96px 0">
+      <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:48px"><div><span style="display:flex;align-items:center;gap:10px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>02 // Start here</span><h2 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">What do you want to trace?</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">Select your role. The page then shows three first steps for that role and filters the tutorial list.</p></div>
+      <div data-reveal="1" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px">
+        <bt-list style="display:contents">
+          <button class="bt-hover-8" type="button" aria-pressed="true" data-bt-click="5" style="font:inherit;text-align:left;cursor:pointer;border:2px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 14%, transparent);color:var(--color-bg);padding:18px 20px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;color:var(--color-accent-400)">[01]</span>
+            <span style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(20px,2vw,26px);line-height:1">SRE / ops</span>
+          </button>
+
+          <button class="bt-hover-8" type="button" aria-pressed="false" data-bt-click="6" style="font:inherit;text-align:left;cursor:pointer;border:2px solid var(--color-neutral-800);background:transparent;color:var(--color-bg);padding:18px 20px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;color:var(--color-accent-400)">[02]</span>
+            <span style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(20px,2vw,26px);line-height:1">AI / LLM builders</span>
+          </button>
+
+          <button class="bt-hover-8" type="button" aria-pressed="false" data-bt-click="7" style="font:inherit;text-align:left;cursor:pointer;border:2px solid var(--color-neutral-800);background:transparent;color:var(--color-bg);padding:18px 20px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;color:var(--color-accent-400)">[03]</span>
+            <span style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(20px,2vw,26px);line-height:1">Coding-agent users</span>
+          </button>
+        </bt-list>
+      </div>
+      <p style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-weight:600;text-transform:none;font-size:clamp(22px,2.2vw,30px);line-height:1.2;max-width:34ch;margin:40px 0 28px"><span style="color:var(--color-accent);font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:600">&gt; </span>Find the cause on a live JVM. Then remove all probes.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px">
+        <bt-list style="display:contents">
+          <a class="bt-hover-9" href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/01-first-trace-in-2-minutes.md" style="display:flex;flex-direction:column;gap:10px;padding:22px;color:var(--color-bg);text-decoration:none;border:2px solid var(--color-neutral-800);background:color-mix(in srgb,var(--color-text) 70%,transparent);animation:bt-in .4s ease both">
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent-400)">Tutorial 01 · ~5 min</span>
+            <span style="font-size:21px;font-weight:700;line-height:1.25">Your First Trace in 2 Minutes</span>
+            <span style="font-size:15px;line-height:24px;color:var(--color-neutral-400)">Find a latency bug and a swallowed exception in a live JVM with oneliners.</span>
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-top:auto;color:var(--color-accent-400)">Open →</span>
+          </a>
+
+          <a class="bt-hover-9" href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/12-production-safe-attach.md" style="display:flex;flex-direction:column;gap:10px;padding:22px;color:var(--color-bg);text-decoration:none;border:2px solid var(--color-neutral-800);background:color-mix(in srgb,var(--color-text) 70%,transparent);animation:bt-in .4s ease both">
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent-400)">Tutorial 12 · ~10 min</span>
+            <span style="font-size:21px;font-weight:700;line-height:1.25">Attach to Production Without Fear</span>
+            <span style="font-size:15px;line-height:24px;color:var(--color-neutral-400)">Prepare the JVM, check it with btrace doctor, attach, and make sure that no probe remains.</span>
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-top:auto;color:var(--color-accent-400)">Open →</span>
+          </a>
+
+          <a class="bt-hover-9" href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/09-kubernetes-sidecar.md" style="display:flex;flex-direction:column;gap:10px;padding:22px;color:var(--color-bg);text-decoration:none;border:2px solid var(--color-neutral-800);background:color-mix(in srgb,var(--color-text) 70%,transparent);animation:bt-in .4s ease both">
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent-400)">Tutorial 09 · ~15 min</span>
+            <span style="font-size:21px;font-weight:700;line-height:1.25">BTrace in Kubernetes, the Sidecar Way</span>
+            <span style="font-size:15px;line-height:24px;color:var(--color-neutral-400)">Three container variants; attach across a container boundary.</span>
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-top:auto;color:var(--color-accent-400)">Open →</span>
+          </a>
+        </bt-list>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="plugins" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px)">
+    <div style="height:2px;background:var(--color-neutral-800)"></div>
+    <div style="padding:96px 0">
+      <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:48px"><div><span style="display:flex;align-items:center;gap:10px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>03 // Agent plugins</span><h2 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">One marketplace. Claude Code, Codex, Pi.</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">Five plugins from one repository. Each works the same way in all three hosts.</p></div>
+      <div data-reveal="1" style="border-top:2px solid var(--color-neutral-700)">
+        <bt-list style="display:contents">
+          <a class="plugin-row bt-hover-10" href="https://github.com/btraceio/agent-plugins/tree/main/plugins/btrace-observability" style="display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr) auto;gap:8px 32px;align-items:baseline;padding:20px 12px 20px 0;border-bottom:2px solid var(--color-neutral-800);color:var(--color-bg);text-decoration:none">
+            <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;background:var(--color-accent);display:block"></span>btrace-observability</code>
+            <span style="font-size:16px;line-height:25px;color:var(--color-neutral-300)">Skills that find faults in Java applications with BTrace probes.</span>
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span>
+          </a>
+
+          <a class="plugin-row bt-hover-10" href="https://github.com/btraceio/agent-plugins/tree/main/plugins/jfr-analyzer" style="display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr) auto;gap:8px 32px;align-items:baseline;padding:20px 12px 20px 0;border-bottom:2px solid var(--color-neutral-800);color:var(--color-bg);text-decoration:none">
+            <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;background:var(--color-neutral-600);display:block"></span>jfr-analyzer</code>
+            <span style="font-size:16px;line-height:25px;color:var(--color-neutral-300)">Analyzes JFR profiles. Can compare the results with live BTrace probes.</span>
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span>
+          </a>
+
+          <a class="plugin-row bt-hover-10" href="https://github.com/btraceio/agent-plugins/tree/main/plugins/jafar-perf" style="display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr) auto;gap:8px 32px;align-items:baseline;padding:20px 12px 20px 0;border-bottom:2px solid var(--color-neutral-800);color:var(--color-bg);text-decoration:none">
+            <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;background:var(--color-neutral-600);display:block"></span>jafar-perf</code>
+            <span style="font-size:16px;line-height:25px;color:var(--color-neutral-300)">Procedures for JVM performance analysis on the Jafar MCP server: CPU, latency, GC and memory.</span>
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span>
+          </a>
+
+          <a class="plugin-row bt-hover-10" href="https://github.com/btraceio/agent-plugins/tree/main/plugins/perf-engineer" style="display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr) auto;gap:8px 32px;align-items:baseline;padding:20px 12px 20px 0;border-bottom:2px solid var(--color-neutral-800);color:var(--color-bg);text-decoration:none">
+            <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;background:var(--color-neutral-600);display:block"></span>perf-engineer</code>
+            <span style="font-size:16px;line-height:25px;color:var(--color-neutral-300)">Finds and verifies optimizations with JFR, BTrace and JMH.</span>
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span>
+          </a>
+
+          <a class="plugin-row bt-hover-10" href="https://github.com/btraceio/agent-plugins/tree/main/plugins/btrace-development" style="display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr) auto;gap:8px 32px;align-items:baseline;padding:20px 12px 20px 0;border-bottom:2px solid var(--color-neutral-800);color:var(--color-bg);text-decoration:none">
+            <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;background:var(--color-neutral-600);display:block"></span>btrace-development</code>
+            <span style="font-size:16px;line-height:25px;color:var(--color-neutral-300)">Rules and build instructions for work on BTrace itself.</span>
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span>
+          </a>
+        </bt-list>
+      </div>
+      <div data-reveal="2" style="margin-top:32px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400);margin-right:8px">// btrace-observability skills</span>
+        <bt-list style="display:contents">
+          <span class="tag" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:5px 10px;border:1px solid var(--color-neutral-700);color:var(--color-neutral-300)">btrace-latency-analysis</span>
+
+          <span class="tag" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:5px 10px;border:1px solid var(--color-neutral-700);color:var(--color-neutral-300)">btrace-failure-analysis</span>
+
+          <span class="tag" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:5px 10px;border:1px solid var(--color-neutral-700);color:var(--color-neutral-300)">btrace-oneliner-triage</span>
+
+          <span class="tag" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:5px 10px;border:1px solid var(--color-neutral-700);color:var(--color-neutral-300)">btrace-endpoint-diagnostics</span>
+
+          <span class="tag" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:5px 10px;border:1px solid var(--color-neutral-700);color:var(--color-neutral-300)">btrace-probe-lifecycle</span>
+
+          <span class="tag" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:5px 10px;border:1px solid var(--color-neutral-700);color:var(--color-neutral-300)">btrace-data-safety</span>
+
+          <span class="tag" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:5px 10px;border:1px solid var(--color-neutral-700);color:var(--color-neutral-300)">btrace-runtime-access</span>
+
+          <span class="tag" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:5px 10px;border:1px solid var(--color-neutral-700);color:var(--color-neutral-300)">btrace-startup-and-packaging</span>
+
+          <span class="tag" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:5px 10px;border:1px solid var(--color-neutral-700);color:var(--color-neutral-300)">btrace-mcp-operations</span>
+
+          <span class="tag" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:5px 10px;border:1px solid var(--color-neutral-700);color:var(--color-neutral-300)">btrace-legacy-libs-migration</span>
+        </bt-list>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="oneliner" style="scroll-margin-top:72px;background:color-mix(in srgb,var(--color-text) 60%,black 40%);border-top:2px solid var(--color-neutral-800);border-bottom:2px solid var(--color-neutral-800)">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-top:96px;padding-bottom:96px">
+    <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:48px"><div><span style="display:flex;align-items:center;gap:10px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>04 // Oneliners</span><h2 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">No file. No compile.</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">One command attaches to a live JVM and prints the result. Change the matcher and run the command again. Use the builder below to make a command.</p></div>
+    <div data-reveal="1" style="position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));border:2px solid var(--color-neutral-700);background:var(--color-text)">
+      <span style="position:absolute;top:-2px;left:-2px;width:18px;height:18px;border-top:2px solid var(--color-accent);border-left:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-top:2px solid var(--color-accent);border-right:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;bottom:-2px;left:-2px;width:18px;height:18px;border-bottom:2px solid var(--color-accent);border-left:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-bottom:2px solid var(--color-accent);border-right:2px solid var(--color-accent);pointer-events:none"></span>
+      <div style="padding:24px;display:flex;flex-direction:column;gap:22px;border-right:2px solid var(--color-neutral-700)">
+        <div>
+          <span style="display:block;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400);margin-bottom:8px">// start from a question</span>
+          <div style="display:grid;gap:6px">
+            <bt-list style="display:contents">
+              <button class="bt-hover-11" type="button" aria-pressed="false" data-bt-click="8" style="font:inherit;font-size:15px;text-align:left;cursor:pointer;padding:10px 12px;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-bg);display:flex;justify-content:space-between;gap:12px">How long does each call take?<span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span></button>
+
+              <button class="bt-hover-11" type="button" aria-pressed="true" data-bt-click="9" style="font:inherit;font-size:15px;text-align:left;cursor:pointer;padding:10px 12px;border:1px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 16%, transparent);color:var(--color-bg);display:flex;justify-content:space-between;gap:12px">Which calls are slower than 200 ms?<span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span></button>
+
+              <button class="bt-hover-11" type="button" aria-pressed="false" data-bt-click="10" style="font:inherit;font-size:15px;text-align:left;cursor:pointer;padding:10px 12px;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-bg);display:flex;justify-content:space-between;gap:12px">Which method throws an exception, and where?<span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span></button>
+            </bt-list>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px">
+          <label class="field" style="display:flex;flex-direction:column;gap:6px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400)">Class<input class="input" value="OrderService" data-bt-change="11" spellcheck="false" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-transform:none;letter-spacing:0;background:color-mix(in oklch,var(--color-text),black 45%);color:var(--color-bg);border-color:var(--color-neutral-700)"></label>
+          <label class="field" style="display:flex;flex-direction:column;gap:6px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400)">Method<input class="input" value="*" data-bt-change="12" spellcheck="false" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-transform:none;letter-spacing:0;background:color-mix(in oklch,var(--color-text),black 45%);color:var(--color-bg);border-color:var(--color-neutral-700)"></label>
+        </div>
+        <div>
+          <span style="display:block;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400);margin-bottom:8px">Location</span>
+          <div class="seg" style="border-color:var(--color-neutral-700)">
+            <bt-list style="display:contents">
+              <label class="seg-opt" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;border-color:var(--color-neutral-700)"><input type="radio" name="bt-loc" data-bt-change="13" style="position:absolute;opacity:0;width:0;height:0">@entry</label>
+
+              <label class="seg-opt" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;border-color:var(--color-neutral-700)"><input type="radio" name="bt-loc" checked data-bt-change="14" style="position:absolute;opacity:0;width:0;height:0">@return</label>
+
+              <label class="seg-opt" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;border-color:var(--color-neutral-700)"><input type="radio" name="bt-loc" data-bt-change="15" style="position:absolute;opacity:0;width:0;height:0">@error</label>
+            </bt-list>
+          </div>
+        </div>
+        <div style="opacity:1">
+          <div style="display:flex;justify-content:space-between;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400);margin-bottom:8px"><span>if duration &gt;</span><span style="color:var(--color-accent-400)">200 ms</span></div>
+          <input aria-label="Minimum duration in milliseconds" type="range" min="0" max="1000" step="50" value="200" data-bt-change="16" style="width:100%;accent-color:var(--color-accent)">
+        </div>
+        <div>
+          <span style="display:block;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400);margin-bottom:8px">Print</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <bt-list style="display:contents">
+              <button type="button" aria-pressed="true" data-bt-click="17" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;padding:6px 10px;cursor:pointer;border:1px solid var(--color-accent);background:var(--color-accent);color:var(--color-bg);opacity:1">method</button>
+
+              <button type="button" aria-pressed="false" data-bt-click="18" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;padding:6px 10px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300);opacity:1">args</button>
+
+              <button type="button" aria-pressed="true" data-bt-click="19" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;padding:6px 10px;cursor:pointer;border:1px solid var(--color-accent);background:var(--color-accent);color:var(--color-bg);opacity:1">duration</button>
+
+              <button type="button" aria-pressed="false" data-bt-click="20" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;padding:6px 10px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300);opacity:1">return</button>
+
+              <button type="button" aria-pressed="false" data-bt-click="21" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;padding:6px 10px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300);opacity:1">stack</button>
+            </bt-list>
+          </div>
+        </div>
+      </div>
+      <div style="background:color-mix(in oklch,var(--color-text),black 45%);display:flex;flex-direction:column;min-width:0">
+        <div style="padding:24px;border-bottom:1px solid var(--color-neutral-800)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-500)">// command</span>
+            <button class="bt-hover-12" type="button" aria-live="polite" data-bt-click="22" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;background:transparent;color:var(--color-bg);border:1px solid var(--color-neutral-600);padding:6px 10px;cursor:pointer">Copy</button>
+          </div>
+          <div style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;line-height:25px;word-break:break-word"><span style="color:var(--color-accent)">$ </span>btrace -n &#39;<span style="color:var(--color-bg)">OrderService::*</span> <span style="color:var(--color-accent-400)">@return</span><span style="color:var(--color-neutral-300)"> if duration&gt;200ms</span> { print method, duration }&#39; &lt;PID&gt;</div>
+        </div>
+        <div style="padding:24px;flex:1;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;line-height:22px;overflow-x:auto;min-height:240px">
+          <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-500);margin-bottom:12px">// simulated sample output</div>
+          <bt-list style="display:contents">
+            <div style="white-space:pre;color:var(--color-bg)">chargeCard</div>
+
+            <div style="white-space:pre;color:var(--color-accent-400)">execution time: 345 ms</div>
+
+            <div style="white-space:pre;color:var(--color-neutral-300)"> </div>
+
+            <div style="white-space:pre;color:var(--color-bg)">processOrder</div>
+
+            <div style="white-space:pre;color:var(--color-accent-400)">execution time: 394 ms</div>
+          </bt-list>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px 28px;margin-top:20px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em">
+      <a href="https://github.com/btraceio/btrace/blob/develop/docs/OnelinerGuide.md">Oneliner Guide →</a>
+      <a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/02-oneliner-to-script.md">Oneliner to script: the flat DSL →</a>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="ai" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-top:96px;padding-bottom:96px">
+    <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:48px"><div><span style="display:flex;align-items:center;gap:10px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>05 // AI workloads</span><h2 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">See your model calls from inside the JVM.</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">Three bundled extensions measure LLM calls, RAG retrieval and on-device inference. No code change, no restart.</p></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px">
+      <article class="bt-hover-13" data-reveal="0" style="position:relative;padding:24px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--color-neutral-800);background:color-mix(in srgb,var(--color-text) 70%,transparent)"><code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:var(--color-accent-400)">&gt; btrace-llm-trace</code><h3 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:22px;line-height:1.05;margin:0">Tokens, latency, cost, budgets</h3><p style="font-size:15px;line-height:24px;margin:0;color:var(--color-neutral-300)">Token counts and estimated cost per model. Add btrace-contracts to flag calls over a latency budget.</p><pre style="margin:8px 0 0;background:color-mix(in oklch,var(--color-text),black 45%);color:var(--color-neutral-300);padding:16px;border-left:2px solid var(--color-accent);font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:20px;overflow-x:auto">Model: gpt-4o-mini (openai)
+  Calls: 20
+  Tokens: 2571 in / 5013 out
+  Latency: avg 464ms, max 3635ms
+  Est. cost: $0.0034
+<span style="color:var(--color-accent-400)">VIOLATIONS: 1 (5%)
+Latency 3635ms exceeded budget 500ms</span></pre><a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/07-llm-observability.md" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;margin-top:auto;text-transform:uppercase;letter-spacing:.06em">Tutorial 07 →</a></article>
+      <article class="bt-hover-14" data-reveal="1" style="position:relative;padding:24px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--color-neutral-800);background:color-mix(in srgb,var(--color-text) 70%,transparent)"><code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:var(--color-accent-400)">&gt; btrace-rag-quality</code><h3 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:22px;line-height:1.05;margin:0">Retrieval quality</h3><p style="font-size:15px;line-height:24px;margin:0;color:var(--color-neutral-300)">Vector store queries, similarity scores and empty retrievals, which the app does not log.</p><pre style="margin:8px 0 0;background:color-mix(in oklch,var(--color-text),black 45%);color:var(--color-neutral-300);padding:16px;border-left:2px solid var(--color-accent);font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:20px;overflow-x:auto">Source: vectorstore
+  <span style="color:var(--color-accent-400)">Queries: 18 (3 empty, 16%)</span>
+  Results: 75 total (avg 4/query)
+  Similarity (top): avg 0.730
+  Latency: avg 53ms, max 82ms
+  Context: 14610 tokens</pre><a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/11-ai-workload-observability.md" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;margin-top:auto;text-transform:uppercase;letter-spacing:.06em">Tutorial 11 →</a></article>
+      <article class="bt-hover-15" data-reveal="2" style="position:relative;padding:24px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--color-neutral-800);background:color-mix(in srgb,var(--color-text) 70%,transparent)"><code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:var(--color-accent-400)">&gt; btrace-gpu-bridge</code><h3 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:22px;line-height:1.05;margin:0">On-device inference</h3><p style="font-size:15px;line-height:24px;margin:0;color:var(--color-neutral-300)">Inference latency and throughput for ONNX Runtime, DJL and TensorFlow Java.</p><pre style="margin:8px 0 0;background:color-mix(in oklch,var(--color-text),black 45%);color:var(--color-neutral-300);padding:16px;border-left:2px solid var(--color-accent);font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:20px;overflow-x:auto">Model: onnx/embed-small
+  Inferences: 17
+  Latency: avg 13ms, max 23ms
+  Batch size: avg 1
+  <span style="color:var(--color-accent-400)">Throughput: 74.6 items/sec</span></pre><a href="https://github.com/btraceio/btrace/blob/develop/docs/BTraceTutorial.md#123-gpu-and-inference-observability-btrace-gpu-bridge" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;margin-top:auto;text-transform:uppercase;letter-spacing:.06em">Lesson 12.3 →</a></article>
+    </div>
+    <div data-reveal="0" style="margin-top:72px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:24px 72px;align-items:start">
+      <div>
+        <span style="display:flex;align-items:center;gap:10px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>Extensions</span>
+        <h3 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:30px;line-height:1;margin:0">Eight bundled extensions. You decide what each may do.</h3>
+        <p style="font-size:15px;line-height:24px;margin:16px 0 0;color:var(--color-neutral-300)">Extensions replace <code style="color:var(--color-accent-400)">libs=</code> profiles and the Aggregations API. Each declares the permissions it needs, and you grant them on the agent side. <code style="color:var(--color-accent-400)">btrace -le</code> explains why an extension is blocked.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:12px 24px;margin-top:16px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em">
+          <a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/04-extensions-and-permissions.md">Permissions →</a>
+          <a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/06-write-your-own-extension.md">Write your own →</a>
+        </div>
+      </div>
+      <div style="border-top:2px solid var(--color-neutral-700)">
+        <bt-list style="display:contents">
+          <div style="display:grid;grid-template-columns:minmax(0,180px) 1fr;gap:16px;padding:14px 0;border-bottom:2px solid var(--color-neutral-800);align-items:baseline">
+            <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:var(--color-accent-400)">btrace-metrics</code>
+            <span style="font-size:15px;line-height:23px;color:var(--color-neutral-300)">Latency histograms and stats: p50, p95, p99.</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:minmax(0,180px) 1fr;gap:16px;padding:14px 0;border-bottom:2px solid var(--color-neutral-800);align-items:baseline">
+            <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:var(--color-accent-400)">btrace-contracts</code>
+            <span style="font-size:15px;line-height:23px;color:var(--color-neutral-300)">Latency budgets, call-rate limits, assertions and tagged path profiles.</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:minmax(0,180px) 1fr;gap:16px;padding:14px 0;border-bottom:2px solid var(--color-neutral-800);align-items:baseline">
+            <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:var(--color-accent-400)">btrace-otel</code>
+            <span style="font-size:15px;line-height:23px;color:var(--color-neutral-300)">Sends spans, counters and gauges to an OTLP/HTTP collector.</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:minmax(0,180px) 1fr;gap:16px;padding:14px 0;border-bottom:2px solid var(--color-neutral-800);align-items:baseline">
+            <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:var(--color-accent-400)">btrace-statsd</code>
+            <span style="font-size:15px;line-height:23px;color:var(--color-neutral-300)">Sends metrics to a StatsD endpoint.</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:minmax(0,180px) 1fr;gap:16px;padding:14px 0;border-bottom:2px solid var(--color-neutral-800);align-items:baseline">
+            <code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:var(--color-accent-400)">btrace-utils</code>
+            <span style="font-size:15px;line-height:23px;color:var(--color-neutral-300)">Common helper functions for probes.</span>
+          </div>
+        </bt-list>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="production" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px)">
+    <div style="height:2px;background:var(--color-neutral-800)"></div>
+    <div style="padding:96px 0">
+      <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:56px"><div><span style="display:flex;align-items:center;gap:10px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>06 // Production</span><h2 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">Attach safely to production JVMs.</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">Check the JVM before you load a probe. When the client detaches, the probe has no cost.</p></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px">
+        <div data-reveal="0" style="position:relative;padding:28px 24px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--color-neutral-800);background:color-mix(in oklch,var(--color-text),black 45%)"><span style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:56px;line-height:1;color:var(--color-accent);text-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 60%,transparent)">01</span><h3 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:22px;margin:0">Prepare</h3><code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400);border:1px solid var(--color-neutral-700);padding:8px 10px;overflow-x:auto;white-space:nowrap">-javaagent:btrace.jar=port=0</code><p style="font-size:15px;line-height:24px;margin:0;color:var(--color-neutral-300)">Start the JVM in prepared mode. It listens on localhost only, requires a token, and instruments nothing.</p></div>
+        <div data-reveal="1" style="position:relative;padding:28px 24px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--color-neutral-800);background:color-mix(in oklch,var(--color-text),black 45%)"><span style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:56px;line-height:1;color:var(--color-accent);text-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 60%,transparent)">02</span><h3 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:22px;margin:0">Check</h3><code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400);border:1px solid var(--color-neutral-700);padding:8px 10px;overflow-x:auto;white-space:nowrap">btrace doctor &lt;pid&gt;</code><p style="font-size:15px;line-height:24px;margin:0;color:var(--color-neutral-300)">Reports whether the JVM is ready, with a scriptable exit code. Loads nothing.</p></div>
+        <div data-reveal="2" style="position:relative;padding:28px 24px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--color-neutral-800);background:color-mix(in oklch,var(--color-text),black 45%)"><span style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:56px;line-height:1;color:var(--color-accent);text-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 60%,transparent)">03</span><h3 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:22px;margin:0">Attach and detach</h3><code style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400);border:1px solid var(--color-neutral-700);padding:8px 10px;overflow-x:auto;white-space:nowrap">btrace &lt;pid&gt; HotPathProbe.java</code><p style="font-size:15px;line-height:24px;margin:0;color:var(--color-neutral-300)">The client finds the endpoint and token by itself. On exit, the original bytecode is restored.</p></div>
+      </div>
+      <div data-reveal="1" style="position:relative;margin-top:24px;border:2px solid var(--color-neutral-700);background:color-mix(in oklch,var(--color-text),black 45%)">
+        <span style="position:absolute;top:-2px;left:-2px;width:18px;height:18px;border-top:2px solid var(--color-accent);border-left:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-top:2px solid var(--color-accent);border-right:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;bottom:-2px;left:-2px;width:18px;height:18px;border-bottom:2px solid var(--color-accent);border-left:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-bottom:2px solid var(--color-accent);border-right:2px solid var(--color-accent);pointer-events:none"></span>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;border-bottom:2px solid var(--color-neutral-700)">
+          <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400);margin-right:auto">// btrace doctor, two JVMs</span>
+          <bt-list style="display:contents">
+            <button type="button" aria-pressed="true" data-bt-click="23" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:6px 12px;cursor:pointer;border:1px solid var(--color-accent);background:var(--color-accent);color:var(--color-bg)">Prepared JVM</button>
+
+            <button type="button" aria-pressed="false" data-bt-click="24" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:6px 12px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300)">Plain JVM</button>
+          </bt-list>
+        </div>
+        <div style="padding:20px 16px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;line-height:23px;overflow-x:auto;min-height:150px">
+          <bt-list style="display:contents">
+            <div style="white-space:pre;color:var(--color-bg);animation:bt-in .3s ease both">$ btrace doctor 39936</div>
+
+            <div style="white-space:pre;color:var(--color-bg);animation:bt-in .3s ease both">Status: READY (exit 0)</div>
+
+            <div style="white-space:pre;color:var(--color-neutral-300);animation:bt-in .3s ease both">BTrace endpoint: ready at 127.0.0.1:58103</div>
+
+            <div style="white-space:pre;color:var(--color-neutral-300);animation:bt-in .3s ease both">Authentication: required; credential file readable</div>
+          </bt-list>
+        </div>
+      </div>
+      <a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/12-production-safe-attach.md" style="display:inline-block;margin-top:20px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em">Tutorial 12 // Attach to production without fear →</a>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="demos" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px)">
+    <div style="height:2px;background:var(--color-neutral-800)"></div>
+    <div style="padding:96px 0">
+      <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:48px"><div><span style="display:flex;align-items:center;gap:10px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>07 // Demos</span><h2 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">Seven demos, recorded from real runs.</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">Each includes the target app, the probe and a run.sh script. CI replays every demo on each push, so the output shown is tested.</p></div>
+      <div data-reveal="1" style="display:flex;flex-wrap:wrap-reverse;gap:0;border:2px solid var(--color-neutral-700)">
+        <div style="display:flex;flex-direction:column;flex:1 1 280px;min-width:0;border-right:2px solid var(--color-neutral-700)">
+          <bt-list style="display:contents">
+            <button class="bt-hover-16" type="button" aria-pressed="false" data-bt-click="25" style="font:inherit;text-align:left;cursor:pointer;border:0;border-bottom:1px solid var(--color-neutral-800);border-left:3px solid transparent;background:transparent;color:var(--color-bg);padding:14px 16px 14px 13px;display:grid;grid-template-columns:44px 1fr;gap:4px 8px">
+              <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-neutral-500)">[01]</span>
+              <span style="font-size:15px;font-weight:700;line-height:22px">Your first trace in one line</span>
+            </button>
+
+            <button class="bt-hover-16" type="button" aria-pressed="false" data-bt-click="26" style="font:inherit;text-align:left;cursor:pointer;border:0;border-bottom:1px solid var(--color-neutral-800);border-left:3px solid transparent;background:transparent;color:var(--color-bg);padding:14px 16px 14px 13px;display:grid;grid-template-columns:44px 1fr;gap:4px 8px">
+              <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-neutral-500)">[02]</span>
+              <span style="font-size:15px;font-weight:700;line-height:22px">Upgrade from 2.x</span>
+            </button>
+
+            <button class="bt-hover-16" type="button" aria-pressed="false" data-bt-click="27" style="font:inherit;text-align:left;cursor:pointer;border:0;border-bottom:1px solid var(--color-neutral-800);border-left:3px solid transparent;background:transparent;color:var(--color-bg);padding:14px 16px 14px 13px;display:grid;grid-template-columns:44px 1fr;gap:4px 8px">
+              <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-neutral-500)">[03]</span>
+              <span style="font-size:15px;font-weight:700;line-height:22px">Metrics and permissions</span>
+            </button>
+
+            <button class="bt-hover-16" type="button" aria-pressed="false" data-bt-click="28" style="font:inherit;text-align:left;cursor:pointer;border:0;border-bottom:1px solid var(--color-neutral-800);border-left:3px solid transparent;background:transparent;color:var(--color-bg);padding:14px 16px 14px 13px;display:grid;grid-template-columns:44px 1fr;gap:4px 8px">
+              <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-neutral-500)">[04]</span>
+              <span style="font-size:15px;font-weight:700;line-height:22px">LLM trace</span>
+            </button>
+
+            <button class="bt-hover-16" type="button" aria-pressed="false" data-bt-click="29" style="font:inherit;text-align:left;cursor:pointer;border:0;border-bottom:1px solid var(--color-neutral-800);border-left:3px solid transparent;background:transparent;color:var(--color-bg);padding:14px 16px 14px 13px;display:grid;grid-template-columns:44px 1fr;gap:4px 8px">
+              <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-neutral-500)">[05]</span>
+              <span style="font-size:15px;font-weight:700;line-height:22px">RAG and inference</span>
+            </button>
+
+            <button class="bt-hover-16" type="button" aria-pressed="true" data-bt-click="30" style="font:inherit;text-align:left;cursor:pointer;border:0;border-bottom:1px solid var(--color-neutral-800);border-left:3px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 12%, transparent);color:var(--color-bg);padding:14px 16px 14px 13px;display:grid;grid-template-columns:44px 1fr;gap:4px 8px">
+              <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent)">[06]</span>
+              <span style="font-size:15px;font-weight:700;line-height:22px">AI assistant</span>
+            </button>
+
+            <button class="bt-hover-16" type="button" aria-pressed="false" data-bt-click="31" style="font:inherit;text-align:left;cursor:pointer;border:0;border-bottom:1px solid var(--color-neutral-800);border-left:3px solid transparent;background:transparent;color:var(--color-bg);padding:14px 16px 14px 13px;display:grid;grid-template-columns:44px 1fr;gap:4px 8px">
+              <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-neutral-500)">[07]</span>
+              <span style="font-size:15px;font-weight:700;line-height:22px">Production-safe attach</span>
+            </button>
+          </bt-list>
+        </div>
+        <figure style="margin:0;flex:2 1 520px;min-width:0;background:color-mix(in oklch,var(--color-text),black 45%);display:flex;flex-direction:column">
+          <div style="width:100%;aspect-ratio:1640/880;background:color-mix(in oklch,var(--color-text),black 45%)">
+            <img src="media/06-ai-assistant.gif" loading="lazy" alt="AI assistant" style="display:block;width:100%;height:100%;object-fit:contain">
+          </div>
+          <figcaption style="display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between;align-items:baseline;padding:16px;border-top:1px solid var(--color-neutral-800);color:var(--color-neutral-300);font-size:14px;line-height:22px">
+            <span style="max-width:62ch">A coding agent finds why a checkout service drops orders and stalls inside a vendor SDK with no source.</span>
+            <a href="https://github.com/btraceio/btrace/tree/develop/demos/06-ai-assistant" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">./run.sh →</a>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="tutorials" style="scroll-margin-top:72px;background:color-mix(in srgb,var(--color-text) 60%,black 40%);border-top:2px solid var(--color-neutral-800);border-bottom:2px solid var(--color-neutral-800)">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-top:96px;padding-bottom:96px">
+    <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:40px"><div><span style="display:flex;align-items:center;gap:10px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>08 // Tutorials</span><h2 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">Short, practical tutorials.</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">Each uses the same demo app, shows the expected output after every command, and ends with cleanup.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px">
+      <bt-list style="display:contents">
+        <button class="bt-hover-17" type="button" aria-pressed="false" data-bt-click="32" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:8px 14px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300)">All <span style="opacity:.7">12</span></button>
+
+        <button class="bt-hover-17" type="button" aria-pressed="false" data-bt-click="33" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:8px 14px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300)">First steps <span style="opacity:.7">3</span></button>
+
+        <button class="bt-hover-17" type="button" aria-pressed="true" data-bt-click="34" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:8px 14px;cursor:pointer;border:1px solid var(--color-accent);background:var(--color-accent);color:var(--color-bg)">Production <span style="opacity:.7">3</span></button>
+
+        <button class="bt-hover-17" type="button" aria-pressed="false" data-bt-click="35" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:8px 14px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300)">AI workloads <span style="opacity:.7">2</span></button>
+
+        <button class="bt-hover-17" type="button" aria-pressed="false" data-bt-click="36" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:8px 14px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300)">Agents <span style="opacity:.7">1</span></button>
+
+        <button class="bt-hover-17" type="button" aria-pressed="false" data-bt-click="37" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:8px 14px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300)">Extend <span style="opacity:.7">3</span></button>
+
+        <button class="bt-hover-17" type="button" aria-pressed="false" data-bt-click="38" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:8px 14px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300)">Upgrade <span style="opacity:.7">2</span></button>
+      </bt-list>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr));column-gap:48px;border-top:2px solid var(--color-neutral-700)">
+      <bt-list style="display:contents">
+        <a class="bt-hover-18" href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/08-fat-agent.md" style="display:grid;grid-template-columns:48px 1fr auto;gap:4px 12px;padding:18px 0;border-bottom:1px solid var(--color-neutral-800);color:var(--color-bg);text-decoration:none;animation:bt-in .3s ease both">
+          <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400);padding-top:3px">[08]</span>
+          <span style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:17px;font-weight:700;line-height:23px">One JAR to Rule Them All</span>
+            <span style="font-size:14px;line-height:21px;color:var(--color-neutral-400)">Package BTrace plus an extension into a single -javaagent JAR.</span>
+          </span>
+          <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;white-space:nowrap;padding-top:3px;color:var(--color-neutral-400)">~15 min</span>
+        </a>
+
+        <a class="bt-hover-18" href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/09-kubernetes-sidecar.md" style="display:grid;grid-template-columns:48px 1fr auto;gap:4px 12px;padding:18px 0;border-bottom:1px solid var(--color-neutral-800);color:var(--color-bg);text-decoration:none;animation:bt-in .3s ease both">
+          <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400);padding-top:3px">[09]</span>
+          <span style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:17px;font-weight:700;line-height:23px">BTrace in Kubernetes, the Sidecar Way</span>
+            <span style="font-size:14px;line-height:21px;color:var(--color-neutral-400)">Three container variants; attach across a container boundary.</span>
+          </span>
+          <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;white-space:nowrap;padding-top:3px;color:var(--color-neutral-400)">~15 min</span>
+        </a>
+
+        <a class="bt-hover-18" href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/12-production-safe-attach.md" style="display:grid;grid-template-columns:48px 1fr auto;gap:4px 12px;padding:18px 0;border-bottom:1px solid var(--color-neutral-800);color:var(--color-bg);text-decoration:none;animation:bt-in .3s ease both">
+          <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400);padding-top:3px">[12]</span>
+          <span style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:17px;font-weight:700;line-height:23px">Attach to Production Without Fear</span>
+            <span style="font-size:14px;line-height:21px;color:var(--color-neutral-400)">Prepared mode, btrace doctor, no-flag attach, and nothing left behind.</span>
+          </span>
+          <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;white-space:nowrap;padding-top:3px;color:var(--color-neutral-400)">~10 min</span>
+        </a>
+      </bt-list>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="install" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-top:96px;padding-bottom:96px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:48px 72px;align-items:start">
+      <div data-reveal="0">
+        <span style="display:flex;align-items:center;gap:10px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>09 // Install</span>
+        <h2 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">One btrace.jar.</h2>
+        <p style="font-size:18px;line-height:28px;margin:24px 0 0;max-width:46ch;color:var(--color-neutral-300)">Replaces the three-jar layout. Runs on Java 8 to 27. Support for Java below 17 is deprecated and ends in 4.0.</p>
+      </div>
+      <div data-reveal="1">
+        <div style="display:flex;border:1px solid var(--color-neutral-700);border-bottom:0;width:fit-content"><bt-list style="display:contents"><button type="button" aria-pressed="true" data-bt-click="39" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:9px 16px;border:0;border-right:1px solid var(--color-neutral-700);cursor:pointer;background:var(--color-accent);color:var(--color-bg)">SDKMAN!</button><button type="button" aria-pressed="false" data-bt-click="40" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:9px 16px;border:0;border-right:1px solid var(--color-neutral-700);cursor:pointer;background:transparent;color:var(--color-neutral-300)">JBang</button><button type="button" aria-pressed="false" data-bt-click="41" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:9px 16px;border:0;border-right:1px solid var(--color-neutral-700);cursor:pointer;background:transparent;color:var(--color-neutral-300)">Docker</button></bt-list></div>
+        <div style="background:color-mix(in oklch,var(--color-text),black 45%);border:1px solid var(--color-neutral-700);border-left:2px solid var(--color-accent);padding:18px 16px 18px 20px;display:flex;gap:16px;align-items:center">
+          <code style="flex:1;min-width:0;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;overflow-x:auto;white-space:nowrap"><span style="color:var(--color-accent)">$ </span>sdk install btrace</code>
+          <button class="bt-hover-19" type="button" aria-live="polite" data-bt-click="42" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;background:transparent;color:var(--color-bg);border:1px solid var(--color-neutral-600);padding:6px 10px;cursor:pointer">Copy</button>
+        </div>
+        <div style="margin-top:32px;border-top:2px solid var(--color-neutral-800);padding-top:20px;display:grid;grid-template-columns:auto 1fr;gap:6px 20px;align-items:baseline">
+          <span class="tag" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;border:1px solid var(--color-accent);color:var(--color-accent-400)">FROM 2.x</span>
+          <p style="margin:0;font-size:15px;line-height:24px;color:var(--color-neutral-300)">Compiled probes need no change. Source scripts need a one-line import fix, which <code style="color:var(--color-accent-400)">scripts/migrate-btrace-script.sh</code> applies. <a href="https://github.com/btraceio/btrace/blob/develop/docs/Migration-2.x-to-3.0.md">Migration guide →</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="docs" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-bottom:96px">
+    <div style="height:2px;background:var(--color-neutral-800);margin-bottom:56px"></div>
+    <span style="display:flex;align-items:center;gap:10px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>10 // Docs and community</span>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:32px 40px">
+      <bt-list style="display:contents">
+        <div data-reveal="0" style="border-top:2px solid var(--color-accent);padding-top:14px">
+          <h3 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:16px;margin:0 0 12px">Learn</h3>
+          <div style="display:flex;flex-direction:column">
+            <bt-list style="display:contents">
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/blob/develop/docs/GettingStarted.md" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">Getting Started</a>
+
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/blob/develop/docs/OnelinerGuide.md" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">Oneliner Guide</a>
+
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/blob/develop/docs/BTraceTutorial.md" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">BTrace Tutorial</a>
+
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/blob/develop/docs/QuickReference.md" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">Quick Reference</a>
+            </bt-list>
+          </div>
+        </div>
+
+        <div data-reveal="1" style="border-top:2px solid var(--color-accent);padding-top:14px">
+          <h3 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:16px;margin:0 0 12px">Operate</h3>
+          <div style="display:flex;flex-direction:column">
+            <bt-list style="display:contents">
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/blob/develop/docs/Troubleshooting.md" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">Troubleshooting</a>
+
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/blob/develop/docs/FAQ.md" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">FAQ</a>
+
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/blob/develop/docs/JDKCompatibility.md" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">JDK Compatibility</a>
+
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/blob/develop/docs/PermissionPolicy.md" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">Permission Policy</a>
+            </bt-list>
+          </div>
+        </div>
+
+        <div data-reveal="2" style="border-top:2px solid var(--color-accent);padding-top:14px">
+          <h3 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:16px;margin:0 0 12px">Build on it</h3>
+          <div style="display:flex;flex-direction:column">
+            <bt-list style="display:contents">
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/blob/develop/docs/BTraceExtensionDevelopmentGuide.md" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">Extension Development Guide</a>
+
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/blob/develop/docs/MCPServer.md" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">MCP Server</a>
+
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/blob/develop/docs/Migration-2.x-to-3.0.md" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">Migration 2.x → 3.0</a>
+
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/tree/develop/btrace-dist/src/main/resources/samples" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">50+ sample scripts</a>
+            </bt-list>
+          </div>
+        </div>
+
+        <div data-reveal="3" style="border-top:2px solid var(--color-accent);padding-top:14px">
+          <h3 style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:16px;margin:0 0 12px">Community</h3>
+          <div style="display:flex;flex-direction:column">
+            <bt-list style="display:contents">
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/discussions" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">GitHub Discussions</a>
+
+              <a class="bt-hover-20" href="https://github.com/btraceio/btrace/issues" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">Issues</a>
+
+              <a class="bt-hover-20" href="http://btrace.slack.com/" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">Slack</a>
+
+              <a class="bt-hover-20" href="https://gitter.im/btraceio/btrace" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)">Gitter</a>
+            </bt-list>
+          </div>
+        </div>
+      </bt-list>
+    </div>
+  </div>
+</section>
+
+<section style="position:relative;overflow:hidden;background:var(--color-accent);color:var(--color-bg)">
+  <div aria-hidden="true" style="position:absolute;inset:0;background-image:linear-gradient(color-mix(in srgb,var(--color-text) 14%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--color-text) 14%,transparent) 1px,transparent 1px);background-size:64px 64px"></div>
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);position:relative;padding-top:104px;padding-bottom:104px">
+    <img src="icon/btrace-icon.svg" alt="BTrace" width="72" height="72" style="display:block;margin-bottom:28px"><span style="display:block;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;margin-bottom:24px">&gt; end of transmission_</span>
+    <h2 data-reveal="0" style="font-family:&#39;Oxanium&#39;,var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(44px,8vw,128px);line-height:.9;letter-spacing:-0.015em;margin:0 0 0 -0.04em">
+      <span style="display:block">Ask. Probe.</span>
+      <span style="display:block;color:var(--color-text)">Detach.</span>
+    </h2>
+    <div data-reveal="1" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:44px">
+      <a href="#install-plugin" class="btn bt-hover-21" style="background:var(--color-text);color:var(--color-bg);padding:14px 16px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em;min-width:260px;justify-content:space-between">Install the agent plugin <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a>
+      <a href="https://github.com/btraceio/btrace/releases/tag/v3.0.0" class="btn bt-hover-22" style="color:var(--color-bg);border:2px solid var(--color-bg);padding:12px 16px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em">Download 3.0.0</a>
+    </div>
+  </div>
+</section>
+
+<footer style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-top:28px;padding-bottom:28px;display:flex;flex-wrap:wrap;gap:8px 24px;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:22px;letter-spacing:.04em;color:var(--color-neutral-400)">
+  <span style="display:flex;align-items:center;gap:8px;color:var(--color-bg);font-weight:600"><img src="icon/btrace-icon-small.svg" alt="" width="18" height="18" style="display:block">BTRACE</span>
+  <span>BTrace safely instruments Java applications while they run. Open source since 2008.</span>
+  <span>Apache License 2.0</span>
+  <a href="https://github.com/btraceio/btrace" style="margin-left:auto">github.com/btraceio/btrace</a>
+</footer>
+
+</main>
 </div>
+<noscript><p class="no-script">Enable JavaScript to use the command builder, filters and demo selector. Documentation and installation links are available above.</p></noscript>
+</body>
+</html>

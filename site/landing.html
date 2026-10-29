@@ -1,0 +1,416 @@
+<div aria-hidden="true" style="position:fixed;inset:0;pointer-events:none;z-index:60;background:repeating-linear-gradient(to bottom,color-mix(in srgb,black 22%,transparent) 0 1px,transparent 1px 3px);opacity:.55"></div>
+<div aria-hidden="true" style="position:fixed;left:0;right:0;top:0;height:14vh;pointer-events:none;z-index:61;background:linear-gradient(to bottom,transparent,color-mix(in srgb,var(--color-accent) 6%,transparent),transparent);animation:bt-scan 9s linear infinite"></div>
+
+<div style="background:var(--color-accent);color:var(--color-bg);overflow:hidden;border-bottom:2px solid var(--color-accent-700)">
+  <div style="display:flex;width:max-content;gap:28px;padding:9px 0;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;animation:bt-ticker 70s linear infinite"><span style="display:flex;align-items:center;gap:28px">Trace a live JVM in one line<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Your coding agent writes, attaches and removes the probe<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">No overhead after you detach<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Scripts half the size with the flat DSL<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">LLM, RAG and inference observability from inside the JVM<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Extensions with permissions you grant<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">One jar, Apache 2.0<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Ready for class files newer than ASM supports<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">2.x probes run unchanged<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Java 8 through 27<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Trace a live JVM in one line<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Your coding agent writes, attaches and removes the probe<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">No overhead after you detach<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Scripts half the size with the flat DSL<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">LLM, RAG and inference observability from inside the JVM<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Extensions with permissions you grant<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">One jar, Apache 2.0<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Ready for class files newer than ASM supports<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">2.x probes run unchanged<span style="width:6px;height:6px;background:var(--color-bg)"></span></span><span style="display:flex;align-items:center;gap:28px">Java 8 through 27<span style="width:6px;height:6px;background:var(--color-bg)"></span></span></div>
+</div>
+
+<div style="position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--color-text) 88%,transparent);backdrop-filter:blur(8px)">
+  <nav aria-label="Main navigation" class="nav" style="padding:12px max(clamp(20px,5vw,72px), calc((100% - 1240px) / 2 + clamp(20px,5vw,72px)));gap:24px;border-bottom:2px solid var(--color-neutral-800)">
+    <a href="#top" class="nav-brand" style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:18px;letter-spacing:.02em;color:var(--color-bg);display:flex;align-items:center;gap:10px;margin-right:0">
+      <img src="icon/btrace-icon-small.svg" alt="" width="28" height="28" style="display:block;outline:1px solid var(--color-neutral-700)">BTRACE<span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;font-weight:600;font-stretch:100%;color:var(--color-accent-400);border:1px solid var(--color-accent);padding:2px 6px">v3.0.0</span>
+    </a>
+    <div style="display:flex;gap:22px;overflow-x:auto;margin-right:auto;scrollbar-width:none;padding:4px 0;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-transform:uppercase;letter-spacing:.06em">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="9">
+        <a href="{{ n.href }}" aria-current="{{ n.cur }}" style="white-space:nowrap;font-size:12px">{{ n.label }}</a>
+      </sc-for>
+    </div>
+    <a href="#install-plugin" class="btn btn-primary" style="white-space:nowrap;color:var(--color-bg);font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;box-shadow:0 0 20px color-mix(in srgb,var(--color-accent) 45%,transparent)" style-hover="background:var(--color-accent-500)">Install agent plugin</a>
+  </nav>
+  <div style="height:2px;position:relative;margin-top:-2px">
+    <div ref="{{ progRef }}" style="height:2px;width:0;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></div>
+  </div>
+</div>
+
+<main id="top" tabindex="-1" style="background-image:linear-gradient(color-mix(in srgb,var(--color-bg) 4%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--color-bg) 4%,transparent) 1px,transparent 1px);background-size:64px 64px">
+
+<section data-spy="1" id="agent" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-top:88px;padding-bottom:56px">
+    <div data-hero="0" style="display:flex;flex-wrap:wrap;gap:8px 24px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-neutral-400);margin-bottom:28px">
+      <span style="color:var(--color-accent-400)">SYS:// btrace 3.0.0</span><span>first major since 2.2.6</span><span>status: <span style="color:var(--color-accent-400);animation:bt-flicker 3s infinite">online</span></span>
+    </div>
+    <h1 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(40px,7.2vw,112px);line-height:.92;letter-spacing:-0.015em;margin:0 0 0 -0.04em">
+      <span data-hero="0" style="display:block;position:relative">Ask your agent.<span aria-hidden="true" style="position:absolute;inset:0;color:var(--color-accent);mix-blend-mode:screen;animation:bt-glitch 4.2s steps(1) infinite 0s;pointer-events:none">Ask your agent.</span><span aria-hidden="true" style="position:absolute;inset:0;color:var(--color-neutral-300);mix-blend-mode:screen;animation:bt-glitch2 4.2s steps(1) infinite 0s;pointer-events:none">Ask your agent.</span></span>
+      <span data-hero="1" style="display:block;position:relative"><span style="color:var(--color-accent);text-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 60%,transparent)">It traces</span> the live JVM.<span aria-hidden="true" style="position:absolute;inset:0;color:var(--color-accent);mix-blend-mode:screen;animation:bt-glitch 4.2s steps(1) infinite 0.7s;pointer-events:none"><span style="color:var(--color-accent);text-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 60%,transparent)">It traces</span> the live JVM.</span><span aria-hidden="true" style="position:absolute;inset:0;color:var(--color-neutral-300);mix-blend-mode:screen;animation:bt-glitch2 4.2s steps(1) infinite 0.7s;pointer-events:none"><span style="color:var(--color-accent);text-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 60%,transparent)">It traces</span> the live JVM.</span></span>
+    </h1>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:40px 72px;align-items:start;margin-top:40px">
+      <div>
+        <p data-hero="2" style="font-size:19px;line-height:30px;max-width:56ch;margin:0;color:var(--color-neutral-300)">BTrace adds instrumentation to a JVM while it runs. You do not restart it. In 3.0, your coding agent can operate it. Describe the symptom. The <strong style="color:var(--color-bg);font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:600">btrace-observability</strong> plugin writes a narrow probe, attaches it, reads the output and removes it.</p>
+        <div data-hero="3" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:32px">
+          <a href="#install-plugin" class="btn btn-primary" style="min-width:260px;justify-content:space-between;padding:14px 16px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-bg);box-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 50%,transparent)" style-hover="background:var(--color-accent-500)">Install the agent plugin <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a>
+          <a href="#oneliner" class="btn btn-secondary" style="padding:14px 16px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-bg);border-color:var(--color-neutral-600)" style-hover="background:color-mix(in srgb,var(--color-bg) 8%,transparent);border-color:var(--color-bg)">&gt;_ Trace it in one line</a>
+        </div>
+      </div>
+      <ol data-hero="4" style="list-style:none;margin:0;padding:0;border-top:2px solid var(--color-neutral-800)">
+        <li style="border-bottom:2px solid var(--color-neutral-800)"><a href="#oneliner" style="display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:baseline;padding:18px 0;color:var(--color-bg);text-decoration:none" style-hover="color:var(--color-accent-400);background:color-mix(in srgb,var(--color-accent) 8%,transparent)"><span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400)">[01]</span><span><strong style="display:block;font-size:18px">No file, no compile.</strong><span style="font-size:14px;color:var(--color-neutral-400)">One command attaches to a live JVM.</span></span><span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span></a></li>
+        <li style="border-bottom:2px solid var(--color-neutral-800)"><a href="#plugins" style="display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:baseline;padding:18px 0;color:var(--color-bg);text-decoration:none" style-hover="color:var(--color-accent-400);background:color-mix(in srgb,var(--color-accent) 8%,transparent)"><span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400)">[02]</span><span><strong style="display:block;font-size:18px">Your coding agent can run it.</strong><span style="font-size:14px;color:var(--color-neutral-400)">In Claude Code, Codex and Pi.</span></span><span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span></a></li>
+        <li style="border-bottom:2px solid var(--color-neutral-800)"><a href="#production" style="display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:baseline;padding:18px 0;color:var(--color-bg);text-decoration:none" style-hover="color:var(--color-accent-400);background:color-mix(in srgb,var(--color-accent) 8%,transparent)"><span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400)">[03]</span><span><strong style="display:block;font-size:18px">Production-safe attach.</strong><span style="font-size:14px;color:var(--color-neutral-400)">Check the JVM first. No overhead after you detach.</span></span><span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span></a></li>
+      </ol>
+    </div>
+
+    <div data-reveal="0" style="position:relative;margin-top:72px;border:2px solid var(--color-neutral-700);background:color-mix(in srgb,var(--color-text) 80%,transparent);box-shadow:0 0 60px color-mix(in srgb,var(--color-accent) 12%,transparent)">
+      <span style="position:absolute;top:-2px;left:-2px;width:18px;height:18px;border-top:2px solid var(--color-accent);border-left:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-top:2px solid var(--color-accent);border-right:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;bottom:-2px;left:-2px;width:18px;height:18px;border-bottom:2px solid var(--color-accent);border-left:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-bottom:2px solid var(--color-accent);border-right:2px solid var(--color-accent);pointer-events:none"></span>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:10px 16px;border-bottom:2px solid var(--color-neutral-700);font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">
+        <span style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-300)">[ claude :: checkout-service :: on-call ]</span>
+        <span style="display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-400)">
+          <span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 8px var(--color-accent);animation:{{ pulseAnim }}"></span>{{ stageLabel }}
+        </span>
+        <button type="button" onClick="{{ replay }}" style="margin-left:auto;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.08em;display:flex;gap:6px;align-items:center;background:transparent;color:var(--color-accent-400);border:1px solid var(--color-accent);padding:5px 10px;cursor:pointer" style-hover="background:var(--color-accent);color:var(--color-bg)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>Replay
+        </button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr))">
+        <div style="padding:24px;min-height:460px;display:flex;flex-direction:column;gap:14px;border-right:2px solid var(--color-neutral-700)">
+          <div style="border:1px solid var(--color-neutral-700);border-left:2px solid var(--color-bg);padding:14px 16px;font-size:15px;line-height:23px">
+            <span style="display:block;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-400);margin-bottom:6px">&gt; you</span>
+            Checkout is sometimes slow, and some orders do not complete. The logs show nothing. We cannot restart the service. Find the cause.
+          </div>
+          <sc-for list="{{ steps }}" as="s" hint-placeholder-count="0">
+            <div class="agent-step" style="display:grid;grid-template-columns:14px 150px minmax(0,1fr);gap:10px;align-items:baseline;font-size:14px;line-height:21px;animation:bt-in .35s ease both">
+              <span style="width:8px;height:8px;background:{{ s.dot }};display:block;transform:translateY(-1px)"></span>
+              <code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;color:var(--color-accent-400)">{{ s.tool }}</code>
+              <span style="color:var(--color-neutral-300)">{{ s.text }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ showAnswer }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:auto;border:1px solid var(--color-accent);background:color-mix(in srgb,var(--color-accent) 10%,transparent);padding:14px 16px;font-size:15px;line-height:23px;animation:bt-in .4s ease both">
+              <span style="display:block;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:6px">&gt; agent // diagnosis</span>
+              <code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px">FraudScreen.screen</code> calls threw <code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px">RiskServiceException</code> : 22 of 104 (21%). <code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px">checkout</code> swallows it, so those orders are dropped without a log line. <code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px">PaymentClient.authorize</code>: 129 ms average, 449 ms worst. Probe removed.
+            </div>
+          </sc-if>
+        </div>
+        <div style="background:color-mix(in oklch,var(--color-text),black 45%);padding:24px;min-height:460px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;line-height:22px;overflow-x:auto">
+          <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-500);margin-bottom:12px">// live probe output</div>
+          <sc-for list="{{ outLines }}" as="l" hint-placeholder-count="0">
+            <div style="white-space:pre;color:{{ l.color }};animation:bt-in .25s ease both">{{ l.text }}</div>
+          </sc-for>
+          <span style="display:inline-block;width:9px;height:17px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent);vertical-align:middle;animation:bt-blink 1s steps(1) infinite"></span>
+        </div>
+      </div>
+    </div>
+    <p style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:20px;margin:12px 0 0;color:var(--color-neutral-500)">// Condensed from a recorded Claude Code session (<a href="https://github.com/btraceio/btrace/tree/develop/demos/06-ai-assistant">demos/06-ai-assistant</a>). The vendor SDK has no source, so only a live probe could find the cause.</p>
+
+    <div id="install-plugin" data-reveal="1" style="scroll-margin-top:96px;margin-top:56px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:24px 48px;align-items:start">
+      <div>
+        <span style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>Install the agent plugin</span>
+        <p style="font-size:16px;line-height:26px;margin:0;max-width:44ch;color:var(--color-neutral-300)">Ships from <a href="https://github.com/btraceio/agent-plugins">btraceio/agent-plugins</a>. Needs JBang and JDK 11+ on the machine that runs the target JVM.</p>
+      </div>
+      <div>
+        <div style="display:flex;border:1px solid var(--color-neutral-700);border-bottom:0;width:fit-content"><sc-for list="{{ pluginTabs }}" as="tb" hint-placeholder-count="3"><button type="button" aria-pressed="{{ tb.bg === 'var(--color-accent)' }}" onClick="{{ tb.pick }}" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:9px 16px;border:0;border-right:1px solid var(--color-neutral-700);cursor:pointer;background:{{ tb.bg }};color:{{ tb.fg }}">{{ tb.label }}</button></sc-for></div>
+        <div style="background:color-mix(in oklch,var(--color-text),black 45%);border:1px solid var(--color-neutral-700);border-left:2px solid var(--color-accent);padding:16px 16px 16px 20px;display:flex;gap:16px;align-items:flex-start">
+          <div style="flex:1;min-width:0;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;line-height:24px;overflow-x:auto">
+            <sc-for list="{{ pluginLines }}" as="pl" hint-placeholder-count="2">
+              <div style="white-space:pre"><span style="color:var(--color-accent-400)">{{ pl.prompt }}</span>{{ pl.text }}</div>
+            </sc-for>
+          </div>
+          <button type="button" aria-live="polite" onClick="{{ copyPlugin }}" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;background:transparent;color:var(--color-bg);border:1px solid var(--color-neutral-600);padding:6px 10px;cursor:pointer" style-hover="border-color:var(--color-accent);color:var(--color-accent-400)">{{ copyPluginLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="start" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px)">
+    <div style="height:2px;background:var(--color-neutral-800)"></div>
+    <div style="padding:96px 0">
+      <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:48px"><div><span style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>02 // Start here</span><h2 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">What do you want to trace?</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">Select your role. The page then shows three first steps for that role and filters the tutorial list.</p></div>
+      <div data-reveal="1" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px">
+        <sc-for list="{{ audTabs }}" as="a" hint-placeholder-count="3">
+          <button type="button" aria-pressed="{{ a.bar === 'var(--color-accent)' }}" onClick="{{ a.pick }}" style="font:inherit;text-align:left;cursor:pointer;border:2px solid {{ a.bar }};background:{{ a.bg }};color:var(--color-bg);padding:18px 20px;display:flex;flex-direction:column;gap:6px" style-hover="border-color:var(--color-accent)">
+            <span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;color:var(--color-accent-400)">[{{ a.num }}]</span>
+            <span style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(20px,2vw,26px);line-height:1">{{ a.label }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <p style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-weight:600;text-transform:none;font-size:clamp(22px,2.2vw,30px);line-height:1.2;max-width:34ch;margin:40px 0 28px"><span style="color:var(--color-accent);font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:600">&gt; </span>{{ audLead }}</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px">
+        <sc-for list="{{ audRoutes }}" as="r" hint-placeholder-count="3">
+          <a href="{{ r.href }}" style="display:flex;flex-direction:column;gap:10px;padding:22px;color:var(--color-bg);text-decoration:none;border:2px solid var(--color-neutral-800);background:color-mix(in srgb,var(--color-text) 70%,transparent);animation:bt-in .4s ease both" style-hover="border-color:var(--color-accent);background:color-mix(in srgb,var(--color-accent) 8%,transparent)">
+            <span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent-400)">{{ r.kind }}</span>
+            <span style="font-size:21px;font-weight:700;line-height:1.25">{{ r.title }}</span>
+            <span style="font-size:15px;line-height:24px;color:var(--color-neutral-400)">{{ r.desc }}</span>
+            <span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-top:auto;color:var(--color-accent-400)">Open →</span>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="plugins" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px)">
+    <div style="height:2px;background:var(--color-neutral-800)"></div>
+    <div style="padding:96px 0">
+      <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:48px"><div><span style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>03 // Agent plugins</span><h2 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">One marketplace. Claude Code, Codex, Pi.</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">Five plugins from one repository. Each works the same way in all three hosts.</p></div>
+      <div data-reveal="1" style="border-top:2px solid var(--color-neutral-700)">
+        <sc-for list="{{ plugins }}" as="p" hint-placeholder-count="5">
+          <a class="plugin-row" href="{{ p.href }}" style="display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr) auto;gap:8px 32px;align-items:baseline;padding:20px 12px 20px 0;border-bottom:2px solid var(--color-neutral-800);color:var(--color-bg);text-decoration:none" style-hover="background:color-mix(in srgb,var(--color-accent) 8%,transparent);color:var(--color-accent-400)">
+            <code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;background:{{ p.mark }};display:block"></span>{{ p.name }}</code>
+            <span style="font-size:16px;line-height:25px;color:var(--color-neutral-300)">{{ p.desc }}</span>
+            <span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span>
+          </a>
+        </sc-for>
+      </div>
+      <div data-reveal="2" style="margin-top:32px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400);margin-right:8px">// btrace-observability skills</span>
+        <sc-for list="{{ skills }}" as="sk" hint-placeholder-count="10">
+          <span class="tag" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:5px 10px;border:1px solid var(--color-neutral-700);color:var(--color-neutral-300)">{{ sk.name }}</span>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="oneliner" style="scroll-margin-top:72px;background:color-mix(in srgb,var(--color-text) 60%,black 40%);border-top:2px solid var(--color-neutral-800);border-bottom:2px solid var(--color-neutral-800)">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-top:96px;padding-bottom:96px">
+    <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:48px"><div><span style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>04 // Oneliners</span><h2 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">No file. No compile.</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">One command attaches to a live JVM and prints the result. Change the matcher and run the command again. Use the builder below to make a command.</p></div>
+    <div data-reveal="1" style="position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));border:2px solid var(--color-neutral-700);background:var(--color-text)">
+      <span style="position:absolute;top:-2px;left:-2px;width:18px;height:18px;border-top:2px solid var(--color-accent);border-left:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-top:2px solid var(--color-accent);border-right:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;bottom:-2px;left:-2px;width:18px;height:18px;border-bottom:2px solid var(--color-accent);border-left:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-bottom:2px solid var(--color-accent);border-right:2px solid var(--color-accent);pointer-events:none"></span>
+      <div style="padding:24px;display:flex;flex-direction:column;gap:22px;border-right:2px solid var(--color-neutral-700)">
+        <div>
+          <span style="display:block;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400);margin-bottom:8px">// start from a question</span>
+          <div style="display:grid;gap:6px">
+            <sc-for list="{{ presets }}" as="pr" hint-placeholder-count="3">
+              <button type="button" aria-pressed="{{ pr.border === 'var(--color-accent)' }}" onClick="{{ pr.pick }}" style="font:inherit;font-size:15px;text-align:left;cursor:pointer;padding:10px 12px;border:1px solid {{ pr.border }};background:{{ pr.bg }};color:{{ pr.fg }};display:flex;justify-content:space-between;gap:12px" style-hover="border-color:var(--color-accent)">{{ pr.label }}<span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">→</span></button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px">
+          <label class="field" style="display:flex;flex-direction:column;gap:6px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400)">Class<input class="input" value="{{ cls }}" onChange="{{ setCls }}" spellcheck="false" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-transform:none;letter-spacing:0;background:color-mix(in oklch,var(--color-text),black 45%);color:var(--color-bg);border-color:var(--color-neutral-700)"></label>
+          <label class="field" style="display:flex;flex-direction:column;gap:6px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400)">Method<input class="input" value="{{ meth }}" onChange="{{ setMeth }}" spellcheck="false" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-transform:none;letter-spacing:0;background:color-mix(in oklch,var(--color-text),black 45%);color:var(--color-bg);border-color:var(--color-neutral-700)"></label>
+        </div>
+        <div>
+          <span style="display:block;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400);margin-bottom:8px">Location</span>
+          <div class="seg" style="border-color:var(--color-neutral-700)">
+            <sc-for list="{{ locOpts }}" as="lo" hint-placeholder-count="3">
+              <label class="seg-opt" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;border-color:var(--color-neutral-700)"><input type="radio" name="bt-loc" checked="{{ lo.on }}" onChange="{{ lo.pick }}" style="position:absolute;opacity:0;width:0;height:0">{{ lo.label }}</label>
+            </sc-for>
+          </div>
+        </div>
+        <div style="opacity:{{ thrOpacity }}">
+          <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400);margin-bottom:8px"><span>if duration &gt;</span><span style="color:var(--color-accent-400)">{{ thrLabel }}</span></div>
+          <input aria-label="Minimum duration in milliseconds" type="range" min="0" max="1000" step="50" value="{{ thr }}" onChange="{{ setThr }}" disabled="{{ thrDisabled }}" style="width:100%;accent-color:var(--color-accent)">
+        </div>
+        <div>
+          <span style="display:block;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400);margin-bottom:8px">Print</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{ fieldChips }}" as="fc" hint-placeholder-count="5">
+              <button type="button" aria-pressed="{{ fc.bg === 'var(--color-accent)' }}" onClick="{{ fc.toggle }}" disabled="{{ fc.disabled }}" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;padding:6px 10px;cursor:pointer;border:1px solid {{ fc.border }};background:{{ fc.bg }};color:{{ fc.fg }};opacity:{{ fc.opacity }}">{{ fc.key }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <div style="background:color-mix(in oklch,var(--color-text),black 45%);display:flex;flex-direction:column;min-width:0">
+        <div style="padding:24px;border-bottom:1px solid var(--color-neutral-800)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-500)">// command</span>
+            <button type="button" aria-live="polite" onClick="{{ copyCmd }}" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;background:transparent;color:var(--color-bg);border:1px solid var(--color-neutral-600);padding:6px 10px;cursor:pointer" style-hover="border-color:var(--color-accent);color:var(--color-accent-400)">{{ copyCmdLabel }}</button>
+          </div>
+          <div style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;line-height:25px;word-break:break-word"><span style="color:var(--color-accent)">$ </span>btrace -n '<span style="color:var(--color-bg)">{{ cmdMatcher }}</span> <span style="color:var(--color-accent-400)">{{ cmdLoc }}</span><span style="color:var(--color-neutral-300)">{{ cmdFilter }}</span> { {{ cmdAction }} }' &lt;PID&gt;</div>
+        </div>
+        <div style="padding:24px;flex:1;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;line-height:22px;overflow-x:auto;min-height:240px">
+          <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-500);margin-bottom:12px">// simulated sample output</div>
+          <sc-for list="{{ sampleOut }}" as="so" hint-placeholder-count="4">
+            <div style="white-space:pre;color:{{ so.color }}">{{ so.text }}</div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px 28px;margin-top:20px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em">
+      <a href="https://github.com/btraceio/btrace/blob/develop/docs/OnelinerGuide.md">Oneliner Guide →</a>
+      <a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/02-oneliner-to-script.md">Oneliner to script: the flat DSL →</a>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="ai" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-top:96px;padding-bottom:96px">
+    <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:48px"><div><span style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>05 // AI workloads</span><h2 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">See your model calls from inside the JVM.</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">Three bundled extensions measure LLM calls, RAG retrieval and on-device inference. No code change, no restart.</p></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px">
+      <article data-reveal="0" style="position:relative;padding:24px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--color-neutral-800);background:color-mix(in srgb,var(--color-text) 70%,transparent)" style-hover="border-color:var(--color-accent)"><code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:var(--color-accent-400)">&gt; btrace-llm-trace</code><h3 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:22px;line-height:1.05;margin:0">Tokens, latency, cost, budgets</h3><p style="font-size:15px;line-height:24px;margin:0;color:var(--color-neutral-300)">Token counts and estimated cost per model. Add btrace-contracts to flag calls over a latency budget.</p><pre style="margin:8px 0 0;background:color-mix(in oklch,var(--color-text),black 45%);color:var(--color-neutral-300);padding:16px;border-left:2px solid var(--color-accent);font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:20px;overflow-x:auto">Model: gpt-4o-mini (openai)
+  Calls: 20
+  Tokens: 2571 in / 5013 out
+  Latency: avg 464ms, max 3635ms
+  Est. cost: $0.0034
+<span style="color:var(--color-accent-400)">VIOLATIONS: 1 (5%)
+Latency 3635ms exceeded budget 500ms</span></pre><a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/07-llm-observability.md" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;margin-top:auto;text-transform:uppercase;letter-spacing:.06em">Tutorial 07 →</a></article>
+      <article data-reveal="1" style="position:relative;padding:24px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--color-neutral-800);background:color-mix(in srgb,var(--color-text) 70%,transparent)" style-hover="border-color:var(--color-accent)"><code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:var(--color-accent-400)">&gt; btrace-rag-quality</code><h3 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:22px;line-height:1.05;margin:0">Retrieval quality</h3><p style="font-size:15px;line-height:24px;margin:0;color:var(--color-neutral-300)">Vector store queries, similarity scores and empty retrievals, which the app does not log.</p><pre style="margin:8px 0 0;background:color-mix(in oklch,var(--color-text),black 45%);color:var(--color-neutral-300);padding:16px;border-left:2px solid var(--color-accent);font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:20px;overflow-x:auto">Source: vectorstore
+  <span style="color:var(--color-accent-400)">Queries: 18 (3 empty, 16%)</span>
+  Results: 75 total (avg 4/query)
+  Similarity (top): avg 0.730
+  Latency: avg 53ms, max 82ms
+  Context: 14610 tokens</pre><a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/11-ai-workload-observability.md" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;margin-top:auto;text-transform:uppercase;letter-spacing:.06em">Tutorial 11 →</a></article>
+      <article data-reveal="2" style="position:relative;padding:24px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--color-neutral-800);background:color-mix(in srgb,var(--color-text) 70%,transparent)" style-hover="border-color:var(--color-accent)"><code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:var(--color-accent-400)">&gt; btrace-gpu-bridge</code><h3 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:22px;line-height:1.05;margin:0">On-device inference</h3><p style="font-size:15px;line-height:24px;margin:0;color:var(--color-neutral-300)">Inference latency and throughput for ONNX Runtime, DJL and TensorFlow Java.</p><pre style="margin:8px 0 0;background:color-mix(in oklch,var(--color-text),black 45%);color:var(--color-neutral-300);padding:16px;border-left:2px solid var(--color-accent);font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:20px;overflow-x:auto">Model: onnx/embed-small
+  Inferences: 17
+  Latency: avg 13ms, max 23ms
+  Batch size: avg 1
+  <span style="color:var(--color-accent-400)">Throughput: 74.6 items/sec</span></pre><a href="https://github.com/btraceio/btrace/blob/develop/docs/BTraceTutorial.md#123-gpu-and-inference-observability-btrace-gpu-bridge" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;margin-top:auto;text-transform:uppercase;letter-spacing:.06em">Lesson 12.3 →</a></article>
+    </div>
+    <div data-reveal="0" style="margin-top:72px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:24px 72px;align-items:start">
+      <div>
+        <span style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>Extensions</span>
+        <h3 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:30px;line-height:1;margin:0">Eight bundled extensions. You decide what each may do.</h3>
+        <p style="font-size:15px;line-height:24px;margin:16px 0 0;color:var(--color-neutral-300)">Extensions replace <code style="color:var(--color-accent-400)">libs=</code> profiles and the Aggregations API. Each declares the permissions it needs, and you grant them on the agent side. <code style="color:var(--color-accent-400)">btrace -le</code> explains why an extension is blocked.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:12px 24px;margin-top:16px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em">
+          <a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/04-extensions-and-permissions.md">Permissions →</a>
+          <a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/06-write-your-own-extension.md">Write your own →</a>
+        </div>
+      </div>
+      <div style="border-top:2px solid var(--color-neutral-700)">
+        <sc-for list="{{ exts }}" as="e" hint-placeholder-count="5">
+          <div style="display:grid;grid-template-columns:minmax(0,180px) 1fr;gap:16px;padding:14px 0;border-bottom:2px solid var(--color-neutral-800);align-items:baseline">
+            <code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;color:var(--color-accent-400)">{{ e.name }}</code>
+            <span style="font-size:15px;line-height:23px;color:var(--color-neutral-300)">{{ e.desc }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="production" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px)">
+    <div style="height:2px;background:var(--color-neutral-800)"></div>
+    <div style="padding:96px 0">
+      <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:56px"><div><span style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>06 // Production</span><h2 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">Attach safely to production JVMs.</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">Check the JVM before you load a probe. When the client detaches, the probe has no cost.</p></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px">
+        <div data-reveal="0" style="position:relative;padding:28px 24px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--color-neutral-800);background:color-mix(in oklch,var(--color-text),black 45%)"><span style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:56px;line-height:1;color:var(--color-accent);text-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 60%,transparent)">01</span><h3 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:22px;margin:0">Prepare</h3><code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400);border:1px solid var(--color-neutral-700);padding:8px 10px;overflow-x:auto;white-space:nowrap">-javaagent:btrace.jar=port=0</code><p style="font-size:15px;line-height:24px;margin:0;color:var(--color-neutral-300)">Start the JVM in prepared mode. It listens on localhost only, requires a token, and instruments nothing.</p></div>
+        <div data-reveal="1" style="position:relative;padding:28px 24px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--color-neutral-800);background:color-mix(in oklch,var(--color-text),black 45%)"><span style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:56px;line-height:1;color:var(--color-accent);text-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 60%,transparent)">02</span><h3 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:22px;margin:0">Check</h3><code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400);border:1px solid var(--color-neutral-700);padding:8px 10px;overflow-x:auto;white-space:nowrap">btrace doctor &lt;pid&gt;</code><p style="font-size:15px;line-height:24px;margin:0;color:var(--color-neutral-300)">Reports whether the JVM is ready, with a scriptable exit code. Loads nothing.</p></div>
+        <div data-reveal="2" style="position:relative;padding:28px 24px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--color-neutral-800);background:color-mix(in oklch,var(--color-text),black 45%)"><span style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:56px;line-height:1;color:var(--color-accent);text-shadow:0 0 28px color-mix(in srgb,var(--color-accent) 60%,transparent)">03</span><h3 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:22px;margin:0">Attach and detach</h3><code style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400);border:1px solid var(--color-neutral-700);padding:8px 10px;overflow-x:auto;white-space:nowrap">btrace &lt;pid&gt; HotPathProbe.java</code><p style="font-size:15px;line-height:24px;margin:0;color:var(--color-neutral-300)">The client finds the endpoint and token by itself. On exit, the original bytecode is restored.</p></div>
+      </div>
+      <div data-reveal="1" style="position:relative;margin-top:24px;border:2px solid var(--color-neutral-700);background:color-mix(in oklch,var(--color-text),black 45%)">
+        <span style="position:absolute;top:-2px;left:-2px;width:18px;height:18px;border-top:2px solid var(--color-accent);border-left:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-top:2px solid var(--color-accent);border-right:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;bottom:-2px;left:-2px;width:18px;height:18px;border-bottom:2px solid var(--color-accent);border-left:2px solid var(--color-accent);pointer-events:none"></span><span style="position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-bottom:2px solid var(--color-accent);border-right:2px solid var(--color-accent);pointer-events:none"></span>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;border-bottom:2px solid var(--color-neutral-700)">
+          <span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-400);margin-right:auto">// btrace doctor, two JVMs</span>
+          <sc-for list="{{ doctorTabs }}" as="dt" hint-placeholder-count="2">
+            <button type="button" aria-pressed="{{ dt.bg === 'var(--color-accent)' }}" onClick="{{ dt.pick }}" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:6px 12px;cursor:pointer;border:1px solid {{ dt.border }};background:{{ dt.bg }};color:{{ dt.fg }}">{{ dt.label }}</button>
+          </sc-for>
+        </div>
+        <div style="padding:20px 16px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;line-height:23px;overflow-x:auto;min-height:150px">
+          <sc-for list="{{ doctorLines }}" as="dl" hint-placeholder-count="4">
+            <div style="white-space:pre;color:{{ dl.color }};animation:bt-in .3s ease both">{{ dl.text }}</div>
+          </sc-for>
+        </div>
+      </div>
+      <a href="https://github.com/btraceio/btrace/blob/develop/docs/tutorials/12-production-safe-attach.md" style="display:inline-block;margin-top:20px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em">Tutorial 12 // Attach to production without fear →</a>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="demos" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px)">
+    <div style="height:2px;background:var(--color-neutral-800)"></div>
+    <div style="padding:96px 0">
+      <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:48px"><div><span style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>07 // Demos</span><h2 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">Seven demos, recorded from real runs.</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">Each includes the target app, the probe and a run.sh script. CI replays every demo on each push, so the output shown is tested.</p></div>
+      <div data-reveal="1" style="display:flex;flex-wrap:wrap-reverse;gap:0;border:2px solid var(--color-neutral-700)">
+        <div style="display:flex;flex-direction:column;flex:1 1 280px;min-width:0;border-right:2px solid var(--color-neutral-700)">
+          <sc-for list="{{ demoItems }}" as="d" hint-placeholder-count="7">
+            <button type="button" aria-pressed="{{ d.bar === 'var(--color-accent)' }}" onClick="{{ d.pick }}" style="font:inherit;text-align:left;cursor:pointer;border:0;border-bottom:1px solid var(--color-neutral-800);border-left:3px solid {{ d.bar }};background:{{ d.bg }};color:var(--color-bg);padding:14px 16px 14px 13px;display:grid;grid-template-columns:44px 1fr;gap:4px 8px" style-hover="color:var(--color-accent-400)">
+              <span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:{{ d.numColor }}">[{{ d.n }}]</span>
+              <span style="font-size:15px;font-weight:700;line-height:22px">{{ d.title }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <figure style="margin:0;flex:2 1 520px;min-width:0;background:color-mix(in oklch,var(--color-text),black 45%);display:flex;flex-direction:column">
+          <div style="width:100%;aspect-ratio:1640/880;background:color-mix(in oklch,var(--color-text),black 45%)">
+            <img src="{{ demoSel.src }}" loading="lazy" alt="{{ demoSel.title }}" style="display:block;width:100%;height:100%;object-fit:contain">
+          </div>
+          <figcaption style="display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between;align-items:baseline;padding:16px;border-top:1px solid var(--color-neutral-800);color:var(--color-neutral-300);font-size:14px;line-height:22px">
+            <span style="max-width:62ch">{{ demoSel.story }}</span>
+            <a href="{{ demoSel.href }}" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">./run.sh →</a>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="tutorials" style="scroll-margin-top:72px;background:color-mix(in srgb,var(--color-text) 60%,black 40%);border-top:2px solid var(--color-neutral-800);border-bottom:2px solid var(--color-neutral-800)">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-top:96px;padding-bottom:96px">
+    <div data-reveal="0" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:24px 72px;align-items:end;margin-bottom:40px"><div><span style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>08 // Tutorials</span><h2 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">Short, practical tutorials.</h2></div><p style="font-size:18px;line-height:28px;margin:0;max-width:52ch;color:var(--color-neutral-300)">Each uses the same demo app, shows the expected output after every command, and ends with cleanup.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px">
+      <sc-for list="{{ goalChips }}" as="g" hint-placeholder-count="7">
+        <button type="button" aria-pressed="{{ g.bg === 'var(--color-accent)' }}" onClick="{{ g.pick }}" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:8px 14px;cursor:pointer;border:1px solid {{ g.border }};background:{{ g.bg }};color:{{ g.fg }}" style-hover="border-color:var(--color-accent)">{{ g.label }} <span style="opacity:.7">{{ g.count }}</span></button>
+      </sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr));column-gap:48px;border-top:2px solid var(--color-neutral-700)">
+      <sc-for list="{{ tutList }}" as="tu" hint-placeholder-count="12">
+        <a href="{{ tu.href }}" style="display:grid;grid-template-columns:48px 1fr auto;gap:4px 12px;padding:18px 0;border-bottom:1px solid var(--color-neutral-800);color:var(--color-bg);text-decoration:none;animation:bt-in .3s ease both" style-hover="color:var(--color-accent-400)">
+          <span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:var(--color-accent-400);padding-top:3px">[{{ tu.n }}]</span>
+          <span style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:17px;font-weight:700;line-height:23px">{{ tu.title }}</span>
+            <span style="font-size:14px;line-height:21px;color:var(--color-neutral-400)">{{ tu.desc }}</span>
+          </span>
+          <span style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;white-space:nowrap;padding-top:3px;color:var(--color-neutral-400)">{{ tu.time }}</span>
+        </a>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="install" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-top:96px;padding-bottom:96px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:48px 72px;align-items:start">
+      <div data-reveal="0">
+        <span style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>09 // Install</span>
+        <h2 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(32px,4.4vw,62px);line-height:.98;letter-spacing:-0.01em;margin:0">One btrace.jar.</h2>
+        <p style="font-size:18px;line-height:28px;margin:24px 0 0;max-width:46ch;color:var(--color-neutral-300)">Replaces the three-jar layout. Runs on Java 8 to 27. Support for Java below 17 is deprecated and ends in 4.0.</p>
+      </div>
+      <div data-reveal="1">
+        <div style="display:flex;border:1px solid var(--color-neutral-700);border-bottom:0;width:fit-content"><sc-for list="{{ instTabs }}" as="it" hint-placeholder-count="3"><button type="button" aria-pressed="{{ it.bg === 'var(--color-accent)' }}" onClick="{{ it.pick }}" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:9px 16px;border:0;border-right:1px solid var(--color-neutral-700);cursor:pointer;background:{{ it.bg }};color:{{ it.fg }}">{{ it.label }}</button></sc-for></div>
+        <div style="background:color-mix(in oklch,var(--color-text),black 45%);border:1px solid var(--color-neutral-700);border-left:2px solid var(--color-accent);padding:18px 16px 18px 20px;display:flex;gap:16px;align-items:center">
+          <code style="flex:1;min-width:0;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;overflow-x:auto;white-space:nowrap"><span style="color:var(--color-accent)">$ </span>{{ instCmd }}</code>
+          <button type="button" aria-live="polite" onClick="{{ copyInst }}" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;background:transparent;color:var(--color-bg);border:1px solid var(--color-neutral-600);padding:6px 10px;cursor:pointer" style-hover="border-color:var(--color-accent);color:var(--color-accent-400)">{{ copyInstLabel }}</button>
+        </div>
+        <div style="margin-top:32px;border-top:2px solid var(--color-neutral-800);padding-top:20px;display:grid;grid-template-columns:auto 1fr;gap:6px 20px;align-items:baseline">
+          <span class="tag" style="font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;border:1px solid var(--color-accent);color:var(--color-accent-400)">FROM 2.x</span>
+          <p style="margin:0;font-size:15px;line-height:24px;color:var(--color-neutral-300)">Compiled probes need no change. Source scripts need a one-line import fix, which <code style="color:var(--color-accent-400)">scripts/migrate-btrace-script.sh</code> applies. <a href="https://github.com/btraceio/btrace/blob/develop/docs/Migration-2.x-to-3.0.md">Migration guide →</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-spy="1" id="docs" style="scroll-margin-top:72px">
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-bottom:96px">
+    <div style="height:2px;background:var(--color-neutral-800);margin-bottom:56px"></div>
+    <span style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-400);margin-bottom:18px"><span style="width:8px;height:8px;background:var(--color-accent);box-shadow:0 0 10px var(--color-accent)"></span>10 // Docs and community</span>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:32px 40px">
+      <sc-for list="{{ docCols }}" as="dc" hint-placeholder-count="4">
+        <div data-reveal="{{ $index }}" style="border-top:2px solid var(--color-accent);padding-top:14px">
+          <h3 style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:16px;margin:0 0 12px">{{ dc.title }}</h3>
+          <div style="display:flex;flex-direction:column">
+            <sc-for list="{{ dc.links }}" as="lk" hint-placeholder-count="4">
+              <a href="{{ lk.href }}" style="font-size:15px;line-height:22px;padding:7px 0;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px solid var(--color-neutral-800)" style-hover="color:var(--color-accent-400)">{{ lk.label }}</a>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<section style="position:relative;overflow:hidden;background:var(--color-accent);color:var(--color-bg)">
+  <div aria-hidden="true" style="position:absolute;inset:0;background-image:linear-gradient(color-mix(in srgb,var(--color-text) 14%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--color-text) 14%,transparent) 1px,transparent 1px);background-size:64px 64px"></div>
+  <div style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);position:relative;padding-top:104px;padding-bottom:104px">
+    <img src="icon/btrace-icon.svg" alt="BTrace" width="72" height="72" style="display:block;margin-bottom:28px"><span style="display:block;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;margin-bottom:24px">&gt; end of transmission_</span>
+    <h2 data-reveal="0" style="font-family:'Oxanium',var(--font-heading);font-weight:700;text-transform:uppercase;font-size:clamp(44px,8vw,128px);line-height:.9;letter-spacing:-0.015em;margin:0 0 0 -0.04em">
+      <span style="display:block">Ask. Probe.</span>
+      <span style="display:block;color:var(--color-text)">Detach.</span>
+    </h2>
+    <div data-reveal="1" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:44px">
+      <a href="#install-plugin" class="btn" style="background:var(--color-text);color:var(--color-bg);padding:14px 16px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em;min-width:260px;justify-content:space-between" style-hover="background:var(--color-neutral-900)">Install the agent plugin <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a>
+      <a href="https://github.com/btraceio/btrace/releases/tag/v3.0.0" class="btn" style="color:var(--color-bg);border:2px solid var(--color-bg);padding:12px 16px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;text-transform:uppercase;letter-spacing:.06em" style-hover="background:var(--color-bg);color:var(--color-accent-700)">Download 3.0.0</a>
+    </div>
+  </div>
+</section>
+
+<footer style="max-width:1240px;margin:0 auto;padding-left:clamp(20px,5vw,72px);padding-right:clamp(20px,5vw,72px);padding-top:28px;padding-bottom:28px;display:flex;flex-wrap:wrap;gap:8px 24px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:22px;letter-spacing:.04em;color:var(--color-neutral-400)">
+  <span style="display:flex;align-items:center;gap:8px;color:var(--color-bg);font-weight:600"><img src="icon/btrace-icon-small.svg" alt="" width="18" height="18" style="display:block">BTRACE</span>
+  <span>BTrace safely instruments Java applications while they run. Open source since 2008.</span>
+  <span>Apache License 2.0</span>
+  <a href="https://github.com/btraceio/btrace" style="margin-left:auto">github.com/btraceio/btrace</a>
+</footer>
+
+</main>
