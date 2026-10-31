@@ -72,16 +72,16 @@ const PRESETS = [
 ];
 const FIELDS = ['method', 'args', 'duration', 'return', 'stack'];
 const EVENTS = [
-  { m: 'processOrder', d: 54, a: '[ORD-1041]', r: 'OK' },
-  { m: 'chargeCard', d: 345, a: '[ORD-1042, 129.90]', r: 'AUTHORIZED' },
-  { m: 'processOrder', d: 394, a: '[ORD-1042]', r: 'OK' },
-  { m: 'validateOrder', d: 3, a: '[ORD-1043]', r: 'true' },
-  { m: 'processOrder', d: 61, a: '[ORD-1044]', r: 'OK' }
+  { m: 'processOrder', d: 54, a: '[order-73547]', r: 'void' },
+  { m: 'chargeCard', d: 345, a: '[order-94839]', r: 'void' },
+  { m: 'processOrder', d: 394, a: '[order-94839]', r: 'void' },
+  { m: 'validateOrder', d: 3, a: '[order-35286]', r: 'void' },
+  { m: 'processOrder', d: 61, a: '[order-35286]', r: 'void' }
 ];
 const STACK = ['OrderService.processOrder(OrderServiceApp.java:81)', 'OrderServiceApp.lambda$main$0(OrderServiceApp.java:47)', 'java.base/java.lang.Thread.run(Thread.java:842)'];
 const DOCTOR = {
   ready: [['$ btrace doctor 39936','cmd'],['Status: READY (exit 0)','hl'],['BTrace endpoint: ready at 127.0.0.1:58103','n'],['Authentication: required; credential file readable','n']],
-  plain: [['$ btrace doctor 40319','cmd'],['Status: PREPARATION_REQUIRED (exit 2)','hl'],['BTrace endpoint: not ready','n'],['Remediation:','n'],['- Relaunch with -javaagent:/path/to/btrace.jar=port=0 for reviewed prepared mode.','n']]
+  plain: [['$ btrace doctor 40319','cmd'],['Status: PREPARATION_REQUIRED (exit 2)','hl'],['BTrace endpoint: not ready','n'],['Remediation:','n'],['- Relaunch with -XX:+EnableDynamicAgentLoading before using dynamic attach.','n'],['- Relaunch with -javaagent:/path/to/btrace.jar=port=0 for reviewed prepared mode.','n']]
 };
 const DEMOS = [
   { n: '01', title: 'Your first trace in one line', story: 'Three oneliners find a latency bug and a swallowed exception in a live order service.', src: 'media/01-oneliner.gif', href: DEMO + '01-oneliner' },
@@ -107,7 +107,7 @@ const TUTS = [
   ['11','Watch Your RAG Pipeline and Your Models','Empty retrievals, similarity scores and embedding latency in one probe.','~10 min','11-ai-workload-observability.md',['ai']],
   ['12','Attach to Production Without Fear','Prepared mode, btrace doctor, no-flag attach, and nothing left behind.','~10 min','12-production-safe-attach.md',['production']]
 ].map(([n, title, desc, time, f, tags]) => ({ n, title, desc, time, href: TUT + f, tags }));
-const INST = { sdk: { label: 'SDKMAN!', cmd: 'sdk install btrace' }, jbang: { label: 'JBang', cmd: 'jbang io.btrace:btrace:3.0.0 <pid> ...' }, docker: { label: 'Docker', cmd: 'docker pull ghcr.io/btraceio/btrace:3.0.0' } };
+const INST = { source: { label: '3.0 from source', cmd: 'git clone -b develop https://github.com/btraceio/btrace && cd btrace && ./gradlew :btrace-dist:build' }, stable: { label: 'Stable 2.2.6 (SDKMAN!)', cmd: 'sdk install btrace' } };
 const D = GH + 'docs/';
 const DOCS = [
   { title: 'Learn', links: [['Getting Started', D + 'GettingStarted.md'], ['Oneliner Guide', D + 'OnelinerGuide.md'], ['BTrace Tutorial', D + 'BTraceTutorial.md'], ['Quick Reference', D + 'QuickReference.md']] },
@@ -117,7 +117,7 @@ const DOCS = [
 ].map(c => ({ title: c.title, links: c.links.map(([label, href]) => ({ label, href })) }));
 
 class LandingPage {
-  state = { t: 13, plugin: 'claude', aud: null, goal: null, cls: 'OrderService', meth: '*', loc: 'return', thr: 200, fields: { method: true, duration: true }, preset: 'slow', inst: 'sdk', doctor: 'ready', demo: 5, copied: null, active: 'agent' };
+  state = { t: 13, plugin: 'claude', aud: null, goal: null, cls: 'OrderService', meth: '*', loc: 'return', thr: 200, fields: { method: true, duration: true }, preset: 'slow', inst: 'source', doctor: 'ready', demo: 5, copied: null, active: 'agent' };
   props = { animateHero: true, defaultAudience: 'sre' };
   setState(patch) {
     this.state = { ...this.state, ...(typeof patch === 'function' ? patch(this.state) : patch) };
@@ -192,24 +192,27 @@ class LandingPage {
     const mm = s.meth || '*';
     const matchM = e => mm === '*' || (mm.endsWith('*') ? e.m.startsWith(mm.slice(0, -1)) : e.m === mm);
     let evs;
-    if (loc === 'error') evs = [{ m: mm === '*' ? 'validateOrder' : mm.replace('*', ''), d: 2, a: '[ORD-1043]' }];
+    if (loc === 'error') evs = [{ m: mm === '*' ? 'validateOrder' : mm.replace('*', ''), d: 2, a: '[order-35286]' }];
     else {
       evs = EVENTS.filter(matchM).filter(e => !useThr || e.d > s.thr);
       if (!evs.length && !EVENTS.some(matchM)) evs = [{ m: mm.replace('*', '') || 'call', d: 87, a: '[...]', r: '…' }];
     }
     let sampleOut = [];
     if (!active.length) {
-      sampleOut = [{ text: `${cmdMatcher}  count: ${loc === 'error' ? 38 : 1284}`, color: TONE.n }];
+      sampleOut = [{ text: '(the count prints when you press Ctrl+C and choose 2. send an event)', color: TONE.dim }];
     } else if (!evs.length) {
       sampleOut = [{ text: `(no calls over ${s.thr} ms yet)`, color: TONE.dim }];
     } else {
       evs.slice(0, 4).forEach((e, i) => {
-        if (i) sampleOut.push({ text: ' ', color: TONE.n });
+        const parts = [];
         active.forEach(f => {
-          if (f === 'method') sampleOut.push({ text: e.m, color: TONE.cmd });
-          if (f === 'args') sampleOut.push({ text: 'args: ' + e.a, color: TONE.n });
-          if (f === 'duration') sampleOut.push({ text: `execution time: ${e.d} ms`, color: e.d > 200 ? TONE.hl : TONE.n });
-          if (f === 'return') sampleOut.push({ text: 'return: ' + e.r, color: TONE.n });
+          if (f === 'method') parts.push(e.m);
+          if (f === 'args') parts.push(e.a);
+          if (f === 'duration') parts.push(`${e.d}171192`);
+          if (f === 'return') parts.push(e.r);
+        });
+        if (parts.length) sampleOut.push({ text: parts.join(' '), color: active.includes('duration') && e.d > 200 ? TONE.hl : TONE.cmd });
+        active.forEach(f => {
           if (f === 'stack') STACK.forEach(l => sampleOut.push({ text: l, color: TONE.dim }));
         });
       });
