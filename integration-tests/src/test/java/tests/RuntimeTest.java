@@ -1272,7 +1272,7 @@ public abstract class RuntimeTest {
       argVals.add(mainClassIdx + 1, "-v");
     }
     argVals.addAll(Arrays.asList(args));
-    if (Files.exists(Paths.get(javaHome, "jmods"))) {
+    if (Files.exists(Paths.get(javaHome, "lib", "modules"))) {
       argVals.addAll(
           1,
           Arrays.asList(
@@ -1429,7 +1429,7 @@ public abstract class RuntimeTest {
       argVals.add(mainClassIdx + 1, "-v");
     }
     argVals.addAll(Arrays.asList(args));
-    if (Files.exists(Paths.get(javaHome, "jmods"))) {
+    if (Files.exists(Paths.get(javaHome, "lib", "modules"))) {
       argVals.addAll(
           1,
           Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
@@ -1558,7 +1558,7 @@ public abstract class RuntimeTest {
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
     }
-    if (Files.exists(Paths.get(javaHome, "jmods"))) {
+    if (Files.exists(Paths.get(javaHome, "lib", "modules"))) {
       argVals.addAll(
           1,
           Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
@@ -1676,7 +1676,7 @@ public abstract class RuntimeTest {
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
     }
-    if (Files.exists(Paths.get(javaHome, "jmods"))) {
+    if (Files.exists(Paths.get(javaHome, "lib", "modules"))) {
       argVals.addAll(
           1,
           Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));

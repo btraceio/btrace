@@ -94,7 +94,7 @@ public final class QeEnvironment {
   }
 
   public boolean isModularJdk() {
-    return Files.isDirectory(Paths.get(javaHome, "jmods"));
+    return Files.isRegularFile(Paths.get(javaHome, "lib", "modules"));
   }
 
   public Path btraceJarPath() {

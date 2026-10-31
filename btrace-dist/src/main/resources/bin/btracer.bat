@@ -20,7 +20,7 @@ if "%JAVA_HOME%" == "" goto noJavaHome
 
 set "JAVA_ARGS=-XX:+IgnoreUnrecognizedVMOptions"
 
-if exist "%JAVA_HOME%/jmods/" (
+if exist "%JAVA_HOME%\lib\modules" (
   set "JAVA_ARGS=%JAVA_ARGS% -XX:+AllowRedefinitionToAddDeleteMethods"
   set "JAVA_ARGS=%JAVA_ARGS% --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
 )

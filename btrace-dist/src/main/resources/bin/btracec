@@ -13,7 +13,7 @@ if [ -z "$BTRACE_HOME" -o ! -d "$BTRACE_HOME" ]; then
   BTRACE_HOME=$(cd "$BTRACE_HOME" && pwd)
 fi
 JAVA_ARGS="-XX:+IgnoreUnrecognizedVMOptions"
-if [ -d "${JAVA_HOME}/jmods" ]; then
+if [ -f "${JAVA_HOME}/lib/modules" ]; then
   JAVA_ARGS="$JAVA_ARGS --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
 fi
 CLIENT_JAR="${BTRACE_HOME}/libs/btrace.jar"
@@ -30,7 +30,7 @@ if [ -f "${CLIENT_JAR}" ]; then
       TOOLS_JAR="$JAVA_HOME/../lib/tools.jar"
     fi
 
-    if [ ! -f "${TOOLS_JAR}" ] && [ ! -d "${JAVA_HOME}/jmods" ]; then
+    if [ ! -f "${TOOLS_JAR}" ] && [ ! -f "${JAVA_HOME}/lib/modules" ]; then
       # old Java versions on MacOS don't have tools.jar at all
       case "$(uname)" in
       Darwin*)
@@ -45,7 +45,7 @@ if [ -f "${CLIENT_JAR}" ]; then
         ;;
       esac
     fi
-    if [ ! -f "${TOOLS_JAR}" ] && [ ! -d "${JAVA_HOME}/jmods" ]; then
+    if [ ! -f "${TOOLS_JAR}" ] && [ ! -f "${JAVA_HOME}/lib/modules" ]; then
       # in non-jigsaw world TOOLS_JAR must point to a valid file
       echo "Unable to locate tools.jar. Please, make sure JAVA_HOME points to a valid JDK installation"
       exit 1

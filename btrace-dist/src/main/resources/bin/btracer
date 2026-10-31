@@ -37,7 +37,7 @@ if [ $# -eq 0 ]; then
 fi
 
 JAVA_ARGS="-XX:+IgnoreUnrecognizedVMOptions"
-if [ -d "${JAVA_HOME}/jmods" ]; then
+if [ -f "${JAVA_HOME}/lib/modules" ]; then
   JAVA_ARGS="$JAVA_ARGS -XX:+AllowRedefinitionToAddDeleteMethods"
   JAVA_ARGS="$JAVA_ARGS --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
 fi
