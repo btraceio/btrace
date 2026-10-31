@@ -100,7 +100,12 @@ public class MessageCommand extends DataCommand {
       out.print(" : ");
     }
     if (msg != null) {
-      out.println(msg);
+      // println() in a probe sends the line separator as part of the message
+      if (msg.endsWith(System.lineSeparator())) {
+        out.print(msg);
+      } else {
+        out.println(msg);
+      }
     }
     if (isUrgent()) {
       out.flush();

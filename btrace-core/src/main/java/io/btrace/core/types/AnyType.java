@@ -25,5 +25,11 @@ package io.btrace.core.types;
  * @author A. Sundararajan
  */
 public interface AnyType {
-  AnyType VOID = new AnyType() {};
+  AnyType VOID =
+      new AnyType() {
+        @Override
+        public String toString() {
+          return "void";
+        }
+      };
 }

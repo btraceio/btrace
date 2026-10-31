@@ -282,6 +282,24 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   @Test
+  public void testOnelinerVoidReturnOutput() throws Exception {
+    String oneLiner = "resources.Main::callA @return { print method, return }";
+    testDynamicOneliner(
+        "resources.Main",
+        oneLiner,
+        Completion.untilContains("callA"),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertTrue(stdout.contains("callA void"), "Expected void return value:\n" + stdout);
+            assertFalse(
+                Pattern.compile("callA void\\R\\s*\\R").matcher(stdout).find(),
+                "Expected no blank line after println:\n" + stdout);
+          }
+        });
+  }
+
+  @Test
   public void testExtensionLifecycleClose() throws Exception {
     attachDelayMs = 500;
     testDynamic(
