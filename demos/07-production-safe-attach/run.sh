@@ -45,7 +45,9 @@ for _ in $(seq 1 30); do
   if awk -v a="$LAST" -v b="$BASELINE" 'BEGIN { exit !(a >= b * 0.7) }'; then RECOVERED=1; break; fi
 done
 tail -n 3 "$APP_LOG"
-if [ -n "$RECOVERED" ]; then
+if [ -n "${BTRACE_DEMO_FAILED:-}" ]; then
+  : # the probe never attached, so a recovered number proves nothing; finish reports the failure
+elif [ -n "$RECOVERED" ]; then
   say "Back at baseline (${LAST} vs ${BASELINE} M calls/s before). Nothing is left behind in the JVM."
 else
   echo "[demo] throughput did not recover within 30s (last ${LAST}, baseline ${BASELINE})" >&2
