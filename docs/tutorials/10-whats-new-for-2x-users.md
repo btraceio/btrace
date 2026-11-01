@@ -34,7 +34,9 @@ cd demos/01-oneliner
 java OrderServiceApp.java
 ```
 
-In terminal 2, find its PID with `jps`. That number is `<PID>` in every command below.
+In terminal 2, find its PID with `jps -m`: it is the line `<PID> Main OrderServiceApp.java` (a
+single-file source launch runs under the JDK's `Main` launcher class, so plain `jps` shows only
+`Main`). That number is `<PID>` in every command below.
 
 **You should see** in terminal 1 a banner and then, periodically, a `processed N orders` summary
 line. Note that the app was started with no BTrace flags at all.
@@ -56,6 +58,10 @@ execution time: 54 ms
 processOrder
 execution time: 354 ms
 ```
+
+Before the stream, the client prints two `[main] INFO` lines reporting the attach, usually after
+a JDK warning about `AllowRedefinitionToAddDeleteMethods`. Listings in this tutorial show those
+lines only where they matter (Steps 3 and 4) and otherwise show just the probe's output.
 
 Press `Ctrl+C`, then choose `1. exit`. Now keep only the slow calls on every `OrderService`
 method:
@@ -109,6 +115,8 @@ JAVA_TOOL_OPTIONS="-Dbtrace.oneliner.dump=true" btrace -n 'OrderService::process
 
 ```
 Picked up JAVA_TOOL_OPTIONS: -Dbtrace.oneliner.dump=true
+OpenJDK 64-Bit Server VM warning: Option AllowRedefinitionToAddDeleteMethods was deprecated in version 13.0 and will likely be removed in a future release.
+[main] INFO io.btrace.client.Main - Attaching BTrace to PID: <PID>
 === Generated oneliner source (BTraceOneliner_1752219841233.java) ===
 package io.btrace.generated;
 ...
@@ -122,6 +130,8 @@ public class BTraceOneliner_1752219841233 {
     BTraceUtils.println("execution time: " + (duration / 1000000) + " ms");
   }
 }
+
+[main] INFO io.btrace.client.Client - Successfully started BTrace probe: BTraceOneliner_1752219841233.java
 ```
 
 Exit the session. Your own scripts need none of that boilerplate: the flat DSL drops the
@@ -143,11 +153,10 @@ btrace <PID> legacy/SlowChargeProbe.class
 **You should see** the old package name in the class file, then the probe running:
 
 ```
-  4org/openjdk/btrace/runtime/auxiliary/SlowChargeProbe
+4org/openjdk/btrace/runtime/auxiliary/SlowChargeProbe
 [main] INFO io.btrace.client.Main - Attaching BTrace to PID: <PID>
 [main] INFO io.btrace.client.Client - Successfully started BTrace probe: legacy/SlowChargeProbe.class
 slow chargeCard: 260 ms
-
 slow chargeCard: 313 ms
 ```
 
@@ -173,6 +182,7 @@ mkdir -p /tmp/migrated && cp legacy/SlowChargeProbe.java /tmp/migrated/
 
 ```
 would migrate: /tmp/migrated/SlowChargeProbe.java
+    3: * org.openjdk.btrace package. demos/02-upgrade-from-2x uses it two ways: the SlowChargeProbe.class
     9:import org.openjdk.btrace.core.annotations.BTrace;
     10:import org.openjdk.btrace.core.annotations.OnMethod;
     ...
@@ -191,6 +201,7 @@ btrace <PID> /tmp/migrated/SlowChargeProbe.java
 
 ```
 migrated: /tmp/migrated/SlowChargeProbe.java (backup: /tmp/migrated/SlowChargeProbe.java.bak)
+    3: * io.btrace package. demos/02-upgrade-from-2x uses it two ways: the SlowChargeProbe.class
     9:import io.btrace.core.annotations.BTrace;
     ...
 Done: 1 file(s) migrated (of 1 examined).
@@ -244,7 +255,7 @@ The agent reads the policy once per JVM, so restart the app with it. Stop the ap
 java -Dbtrace.permissions=permissions.properties ../01-oneliner/OrderServiceApp.java
 ```
 
-Find the new PID with `jps`, then deploy the same probe:
+Find the new PID with `jps -m`, then deploy the same probe:
 
 ```sh
 btrace <NEW_PID> LatencyHistogram.java
@@ -270,19 +281,44 @@ Exit the session.
 ## Step 7 - Run `btrace doctor` before attaching to anything you do not own
 
 New in 3.0: `btrace doctor <PID>` reports whether a JVM is ready to be traced, without loading an
-agent or opening a command connection to it. Try it on the order service:
+agent or opening a command connection to it. Try it on the order service you just traced:
 
 ```sh
 btrace doctor <NEW_PID>
 ```
 
-**You should see** a readiness report. For a JVM started without the BTrace agent, it looks like
-this (PID and JDK details differ):
+**You should see** a readiness report (PID, JDK details and the port differ):
 
 ```
-BTrace doctor for PID 89358
+BTrace doctor for PID 15949
+Status: READY (exit 0)
+Target JDK: 17.0.19 (Eclipse Adoptium)
+Attach API: available
+Target attach: accessible
+Dynamic agent loading: not tested (doctor never loads an agent)
+BTrace endpoint: ready at 127.0.0.1:2020
+Authentication: not required
+Detail: A BTrace control endpoint is ready.
+Observation: doctor did not inspect the target VM flag state.
+Actions: read target system properties and detached; no agent load or BTrace command connection was attempted.
+```
+
+This JVM is ready because Step 6 already attached BTrace to it: the dynamically loaded agent
+stays in the JVM after you exit, with its command endpoint still published on the default port
+`2020`. A JVM nobody has attached to looks different. Start a second copy of the app in another
+terminal (from `demos/03-metrics-and-permissions`, `java ../01-oneliner/OrderServiceApp.java`),
+find its PID with `jps -m`, and ask doctor about it:
+
+```sh
+btrace doctor <FRESH_PID>
+```
+
+**You should see:**
+
+```
+BTrace doctor for PID 16102
 Status: PREPARATION_REQUIRED (exit 2)
-Target JDK: 17.0.12 (Oracle Corporation)
+Target JDK: 17.0.19 (Eclipse Adoptium)
 Attach API: available
 Target attach: accessible
 Dynamic agent loading: not tested (doctor never loads an agent)
@@ -294,6 +330,9 @@ Remediation:
 - Relaunch with -javaagent:/path/to/btrace.jar=port=0 for reviewed prepared mode.
 Actions: read target system properties and detached; no agent load or BTrace command connection was attempted.
 ```
+
+Stop that second copy with `Ctrl+C`; you do not need it again. As everywhere in this tutorial,
+the JDK's `AllowRedefinitionToAddDeleteMethods` warning that may precede each report is left out.
 
 Doctor tells you what to change on the *next* deployment. For production, the safer route is
 prepared mode: a JVM started with the agent and no probes, which you attach to later with no
