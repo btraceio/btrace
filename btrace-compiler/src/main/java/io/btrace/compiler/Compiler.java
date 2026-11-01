@@ -181,8 +181,9 @@ public class Compiler {
     }
   }
 
-  private static final String DSL_IMPORT = "import static io.btrace.BTrace.*;\n";
-  private static final String ANNOTATIONS_IMPORT = "import io.btrace.core.annotations.*;\n";
+  // No line breaks: the script's errors and debug info must keep its own line numbers
+  private static final String DSL_IMPORT = "import static io.btrace.BTrace.*; ";
+  private static final String ANNOTATIONS_IMPORT = "import io.btrace.core.annotations.*; ";
 
   private static String injectDslImport(String source) {
     boolean hasDsl =
@@ -191,22 +192,19 @@ public class Compiler {
     boolean hasAnnotations = source.contains("import io.btrace.core.annotations");
     if (hasDsl && hasAnnotations) return source;
 
+    String imports = (!hasDsl ? DSL_IMPORT : "") + (!hasAnnotations ? ANNOTATIONS_IMPORT : "");
     String[] lines = source.split("\n", -1);
     StringBuilder sb = new StringBuilder();
     boolean injected = false;
     for (String line : lines) {
-      sb.append(line).append("\n");
       if (!injected && line.trim().startsWith("package ") && line.contains(";")) {
-        if (!hasDsl) sb.append(DSL_IMPORT);
-        if (!hasAnnotations) sb.append(ANNOTATIONS_IMPORT);
+        int end = line.indexOf(';') + 1;
+        line = line.substring(0, end) + " " + imports + line.substring(end);
         injected = true;
       }
+      sb.append(line).append("\n");
     }
-    if (!injected) {
-      String prefix = (!hasDsl ? DSL_IMPORT : "") + (!hasAnnotations ? ANNOTATIONS_IMPORT : "");
-      return prefix + source;
-    }
-    return sb.toString();
+    return injected ? sb.toString() : imports + source;
   }
 
   public Map<String, byte[]> compile(File file, Writer err, String sourcePath, String classPath) {

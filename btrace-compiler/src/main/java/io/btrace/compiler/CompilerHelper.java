@@ -35,9 +35,11 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.Set;
 import java.util.stream.Stream;
 import javax.annotation.processing.Processor;
 import javax.tools.Diagnostic;
@@ -255,6 +257,7 @@ class CompilerHelper {
       for (Diagnostic diagnostic : diagnostics.getDiagnostics()) {
         printDiagnostic(diagnostic, perr);
       }
+      printImportHints(diagnostics, perr);
       perr.flush();
       return null;
     }
@@ -355,6 +358,32 @@ class CompilerHelper {
 
   private void printDiagnostic(Diagnostic diagnostic, PrintWriter perr) {
     perr.println(diagnostic);
+  }
+
+  /** The usual import mistakes get an answer javac's own message cannot give. */
+  private void printImportHints(DiagnosticCollector<?> diagnostics, PrintWriter perr) {
+    Set<String> hints = new LinkedHashSet<>();
+    for (Diagnostic<?> diagnostic : diagnostics.getDiagnostics()) {
+      String message = diagnostic.getMessage(null);
+      if ("compiler.err.doesnt.exist".equals(diagnostic.getCode())) {
+        if (message.contains("org.openjdk.btrace")) {
+          hints.add(
+              "BTrace 3 moved org.openjdk.btrace to io.btrace. Replace the imports, or drop them:"
+                  + " the annotations and the DSL are imported automatically.");
+        } else if (message.contains("io.btrace.annotations")) {
+          hints.add(
+              "the annotations are in io.btrace.core.annotations, and are imported automatically.");
+        }
+      } else if ("compiler.err.ref.ambiguous".equals(diagnostic.getCode())
+          && message.contains("io.btrace.BTrace")) {
+        hints.add(
+            "remove the wildcard import of io.btrace: its BTrace class is the DSL, and clashes with"
+                + " the @BTrace annotation.");
+      }
+    }
+    for (String hint : hints) {
+      perr.println("hint: " + hint);
+    }
   }
 
   /**
