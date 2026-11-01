@@ -44,17 +44,6 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   probe is left behind.
 - **Suggested fix:** report "agent loaded, no active probes" (or the probe count) instead.
 
-### O7. Assistants keep writing 2.x imports, and the errors don't help
-
-- **Where:** btrace compiler diagnostics (and the MCP server's compile error text).
-- **What:** in recorded takes, assistants wrote `org.openjdk.btrace.core.*` (the 2.x package) in
-  three of six first deploys, and once `io.btrace.annotations.*`, which fails with "reference to
-  BTrace is ambiguous" because `io.btrace.BTrace` exists in the root package.
-- **Suggested fix:** when compiling a script that imports `org.openjdk.btrace`, either migrate the
-  source as `ProbePackageMigrator` does for compiled probes or fail with "BTrace 3 moved
-  `org.openjdk.btrace` to `io.btrace`; replace the imports". Consider whether `io.btrace.BTrace` in
-  the root package is needed.
-
 ### O8. Build and test tooling papercuts found on the way
 
 - `publishBtracePublicationToMavenLocal` requires a PGP signature, so a snapshot cannot be
@@ -156,3 +145,4 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F30 | A plain `Throwable` parameter at `Kind.CATCH` and `Kind.THROW` was silently ignored | `BTraceMethodNode`, 2026-11-01 |
 | F31 | A handler whose unannotated parameters fit no matching method was skipped with no message to the client | `MethodInstrumentor`, `Instrumentor`, 2026-11-01 |
 | F32 | `str()` printed an application enum constant as its identity instead of its name | `BTraceUtils`, 2026-11-01 |
+| F33 | Compile errors for 2.x and other wrong imports did not say what to write instead, and reported lines shifted by the auto-imports | `CompilerHelper`, `Compiler`, 2026-11-01 |
