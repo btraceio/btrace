@@ -16,8 +16,7 @@
  */
 package io.btrace.instr;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -30,7 +29,8 @@ import org.objectweb.asm.MethodVisitor;
  * @author A. Sundararajan
  */
 public class LineNumberInstrumentor extends MethodInstrumentor {
-  private final List<Integer> pendingLines = new ArrayList<>();
+  private int[] pendingLines = new int[2];
+  private int pendingLineCount = 0;
   private int lastLine;
 
   public LineNumberInstrumentor(
@@ -49,18 +49,20 @@ public class LineNumberInstrumentor extends MethodInstrumentor {
   public void visitLineNumber(int line, Label start) {
     // A line number comes before the stack map frame of its offset, and the frame has to stay in
     // front of any code added there, so that code waits for the first instruction of the line
-    pendingLines.add(line);
+    if (pendingLineCount == pendingLines.length) {
+      pendingLines = Arrays.copyOf(pendingLines, pendingLineCount * 2);
+    }
+    pendingLines[pendingLineCount++] = line;
     super.visitLineNumber(line, start);
   }
 
   private void flushLines() {
-    if (pendingLines.isEmpty()) {
-      return;
-    }
-    // The code added for a line comes back through the visit methods below
-    List<Integer> lines = new ArrayList<>(pendingLines);
-    pendingLines.clear();
-    for (int line : lines) {
+    // The code added for a line comes back through the visit methods below, and must find no
+    // line pending; a visit adds no line numbers, so the array stays as it is meanwhile
+    int count = pendingLineCount;
+    pendingLineCount = 0;
+    for (int i = 0; i < count; i++) {
+      int line = pendingLines[i];
       if (lastLine != 0) {
         // The line that just finished is the previously-seen line, not line-1: line tables are not
         // guaranteed to be consecutive (gaps, branches), so line-1 would report the wrong line (and
