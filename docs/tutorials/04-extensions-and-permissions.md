@@ -295,6 +295,28 @@ btracex policy set --allowExtensions btrace-metrics
 Policy saved to /home/you/.btrace/permissions.properties
 ```
 
+Print it again to confirm the flip:
+
+```sh
+btracex policy print
+```
+
+**You should see:**
+
+```
+Policy: /home/you/.btrace/permissions.properties
+  allowExtensions=btrace-metrics
+  denyExtensions=
+  allowPrivileged=false
+```
+
+`policy set --allowExtensions <ids>` replaces the allow list *and* removes those ids from
+`denyExtensions`; `--denyExtensions <ids>` does the reverse. Anything you don't pass (other ids,
+`allowPrivileged`) is left as it was, so the newest decision for an extension always wins. Naming
+the same id in both options in one command is rejected. As in Step 3, a JVM that BTrace has already
+attached to keeps the policy it loaded first, so `btrace -le <NEW_PID>` still reports the old
+denial — the new policy applies to the next JVM you attach to.
+
 > **What just happened?** `btracex list`/`inspect` read extension manifests directly — no running
 > JVM needed, which is why they work identically whether or not anything is attached right now.
 > `policy print`/`set` read and write the exact same `~/.btrace/permissions.properties` your probes

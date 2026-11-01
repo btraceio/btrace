@@ -64,6 +64,45 @@ class PolicyFileTest {
   }
 
   @Test
+  void setAllowRemovesIdFromDenyAndKeepsOtherSettings() throws IOException {
+    Path policy = tempDir.resolve("permissions.properties");
+    PolicyFile pf = PolicyFile.fromArgs(new String[] {"--policy-file", policy.toString()});
+    pf.updateFromArgs(
+        new String[] {
+          "--denyExtensions", "btrace-metrics,btrace-otel", "--allowPrivileged", "true"
+        });
+    pf.save();
+
+    PolicyFile next = PolicyFile.fromArgs(new String[] {"--policy-file", policy.toString()});
+    next.updateFromArgs(new String[] {"--allowExtensions", "btrace-metrics"});
+    next.save();
+
+    PolicyFile reloaded = PolicyFile.fromArgs(new String[] {"--policy-file", policy.toString()});
+    assertEquals(List.of("btrace-metrics"), reloaded.getAllowList());
+    assertEquals(List.of("btrace-otel"), reloaded.getDenyList());
+    assertTrue(reloaded.describe(true).contains("\"allowPrivileged\":\"true\""));
+  }
+
+  @Test
+  void setDenyRemovesIdFromAllow() throws IOException {
+    Path policy = tempDir.resolve("permissions.properties");
+    PolicyFile pf = PolicyFile.fromArgs(new String[] {"--policy-file", policy.toString()});
+    pf.updateFromArgs(new String[] {"--allowExtensions", "a,b"});
+    pf.updateFromArgs(new String[] {"--denyExtensions", "a"});
+    assertEquals(List.of("b"), pf.getAllowList());
+    assertEquals(List.of("a"), pf.getDenyList());
+  }
+
+  @Test
+  void setRejectsIdInBothAllowAndDeny() throws IOException {
+    Path policy = tempDir.resolve("permissions.properties");
+    PolicyFile pf = PolicyFile.fromArgs(new String[] {"--policy-file", policy.toString()});
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> pf.updateFromArgs(new String[] {"--allowExtensions", "a", "--denyExtensions", "a"}));
+  }
+
+  @Test
   void rejectsMultipleTargets() {
     assertThrows(
         IllegalArgumentException.class,
