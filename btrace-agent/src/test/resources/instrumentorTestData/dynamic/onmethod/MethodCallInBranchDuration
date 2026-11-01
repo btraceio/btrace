@@ -1,0 +1,310 @@
+LCONST_0
+LSTORE 2
+LCONST_0
+LSTORE 4
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 4
+ASTORE 6
+ALOAD 6
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 4
+LSUB
+LSTORE 2
+L5
+FRAME APPEND [J J resources/CallInBranchTarget]
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+ALOAD 6
+LDC "work"
+LLOAD 2
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallInBranchDuration$args(Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/MethodCallInBranchDuration"
+]
+FRAME SAME
+FRAME FULL [resources/CallInBranchTarget I] [java/lang/IllegalStateException]
+ASTORE 7
+L6
+LINENUMBER 26 L6
+LCONST_0
+LSTORE 8
+LCONST_0
+LSTORE 10
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 10
+ASTORE 12
+ALOAD 12
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 10
+LSUB
+LSTORE 8
+L7
+FRAME FULL [resources/CallInBranchTarget I T T T T T T J J resources/CallInBranchTarget] []
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L8
+ALOAD 12
+LDC "done"
+LLOAD 8
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallInBranchDuration$args(Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/MethodCallInBranchDuration"
+]
+L8
+LINENUMBER 30 L8
+FRAME SAME
+L9
+LOCALVARIABLE e Ljava/lang/IllegalStateException; L6 L4 7
+LOCALVARIABLE this Lresources/CallInBranchTarget; L3 L9 0
+LOCALVARIABLE deep Z L3 L9 1
+MAXSTACK = 4
+MAXLOCALS = 13
+LCONST_0
+LSTORE 2
+LCONST_0
+LSTORE 4
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 4
+ASTORE 6
+ALOAD 6
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 4
+LSUB
+LSTORE 2
+L3
+FRAME APPEND [J J resources/CallInBranchTarget]
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+ALOAD 6
+LDC "work"
+LLOAD 2
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallInBranchDuration$args(Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/MethodCallInBranchDuration"
+]
+L4
+FRAME SAME
+GOTO L5
+FRAME CHOP 3
+LCONST_0
+LSTORE 7
+LCONST_0
+LSTORE 9
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 9
+ASTORE 11
+ALOAD 11
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 9
+LSUB
+LSTORE 7
+L6
+FRAME FULL [resources/CallInBranchTarget I T T T T T J J resources/CallInBranchTarget] []
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L5
+ALOAD 11
+LDC "done"
+LLOAD 7
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallInBranchDuration$args(Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/MethodCallInBranchDuration"
+]
+L5
+LINENUMBER 38 L5
+FRAME FULL [resources/CallInBranchTarget I T T] []
+L7
+LOCALVARIABLE this Lresources/CallInBranchTarget; L0 L7 0
+LOCALVARIABLE flag Z L0 L7 1
+MAXSTACK = 4
+MAXLOCALS = 12
+LCONST_0
+LSTORE 2
+LCONST_0
+LSTORE 4
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 4
+ASTORE 6
+ALOAD 6
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 4
+LSUB
+LSTORE 2
+L2
+FRAME FULL [resources/CallInBranchTarget I J J resources/CallInBranchTarget] [I]
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L3
+ALOAD 6
+LDC "value"
+LLOAD 2
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallInBranchDuration$args(Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/MethodCallInBranchDuration"
+]
+L3
+FRAME SAME1 I
+GOTO L4
+FRAME CHOP 3
+LCONST_0
+LSTORE 7
+LCONST_0
+LSTORE 9
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 9
+ASTORE 11
+ALOAD 11
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 9
+LSUB
+LSTORE 7
+L5
+FRAME FULL [resources/CallInBranchTarget I T T T T T J J resources/CallInBranchTarget] [I]
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L6
+ALOAD 11
+LDC "value"
+LLOAD 7
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallInBranchDuration$args(Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/MethodCallInBranchDuration"
+]
+L6
+FRAME SAME1 I
+L4
+FRAME FULL [resources/CallInBranchTarget I T T] [I]
+L7
+LOCALVARIABLE this Lresources/CallInBranchTarget; L0 L7 0
+LOCALVARIABLE flag Z L0 L7 1
+MAXSTACK = 5
+MAXLOCALS = 12
+LCONST_0
+LSTORE 2
+LCONST_0
+LSTORE 4
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 4
+ASTORE 6
+ALOAD 6
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 4
+LSUB
+LSTORE 2
+FRAME APPEND [J J resources/CallInBranchTarget]
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L5
+ALOAD 6
+LDC "work"
+LLOAD 2
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallInBranchDuration$args(Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/MethodCallInBranchDuration"
+]
+L5
+LINENUMBER 48 L5
+FRAME SAME
+FRAME CHOP 3
+LCONST_0
+LSTORE 7
+LCONST_0
+LSTORE 9
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 9
+ASTORE 11
+ALOAD 11
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 9
+LSUB
+LSTORE 7
+L6
+FRAME FULL [resources/CallInBranchTarget I T T T T T J J resources/CallInBranchTarget] []
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L7
+ALOAD 11
+LDC "done"
+LLOAD 7
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallInBranchDuration$args(Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/MethodCallInBranchDuration"
+]
+L7
+LINENUMBER 51 L7
+FRAME SAME
+FRAME FULL [resources/CallInBranchTarget I] []
+LCONST_0
+LSTORE 12
+LCONST_0
+LSTORE 14
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 14
+ASTORE 16
+ALOAD 16
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 14
+LSUB
+LSTORE 12
+L8
+FRAME FULL [resources/CallInBranchTarget I T T T T T T T T T T J J resources/CallInBranchTarget] []
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L9
+ALOAD 16
+LDC "done"
+LLOAD 12
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallInBranchDuration$args(Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/MethodCallInBranchDuration"
+]
+L9
+LINENUMBER 56 L9
+FRAME SAME
+L10
+LOCALVARIABLE this Lresources/CallInBranchTarget; L0 L10 0
+LOCALVARIABLE kind I L0 L10 1
+MAXSTACK = 4
+MAXLOCALS = 17
+LCONST_0
+LSTORE 3
+LCONST_0
+LSTORE 5
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 5
+ASTORE 7
+ALOAD 7
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 5
+LSUB
+LSTORE 3
+L6
+FRAME APPEND [J J resources/CallInBranchTarget]
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+ALOAD 7
+LDC "work"
+LLOAD 3
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallInBranchDuration$args(Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/MethodCallInBranchDuration"
+]
+FRAME CHOP 3
+L7
+LOCALVARIABLE this Lresources/CallInBranchTarget; L0 L7 0
+LOCALVARIABLE count I L0 L7 1
+MAXSTACK = 4
+MAXLOCALS = 8

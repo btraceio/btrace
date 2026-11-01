@@ -284,8 +284,9 @@ public class BTraceUtils {
    * Returns a string representation of the object. In general, the <code>toString</code> method
    * returns a string that "textually represents" this object. The result should be a concise but
    * informative representation that is easy for a person to read. For bootstrap classes, returns
-   * the result of calling Object.toString() override. For non-bootstrap classes, default toString()
-   * value [className@hashCode] is returned.
+   * the result of calling Object.toString() override. For non-bootstrap enum constants, returns the
+   * constant's name. For other non-bootstrap classes, default toString() value [className@hashCode]
+   * is returned.
    *
    * @param obj the object whose string representation is returned
    * @return a string representation of the given object.
@@ -3531,8 +3532,9 @@ public class BTraceUtils {
      * Returns a string representation of the object. In general, the <code>toString</code> method
      * returns a string that "textually represents" this object. The result should be a concise but
      * informative representation that is easy for a person to read. For bootstrap classes, returns
-     * the result of calling Object.toString() override. For non-bootstrap classes, default
-     * toString() value [className@hashCode] is returned.
+     * the result of calling Object.toString() override. For non-bootstrap enum constants, returns
+     * the constant's name. For other non-bootstrap classes, default toString() value
+     * [className@hashCode] is returned.
      *
      * @param obj the object whose string representation is returned
      * @return a string representation of the given object.
@@ -3549,6 +3551,9 @@ public class BTraceUtils {
           // NPE can be thrown from inside the toString() method we have no control over
           return "null";
         }
+      } else if (obj instanceof Enum) {
+        // name() is final, so this runs none of the target's code
+        return ((Enum<?>) obj).name();
       } else {
         return identityStr(obj);
       }

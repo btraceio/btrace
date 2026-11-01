@@ -181,10 +181,12 @@ Inject context information into probe handler parameters.
 | `@TargetInstance` | Object | Target object; the exception at `ERROR`, `CATCH`, `THROW` | `CALL`, `FIELD_GET/SET`, `ERROR`, `CATCH`, `THROW` |
 | `@TargetMethodOrField` | String | Target name | `CALL`, `FIELD_GET/SET` |
 
-At `ERROR`, a handler can also take the exception as a plain `Throwable` parameter: when no
-parameter is annotated `@TargetInstance`, the last unannotated parameter declared as
-`java.lang.Throwable` receives it. At `CATCH` and `THROW` the exception parameter must be annotated
-`@TargetInstance`.
+At `ERROR`, `CATCH` and `THROW`, a handler can also take the exception as a plain `Throwable`
+parameter: when no parameter is annotated `@TargetInstance`, the last unannotated parameter declared
+as `java.lang.Throwable` receives it.
+
+A handler whose unannotated parameters fit no matching method is not applied, and the client gets a
+`[BTRACE WARN] Handler ... was not applied` message naming the first method that rejected it.
 
 **Examples:**
 ```java

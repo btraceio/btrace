@@ -83,7 +83,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       String desc,
       MethodVisitor mv,
       FrameDiagnosticListener frameDiagnosticListener) {
-    super(ASM9, mv);
+    super(ASM9, new LastFrameAtOffsetVisitor(mv));
     this.owner = owner;
     this.desc = desc;
 
@@ -144,9 +144,6 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
 
   @Override
   public void visitFrame(int type, int nLocal, Object[] local, int nStack, Object[] stack) {
-    if (lastFramePc == pc) {
-      return;
-    }
     lastFramePc = pc;
 
     switch (type) {
@@ -248,9 +245,9 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   public void visitLookupSwitchInsn(Label label, int[] ints, Label[] labels) {
     stack.pop();
     SavedState state = new SavedState(localTypes, stack, newLocals, SavedState.CONDITIONAL);
-    jumpTargetStates.put(label, state);
+    recordJump(label, state);
     for (Label l : labels) {
-      jumpTargetStates.put(l, state);
+      recordJump(l, state);
     }
     super.visitLookupSwitchInsn(label, ints, labels);
     pc++;
@@ -260,9 +257,9 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   public void visitTableSwitchInsn(int i, int i1, Label label, Label... labels) {
     stack.pop();
     SavedState state = new SavedState(localTypes, stack, newLocals, SavedState.CONDITIONAL);
-    jumpTargetStates.put(label, state);
+    recordJump(label, state);
     for (Label l : labels) {
-      jumpTargetStates.put(l, state);
+      recordJump(l, state);
     }
     super.visitTableSwitchInsn(i, i1, label, labels);
     pc++;
@@ -352,13 +349,22 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
           break;
         }
     }
-    jumpTargetStates.put(
+    recordJump(
         label,
         new SavedState(
             localTypes,
             stack,
             newLocals,
             opcode == GOTO || opcode == JSR ? SavedState.UNCONDITIONAL : SavedState.CONDITIONAL));
+  }
+
+  /**
+   * A label reached by several jumps can rely only on the added locals that every one of them has
+   * set, so a later jump must not bring in locals the earlier ones never initialized.
+   */
+  private void recordJump(Label label, SavedState state) {
+    SavedState known = jumpTargetStates.get(label);
+    jumpTargetStates.put(label, known != null ? state.joinedWith(known) : state);
   }
 
   @Override
@@ -1872,6 +1878,28 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       this.sStack = new SimulatedStack(sStack.toArray());
       this.newLocals = new HashSet<>(newLocals);
       this.kind = kind;
+    }
+
+    /** This state without the added locals that {@code other} does not have as well. */
+    SavedState joinedWith(SavedState other) {
+      Collection<LocalVarSlot> common = new HashSet<>(newLocals);
+      common.retainAll(other.newLocals);
+      Object[] types = lvTypes.toArray();
+      for (Collection<LocalVarSlot> slots : Arrays.asList(newLocals, other.newLocals)) {
+        for (LocalVarSlot lvs : slots) {
+          if (!common.contains(lvs)) {
+            clearSlot(types, lvs);
+          }
+        }
+      }
+      return new SavedState(new LocalVarTypes(types), sStack, common, kind);
+    }
+
+    private static void clearSlot(Object[] types, LocalVarSlot lvs) {
+      int size = lvs.type == LONG || lvs.type == DOUBLE ? 2 : 1;
+      for (int i = lvs.idx; i < lvs.idx + size && i < types.length; i++) {
+        types[i] = TOP;
+      }
     }
   }
 

@@ -39,6 +39,7 @@ public class OnMethodInstrumenterTest extends InstrumentorTestBase {
 
   static {
     targetClassMap.put("onmethod/MatchDerived", "DerivedClass");
+    targetClassMap.put("onmethod/MethodCallInBranchDuration", "CallInBranchTarget");
     targetClassMap.put("issues/BTRACE22", "issues/BTRACE22");
     targetClassMap.put("issues/BTRACE28", "issues/BTRACE28");
     targetClassMap.put("issues/BTRACE53", "DerivedClass");

@@ -29,51 +29,6 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 - **Suggested fix:** refuse a deploy while a session for that `pid:port` is active ("exit or detach
   the running probe first"), or track several probes per JVM. Test-first in `ToolHandlersTest`.
 
-### O2. A `Kind.CALL` probe with `@Duration` fails verification when the call sits inside a branch
-
-- **Where:** btrace agent, the stack map frames emitted around `Kind.CALL` instrumentation
-  (`Instrumentor`, `InstrumentingMethodVisitor`); not fixed yet.
-- **What:** this handler over `FraudScreen.screen`, whose `deepScore()` call sits inside
-  `if (amountCents >= DEEP_SCORING_CENTS)`, makes the whole class fail verification, so no handler
-  runs in it. The client now prints
-  `[BTRACE WARN] Class verification failed: com.acme.risk.FraudScreen (null)`:
-
-  ```java
-  @OnMethod(clazz = "com.acme.risk.FraudScreen", method = "screen",
-      location = @Location(value = Kind.CALL, clazz = "/.*/", method = "/.*/", where = Where.AFTER))
-  public static void s(@TargetInstance Object ti, @TargetMethodOrField String tm, @Duration long d) { ... }
-  ```
-
-- **Root cause so far:** loading the dumped class with `-XX:+BytecodeVerificationLocal` gives
-  "Inconsistent stackmap frames at branch target 215 ... Type top (current frame, locals[16]) is not
-  assignable to long". The duration locals are declared inside the branch, yet the frame at the
-  join point claims them, and the path skipping the branch never set them. Related to F12, but with
-  a single probe. The frame code itself has not been read yet.
-- **Repro:** start demo 06 (`demos/06-ai-assistant/run.sh`), deploy the handler above. The same
-  handler over `PaymentClient.authorize`, which has no such branch, works.
-- **History:** the originally reported "prints nothing at all" had two more causes, fixed as F26 and
-  F27.
-
-### O3. Unannotated exception parameters at CATCH and THROW are silently ignored
-
-- **Where:** btrace agent, `Instrumentor` CATCH and THROW cases; more generally,
-  `validateArguments`.
-- **What:** at `Kind.CATCH` and `Kind.THROW` the exception binds only to `@TargetInstance`. A plain
-  `Throwable t` parameter is matched against the target method's own arguments, fails, and the
-  handler is never applied, with no compile-time or runtime message. `Kind.ERROR` had the same
-  problem and is fixed (see F10).
-- **Broader issue:** any handler whose unannotated parameters do not match the target's arguments
-  is skipped silently. A verifier warning ("handler X matches no method signature of Y") would
-  have turned three of the bugs in this file into a one-line error.
-- **Suggested fix:** bind a bare `Throwable` at CATCH and THROW as at ERROR, and report handlers
-  that are never applied because of an argument mismatch.
-
-### O5. `str()` on an enum prints its identity, not its name
-
-- **Where:** `BTraceUtils.str(Object)`.
-- **What:** `str(verdict)` for `com.acme.risk.Verdict.HOLD` prints
-  `com.acme.risk.Verdict@778d07d8`. A recorded assistant had to correlate verdicts by identity hash.
-- **Suggested fix:** for enum constants, return `name()` (safe: no user `toString` is called).
 
 ### O6. `list_jvms` keeps saying "BTrace: attached" after every probe is removed (MCP server)
 
@@ -204,6 +159,16 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   `sun.misc.Unsafe`, JCTools' non-Unsafe (atomic) queue variants, or `java.util.concurrent`
   queues where the hot path allows.
 
+### O17. A `Kind.LINE` probe ignores the `method` of its `@OnMethod`
+
+- **Where:** btrace agent, `Instrumentor.visitMethod`, which applies a `Kind.LINE` probe to every
+  method of a matching class without looking at `method`.
+- **What:** a probe with `method = "screen"` and `line = -1` on `FraudScreen` also fired on the lines
+  of `deepScore` (46 to 50). The behaviour looks long-standing, and the `AllLines` test trace names
+  `<init>` yet instruments every method, so a fix may be a behaviour change rather than a plain bug
+  fix. Decide which one before changing it.
+- **Repro:** start demo 06, deploy that probe and look at the reported line numbers.
+
 ## Fixed
 
 | # | Defect | Fix |
@@ -235,3 +200,8 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F25 | The migration script listed unchanged lines after applying | `0adb2d22` |
 | F26 | A `Kind.CALL` `@Duration` probe whose call site pattern matched the `System.nanoTime()` call BTrace adds overflowed the stack while instrumenting, and no handler ran in the class | `Instrumentor`, 2026-11-01 |
 | F27 | A class that failed to transform was reported only in the target JVM's log, so its probes printed nothing with no explanation | `BTraceTransformer`, 2026-11-01 |
+| F28 | A `Kind.CALL` `@Duration` probe failed verification when the call sat inside a branch: a label's saved state came from the last jump to it, and an injected frame displaced the method's own frame at the same offset | `InstrumentingMethodVisitor`, `LastFrameAtOffsetVisitor`, 2026-11-01 |
+| F29 | A `Kind.LINE` probe on a line starting at a catch handler or join point failed verification, because its code went in front of the stack map frame of that offset | `LineNumberInstrumentor`, 2026-11-01 |
+| F30 | A plain `Throwable` parameter at `Kind.CATCH` and `Kind.THROW` was silently ignored | `BTraceMethodNode`, 2026-11-01 |
+| F31 | A handler whose unannotated parameters fit no matching method was skipped with no message to the client | `MethodInstrumentor`, `Instrumentor`, 2026-11-01 |
+| F32 | `str()` printed an application enum constant as its identity instead of its name | `BTraceUtils`, 2026-11-01 |

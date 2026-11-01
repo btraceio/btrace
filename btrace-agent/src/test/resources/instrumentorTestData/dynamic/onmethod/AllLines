@@ -261,7 +261,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/AllLines"
 ]
 L3
-FRAME SAME1 java/lang/Throwable
+FRAME SAME1 java/io/IOException
 L4
 LINENUMBER 76 L4
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
@@ -276,7 +276,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/AllLines"
 ]
 L5
-FRAME APPEND [java/lang/Throwable]
+FRAME APPEND [java/io/IOException]
 L6
 LINENUMBER 78 L6
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
@@ -577,6 +577,7 @@ L8
 FRAME SAME
 L6
 LINENUMBER 113 L6
+FRAME FULL [resources/OnMethodTest java/util/Map java/util/HashMap] []
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L9
 ALOAD 0
@@ -651,7 +652,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/AllLines"
 ]
 L10
-FRAME FULL [resources/OnMethodTest resources/OnMethodTest] []
+FRAME SAME
 L11
 LOCALVARIABLE this Lresources/OnMethodTest; L4 L11 0
 MAXSTACK = 3
@@ -737,6 +738,7 @@ L4
 FRAME SAME
 L2
 LINENUMBER 135 L2
+FRAME SAME
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
@@ -767,6 +769,7 @@ L8
 FRAME SAME
 L6
 LINENUMBER 140 L6
+FRAME SAME
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L9
 ALOAD 0
@@ -933,7 +936,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/AllLines"
 ]
 L3
-FRAME SAME1 java/lang/Throwable
+FRAME SAME1 java/lang/RuntimeException
 L4
 LINENUMBER 171 L4
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
@@ -948,7 +951,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/AllLines"
 ]
 L5
-FRAME APPEND [java/lang/Throwable]
+FRAME APPEND [java/lang/RuntimeException]
 L6
 LINENUMBER 173 L6
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I

@@ -63,7 +63,7 @@ public class BTraceMethodNode extends MethodNode {
   @Override
   public void visitEnd() {
     if (om != null) {
-      bindBareThrowableAtError(om);
+      bindBareThrowable(om);
       verifySpecialParameters(om);
       cn.addOnMethod(om);
     }
@@ -353,16 +353,16 @@ public class BTraceMethodNode extends MethodNode {
   }
 
   /**
-   * At {@code Kind.ERROR} the thrown exception is delivered to the {@code @TargetInstance}
-   * parameter. Handlers are commonly written with a plain {@code Throwable} parameter instead, as
-   * the documentation shows; without a binding, that parameter is matched against the target
-   * method's own arguments, fails to match, and the handler is silently never applied. When no
-   * parameter is annotated {@code @TargetInstance}, bind the last unannotated parameter declared
-   * exactly as {@code java.lang.Throwable} to the exception.
+   * At {@code Kind.ERROR}, {@code Kind.CATCH} and {@code Kind.THROW} the exception is delivered to
+   * the {@code @TargetInstance} parameter. Handlers are commonly written with a plain {@code
+   * Throwable} parameter instead, as the documentation shows; without a binding, that parameter is
+   * matched against the target method's own arguments, fails to match, and the handler is never
+   * applied. When no parameter is annotated {@code @TargetInstance}, bind the last unannotated
+   * parameter declared exactly as {@code java.lang.Throwable} to the exception.
    */
-  private void bindBareThrowableAtError(OnMethod om) {
+  private void bindBareThrowable(OnMethod om) {
     if (om.getLocation() == null
-        || om.getLocation().getValue() != Kind.ERROR
+        || !takesException(om.getLocation().getValue())
         || om.getTargetInstanceParameter() != -1) {
       return;
     }
@@ -373,6 +373,10 @@ public class BTraceMethodNode extends MethodNode {
         return;
       }
     }
+  }
+
+  private static boolean takesException(Kind kind) {
+    return kind == Kind.ERROR || kind == Kind.CATCH || kind == Kind.THROW;
   }
 
   private static boolean isSpecialParameter(OnMethod om, int index) {
