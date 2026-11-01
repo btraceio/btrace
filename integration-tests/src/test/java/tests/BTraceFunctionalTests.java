@@ -29,6 +29,7 @@ import io.btrace.core.comm.DisconnectCommand;
 import io.btrace.core.comm.StatusCommand;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -315,6 +316,36 @@ public class BTraceFunctionalTests extends RuntimeTest {
                 "Expected print() fragments joined on one line, no blank line:\n" + stdout);
           }
         });
+  }
+
+  @Test
+  public void testRequiredServiceBlockedByPolicyRefusesProbe() throws Exception {
+    Path policy = Files.createTempFile("btrace-deny-metrics", ".properties");
+    try {
+      Files.write(policy, "denyExtensions=btrace-metrics\n".getBytes(StandardCharsets.UTF_8));
+      permissionsOverride = policy.toString();
+      testDynamic(
+          "resources.Main",
+          "btrace/RequiredServiceDeniedTest.java",
+          Completion.untilContains("was not deployed"),
+          new ResultValidator() {
+            @Override
+            public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+              String all = stdout + stderr;
+              assertTrue(
+                  all.contains(
+                      "required @Injected service io.btrace.metrics.MetricsService"
+                          + " (field 'metrics') is unavailable: btrace-metrics: Blocked by policy"
+                          + " (denyExtensions)"),
+                  "Expected the probe to be refused:\n" + all);
+              assertFalse(all.contains("Successfully started"), "Probe must not deploy:\n" + all);
+              assertFalse(all.contains("REQUIRED: metrics recorded"), all);
+              assertFalse(all.contains("BootstrapMethodError"), all);
+            }
+          });
+    } finally {
+      Files.deleteIfExists(policy);
+    }
   }
 
   @Test

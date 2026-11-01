@@ -119,6 +119,32 @@ public final class ExtensionIndy {
   }
 
   /**
+   * Checks ahead of linking whether an {@code @Injected} field would fail to link, so that a probe
+   * with an unavailable required service can be refused at deploy time instead of throwing a {@link
+   * BootstrapMethodError} at every call site. Applies the same rules as {@link #bootstrapFieldGet}:
+   * optional fields and fields in SHIM mode (per field or through {@code
+   * btrace.extension.shimMode}) fall back and are never reported.
+   *
+   * @param serviceClassName fully qualified service class name
+   * @param optionalFlag non-zero if the field is optional
+   * @param injectMode the field's injection mode name, may be empty
+   * @return why the required service is unavailable, or {@code null} if it would link or fall back
+   */
+  public static String requiredServiceProblem(
+      String serviceClassName, int optionalFlag, String injectMode) {
+    if (optionalFlag != 0 || resolveMode(parseInjectionMode(injectMode)) == InjectionMode.SHIM) {
+      return null;
+    }
+    try {
+      requireServiceClass(serviceClassName);
+      return null;
+    } catch (Throwable t) {
+      String msg = t.getMessage();
+      return msg != null ? msg : t.toString();
+    }
+  }
+
+  /**
    * Service instances created for {@code @Injected} fields, per probe class. {@code
    * bootstrapFieldGet} runs once per call site, so without this cache every handler reading the
    * same field would get its own instance. Keyed weakly on the caller (probe) {@code Class}: probe
