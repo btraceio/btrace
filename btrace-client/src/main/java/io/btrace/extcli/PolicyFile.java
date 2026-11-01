@@ -77,13 +77,13 @@ final class PolicyFile {
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "--allowExtensions":
-          allow = splitCsv(args[++i]);
+          allow = splitCsv(optionValue(args, ++i));
           break;
         case "--denyExtensions":
-          deny = splitCsv(args[++i]);
+          deny = splitCsv(optionValue(args, ++i));
           break;
         case "--allowPrivileged":
-          props.setProperty("allowPrivileged", args[++i]);
+          props.setProperty("allowPrivileged", optionValue(args, ++i));
           break;
       }
     }
@@ -197,6 +197,13 @@ final class PolicyFile {
         props.getProperty("allowExtensions", ""),
         props.getProperty("denyExtensions", ""),
         allowPriv);
+  }
+
+  private static String optionValue(String[] args, int i) {
+    if (i >= args.length) {
+      throw new IllegalArgumentException("Missing value for " + args[i - 1]);
+    }
+    return args[i];
   }
 
   private static List<String> splitCsv(String csv) {

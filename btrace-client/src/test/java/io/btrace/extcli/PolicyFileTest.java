@@ -103,6 +103,17 @@ class PolicyFileTest {
   }
 
   @Test
+  void setRejectsOptionWithoutValue() throws IOException {
+    Path policy = tempDir.resolve("permissions.properties");
+    PolicyFile pf = PolicyFile.fromArgs(new String[] {"--policy-file", policy.toString()});
+    IllegalArgumentException e =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> pf.updateFromArgs(new String[] {"--allowExtensions"}));
+    assertEquals("Missing value for --allowExtensions", e.getMessage());
+  }
+
+  @Test
   void rejectsMultipleTargets() {
     assertThrows(
         IllegalArgumentException.class,
