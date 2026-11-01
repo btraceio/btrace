@@ -156,6 +156,21 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   is seen still registered on a build with F11. A possible hardening, not done: have the client's
   shutdown hook wait briefly for the exit echo, so the next probe always starts after cleanup.
 
+### O12. On JDK 24+ the target app prints a `sun.misc.Unsafe` removal warning once a probe attaches
+
+- **Where:** the JCTools 4.0.7 copy shaded into the agent (`io/btrace/libs/org/jctools`); no BTrace
+  source calls `sun.misc.Unsafe::arrayBaseOffset`.
+- **What:** in demo 07 on Temurin 26.0.1 the app's own output shows
+  `WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release` between the
+  throughput lines. It is the one-time warning the JDK prints under the default
+  `--sun-misc-unsafe-memory-access=warn`; the other demos pass with no such line, and JDK 11, 17
+  and 21 print nothing. The integration harness already filters the line out of oneliner output.
+- **Why it matters:** it lands in the user's application log, and a later JDK that defaults to
+  `deny` would make these queues throw instead of warn.
+- **Suggested fix:** not investigated. Options: a JCTools release whose queues avoid
+  `sun.misc.Unsafe`, JCTools' non-Unsafe (atomic) queue variants, or `java.util.concurrent`
+  queues where the hot path allows.
+
 ## Fixed
 
 | # | Defect | Fix |
