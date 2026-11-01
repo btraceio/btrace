@@ -10,25 +10,6 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 
 ## Open
 
-### O1. A second deploy on the same JVM leaks the first probe (MCP server)
-
-- **Where:** agent-plugins, `ClientManager.registerClient` and the two deploy handlers.
-- **What:** the server keeps one session per `pid:port`. Deploying a probe while another deployed
-  in the same session is still active replaces the registry entry without stopping or closing the
-  first one. Its client socket stays open and the probe keeps running in the target, but
-  `exit_probe` now only reaches the second probe, and `list_probes` (which lists only detached
-  probes) does not show it either.
-- **Impact:** an assistant can truthfully believe it cleaned up while a probe is still running.
-  Seen in a recorded take (demo 06, take B): it deployed `Probe7`, then `Probe8` without an
-  `exit_probe` in between, and finally reported "no probes are still attached".
-- **Repro:** `deploy_oneliner` twice on the same PID, `exit_probe` once, then check the target
-  (for example a counter probe still firing, or `jcmd <PID> Thread.print` showing the BTrace
-  command thread).
-- **Not confirmed live:** the take B service was stopped when the recording ended, so the leak was
-  inferred from the code path, not observed in that JVM.
-- **Suggested fix:** refuse a deploy while a session for that `pid:port` is active ("exit or detach
-  the running probe first"), or track several probes per JVM. Test-first in `ToolHandlersTest`.
-
 ### O4. `println` output reaches the client with an extra blank line
 
 - **Where:** btrace runtime/client message formatting (not root-caused).
@@ -110,6 +91,14 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   fix. Decide which one before changing it.
 - **Repro:** start demo 06, deploy that probe and look at the reported line numbers.
 
+### O18. The MCP server's busy-port error tells the user about `-p`
+
+- **Where:** `Client.java` in btrace-client, and agent-plugins `McpServerE2ETest`.
+- **What:** `aBusyPortIsReportedWithTheArgumentThatAvoidsIt` expects `Port N unavailable` and a
+  mention of the `'port' argument`. The client now says `Port N is in use by another process ...
+  choose a free agent port with -p <port>`, and `-p` means nothing to an MCP user. The test fails
+  with or without the fix for F37.
+
 ## Fixed
 
 | # | Defect | Fix |
@@ -138,3 +127,4 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F34 | A snapshot could not be installed into `mavenLocal` without a PGP key | `btrace-dist/build.gradle`, 2026-11-01 |
 | F35 | `classFileApiBackendTest` failed `./gradlew build` on a machine without JDK 28 | `btrace-agent/build.gradle`, 2026-11-01 |
 | F36 | `OnMethodInstrumenterTest` failed when run on its own | `InstrumentorTestBase`, 2026-11-01 |
+| F37 | A second deploy on one JVM left the first probe running where `exit_probe` could not reach it | agent-plugins `ClientManager`, deploy handlers, 2026-11-01 |
