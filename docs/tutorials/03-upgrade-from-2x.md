@@ -30,24 +30,22 @@ representative 2.x-style probe ([demo/legacy/SlowChargeProbe.java](demo/legacy/S
  * the pre-3.0 org.openjdk.btrace package so the tutorial has something real
  * to run scripts/migrate-btrace-script.sh against.
  */
-package demo;
 
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Duration;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
-import org.openjdk.btrace.core.annotations.Return;
 import static org.openjdk.btrace.core.BTraceUtils.println;
 import static org.openjdk.btrace.core.BTraceUtils.str;
 
 @BTrace
 public class SlowChargeProbe {
   @OnMethod(
-      clazz = "demo.OrderService",
+      clazz = "OrderService",
       method = "chargeCard",
       location = @Location(Kind.RETURN))
-  public static void onCharge(@Duration long duration, @Return Object result) {
+  public static void onCharge(@Duration long duration) {
     if (duration > 200_000_000L) {
       println("slow chargeCard: " + str(duration / 1_000_000) + " ms");
     }
@@ -55,7 +53,7 @@ public class SlowChargeProbe {
 }
 ```
 
-Every one of its eight imports is a `org.openjdk.btrace.*` reference (and so is the header
+Every one of its seven imports is an `org.openjdk.btrace.*` reference (and so is the header
 comment, which matters in a moment). That's the entire migration surface — there's no other
 syntax change between 2.x and 3.0.
 
@@ -74,14 +72,13 @@ scripts/migrate-btrace-script.sh --dry-run docs/tutorials/demo/legacy/SlowCharge
 ```
 would migrate: docs/tutorials/demo/legacy/SlowChargeProbe.java
     4: * the pre-3.0 org.openjdk.btrace package so the tutorial has something real
-    9:import org.openjdk.btrace.core.annotations.BTrace;
-    10:import org.openjdk.btrace.core.annotations.OnMethod;
-    11:import org.openjdk.btrace.core.annotations.Duration;
-    12:import org.openjdk.btrace.core.annotations.Kind;
-    13:import org.openjdk.btrace.core.annotations.Location;
-    14:import org.openjdk.btrace.core.annotations.Return;
-    15:import static org.openjdk.btrace.core.BTraceUtils.println;
-    16:import static org.openjdk.btrace.core.BTraceUtils.str;
+    8:import org.openjdk.btrace.core.annotations.BTrace;
+    9:import org.openjdk.btrace.core.annotations.OnMethod;
+    10:import org.openjdk.btrace.core.annotations.Duration;
+    11:import org.openjdk.btrace.core.annotations.Kind;
+    12:import org.openjdk.btrace.core.annotations.Location;
+    13:import static org.openjdk.btrace.core.BTraceUtils.println;
+    14:import static org.openjdk.btrace.core.BTraceUtils.str;
 Dry run: 1 file(s) would be migrated (of 1 examined).
 ```
 
@@ -99,21 +96,27 @@ scripts/migrate-btrace-script.sh docs/tutorials/demo/legacy/SlowChargeProbe.java
 ```
 migrated: docs/tutorials/demo/legacy/SlowChargeProbe.java (backup: docs/tutorials/demo/legacy/SlowChargeProbe.java.bak)
     4: * the pre-3.0 io.btrace package so the tutorial has something real
-    9:import io.btrace.core.annotations.BTrace;
-    10:import io.btrace.core.annotations.OnMethod;
-    11:import io.btrace.core.annotations.Duration;
-    12:import io.btrace.core.annotations.Kind;
-    13:import io.btrace.core.annotations.Location;
-    14:import io.btrace.core.annotations.Return;
-    15:import static io.btrace.core.BTraceUtils.println;
-    16:import static io.btrace.core.BTraceUtils.str;
+    8:import io.btrace.core.annotations.BTrace;
+    9:import io.btrace.core.annotations.OnMethod;
+    10:import io.btrace.core.annotations.Duration;
+    11:import io.btrace.core.annotations.Kind;
+    12:import io.btrace.core.annotations.Location;
+    13:import static io.btrace.core.BTraceUtils.println;
+    14:import static io.btrace.core.BTraceUtils.str;
 Done: 1 file(s) migrated (of 1 examined).
 ```
 
 Your original file is preserved as `SlowChargeProbe.java.bak` next to it; the script itself now imports
 `io.btrace.*` and deploys against BTrace 3.0 exactly as before — `@BTrace`, `@OnMethod`,
-`@Duration`, `@Return`, `@Location`/`Kind`, and `BTraceUtils.println`/`str` all exist with the same
-names and signatures in 3.0.
+`@Duration`, `@Location`/`Kind`, and `BTraceUtils.println`/`str` all exist with the same
+names and signatures in 3.0. Deploy it against the demo app from
+[Tutorial 1](01-first-trace-in-2-minutes.md) (`btrace <PID> docs/tutorials/demo/legacy/SlowChargeProbe.java`)
+and it prints one line for every `chargeCard` call slower than 200 ms:
+
+```
+slow chargeCard: 294 ms
+slow chargeCard: 329 ms
+```
 
 > **What just happened?** The tool does one thing: it finds `org.openjdk.btrace` (as an import, a
 > fully-qualified reference, or — as line 4 shows — plain text in a comment) and replaces it with
@@ -122,7 +125,7 @@ names and signatures in 3.0.
 
 > **Going further:** since the 3.0 compiler auto-injects `import static io.btrace.BTrace.*;` and
 > `import io.btrace.core.annotations.*;` into any script that doesn't already import the DSL or
-> the annotations package, you can now *delete* most of those eight import lines entirely and keep
+> the annotations package, you can now *delete* most of those seven import lines entirely and keep
 > only the logic. Migrating gets you back to 3.0's zero-import style for free — see
 > [From Oneliner to Script](02-oneliner-to-script.md) for that DSL.
 
