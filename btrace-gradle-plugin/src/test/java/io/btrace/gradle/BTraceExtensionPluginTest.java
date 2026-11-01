@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -372,6 +373,28 @@ class BTraceExtensionPluginTest {
         assertTrue(pom.contains("<description>Fixture for extension plugin tests</description>"), pom);
         assertTrue(pom.contains("<url>https://github.com/example-org/my-extension</url>"), pom);
         assertTrue(pom.contains("<licenses>") && pom.contains("<developers>") && pom.contains("<scm>"), pom);
+    }
+
+    @Test
+    @DisplayName("the manifest uses the project version even when it is set after the plugin is applied")
+    void manifestUsesVersionAssignedAfterPluginsBlock() throws IOException {
+        writeExtensionProject();
+        Path buildFile = projectDir.resolve("ext/build.gradle");
+        String script = Files.readString(buildFile, StandardCharsets.UTF_8);
+        // Real build scripts assign the version after the plugins block, as the fixture does
+        assertTrue(script.indexOf("version = '1.0'") > script.indexOf("id 'io.btrace.extension'"));
+        writeFile(buildFile, script.replace("version = '1.0'", "version = '1.2.3'"));
+
+        BuildResult result = createRunner().withArguments(":ext:buildApiJar").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":ext:buildApiJar").getOutcome());
+        try (JarFile jar =
+                new JarFile(projectDir.resolve("ext/build/libs/ext-1.2.3-api.jar").toFile())) {
+            Attributes attrs = jar.getManifest().getMainAttributes();
+            assertEquals("1.2.3", attrs.getValue("BTrace-Extension-Version"));
+            assertEquals("ext-1.2.3-impl.jar", attrs.getValue("BTrace-Extension-Impl"));
+        }
+        assertTrue(projectDir.resolve("ext/build/libs/ext-1.2.3-impl.jar").toFile().isFile());
     }
 
     @Test
