@@ -31,4 +31,13 @@ class CallSiteInstrumentationTest extends InstrumentorTestBase {
     assertNotSame(originalBC, transformedBC, "the probe was not applied");
     assertVerifies();
   }
+
+  @Test
+  void durationOfCallsOnSeparateBranchesPassesVerification() throws Exception {
+    loadTargetClass("CallInBranchTarget");
+    transform("onmethod/MethodCallInBranchDuration");
+
+    assertNotSame(originalBC, transformedBC, "the probe was not applied");
+    assertVerifies();
+  }
 }

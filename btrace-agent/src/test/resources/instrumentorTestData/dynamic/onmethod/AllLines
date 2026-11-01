@@ -261,7 +261,6 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/AllLines"
 ]
 L3
-FRAME SAME1 java/lang/Throwable
 L4
 LINENUMBER 76 L4
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
@@ -276,7 +275,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/AllLines"
 ]
 L5
-FRAME APPEND [java/lang/Throwable]
+FRAME APPEND [java/io/IOException]
 L6
 LINENUMBER 78 L6
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
@@ -589,7 +588,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/AllLines"
 ]
 L9
-FRAME SAME
+FRAME FULL [resources/OnMethodTest java/util/Map java/util/HashMap] []
 L10
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L10 0
 LOCALVARIABLE c Ljava/util/Map; L2 L10 1
@@ -651,7 +650,6 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/AllLines"
 ]
 L10
-FRAME FULL [resources/OnMethodTest resources/OnMethodTest] []
 L11
 LOCALVARIABLE this Lresources/OnMethodTest; L4 L11 0
 MAXSTACK = 3
@@ -887,7 +885,6 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/AllLines"
 ]
 L10
-FRAME SAME
 L11
 LOCALVARIABLE this Lresources/OnMethodTest; L4 L11 0
 MAXSTACK = 3
@@ -933,7 +930,6 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/AllLines"
 ]
 L3
-FRAME SAME1 java/lang/Throwable
 L4
 LINENUMBER 171 L4
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
@@ -948,7 +944,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/AllLines"
 ]
 L5
-FRAME APPEND [java/lang/Throwable]
+FRAME APPEND [java/lang/RuntimeException]
 L6
 LINENUMBER 173 L6
 INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
