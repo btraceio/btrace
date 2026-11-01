@@ -422,6 +422,21 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   @Test
+  public void testCatchAndThrowHandlersWithBareThrowable() throws Exception {
+    testDynamic(
+        "resources.FailingTarget",
+        "btrace/BareThrowableCatchThrowTest.java",
+        Completion.untilContains("caught java.lang.IllegalStateException"),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertFalse(stdout.contains("was not applied"), "A handler was rejected:\n" + stdout);
+          }
+        });
+  }
+
+  @Test
   public void testErrorHandlerWithBareThrowable() throws Exception {
     // The tutorials declare the exception at Kind.ERROR as a plain Throwable parameter, without
     // @TargetInstance; the handler must still run and receive the thrown exception.
