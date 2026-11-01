@@ -24,6 +24,7 @@ import io.btrace.core.BTraceRuntime;
 import io.btrace.core.MethodID;
 import io.btrace.core.SharedSettings;
 import io.btrace.runtime.BTraceRuntimeAccess;
+import io.btrace.runtime.BTraceRuntimeAccessImpl;
 import io.btrace.runtime.auxiliary.Auxiliary;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -83,6 +84,9 @@ public abstract class InstrumentorTestBase {
   @BeforeAll
   public static void classStartup() throws Exception {
     BTraceRuntime.class.getName();
+    // Probe class names come from this implementation; a test class run on its own, with nothing
+    // else having installed it, would see the probes under their original names
+    BTraceRuntimeAccessImpl.install();
     uccn = BTraceRuntimeAccess.class.getDeclaredField("uniqueClientClassNames");
     uccn.setAccessible(true);
     uccn.set(null, true);
