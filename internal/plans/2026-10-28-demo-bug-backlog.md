@@ -163,3 +163,4 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F26 | A `Kind.CALL` `@Duration` probe whose call site pattern matched the `System.nanoTime()` call BTrace adds overflowed the stack while instrumenting, and no handler ran in the class | `Instrumentor`, 2026-11-01 |
 | F27 | A class that failed to transform was reported only in the target JVM's log, so its probes printed nothing with no explanation | `BTraceTransformer`, 2026-11-01 |
 | F28 | A `Kind.CALL` `@Duration` probe failed verification when the call sat inside a branch: a label's saved state came from the last jump to it, and an injected frame displaced the method's own frame at the same offset | `InstrumentingMethodVisitor`, `LastFrameAtOffsetVisitor`, 2026-11-01 |
+| F29 | A `Kind.LINE` probe on a line starting at a catch handler or join point failed verification, because its code went in front of the stack map frame of that offset | `LineNumberInstrumentor`, 2026-11-01 |
