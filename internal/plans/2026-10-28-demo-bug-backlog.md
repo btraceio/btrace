@@ -44,17 +44,6 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   probe is left behind.
 - **Suggested fix:** report "agent loaded, no active probes" (or the probe count) instead.
 
-### O8. Build and test tooling papercuts found on the way
-
-- `publishBtracePublicationToMavenLocal` requires a PGP signature, so a snapshot cannot be
-  installed locally for JBang or Maven users without `mvn install:install-file`. Skip signing for
-  `mavenLocal`.
-- Running `:btrace-agent:test --tests '*OnMethodInstrumenterTest*'` alone fails nearly every
-  golden case, although the same tests pass in the full task: the class depends on setup done by
-  other tests.
-- `:btrace-agent:classFileApiBackendTest` needs a JDK 28 toolchain and fails `./gradlew build` on a
-  machine without one instead of being skipped with a message.
-
 ### O9. A probe exit that overlaps the probe's own install (investigated, not reproduced)
 
 - **Where:** `Client.retransformLoaded` (install, on `Main`'s `serializedExecutor`) and
@@ -146,3 +135,6 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F31 | A handler whose unannotated parameters fit no matching method was skipped with no message to the client | `MethodInstrumentor`, `Instrumentor`, 2026-11-01 |
 | F32 | `str()` printed an application enum constant as its identity instead of its name | `BTraceUtils`, 2026-11-01 |
 | F33 | Compile errors for 2.x and other wrong imports did not say what to write instead, and reported lines shifted by the auto-imports | `CompilerHelper`, `Compiler`, 2026-11-01 |
+| F34 | A snapshot could not be installed into `mavenLocal` without a PGP key | `btrace-dist/build.gradle`, 2026-11-01 |
+| F35 | `classFileApiBackendTest` failed `./gradlew build` on a machine without JDK 28 | `btrace-agent/build.gradle`, 2026-11-01 |
+| F36 | `OnMethodInstrumenterTest` failed when run on its own | `InstrumentorTestBase`, 2026-11-01 |
