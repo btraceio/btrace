@@ -40,10 +40,12 @@ directly.
 In terminal 2:
 
 ```sh
-jps
+jps -m
 ```
 
-**You should see** a line like `12345 DemoApp`. That number is the `<PID>` in every command below.
+**You should see** a line like `12345 Main DemoApp.java`. That number is the `<PID>` in every
+command below. (A single-file source launch runs under the JDK's `Main` launcher class, so plain
+`jps` would show only `12345 Main`; `-m` adds the arguments, which name the file.)
 
 ## Step 3 — Your first trace
 
@@ -66,19 +68,24 @@ execution time: 342 ms
 
 > **What just happened?** BTrace compiled your one-liner into a tiny instrumentation program,
 > injected it into the running JVM, and hooked the return of `OrderService.processOrder` — all
-> while the app kept serving orders. Nothing was restarted, and when you detach, every hook is
+> while the app kept serving orders. Nothing was restarted, and when you exit, every hook is
 > cleanly removed. Curious what it generated? Re-run with
 > `JAVA_TOOL_OPTIONS="-Dbtrace.oneliner.dump=true" btrace -n ...` to see the generated source
 > (the property has to reach the client JVM; appending `-D...` to the `btrace` command line does
 > not work).
+
+Before the stream, the client prints a couple of lines of its own: two `[main] INFO` lines
+reporting the attach and, on most JDKs, an `OpenJDK ... warning: Option
+AllowRedefinitionToAddDeleteMethods was deprecated` line that comes from the JVM, not from BTrace.
+The listings in this tutorial leave those out and show only the probe's output.
 
 Notice something? Most orders take well under 100 ms, but every now and then one takes 300+ ms.
 Let's isolate the slow ones.
 
 ## Step 4 — Catch the latency bug
 
-Stop the previous trace with `Ctrl+C`, then widen the net to *all* `OrderService` methods and keep
-only the slow calls:
+Stop the previous trace (press `Ctrl+C`, then choose `1. exit`), then widen the net to *all*
+`OrderService` methods and keep only the slow calls:
 
 ```sh
 btrace -n 'OrderService::* @return if duration>200ms { print method, time }' <PID>
@@ -113,13 +120,15 @@ btrace -n 'OrderService::validateOrder @error { print method, stack }' <PID>
 
 ```
 validateOrder
-OrderService.validateOrder(DemoApp.java:93)
 OrderService.processOrder(DemoApp.java:85)
-...
+DemoApp.lambda$main$0(DemoApp.java:50)
+java.base/java.lang.Thread.run(Thread.java:840)
 ```
 
-The exception's origin and the exact call path — captured live, from a method that the application
-catches and silently swallows.
+The exact call path into the failing method — captured live, from a method that the application
+catches and silently swallows. The stack starts at the caller: the probed method's own frame is
+not printed, since its name is already on the first line. (The `Thread.java` line number depends
+on your JDK.)
 
 ## Step 6 — Clean up
 

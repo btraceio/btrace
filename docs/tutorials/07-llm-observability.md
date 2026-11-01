@@ -47,10 +47,12 @@ java LlmDemoApp.java
 In terminal 2:
 
 ```sh
-jps
+jps -m
 ```
 
-**You should see** a line like `23456 LlmDemoApp`. That's the `<PID>` for every command below.
+**You should see** a line like `23456 Main LlmDemoApp.java`. That's the `<PID>` for every command
+below. (A single-file source launch runs under the JDK's `Main` launcher class, so plain `jps`
+would show only `23456 Main`.)
 
 ## Step 3 — See what the two extensions actually ask for
 
@@ -206,9 +208,9 @@ Contract: chat/latency
 
 ## Step 7 — Clean up
 
-`Ctrl+C` the `btrace` client to detach (probes disable immediately, same as every other tutorial in
-this series), then `Ctrl+C` `LlmDemoApp` in terminal 1. If you want to leave your BTrace
-installation in its original state:
+In the `btrace` terminal, press `Ctrl+C` and choose `1. exit` to remove the probe (choosing
+`6. detach client` would leave it running in the target), then `Ctrl+C` `LlmDemoApp` in terminal 1.
+If you want to leave your BTrace installation in its original state:
 
 ```sh
 rm ~/.btrace/permissions.properties

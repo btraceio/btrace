@@ -15,7 +15,7 @@ cost of the probe, and its disappearance, show up as a number you can watch.
 
 - JDK 11 or newer with `JAVA_HOME` set (`bin/btrace` refuses to start without it)
 - BTrace 3.0 installed, with `BTRACE_HOME` pointing at it and `bin/btrace` on your PATH ([installation options](../GettingStarted.md#installation))
-- The three files from [demos/07-production-safe-attach](../../demos/07-production-safe-attach/README.md):
+- The two files from [demos/07-production-safe-attach](../../demos/07-production-safe-attach/README.md):
   [HotLoopApp.java](../../demos/07-production-safe-attach/HotLoopApp.java) (the target) and
   [HotPathProbe.java](../../demos/07-production-safe-attach/HotPathProbe.java) (the probe). Run the
   commands below from that directory.
@@ -31,7 +31,9 @@ prepared mode (`port=0`):
 java -javaagent:$BTRACE_HOME/libs/btrace.jar=port=0 HotLoopApp.java
 ```
 
-**You should see** (absolute numbers depend on your machine; yours will differ):
+**You should see**, after a couple of dozen `[main] INFO` lines in which the agent reports
+initializing its extension system and loading the bundled extensions (left out here; absolute
+numbers depend on your machine, so yours will differ):
 
 ```
 [demo] hot loop running - stop with Ctrl+C
@@ -39,8 +41,8 @@ java -javaagent:$BTRACE_HOME/libs/btrace.jar=port=0 HotLoopApp.java
 [demo] 65.7 M calls/s
 ```
 
-Note the baseline: that is what "healthy" looks like. Get the PID in terminal 2 (`jps`, look for
-`HotLoopApp`); you need it for every command below.
+Note the baseline: that is what "healthy" looks like. Get the PID in terminal 2 (`jps -m`, look for
+`Main HotLoopApp.java`); you need it for every command below.
 
 > **What just happened?** The agent started, but it instrumented nothing. Prepared mode means the
 > agent only opens a control endpoint: it binds a loopback address (never a wildcard or remote
