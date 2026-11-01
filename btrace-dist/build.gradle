@@ -1032,5 +1032,7 @@ signing {
     if (signingKey != null && signingPwd != null) {
         useInMemoryPgpKeys(signingKey, signingPwd)
     }
+    // Central needs the signatures; a snapshot installed into mavenLocal does not
+    required = { gradle.taskGraph.allTasks.any { it.name.endsWith('ToSonatypeRepository') } }
     sign publishing.publications.btrace
 }

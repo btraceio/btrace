@@ -187,8 +187,23 @@ tasks.register('classFileApiBackendTest', Test) {
     classpath = sourceSets.test.runtimeClasspath
     shouldRunAfter test
     outputs.upToDateWhen { false }
-    javaLauncher = javaToolchains.launcherFor {
+    def jdk28 = javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(28))
+    }
+    javaLauncher = jdk28
+    // CI installs JDK 28 and must fail without it, or these tests would silently stop running
+    onlyIf('a JDK 28 toolchain is available') {
+        if (System.getenv('CI')) {
+            return true
+        }
+        try {
+            jdk28.get()
+            return true
+        } catch (Exception e) {
+            logger.lifecycle('Skipping classFileApiBackendTest: no JDK 28 toolchain found. ' +
+                    'Install one to run the ClassFile API backend tests on version-72 class files.')
+            return false
+        }
     }
     filter {
         includeTestsMatching 'io.btrace.instr.ClassFileApiBackendTest'
