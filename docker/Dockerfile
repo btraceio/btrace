@@ -30,13 +30,17 @@ COPY btrace/ /opt/btrace/
 RUN chmod -R 755 /opt/btrace/bin && \
     chmod 644 /opt/btrace/libs/*.jar
 
-# Set environment variables
+# Set environment variables. JAVA_HOME is inherited from the base image, which
+# points it at the JDK for the image's own architecture
+# (/usr/lib/jvm/jdk-<version>-bellsoft-<arch>); overriding it here breaks the
+# launcher scripts.
 ENV BTRACE_HOME=/opt/btrace \
-    PATH="${PATH}:/opt/btrace/bin" \
-    JAVA_HOME=/usr/local/openjdk-11
+    PATH="${PATH}:/opt/btrace/bin"
 
-# Verify installation
-RUN btrace --version || echo "BTrace installed"
+# Verify installation: the launchers must actually run, or the build fails
+RUN test -x "${JAVA_HOME}/bin/java" && \
+    btrace --version && \
+    btracec --version
 
 # Add entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/

@@ -16,6 +16,10 @@ LABEL maintainer="BTrace Project <https://github.com/btraceio/btrace>" \
 # Copy only BTrace runtime libraries (no shell scripts since distroless has no shell)
 COPY btrace/libs /opt/btrace/libs
 
+# Verify installation: the jar must load on this image's JVM, or the build fails.
+# Exec form, because there is no shell to run a RUN command through.
+RUN ["/usr/bin/java", "-jar", "/opt/btrace/libs/btrace.jar", "--version"]
+
 # Note: Distroless images don't support environment variables in the traditional way
 # Users should specify paths directly in their java command
 # Example: java -javaagent:/opt/btrace/libs/btrace.jar=...
