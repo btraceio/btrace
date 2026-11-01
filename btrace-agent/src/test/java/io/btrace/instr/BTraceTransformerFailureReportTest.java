@@ -63,8 +63,46 @@ class BTraceTransformerFailureReportTest {
     assertTrue(message.contains("IllegalStateException: instrumentation failed"), message);
   }
 
+  @Test
+  void reportsStopAfterAFewFailures() throws Exception {
+    List<Command> sent = new ArrayList<>();
+    BTraceTransformer transformer = new BTraceTransformer(new DebugSupport(new SharedSettings()));
+    transformer.register(failingProbe(TARGET.replace('/', '.'), recordingRuntime(sent)));
+
+    for (int i = 0; i < 25; i++) {
+      transformer.transform(new ClassLoader(null) {}, TARGET, null, null, bytesOf(Target.class));
+    }
+
+    assertEquals(BTraceTransformer.MAX_FAILURE_REPORTS, sent.size());
+    String last = ((MessageCommand) sent.get(sent.size() - 1)).getMessage();
+    assertTrue(last.contains("further failures"), last);
+  }
+
+  @Test
+  void aFailureThatCannotBeDescribedDoesNotEscape() throws Exception {
+    List<Command> sent = new ArrayList<>();
+    BTraceTransformer transformer = new BTraceTransformer(new DebugSupport(new SharedSettings()));
+    Throwable unprintable =
+        new IllegalStateException() {
+          @Override
+          public String toString() {
+            throw new OutOfMemoryError("while describing the failure");
+          }
+        };
+    transformer.register(
+        failingProbe(TARGET.replace('/', '.'), recordingRuntime(sent), unprintable));
+
+    assertNull(
+        transformer.transform(new ClassLoader(null) {}, TARGET, null, null, bytesOf(Target.class)));
+  }
+
   /** A probe matching {@code className} that throws as soon as instrumentation consults it. */
   private static BTraceProbe failingProbe(String className, BTraceRuntime.Impl rt) {
+    return failingProbe(className, rt, new IllegalStateException("instrumentation failed"));
+  }
+
+  private static BTraceProbe failingProbe(
+      String className, BTraceRuntime.Impl rt, Throwable failure) {
     OnMethod om = new OnMethod();
     om.setClazz(className);
     om.setMethod("run");
@@ -87,7 +125,7 @@ class BTraceTransformerFailureReportTest {
                 case "equals":
                   return proxy == args[0];
                 default:
-                  throw new IllegalStateException("instrumentation failed");
+                  throw failure;
               }
             });
   }

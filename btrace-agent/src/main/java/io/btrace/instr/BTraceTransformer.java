@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -81,6 +82,9 @@ public final class BTraceTransformer implements ClassFileTransformer {
     return Character.isDigit(internalName.charAt(digitStart));
   }
 
+  static final int MAX_FAILURE_REPORTS = 10;
+  private final Map<BTraceProbe, AtomicInteger> failureReports = new ConcurrentHashMap<>();
+
   public void register(BTraceProbe p) {
     try {
       setupLock.writeLock().lock();
@@ -97,6 +101,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
     try {
       setupLock.writeLock().lock();
       probes.remove(p);
+      failureReports.remove(p);
       for (OnMethod om : p.onmethods()) {
         filter.remove(om);
       }
@@ -232,7 +237,6 @@ public final class BTraceTransformer implements ClassFileTransformer {
         }
         return transformed;
       } catch (Throwable th) {
-        log.warn("Failed to transform class {}", className, th);
         // Don't rethrow: a re-thrown Throwable propagates through the JVM's native
         // retransform/transform machinery and can leave an "outstanding Java exception"
         // in the JNI state that survives even after Java callers catch the exception,
@@ -255,21 +259,33 @@ public final class BTraceTransformer implements ClassFileTransformer {
    * prints nothing. A failed transform can't be pinned on one probe, so all of them hear about it.
    */
   private void reportFailure(String className, Throwable failure) {
-    String message =
-        "[BTRACE WARN] Could not instrument "
-            + className.replace('/', '.')
-            + ", no probe will run in it: "
-            + failure
-            + " (stack trace in the target JVM's log)";
-    for (BTraceProbe p : probes) {
-      try {
-        BTraceRuntime.Impl rt = p.getRuntime();
-        if (rt != null) {
-          rt.sendCommand(new MessageCommand(message));
+    // Runs in the catch for any Throwable, OOM included: nothing here may escape transform
+    try {
+      log.warn("Failed to transform class {}", className, failure);
+      String message =
+          "[BTRACE WARN] Could not instrument "
+              + className.replace('/', '.')
+              + ", no probe will run in it: "
+              + failure
+              + " (stack trace in the target JVM's log)";
+      for (BTraceProbe p : probes) {
+        try {
+          int reported =
+              failureReports.computeIfAbsent(p, k -> new AtomicInteger()).incrementAndGet();
+          BTraceRuntime.Impl rt = reported <= MAX_FAILURE_REPORTS ? p.getRuntime() : null;
+          if (rt != null) {
+            rt.sendCommand(
+                new MessageCommand(
+                    reported == MAX_FAILURE_REPORTS
+                        ? message + " (further failures go only to that log)"
+                        : message));
+          }
+        } catch (Throwable th) {
+          log.warn("Failed to report the transform failure of {}", className, th);
         }
-      } catch (Throwable th) {
-        log.warn("Failed to report the transform failure of {}", className, th);
       }
+    } catch (Throwable ignored) {
+      // Not even the failure could be described; returning null is all that is left to do
     }
   }
 
