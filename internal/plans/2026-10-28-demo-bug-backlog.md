@@ -29,20 +29,6 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 - **Suggested fix:** refuse a deploy while a session for that `pid:port` is active ("exit or detach
   the running probe first"), or track several probes per JVM. Test-first in `ToolHandlersTest`.
 
-### O3. Unannotated exception parameters at CATCH and THROW are silently ignored
-
-- **Where:** btrace agent, `Instrumentor` CATCH and THROW cases; more generally,
-  `validateArguments`.
-- **What:** at `Kind.CATCH` and `Kind.THROW` the exception binds only to `@TargetInstance`. A plain
-  `Throwable t` parameter is matched against the target method's own arguments, fails, and the
-  handler is never applied, with no compile-time or runtime message. `Kind.ERROR` had the same
-  problem and is fixed (see F10).
-- **Broader issue:** any handler whose unannotated parameters do not match the target's arguments
-  is skipped silently. A verifier warning ("handler X matches no method signature of Y") would
-  have turned three of the bugs in this file into a one-line error.
-- **Suggested fix:** bind a bare `Throwable` at CATCH and THROW as at ERROR, and report handlers
-  that are never applied because of an argument mismatch.
-
 ### O4. `println` output reaches the client with an extra blank line
 
 - **Where:** btrace runtime/client message formatting (not root-caused).
@@ -174,3 +160,5 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F27 | A class that failed to transform was reported only in the target JVM's log, so its probes printed nothing with no explanation | `BTraceTransformer`, 2026-11-01 |
 | F28 | A `Kind.CALL` `@Duration` probe failed verification when the call sat inside a branch: a label's saved state came from the last jump to it, and an injected frame displaced the method's own frame at the same offset | `InstrumentingMethodVisitor`, `LastFrameAtOffsetVisitor`, 2026-11-01 |
 | F29 | A `Kind.LINE` probe on a line starting at a catch handler or join point failed verification, because its code went in front of the stack map frame of that offset | `LineNumberInstrumentor`, 2026-11-01 |
+| F30 | A plain `Throwable` parameter at `Kind.CATCH` and `Kind.THROW` was silently ignored | `BTraceMethodNode`, 2026-11-01 |
+| F31 | A handler whose unannotated parameters fit no matching method was skipped with no message to the client | `MethodInstrumentor`, `Instrumentor`, 2026-11-01 |
