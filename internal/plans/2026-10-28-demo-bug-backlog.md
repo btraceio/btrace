@@ -115,16 +115,27 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 - `:btrace-agent:classFileApiBackendTest` needs a JDK 28 toolchain and fails `./gradlew build` on a
   machine without one instead of being skipped with a message.
 
-### O9. A probe exit that overlaps the probe's own install can leave classes instrumented
+### O9. A probe exit that overlaps the probe's own install (investigated, not reproduced)
 
 - **Where:** `Client.retransformLoaded` (install, on `Main`'s `serializedExecutor`) and
   `Client.onExit` (on the runtime's command thread); not synchronized with each other.
-- **What:** not observed; found while root-causing F11. If an exit arrives while the install
-  retransform is still running, the install thread's redefinition can land after the restoring
-  one and reinstall the instrumented bytes. The same can happen between one client's exit and
-  another client's install, since exits are not serialized with installs.
-- **Suggested fix:** run the restoring retransform through the same serialized executor, or have
-  `retransformLoaded` re-check `isShuttingDown()` and retransform again after the install finishes.
+- **Concern:** found while root-causing F11. If the install's transformer call ran before the exit
+  unregistered the probe, but its redefinition landed after the exit's restore, the classes would
+  stay instrumented.
+- **Investigation (2026-10-29):** 3000 matching classes, `-Dbtrace.retransform.batchSize=4000` to
+  put them in one retransform, client killed 1.6–3.4s after launch, timestamped temporary logs
+  around install and exit. On JDK 21 an exit unregistered the probe mid-install (unregistered <
+  install end < restored) and throughput recovered fully; no run on JDK 11, 17 or 21 stayed
+  instrumented. Every JDK tested (8u442, 11.0.23, 17.0.19, 21.0.5, 25.0.2) has HotSpot's
+  `RedefineClasses_lock`, which as I understand `VM_RedefineClasses` holds per class from before the
+  ClassFileLoadHook until the new version is installed. Two retransforms of the same class then
+  serialize, transformer call included, and the later one sees the current probe registry. The
+  interleaving above needs the transform to run outside that lock, so it should not happen on
+  HotSpot.
+- **Status:** no code change. Reopen if a JVM without that serialization is supported, or if a
+  stuck class is seen after an early exit. A side observation: on JDK 11 a single 3000-class
+  retransform took ~100s (restore ~160s), so large `btrace.retransform.batchSize` values are a bad
+  idea there.
 
 ### O10. Intermittent "Class verification failed" on a repeated oneliner against the same class
 
