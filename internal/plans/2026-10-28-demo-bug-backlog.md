@@ -36,13 +36,6 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   CLI and through the MCP server (`read_probe_output` returns `screen calls=196\n\n`).
 - **Repro:** any probe with two `println` calls; compare with the expected one line each.
 
-### O5. `str()` on an enum prints its identity, not its name
-
-- **Where:** `BTraceUtils.str(Object)`.
-- **What:** `str(verdict)` for `com.acme.risk.Verdict.HOLD` prints
-  `com.acme.risk.Verdict@778d07d8`. A recorded assistant had to correlate verdicts by identity hash.
-- **Suggested fix:** for enum constants, return `name()` (safe: no user `toString` is called).
-
 ### O6. `list_jvms` keeps saying "BTrace: attached" after every probe is removed (MCP server)
 
 - **Where:** agent-plugins, `ListJvmsHandler`.
@@ -162,3 +155,4 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F29 | A `Kind.LINE` probe on a line starting at a catch handler or join point failed verification, because its code went in front of the stack map frame of that offset | `LineNumberInstrumentor`, 2026-11-01 |
 | F30 | A plain `Throwable` parameter at `Kind.CATCH` and `Kind.THROW` was silently ignored | `BTraceMethodNode`, 2026-11-01 |
 | F31 | A handler whose unannotated parameters fit no matching method was skipped with no message to the client | `MethodInstrumentor`, `Instrumentor`, 2026-11-01 |
+| F32 | `str()` printed an application enum constant as its identity instead of its name | `BTraceUtils`, 2026-11-01 |
