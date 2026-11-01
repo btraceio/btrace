@@ -12,6 +12,9 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(11)
     }
+    // Shadow publishes only a Java 17 variant. Gradle 9, which Shadow requires, already runs on
+    // Java 17+, so resolve it regardless of this plugin's own Java 11 bytecode target.
+    disableAutoTargetJvm()
 }
 
 group = project.findProperty('GROUP') ?: (rootProject.group ?: 'io.btrace')
@@ -31,6 +34,12 @@ dependencies {
     // AsmVersionSyncTest fails the build if the two drift apart.
     implementation 'org.ow2.asm:asm:9.11.1'
     implementation 'org.ow2.asm:asm-tree:9.11.1'
+    // io.btrace.extension auto-applies com.gradleup.shadow by id. A plugin id only resolves when
+    // its implementation is on the consumer's plugin classpath, so the plugin has to bring Shadow
+    // with it; otherwise a build applying just id 'io.btrace.extension' cannot find it. Referenced
+    // by id only, hence runtimeOnly. Keep in sync with plugin('shadow', ...) in the root
+    // settings.gradle.
+    runtimeOnly 'com.gradleup.shadow:shadow-gradle-plugin:9.6.1'
 
     // This is an included build and cannot access the root version catalog. Keep its tests on the
     // last Java 8-compatible JUnit line; the production plugin remains Java 11-compatible.

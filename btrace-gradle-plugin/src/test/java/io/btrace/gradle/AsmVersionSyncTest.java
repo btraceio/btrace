@@ -34,7 +34,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * Guards the one dependency version this build is forced to duplicate.
+ * Guards the dependency versions this build is forced to duplicate (ASM and Shadow).
  *
  * <p>{@code btrace-gradle-plugin} is an included build, so it cannot resolve the root build's
  * version catalog and has to hard-code its ASM coordinates. That duplication has already drifted
@@ -48,6 +48,12 @@ class AsmVersionSyncTest {
             Pattern.compile("version\\s*\\(\\s*'asm'\\s*,\\s*'([^']+)'\\s*\\)");
     private static final Pattern PLUGIN_ASM_COORDINATE =
             Pattern.compile("['\"]org\\.ow2\\.asm:(asm[\\w-]*):([^'\"]+)['\"]");
+    private static final Pattern CATALOG_SHADOW_VERSION =
+            Pattern.compile(
+                    "plugin\\s*\\(\\s*'shadow'\\s*,\\s*'com\\.gradleup\\.shadow'\\s*\\)\\s*"
+                            + "\\.version\\s*\\(\\s*'([^']+)'\\s*\\)");
+    private static final Pattern PLUGIN_SHADOW_COORDINATE =
+            Pattern.compile("['\"]com\\.gradleup\\.shadow:shadow-gradle-plugin:([^'\"]+)['\"]");
 
     @Test
     @DisplayName("plugin ASM version matches the root version catalog")
@@ -71,6 +77,26 @@ class AsmVersionSyncTest {
                 "btrace-gradle-plugin's hard-coded ASM version has drifted from version('asm', ...) "
                         + "in the root settings.gradle. Update btrace-gradle-plugin/build.gradle to "
                         + "match, or update the catalog if the plugin is intentionally pinned.");
+    }
+
+    @Test
+    @DisplayName("plugin Shadow version matches the root version catalog")
+    void shadowVersionMatchesRootCatalog() throws IOException {
+        Path rootSettings = requiredPath("btrace.test.rootSettingsFile");
+        Assumptions.assumeTrue(
+                Files.isRegularFile(rootSettings),
+                "root settings.gradle not reachable - plugin is being built standalone");
+
+        Matcher catalog = CATALOG_SHADOW_VERSION.matcher(read(rootSettings));
+        assertTrue(catalog.find(), "plugin('shadow', ...) not found in the root settings.gradle");
+        Matcher plugin = PLUGIN_SHADOW_COORDINATE.matcher(read(pluginBuildFile()));
+        assertTrue(plugin.find(), "no shadow-gradle-plugin coordinate found in the plugin build");
+        assertEquals(
+                catalog.group(1),
+                plugin.group(1),
+                "btrace-gradle-plugin's hard-coded Shadow version has drifted from plugin('shadow', "
+                        + "...) in the root settings.gradle. Update btrace-gradle-plugin/build.gradle "
+                        + "to match.");
     }
 
     @Test
