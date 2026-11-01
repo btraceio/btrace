@@ -63,6 +63,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   // State at each visited label, for try blocks declared only after their start label was visited
   private final Map<Label, SavedState> visitedLabelStates = new HashMap<>();
   private final Map<Integer, MethodTrackingContext> trackingContexts = new HashMap<>();
+  private Map<OnMethod, String> handlerRejections;
   private final String owner;
   private final String desc;
   private int argsSize = 0;
@@ -140,6 +141,15 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       result[i] = arr[i] == TOP_EXT ? TOP : arr[i];
     }
     return result;
+  }
+
+  void collectHandlerRejections(Map<OnMethod, String> rejections) {
+    handlerRejections = rejections;
+  }
+
+  @Override
+  public Map<OnMethod, String> handlerRejections() {
+    return handlerRejections;
   }
 
   @Override

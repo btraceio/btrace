@@ -33,9 +33,10 @@ import org.junit.jupiter.api.Test;
  */
 class HandlerMismatchReportTest extends InstrumentorTestBase {
   private final List<Command> sent = new ArrayList<>();
+  private boolean failSends = false;
 
   @Test
-  void mismatchedHandlerIsReportedOnce() throws Exception {
+  void mismatchedHandlerIsReportedOncePerClass() throws Exception {
     loadTargetClass("OnMethodTest");
     BTraceProbe probe = recordingProbe("onmethod/ArgsMismatch");
 
@@ -59,6 +60,52 @@ class HandlerMismatchReportTest extends InstrumentorTestBase {
     assertTrue(sent.isEmpty(), "commands sent to the client: " + sent);
   }
 
+  @Test
+  void aBadAnnotatedParameterIsNamedInTheReport() throws Exception {
+    loadTargetClass("OnMethodTest");
+
+    instrument(recordingProbe("onmethod/ArgsBadSelf"));
+
+    assertEquals(1, sent.size(), "commands sent to the client: " + sent);
+    String message = ((MessageCommand) sent.get(0)).getMessage();
+    assertTrue(message.contains("@Self"), message);
+  }
+
+  @Test
+  void passingValidationWithoutInjectingAnythingStillCountsAsNotApplied() throws Exception {
+    loadTargetClass("CallInBranchTarget");
+
+    // The constructor call passes validation but gets no code before it; intArg(int) is rejected
+    instrument(recordingProbe("onmethod/CallBeforeCtorOrMismatch"));
+
+    assertEquals(1, sent.size(), "commands sent to the client: " + sent);
+  }
+
+  @Test
+  void aFailedReportKeepsTheInstrumentationOfOtherHandlers() throws Exception {
+    loadTargetClass("OnMethodTest");
+    failSends = true;
+
+    instrument(recordingProbe("onmethod/ArgsMismatch"));
+  }
+
+  @Test
+  void reportsStopAfterAFewClasses() {
+    OnMethod om = new OnMethod();
+    int reported = 0;
+    String last = null;
+    for (int i = 0; i < 20; i++) {
+      String suffix = om.mismatchReportSuffix("com.acme.C" + i);
+      if (suffix != null) {
+        reported++;
+        last = suffix;
+      }
+    }
+    assertEquals(OnMethod.MAX_MISMATCH_REPORTS, reported);
+    assertTrue(last.contains("further classes"), last);
+    assertEquals(null, om.mismatchReportSuffix("com.acme.C0"), "a retransform stays quiet");
+  }
+
   private void instrument(BTraceProbe probe) throws Exception {
     ClassLoader cl = HandlerMismatchReportTest.class.getClassLoader();
     BTraceClassReader cr = InstrumentUtils.newClassReader(cl, originalBC);
@@ -76,6 +123,9 @@ class HandlerMismatchReportTest extends InstrumentorTestBase {
                 new Class<?>[] {BTraceRuntime.Impl.class},
                 (proxy, method, args) -> {
                   if (method.getName().equals("sendCommand")) {
+                    if (failSends) {
+                      throw new IllegalStateException("runtime is shutting down");
+                    }
                     sent.add((Command) args[0]);
                   }
                   return method.getReturnType() == boolean.class ? Boolean.FALSE : null;

@@ -63,6 +63,13 @@ public class CallInBranchTarget {
     }
   }
 
+  public void ctorAndIntCall() {
+    new StringBuilder("x");
+    intArg(1);
+  }
+
+  private void intArg(int value) {}
+
   private void work() {}
 
   private void done() {}
