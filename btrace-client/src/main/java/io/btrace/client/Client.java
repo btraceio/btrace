@@ -858,7 +858,11 @@ public class Client {
         }
       } else {
         if (!isPortAvailable(port)) {
-          throw new IOException("Port " + port + " unavailable.");
+          throw new IOException(
+              "Port "
+                  + port
+                  + " is in use by another process (often another BTrace agent); choose a free"
+                  + " agent port with -p <port>.");
         }
       }
 

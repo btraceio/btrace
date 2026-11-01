@@ -6,9 +6,10 @@
 #                this checkout (btrace-dist/build/resources/main/v<version>); BTRACE_HOME and the
 #                `btrace` on PATH are ignored, since they may point at an older release
 #   JAVA_HOME    JDK 11+ used for both the demo app and the BTrace client
-#   DEMO_PORT    optional: pass `-p $DEMO_PORT` to every btrace command so several demos can run
-#                side by side (the default agent port is 2020); demos sharing an app (02 and 03
-#                both run OrderServiceApp) can not, since btrace finds the app by its main class
+#   DEMO_PORT    optional: pass `-p $DEMO_PORT` to every btrace command. Unset, the default agent
+#                port 2020 is used, or the next free port when something already listens on 2020,
+#                so several demos can run side by side; demos sharing an app (02 and 03 both run
+#                OrderServiceApp) can not, since btrace finds the app by its main class
 #   DEMO_KEEP    set by `run.sh --keep`: leave the demo app running at the end for a live demo
 #
 # Every helper prints the command it runs, prefixed with `$`, so a recording reads like a shell.
@@ -50,8 +51,25 @@ for arg in "$@"; do
   [ "$arg" = "--keep" ] && DEMO_KEEP=1
 done
 
+# port_in_use <port>: true if something accepts connections on the loopback port, the check the
+# btrace client makes before it loads its agent into the app.
+port_in_use() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+
 PORT_OPT=()
-[ -n "${DEMO_PORT:-}" ] && PORT_OPT=(-p "$DEMO_PORT")
+if [ -n "${DEMO_PORT:-}" ]; then
+  PORT_OPT=(-p "$DEMO_PORT")
+elif port_in_use 2020; then
+  # Another BTrace agent (a demo left running with --keep, for one) holds the default port, and the
+  # client would refuse to attach. Take the next free port; commands keep their plain form otherwise.
+  for port in $(seq 2021 2120); do
+    port_in_use "$port" || { PORT_OPT=(-p "$port"); break; }
+  done
+  if [ ${#PORT_OPT[@]} -eq 0 ]; then
+    echo "Ports 2020-2120 are all in use; set DEMO_PORT to a free port" >&2
+    exit 2
+  fi
+  echo "[demo] port 2020 is in use; the btrace commands below use -p ${PORT_OPT[1]}" >&2
+fi
 
 APP_PID=""
 APP_TARGET=""

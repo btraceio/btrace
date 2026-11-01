@@ -145,17 +145,6 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   the second client to exit before starting the third. F12 made the overlap harmless, but an exited
   probe that keeps running even briefly is still unexpected. Seen once in 16 runs on JDK 17.
 
-### O11. Demos fail when another BTrace agent holds port 2020
-
-- **Where:** `demos/lib/common.sh` (the port is fixed unless `DEMO_PORT` is set) and the client's
-  pre-attach check (`Client.attach`, "Port 2020 unavailable.").
-- **What:** in a 12-run loop of demo 01, runs 7–10 failed: every probe start whose target did not
-  have the agent loaded yet stopped with `Port 2020 unavailable.` while something else on the
-  machine held the port (11:17:45–11:23:30). A demo run next to any other BTrace session fails the
-  same way, with a message that does not say what to do.
-- **Suggested fix:** have `common.sh` pick a free port when `DEMO_PORT` is unset, and make the
-  client message suggest `-p <port>`.
-
 ## Fixed
 
 | # | Defect | Fix |
@@ -172,3 +161,4 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F10 | A plain `Throwable` parameter at `Kind.ERROR` was silently ignored | `068e1a81` |
 | F11 | A client that exited right away could leave its probe installed: the failed exit echo skipped `Client.onExit` (demo 07 throughput stuck at a third of baseline) | `8ab60867` |
 | F12 | An `@error` probe added after a `@return` + `@Duration` probe on the same method failed verification ("Class verification failed: ... (null)" in demo 01): the earlier probe declared its duration locals at the later probe's handler | `InstrumentingMethodVisitor`, 2026-11-01 |
+| F13 | Demos failed with "Port 2020 unavailable." while another BTrace agent held the default port | `common.sh` picks the next free port, the client message suggests `-p`, 2026-11-01 |
