@@ -29,31 +29,6 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 - **Suggested fix:** refuse a deploy while a session for that `pid:port` is active ("exit or detach
   the running probe first"), or track several probes per JVM. Test-first in `ToolHandlersTest`.
 
-### O2. A `Kind.CALL` probe with `@Duration` fails verification when the call sits inside a branch
-
-- **Where:** btrace agent, the stack map frames emitted around `Kind.CALL` instrumentation
-  (`Instrumentor`, `InstrumentingMethodVisitor`); not fixed yet.
-- **What:** this handler over `FraudScreen.screen`, whose `deepScore()` call sits inside
-  `if (amountCents >= DEEP_SCORING_CENTS)`, makes the whole class fail verification, so no handler
-  runs in it. The client now prints
-  `[BTRACE WARN] Class verification failed: com.acme.risk.FraudScreen (null)`:
-
-  ```java
-  @OnMethod(clazz = "com.acme.risk.FraudScreen", method = "screen",
-      location = @Location(value = Kind.CALL, clazz = "/.*/", method = "/.*/", where = Where.AFTER))
-  public static void s(@TargetInstance Object ti, @TargetMethodOrField String tm, @Duration long d) { ... }
-  ```
-
-- **Root cause so far:** loading the dumped class with `-XX:+BytecodeVerificationLocal` gives
-  "Inconsistent stackmap frames at branch target 215 ... Type top (current frame, locals[16]) is not
-  assignable to long". The duration locals are declared inside the branch, yet the frame at the
-  join point claims them, and the path skipping the branch never set them. Related to F12, but with
-  a single probe. The frame code itself has not been read yet.
-- **Repro:** start demo 06 (`demos/06-ai-assistant/run.sh`), deploy the handler above. The same
-  handler over `PaymentClient.authorize`, which has no such branch, works.
-- **History:** the originally reported "prints nothing at all" had two more causes, fixed as F26 and
-  F27.
-
 ### O3. Unannotated exception parameters at CATCH and THROW are silently ignored
 
 - **Where:** btrace agent, `Instrumentor` CATCH and THROW cases; more generally,
@@ -187,3 +162,4 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F13 | Demos failed with "Port 2020 unavailable." while another BTrace agent held the default port | `common.sh` picks the next free port, the client message suggests `-p`, 2026-11-01 |
 | F26 | A `Kind.CALL` `@Duration` probe whose call site pattern matched the `System.nanoTime()` call BTrace adds overflowed the stack while instrumenting, and no handler ran in the class | `Instrumentor`, 2026-11-01 |
 | F27 | A class that failed to transform was reported only in the target JVM's log, so its probes printed nothing with no explanation | `BTraceTransformer`, 2026-11-01 |
+| F28 | A `Kind.CALL` `@Duration` probe failed verification when the call sat inside a branch: a label's saved state came from the last jump to it, and an injected frame displaced the method's own frame at the same offset | `InstrumentingMethodVisitor`, `LastFrameAtOffsetVisitor`, 2026-11-01 |
