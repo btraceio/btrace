@@ -19,16 +19,20 @@ package io.btrace.extension.impl;
 import io.btrace.core.extensions.PermissionSet;
 import io.btrace.extension.ExtensionDescriptorDTO;
 import io.btrace.extension.ExtensionRepository;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.jar.Attributes;
@@ -153,41 +157,96 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
    * Reads the list of embedded extension IDs from all JAR manifests visible to the classloader.
    *
    * <p>All manifests that carry a {@code BTrace-Embedded-Extensions} attribute are iterated;
-   * extension IDs are accumulated in encounter order. Duplicate IDs (e.g. produced by a
-   * shadow/shade merge of two JARs that each declared the same extension) are deduplicated and a
-   * warning is logged so operators can investigate collisions.
+   * extension IDs are accumulated in encounter order. The same JAR is routinely visible more than
+   * once (a fat agent sits on both the bootstrap class path, via {@code Boot-Class-Path}, and the
+   * system class path), so repeated sightings of one JAR are ignored silently. Only an ID declared
+   * by two different JARs is logged as a conflict; the first occurrence wins.
    */
   private List<String> readManifestIndex() {
-    // Use a LinkedHashSet to deduplicate while preserving encounter order.
-    Set<String> seen = new LinkedHashSet<>();
+    List<String> conflicts = new ArrayList<>();
+    List<String> ids;
     try {
-      Enumeration<URL> manifests = resourceLoader.getResources("META-INF/MANIFEST.MF");
-      while (manifests.hasMoreElements()) {
-        URL url = manifests.nextElement();
-        try (InputStream is = url.openStream()) {
-          Manifest manifest = new Manifest(is);
-          Attributes attrs = manifest.getMainAttributes();
-          String embeddedExtensions = attrs.getValue(MANIFEST_ATTR);
-          if (embeddedExtensions != null && !embeddedExtensions.trim().isEmpty()) {
-            for (String entry : embeddedExtensions.split(",")) {
-              String trimmed = entry.trim();
-              if (!trimmed.isEmpty()) {
-                if (!seen.add(trimmed)) {
-                  log.warn(
-                      "Duplicate embedded extension ID '{}' encountered in manifest {};"
-                          + " keeping first occurrence — check for conflicting classpath JARs",
-                      trimmed,
-                      url);
-                }
-              }
-            }
+      ids =
+          collectEmbeddedExtensionIds(
+              resourceLoader.getResources("META-INF/MANIFEST.MF"), conflicts);
+    } catch (IOException e) {
+      log.debug("Failed to read manifest: {}", e.getMessage());
+      return Collections.emptyList();
+    }
+    for (String conflict : conflicts) {
+      log.warn(conflict);
+    }
+    return ids;
+  }
+
+  /**
+   * Collects embedded extension IDs from the given manifests, in encounter order.
+   *
+   * @param manifests manifest resources, possibly containing the same JAR more than once
+   * @param conflicts receives one message per ID declared by more than one distinct JAR
+   * @return the deduplicated IDs
+   */
+  static List<String> collectEmbeddedExtensionIds(
+      Enumeration<URL> manifests, List<String> conflicts) throws IOException {
+    // ID -> identity of the JAR that first declared it
+    Map<String, String> owners = new LinkedHashMap<>();
+    Set<String> visitedJars = new HashSet<>();
+    while (manifests.hasMoreElements()) {
+      URL url = manifests.nextElement();
+      String jar = jarIdentity(url);
+      if (!visitedJars.add(jar)) {
+        // Same JAR reached through another class path entry; nothing new to learn from it
+        continue;
+      }
+      try (InputStream is = url.openStream()) {
+        Manifest manifest = new Manifest(is);
+        Attributes attrs = manifest.getMainAttributes();
+        String embeddedExtensions = attrs.getValue(MANIFEST_ATTR);
+        if (embeddedExtensions == null || embeddedExtensions.trim().isEmpty()) {
+          continue;
+        }
+        for (String entry : embeddedExtensions.split(",")) {
+          String trimmed = entry.trim();
+          if (trimmed.isEmpty()) {
+            continue;
+          }
+          String owner = owners.get(trimmed);
+          if (owner == null) {
+            owners.put(trimmed, jar);
+          } else if (!owner.equals(jar)) {
+            conflicts.add(
+                "Duplicate embedded extension ID '"
+                    + trimmed
+                    + "' declared by "
+                    + url
+                    + " and "
+                    + owner
+                    + "; keeping first occurrence — check for conflicting classpath JARs");
           }
         }
       }
-    } catch (IOException e) {
-      log.debug("Failed to read manifest: {}", e.getMessage());
     }
-    return seen.isEmpty() ? Collections.emptyList() : new ArrayList<>(seen);
+    return owners.isEmpty() ? Collections.emptyList() : new ArrayList<>(owners.keySet());
+  }
+
+  /**
+   * Identifies the JAR (or directory) a manifest URL belongs to, so that the same file reached
+   * through differently spelled class path entries compares equal.
+   */
+  private static String jarIdentity(URL manifestUrl) {
+    String form = manifestUrl.toExternalForm();
+    if (form.startsWith("jar:")) {
+      int sep = form.indexOf("!/");
+      form = sep >= 0 ? form.substring(4, sep) : form.substring(4);
+    }
+    if (form.startsWith("file:")) {
+      try {
+        return new File(new URI(form)).getCanonicalPath();
+      } catch (Exception e) {
+        // Fall back to the textual form; only loses tolerance for differently spelled paths
+      }
+    }
+    return form;
   }
 
   /** Parses an embedded extension from its properties file. */
