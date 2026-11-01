@@ -143,6 +143,16 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   `sun.misc.Unsafe`, JCTools' non-Unsafe (atomic) queue variants, or `java.util.concurrent`
   queues where the hot path allows.
 
+### O17. A `Kind.LINE` probe ignores the `method` of its `@OnMethod`
+
+- **Where:** btrace agent, `Instrumentor.visitMethod`, which applies a `Kind.LINE` probe to every
+  method of a matching class without looking at `method`.
+- **What:** a probe with `method = "screen"` and `line = -1` on `FraudScreen` also fired on the lines
+  of `deepScore` (46 to 50). The behaviour looks long-standing, and the `AllLines` test trace names
+  `<init>` yet instruments every method, so a fix may be a behaviour change rather than a plain bug
+  fix. Decide which one before changing it.
+- **Repro:** start demo 06, deploy that probe and look at the reported line numbers.
+
 ## Fixed
 
 | # | Defect | Fix |
