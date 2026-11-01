@@ -18,6 +18,7 @@ package io.btrace.instr;
 
 import io.btrace.core.BTraceRuntime;
 import io.btrace.core.DebugSupport;
+import io.btrace.core.comm.MessageCommand;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
@@ -237,6 +238,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
         // in the JNI state that survives even after Java callers catch the exception,
         // triggering native assertions (e.g. JPLIS "!errorOutstanding" on JDK 27+).
         // Returning null here is equivalent to "skip instrumentation for this class".
+        reportFailure(className, th);
         return null;
       } finally {
         if (entered) {
@@ -245,6 +247,29 @@ public final class BTraceTransformer implements ClassFileTransformer {
       }
     } finally {
       setupLock.readLock().unlock();
+    }
+  }
+
+  /**
+   * Tells the attached clients a class stays uninstrumented; otherwise a probe matching it just
+   * prints nothing. A failed transform can't be pinned on one probe, so all of them hear about it.
+   */
+  private void reportFailure(String className, Throwable failure) {
+    String message =
+        "[BTRACE WARN] Could not instrument "
+            + className.replace('/', '.')
+            + ", no probe will run in it: "
+            + failure
+            + " (stack trace in the target JVM's log)";
+    for (BTraceProbe p : probes) {
+      try {
+        BTraceRuntime.Impl rt = p.getRuntime();
+        if (rt != null) {
+          rt.sendCommand(new MessageCommand(message));
+        }
+      } catch (Throwable th) {
+        log.warn("Failed to report the transform failure of {}", className, th);
+      }
     }
   }
 
