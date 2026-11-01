@@ -137,15 +137,48 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   retransform took ~100s (restore ~160s), so large `btrace.retransform.batchSize` values are a bad
   idea there.
 
-### O10. Intermittent "Class verification failed" on a repeated oneliner against the same class
+### O10. An `@error` probe on a method that another probe times with `@Duration` fails verification
 
-- **Where:** agent instrumentation (not root-caused).
+- **Where:** btrace agent, `BTraceClassWriter.addInstrumentor` chaining one `Instrumentor` per
+  probe, and the frames the ERROR instrumentation emits for its handler.
 - **What:** demo 01's third probe on `OrderService`
-  (`btrace -n 'OrderService::validateOrder @error { print method, stack }'`, after two earlier
-  probes on the same class were retracted) logged `[BTRACE WARN] Class verification failed:
-  OrderService (null)` and produced no output, though the client reported the probe started. Seen
-  1 of 4 runs on JDK 17.0.19; the `(null)` means the cause is not reported either.
-- **Repro:** run `demos/01-oneliner/run.sh` repeatedly on JDK 17.
+  (`btrace -n 'OrderService::validateOrder @error { print method, stack }'`) logged
+  `[BTRACE WARN] Class verification failed: OrderService (null)` and produced no output, though
+  the client reported the probe started. Seen 1 of 4 demo runs on JDK 17.0.19, 0 of 12 later; it
+  shows up in the demo only when the second probe (`OrderService::* @return if duration>200ms`) is
+  still registered when the third installs.
+- **Root cause (2026-11-01):** each probe gets its own `Instrumentor`, chained so that the last
+  registered probe is the outermost visitor. With a `Kind.RETURN` + `@Duration` probe registered
+  first and a `Kind.ERROR` probe second, the ERROR instrumentor opens its try range at bci 0 and
+  writes the handler frame with the original locals; the inner RETURN instrumentor then adds its
+  two duration `long` locals to every frame passing through, the handler's included, but
+  initializes them after the try range starts. HotSpot rejects the class:
+  `VerifyError: Stack map does not match the one at exception handler 75 ... Type top (current
+  frame, locals[2]) is not assignable to long (stack map, locals[2])`, at bci 0 of
+  `validateOrder`. The redefinition is dropped, so the earlier probe's version stays and the new
+  probe never fires.
+- **Not timing-dependent:** two scripts on `validateOrder`, `Kind.RETURN` with `@Duration`
+  attached first and `Kind.ERROR` second, fail every time. The reverse order works, and one script
+  with both handlers works (a single `Instrumentor` orders its own code).
+- **Also:** the warning says `(null)` because `retransformClasses` throws `VerifyError` with no
+  message; HotSpot's reason only shows by loading the dumped class (`btrace -d <dir>`) with
+  verification on. Why demo 01's second probe was still registered when the third installed is
+  not explained yet.
+- **Repro:** the two-script order above, against `demos/01-oneliner/OrderServiceApp.java`.
+- **Suggested fix:** test-first with a golden or unit case that instruments one method with two
+  probes in that order. Then either make the inner instrumentor mark its added locals as `top` in
+  frames it did not create, or initialize them before the outer instrumentor's code.
+
+### O11. Demos fail when another BTrace agent holds port 2020
+
+- **Where:** `demos/lib/common.sh` (the port is fixed unless `DEMO_PORT` is set) and the client's
+  pre-attach check (`Client.attach`, "Port 2020 unavailable.").
+- **What:** in a 12-run loop of demo 01, runs 7–10 failed: every probe start whose target did not
+  have the agent loaded yet stopped with `Port 2020 unavailable.` while something else on the
+  machine held the port (11:17:45–11:23:30). A demo run next to any other BTrace session fails the
+  same way, with a message that does not say what to do.
+- **Suggested fix:** have `common.sh` pick a free port when `DEMO_PORT` is unset, and make the
+  client message suggest `-p <port>`.
 
 ## Fixed
 
