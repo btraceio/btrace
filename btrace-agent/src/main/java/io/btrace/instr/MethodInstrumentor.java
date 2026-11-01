@@ -295,6 +295,17 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
 
   protected ValidationResult validateArguments(
       OnMethod om, Type[] actionArgTypes, Type[] methodArgTypes) {
+    ValidationResult vr = checkArguments(om, actionArgTypes, methodArgTypes);
+    if (vr.isValid()) {
+      om.noteApplied();
+    } else {
+      om.noteMismatch(getName(true), actionArgTypes, methodArgTypes);
+    }
+    return vr;
+  }
+
+  private ValidationResult checkArguments(
+      OnMethod om, Type[] actionArgTypes, Type[] methodArgTypes) {
     int specialArgsCount = 0;
 
     if (om.getSelfParameter() != -1) {

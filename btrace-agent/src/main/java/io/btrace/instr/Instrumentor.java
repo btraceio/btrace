@@ -18,10 +18,12 @@ package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
+import io.btrace.core.BTraceRuntime;
 import io.btrace.core.MethodID;
 import io.btrace.core.annotations.Kind;
 import io.btrace.core.annotations.Sampled;
 import io.btrace.core.annotations.Where;
+import io.btrace.core.comm.MessageCommand;
 import io.btrace.core.types.AnyType;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
@@ -1835,7 +1837,26 @@ public class Instrumentor extends ClassVisitor {
 
   @Override
   public void visitEnd() {
+    reportMismatchedHandlers();
     cv.visitEnd();
+  }
+
+  /** A handler that fits no method of a matching class would otherwise just print nothing. */
+  private void reportMismatchedHandlers() {
+    for (OnMethod om : applicableOnMethods) {
+      String mismatch = om.takeMismatch();
+      if (mismatch != null) {
+        BTraceRuntime.Impl rt = bcn.getRuntime();
+        if (rt != null) {
+          rt.sendCommand(
+              new MessageCommand(
+                  "[BTRACE WARN] Handler "
+                      + om.getTargetName()
+                      + " was not applied: its parameters "
+                      + mismatch));
+        }
+      }
+    }
   }
 
   static String getActionMethodName(BTraceProbe bp, String name) {
