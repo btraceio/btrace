@@ -22,10 +22,11 @@
  *
  * <pre>{@code btrace <PID> OrderTiming.java}</pre>
  *
- * <p>No imports needed - the compiler auto-injects {@code import static io.btrace.BTrace.*;} and
- * {@code import io.btrace.core.annotations.*;} for any script that doesn't already declare them
- * (see {@code btrace-compiler/.../Compiler.java#injectDslImport}). They're included here explicitly
- * only so the file also compiles standalone with plain {@code javac} for review.
+ * <p>No imports needed - the compiler auto-injects a static import of the flat DSL ({@code
+ * io.btrace.BTrace.*}) and an import of the annotations package ({@code
+ * io.btrace.core.annotations.*}) into any script that doesn't already declare them (see {@code
+ * btrace-compiler/.../Compiler.java#injectDslImport}). Its check is a plain text search for the
+ * import statements, so this comment deliberately never spells them out in full.
  *
  * <p>Tracks, per worker thread, how many orders that thread has attempted and how long its most
  * recently *completed* order took end to end - from {@code validateOrder} entry through {@code
@@ -34,9 +35,6 @@
  * different {@code @OnMethod} handlers on two different methods is exactly what {@code @TLS}
  * (thread-local storage) is for.
  */
-import static io.btrace.BTrace.*;
-import io.btrace.core.annotations.*;
-
 @BTrace
 public class OrderTiming {
 
