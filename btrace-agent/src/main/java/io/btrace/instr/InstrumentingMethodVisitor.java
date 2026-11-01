@@ -60,6 +60,8 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   private final Set<Integer> frameOffsets = new HashSet<>();
   private final Map<Label, SavedState> jumpTargetStates = new HashMap<>();
   private final Map<Label, Set<Label>> tryCatchHandlerMap = new HashMap<>();
+  // State at each visited label, for try blocks declared only after their start label was visited
+  private final Map<Label, SavedState> visitedLabelStates = new HashMap<>();
   private final Map<Integer, MethodTrackingContext> trackingContexts = new HashMap<>();
   private final String owner;
   private final String desc;
@@ -1106,6 +1108,13 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   @Override
   public void visitTryCatchBlock(Label start, Label end, Label handler, String exception) {
     addTryCatchHandler(start, handler);
+    // The instrumentor of a probe registered later wraps this visitor and declares its try block
+    // in visitMaxs, after the start label went by. The handler must still see the locals as they
+    // were at that label: locals this visitor added further in are not initialized on every path.
+    SavedState atStart = visitedLabelStates.get(start);
+    if (atStart != null && !jumpTargetStates.containsKey(handler)) {
+      jumpTargetStates.put(handler, atStart);
+    }
     super.visitTryCatchBlock(start, end, handler, exception);
   }
 
@@ -1130,6 +1139,8 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       newLocals.clear();
       newLocals.addAll(ss.newLocals);
     }
+    visitedLabelStates.put(
+        label, new SavedState(localTypes, stack, newLocals, SavedState.EXCEPTION));
     Set<Label> handlers = tryCatchHandlerMap.get(label);
     if (handlers != null) {
       for (Label handler : handlers) {

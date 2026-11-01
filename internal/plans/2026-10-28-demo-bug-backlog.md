@@ -137,37 +137,13 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   retransform took ~100s (restore ~160s), so large `btrace.retransform.batchSize` values are a bad
   idea there.
 
-### O10. An `@error` probe on a method that another probe times with `@Duration` fails verification
+### O10. Demo 01's second probe was still registered when the third installed (not explained)
 
-- **Where:** btrace agent, `BTraceClassWriter.addInstrumentor` chaining one `Instrumentor` per
-  probe, and the frames the ERROR instrumentation emits for its handler.
-- **What:** demo 01's third probe on `OrderService`
-  (`btrace -n 'OrderService::validateOrder @error { print method, stack }'`) logged
-  `[BTRACE WARN] Class verification failed: OrderService (null)` and produced no output, though
-  the client reported the probe started. Seen 1 of 4 demo runs on JDK 17.0.19, 0 of 12 later; it
-  shows up in the demo only when the second probe (`OrderService::* @return if duration>200ms`) is
-  still registered when the third installs.
-- **Root cause (2026-11-01):** each probe gets its own `Instrumentor`, chained so that the last
-  registered probe is the outermost visitor. With a `Kind.RETURN` + `@Duration` probe registered
-  first and a `Kind.ERROR` probe second, the ERROR instrumentor opens its try range at bci 0 and
-  writes the handler frame with the original locals; the inner RETURN instrumentor then adds its
-  two duration `long` locals to every frame passing through, the handler's included, but
-  initializes them after the try range starts. HotSpot rejects the class:
-  `VerifyError: Stack map does not match the one at exception handler 75 ... Type top (current
-  frame, locals[2]) is not assignable to long (stack map, locals[2])`, at bci 0 of
-  `validateOrder`. The redefinition is dropped, so the earlier probe's version stays and the new
-  probe never fires.
-- **Not timing-dependent:** two scripts on `validateOrder`, `Kind.RETURN` with `@Duration`
-  attached first and `Kind.ERROR` second, fail every time. The reverse order works, and one script
-  with both handlers works (a single `Instrumentor` orders its own code).
-- **Also:** the warning says `(null)` because `retransformClasses` throws `VerifyError` with no
-  message; HotSpot's reason only shows by loading the dumped class (`btrace -d <dir>`) with
-  verification on. Why demo 01's second probe was still registered when the third installed is
-  not explained yet.
-- **Repro:** the two-script order above, against `demos/01-oneliner/OrderServiceApp.java`.
-- **Suggested fix:** test-first with a golden or unit case that instruments one method with two
-  probes in that order. Then either make the inner instrumentor mark its added locals as `top` in
-  frames it did not create, or initialize them before the outer instrumentor's code.
+- **Where:** agent exit path or the demo's client shutdown (not investigated).
+- **What:** in the demo 01 run that hit F12, the third probe's install saw the second probe
+  (`OrderService::* @return if duration>200ms`) still registered, although `btrace_until` waits for
+  the second client to exit before starting the third. F12 made the overlap harmless, but an exited
+  probe that keeps running even briefly is still unexpected. Seen once in 16 runs on JDK 17.
 
 ### O11. Demos fail when another BTrace agent holds port 2020
 
@@ -195,3 +171,4 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F9 | `BTraceRuntimeImplBaseTest` raced the command thread and failed on slow CI runners | `d6065f3b` |
 | F10 | A plain `Throwable` parameter at `Kind.ERROR` was silently ignored | `068e1a81` |
 | F11 | A client that exited right away could leave its probe installed: the failed exit echo skipped `Client.onExit` (demo 07 throughput stuck at a third of baseline) | `8ab60867` |
+| F12 | An `@error` probe added after a `@return` + `@Duration` probe on the same method failed verification ("Class verification failed: ... (null)" in demo 01): the earlier probe declared its duration locals at the later probe's handler | `InstrumentingMethodVisitor`, 2026-11-01 |
