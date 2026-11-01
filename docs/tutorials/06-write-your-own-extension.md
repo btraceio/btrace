@@ -332,9 +332,10 @@ orders: succeeded=89 failed=8
 ```
 
 > **What just happened?** Unlike Tutorial 4's `LatencyHistogram`, `counter` here is a *required*
-> `@Injected` field — no `optional = true`. If you'd skipped Step 6, the client would still print
-> "Successfully started BTrace probe", but every probe call that uses `counter` would then fail
-> with a `BootstrapMethodError` ("No implementation available for service"). `processOrder`'s `@Location(Kind.ERROR)` fires whenever `validateOrder`'s
+> `@Injected` field — no `optional = true`. If you'd skipped Step 6, BTrace would have refused
+> the probe instead of running it: the client reports `Probe … was not deployed: required
+> @Injected service com.example.orderstats.OrderCounterService (field 'counter') is
+> unavailable: …` and exits with status 1. `processOrder`'s `@Location(Kind.ERROR)` fires whenever `validateOrder`'s
 > exception propagates uncaught through it — the same call path Tutorial 1 found with `@error` —
 > so `failed` tracks the ~8% validation failures and `succeeded` tracks everything else.
 
@@ -377,7 +378,7 @@ rm -rf "$BTRACE_HOME/extensions/order-counter" ~/.btrace/permissions.properties
   that version in their implementation manifest. External builds resolve only
   `io.btrace:btrace:<btraceVersion>` for the `@ExternalType` processor; an extension's own
   `version` may therefore follow its independent release scheme.
-- **The probe fails to link instead of running** — you deployed it before Step 6's permission
+- **`Probe … was not deployed: required @Injected service … is unavailable`** — you deployed it before Step 6's permission
   grant, or against a demo app process that was already running (and had already loaded an older
   policy) before you wrote the policy file. Start a fresh `java DemoApp.java` after Step 6.
 - **`btracex list` prints nothing** — it scans `$BTRACE_HOME/extensions/` and
