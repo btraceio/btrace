@@ -16,11 +16,9 @@
  */
 package io.btrace.instr;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.junit.jupiter.api.Test;
-import org.objectweb.asm.ClassReader;
 
 /**
  * Several probes applied to one class in a single transformation, as the agent does when more than
@@ -54,26 +52,5 @@ class MultiProbeInstrumentationTest extends InstrumentorTestBase {
     }
     transformedBC = cw.instrument();
     assertNotNull(transformedBC, "no probe matched");
-  }
-
-  /**
-   * Links the transformed class, which runs HotSpot's verifier against the emitted stack map
-   * frames. ASM's analyzer recomputes frames on its own and would not notice a wrong one.
-   */
-  private void assertVerifies() {
-    String name = new ClassReader(transformedBC).getClassName().replace('/', '.');
-    VerifyingLoader loader = new VerifyingLoader(MultiProbeInstrumentationTest.class);
-    assertDoesNotThrow(() -> Class.forName(name, true, loader.define(name, transformedBC)));
-  }
-
-  private static final class VerifyingLoader extends ClassLoader {
-    VerifyingLoader(Class<?> parentOf) {
-      super(parentOf.getClassLoader());
-    }
-
-    ClassLoader define(String name, byte[] code) {
-      defineClass(name, code, 0, code.length);
-      return this;
-    }
   }
 }
