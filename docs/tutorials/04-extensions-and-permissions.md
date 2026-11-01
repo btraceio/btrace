@@ -38,7 +38,9 @@ java DemoApp.java
 you'll turn the raw numbers into real percentiles a probe can reason about, using a service instead
 of `print`.
 
-Get its PID in terminal 2 (`jps`, look for `DemoApp`) — you'll need it for every command below.
+Get its PID in terminal 2 with `jps -m` and look for the line `<PID> Main DemoApp.java` (a
+single-file source launch runs under the JDK's `Main` launcher class, so plain `jps` shows only
+`Main`) — you'll need it for every command below.
 
 ## Step 2 — Ask BTrace to hand your probe a metrics service
 
@@ -132,14 +134,18 @@ btrace <PID> LatencyHistogram.java
 
 ```
 === Latency Report ===
-chargeCard    p50=27ms  p95=321ms  p99=378ms  (n=41)
-processOrder  p50=58ms  p95=346ms  p99=402ms  (n=41)
+chargeCard    p50=36ms  p95=368ms  p99=401ms  (n=61)
+processOrder  p50=65ms  p95=413ms  p99=452ms  (n=60)
 =======================
 === Latency Report ===
-chargeCard    p50=29ms  p95=318ms  p99=381ms  (n=89)
-processOrder  p50=61ms  p95=349ms  p99=405ms  (n=89)
+chargeCard    p50=31ms  p95=282ms  p99=375ms  (n=66)
+processOrder  p50=64ms  p95=314ms  p99=422ms  (n=66)
 =======================
 ```
+
+Each report covers only the calls recorded since the previous one (`snapshot()` reads the
+histogram's last interval and starts a new one), so `n` is the number of calls in those 5 seconds,
+not a running total, and the percentiles describe just that window.
 
 > **What just happened?** BTrace reads permission policy from (in order) `-Dbtrace.permissions=...`,
 > then `~/.btrace/permissions.properties`, then a classpath resource — the first one found wins.
@@ -161,7 +167,7 @@ denyExtensions=btrace-metrics
 EOF
 ```
 
-Start a fresh demo app (new PID — check with `jps` again), then deploy the exact same script:
+Start a fresh demo app (new PID — check with `jps -m` again), then deploy the exact same script:
 
 ```sh
 java DemoApp.java   # terminal 1, new process
@@ -174,17 +180,24 @@ btrace <NEW_PID> LatencyHistogram.java   # terminal 2
 ```
 ! ERROR
 java.lang.IllegalStateException: BTrace optional service unavailable: io.btrace.metrics.MetricsService
-	at io.btrace.runtime.ExtensionIndy$ThrowingHandler.invoke(ExtensionIndy.java:287)
-	...
-	at LatencyHistogram.onChargeCardReturn(LatencyHistogram.java:45)
-	...
+	at io.btrace.runtime.ExtensionIndy$ThrowingHandler.invoke(ExtensionIndy.java:330)
+	at jdk.proxy2/jdk.proxy2.$Proxy5.histogramMillis(Unknown Source)
+	at OrderService.chargeCard(DemoApp.java:109)
+	at OrderService.processOrder(DemoApp.java:87)
+	at DemoApp.lambda$main$0(DemoApp.java:50)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: java.lang.IllegalStateException: No implementation available for service (interface returned): io.btrace.metrics.MetricsService
-	at io.btrace.runtime.ExtensionIndy.requireServiceClass(ExtensionIndy.java:166)
+	at io.btrace.runtime.ExtensionIndy.requireServiceClass(ExtensionIndy.java:210)
 	at io.btrace.runtime.ExtensionIndy.bootstrapFieldGet(ExtensionIndy.java:82)
 	...
 ```
 
-`Ctrl+C` as soon as you've seen it once — it repeats on every probed call, which gets noisy fast.
+The probe handler has no frame of its own: it is woven into the instrumented method, so the call
+into the stub shows up at `OrderService.chargeCard(DemoApp.java:109)`, the line where
+`chargeCard` returns.
+
+Press `Ctrl+C` and choose `1. exit` as soon as you've seen it once — it repeats on every probed
+call, which gets noisy fast.
 
 > **What just happened?** With `denyExtensions=btrace-metrics` set, BTrace's extension bridge
 > refuses to link the real `MetricsServiceImpl` and records the reason internally as `"Blocked by
@@ -291,9 +304,10 @@ Policy saved to /home/you/.btrace/permissions.properties
 
 ## Step 7 — Clean up
 
-`Ctrl+C` the `btrace` client if it's still attached (probes detach cleanly, same as every other
-tutorial in this series), then `Ctrl+C` the demo app in terminal 1. If you want to leave your
-BTrace installation in its original state, clear the policy file:
+If the `btrace` client is still attached, press `Ctrl+C` and choose `1. exit` to remove the probe
+(choosing `6. detach client` would leave it running in the target), then `Ctrl+C` the demo app in
+terminal 1. If you want to leave your BTrace installation in its original state, clear the policy
+file:
 
 ```sh
 rm ~/.btrace/permissions.properties
