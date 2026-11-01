@@ -18,13 +18,11 @@ package io.btrace.instr;
 
 import io.btrace.core.ArgsMap;
 import io.btrace.core.annotations.Sampled;
-import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import java.util.stream.Collectors;
-import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,9 +38,8 @@ import org.slf4j.LoggerFactory;
 public final class OnMethod extends SpecialParameterHolder {
   private static final Logger log = LoggerFactory.getLogger(OnMethod.class);
 
-  private volatile boolean applied = false;
-  private volatile String mismatch;
-  private final AtomicBoolean mismatchReported = new AtomicBoolean();
+  static final int MAX_MISMATCH_REPORTS = 5;
+  private final Set<String> mismatchReportedClasses = new HashSet<>();
   private String clazz;
   private volatile Pattern compiledClassPattern;
   private static final AtomicReferenceFieldUpdater<OnMethod, Pattern> compiledClassPatternUpdater =
@@ -346,29 +343,20 @@ public final class OnMethod extends SpecialParameterHolder {
     }
   }
 
-  void noteApplied() {
-    applied = true;
-  }
-
-  /** Remembers the first method this handler was rejected for. */
-  void noteMismatch(String site, Type[] handlerArgs, Type[] siteArgs) {
-    if (mismatch == null) {
-      mismatch =
-          "(" + typeNames(handlerArgs) + ") do not fit (" + typeNames(siteArgs) + ") at " + site;
-    }
-  }
-
   /**
-   * The reason this handler has not been applied anywhere so far, or null if it has been or the
-   * reason was already taken. A handler is reported at most once however many classes reject it.
+   * Decides whether to tell the client this handler fits nothing in the given class, so that a
+   * broad class pattern or a retransform cannot flood it. Returns the text to end the report with,
+   * or null to stay quiet.
    */
-  String takeMismatch() {
-    return !applied && mismatch != null && mismatchReported.compareAndSet(false, true)
-        ? mismatch
-        : null;
-  }
-
-  private static String typeNames(Type[] types) {
-    return Arrays.stream(types).map(Type::getClassName).collect(Collectors.joining(", "));
+  String mismatchReportSuffix(String className) {
+    synchronized (mismatchReportedClasses) {
+      if (mismatchReportedClasses.size() >= MAX_MISMATCH_REPORTS
+          || !mismatchReportedClasses.add(className)) {
+        return null;
+      }
+      return mismatchReportedClasses.size() == MAX_MISMATCH_REPORTS
+          ? " (further classes will not be reported for this handler)"
+          : "";
+    }
   }
 }

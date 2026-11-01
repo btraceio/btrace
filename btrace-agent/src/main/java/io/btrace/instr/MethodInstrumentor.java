@@ -55,6 +55,8 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
   private final Map<Integer, Type> extraTypes;
   private Label skipLabel;
   private boolean prologueVisited = false;
+  private final MethodInstrumentorHelper helper;
+  private String rejection;
 
   public MethodInstrumentor(
       ClassLoader cl,
@@ -66,6 +68,7 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
       String name,
       String desc) {
     super(mv, mHelper);
+    helper = mHelper;
     this.parentClz = parentClz;
     this.superClz = superClz;
     this.access = access;
@@ -295,13 +298,31 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
 
   protected ValidationResult validateArguments(
       OnMethod om, Type[] actionArgTypes, Type[] methodArgTypes) {
+    rejection = null;
     ValidationResult vr = checkArguments(om, actionArgTypes, methodArgTypes);
-    if (vr.isValid()) {
-      om.noteApplied();
-    } else {
-      om.noteMismatch(getName(true), actionArgTypes, methodArgTypes);
+    if (!vr.isValid()) {
+      Map<OnMethod, String> rejections = helper != null ? helper.handlerRejections() : null;
+      if (rejections != null && !rejections.containsKey(om)) {
+        String reason =
+            rejection != null
+                ? rejection
+                : "its parameters ("
+                    + typeNames(actionArgTypes)
+                    + ") do not fit ("
+                    + typeNames(methodArgTypes)
+                    + ")";
+        rejections.put(om, reason + " at " + getName(true));
+      }
     }
     return vr;
+  }
+
+  private static String typeNames(Type[] types) {
+    StringBuilder sb = new StringBuilder();
+    for (Type type : types) {
+      sb.append(sb.length() > 0 ? ", " : "").append(type.getClassName());
+    }
+    return sb.toString();
   }
 
   private ValidationResult checkArguments(
@@ -403,6 +424,9 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
     }
     if (om.getDurationParameter() != -1) {
       if (!actionArgTypes[om.getDurationParameter()].equals(Type.LONG_TYPE)) {
+        report(
+            "Invalid @Duration parameter. Expected long, received "
+                + actionArgTypes[om.getDurationParameter()]);
         return ValidationResult.INVALID;
       }
       specialArgsCount++;
@@ -413,6 +437,11 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
           Constants.STRING_TYPE,
           cl,
           om.isExactTypeMatch()))) {
+        report(
+            "Invalid @ProbeClassName parameter. Expected "
+                + Constants.STRING_TYPE
+                + ", received "
+                + actionArgTypes[om.getClassNameParameter()]);
         return ValidationResult.INVALID;
       }
       specialArgsCount++;
@@ -423,6 +452,11 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
           Constants.STRING_TYPE,
           cl,
           om.isExactTypeMatch()))) {
+        report(
+            "Invalid @ProbeMethodName parameter. Expected "
+                + Constants.STRING_TYPE
+                + ", received "
+                + actionArgTypes[om.getMethodParameter()]);
         return ValidationResult.INVALID;
       }
       specialArgsCount++;
@@ -491,6 +525,7 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
   }
 
   private void report(String msg) {
+    rejection = msg;
     String out = "[" + getName(true) + "] " + msg;
     if (Boolean.getBoolean("btrace.validation.warn")) {
       log.warn(out);

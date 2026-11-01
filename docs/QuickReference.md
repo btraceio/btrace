@@ -185,8 +185,10 @@ At `ERROR`, `CATCH` and `THROW`, a handler can also take the exception as a plai
 parameter: when no parameter is annotated `@TargetInstance`, the last unannotated parameter declared
 as `java.lang.Throwable` receives it.
 
-A handler whose unannotated parameters fit no matching method is not applied, and the client gets a
-`[BTRACE WARN] Handler ... was not applied` message naming the first method that rejected it.
+A handler whose parameters fit no matching method of a class is not applied there, and the client
+gets a `[BTRACE WARN] Handler ... was not applied in <class>` message naming the first method that
+rejected it. Each handler reports at most five classes. Classes newer than Java 27 (major version
+above 71) go through the ClassFile API backend, which does not send this message.
 
 **Examples:**
 ```java

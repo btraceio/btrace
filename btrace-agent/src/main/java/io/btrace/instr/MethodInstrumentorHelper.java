@@ -16,6 +16,7 @@
  */
 package io.btrace.instr;
 
+import java.util.Map;
 import java.util.function.Supplier;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
@@ -51,6 +52,12 @@ public interface MethodInstrumentorHelper {
    * @return true if level variable should be cached, false otherwise
    */
   boolean shouldCacheLevelVar();
+
+  /**
+   * Returns where this method's instrumentors record the handlers they reject, with the reason, or
+   * null if nothing collects them. Confined to the thread transforming the class.
+   */
+  Map<OnMethod, String> handlerRejections();
 
   interface Accessor {
     MethodInstrumentorHelper methodHelper();

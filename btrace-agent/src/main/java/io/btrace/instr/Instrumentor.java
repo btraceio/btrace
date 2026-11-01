@@ -31,7 +31,9 @@ import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.PatternSyntaxException;
 import org.objectweb.asm.AnnotationVisitor;
@@ -41,6 +43,8 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This instruments a probed class with BTrace probe action class.
@@ -48,10 +52,12 @@ import org.objectweb.asm.Type;
  * @author A. Sundararajan
  */
 public class Instrumentor extends ClassVisitor {
+  private static final Logger log = LoggerFactory.getLogger(Instrumentor.class);
   private final BTraceProbe bcn;
   private final ClassLoader cl;
   private final Collection<OnMethod> applicableOnMethods;
   private final Set<OnMethod> calledOnMethods = new HashSet<>();
+  private final Map<OnMethod, String> handlerRejections = new LinkedHashMap<>();
 
   private String className, superName;
 
@@ -164,6 +170,7 @@ public class Instrumentor extends ClassVisitor {
 
     InstrumentingMethodVisitor mHelper =
         new InstrumentingMethodVisitor(access, className, name, desc, methodVisitor);
+    mHelper.collectHandlerRejections(handlerRejections);
 
     // Count handlers with level checks to determine if caching is needed
     long levelCheckCount =
@@ -1837,25 +1844,39 @@ public class Instrumentor extends ClassVisitor {
 
   @Override
   public void visitEnd() {
-    reportMismatchedHandlers();
+    reportRejectedHandlers();
     cv.visitEnd();
   }
 
-  /** A handler that fits no method of a matching class would otherwise just print nothing. */
-  private void reportMismatchedHandlers() {
-    for (OnMethod om : applicableOnMethods) {
-      String mismatch = om.takeMismatch();
-      if (mismatch != null) {
-        BTraceRuntime.Impl rt = bcn.getRuntime();
+  /**
+   * A handler that fits nothing in a class it matched would otherwise just print nothing. The
+   * verdict covers this class only: other classes may still fit, and may be transforming right now.
+   * Only a warning, so failing to send it must not cost the class its instrumentation.
+   */
+  private void reportRejectedHandlers() {
+    try {
+      for (Map.Entry<OnMethod, String> rejected : handlerRejections.entrySet()) {
+        OnMethod om = rejected.getKey();
+        if (calledOnMethods.contains(om)) {
+          continue;
+        }
+        String clazz = className.replace('/', '.');
+        String suffix = om.mismatchReportSuffix(clazz);
+        BTraceRuntime.Impl rt = suffix != null ? bcn.getRuntime() : null;
         if (rt != null) {
           rt.sendCommand(
               new MessageCommand(
                   "[BTRACE WARN] Handler "
                       + om.getTargetName()
-                      + " was not applied: its parameters "
-                      + mismatch));
+                      + " was not applied in "
+                      + clazz
+                      + ": "
+                      + rejected.getValue()
+                      + suffix));
         }
       }
+    } catch (Throwable t) {
+      log.warn("Failed to report the handlers rejected in {}", className, t);
     }
   }
 
