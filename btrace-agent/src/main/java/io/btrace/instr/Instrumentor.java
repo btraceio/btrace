@@ -647,6 +647,20 @@ public class Instrumentor extends ClassVisitor {
 
           @Override
           protected void onAfterCallMethod(int opcode, String cOwner, String cName, String cDesc) {
+            // The code injected below (System.nanoTime() for @Duration, the handler call) comes
+            // back through visitMethodInsn; a call site pattern matching it would recurse forever
+            if (generatingCode) {
+              return;
+            }
+            try {
+              generatingCode = true;
+              onAfterMatchingCall(opcode, cOwner, cName, cDesc);
+            } finally {
+              generatingCode = false;
+            }
+          }
+
+          private void onAfterMatchingCall(int opcode, String cOwner, String cName, String cDesc) {
             if (matches(localClassName, cOwner.replace('/', '.'))
                 && matches(localMethodName, cName)
                 && typeMatches(loc.getType(), cDesc, om.isExactTypeMatch())) {

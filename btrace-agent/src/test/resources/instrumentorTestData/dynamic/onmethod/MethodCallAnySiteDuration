@@ -1,0 +1,66 @@
+LCONST_0
+LSTORE 4
+LCONST_0
+LSTORE 6
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 6
+LSTORE 8
+ASTORE 10
+ASTORE 11
+ALOAD 11
+ALOAD 10
+LLOAD 8
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 6
+LSUB
+LSTORE 4
+L1
+FRAME FULL [resources/OnMethodTest java/lang/String J J J J java/lang/String resources/OnMethodTest] [J]
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L2
+ALOAD 11
+LDC "callTarget"
+LLOAD 4
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallAnySiteDuration$args(Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/MethodCallAnySiteDuration"
+]
+L2
+FRAME SAME1 J
+LCONST_0
+LSTORE 12
+LCONST_0
+LSTORE 14
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 14
+LSTORE 16
+ASTORE 18
+ALOAD 18
+LLOAD 16
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 14
+LSUB
+LSTORE 12
+L3
+FRAME FULL [resources/OnMethodTest java/lang/String J J J J java/lang/String resources/OnMethodTest J J J java/lang/String] [J J]
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+ACONST_NULL
+LDC "callTargetStatic"
+LLOAD 12
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallAnySiteDuration$args(Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/MethodCallAnySiteDuration"
+]
+L4
+FRAME FULL [resources/OnMethodTest java/lang/String J J J J java/lang/String resources/OnMethodTest J J J java/lang/String] [J J]
+L5
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+LOCALVARIABLE a Ljava/lang/String; L0 L5 1
+LOCALVARIABLE b J L0 L5 2
+MAXSTACK = 8
+MAXLOCALS = 19

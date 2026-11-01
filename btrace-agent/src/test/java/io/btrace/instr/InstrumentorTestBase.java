@@ -16,6 +16,7 @@
  */
 package io.btrace.instr;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -384,6 +385,27 @@ public abstract class InstrumentorTestBase {
       originalBC = loadResource("/resources/" + name + ".clazz");
     }
     return originalBC;
+  }
+
+  /**
+   * Links the transformed class, which runs HotSpot's verifier against the emitted stack map
+   * frames. ASM's analyzer recomputes frames on its own and would not notice a wrong one.
+   */
+  protected void assertVerifies() {
+    String name = new ClassReader(transformedBC).getClassName().replace('/', '.');
+    VerifyingLoader loader = new VerifyingLoader(InstrumentorTestBase.class);
+    assertDoesNotThrow(() -> Class.forName(name, true, loader.define(name, transformedBC)));
+  }
+
+  private static final class VerifyingLoader extends ClassLoader {
+    VerifyingLoader(Class<?> parentOf) {
+      super(parentOf.getClassLoader());
+    }
+
+    ClassLoader define(String name, byte[] code) {
+      defineClass(name, code, 0, code.length);
+      return this;
+    }
   }
 
   private byte[] loadResource(final String path) throws IOException {
