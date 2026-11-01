@@ -363,7 +363,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
           if (sb != null) {
             if (!sb.offer(cmd)) {
               sb.clear();
-              sb.offer(new MessageCommand("speculative buffer overflow: " + curId));
+              sb.offer(MessageCommand.line("speculative buffer overflow: " + curId));
             }
             return;
           }
@@ -985,7 +985,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     if (terminalShutdownRequested.compareAndSet(false, true)) {
       terminalExitCode = exitCode;
       String cleanupOutcome = completeTerminalCleanup(exitCode);
-      MessageCommand marker = new MessageCommand("[BTRACE] terminal cleanup: " + cleanupOutcome);
+      MessageCommand marker = MessageCommand.line("[BTRACE] terminal cleanup: " + cleanupOutcome);
       terminalMarker = marker;
       if (queue != null) {
         queue.enqueue(marker);

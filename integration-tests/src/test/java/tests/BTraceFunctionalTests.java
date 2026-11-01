@@ -300,6 +300,24 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   @Test
+  public void testPrintLeavesLineOpen() throws Exception {
+    testDynamic(
+        "resources.Main",
+        "btrace/PrintNoNewlineTest.java",
+        Completion.untilContains("after-line"),
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertTrue(
+                Pattern.compile("(?m)^entered resources\\.Main\\.callA\\Rafter-line\\R")
+                    .matcher(stdout)
+                    .find(),
+                "Expected print() fragments joined on one line, no blank line:\n" + stdout);
+          }
+        });
+  }
+
+  @Test
   public void testExtensionLifecycleClose() throws Exception {
     attachDelayMs = 500;
     testDynamic(

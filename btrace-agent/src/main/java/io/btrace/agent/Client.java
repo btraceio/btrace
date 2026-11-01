@@ -652,7 +652,7 @@ abstract class Client implements CommandListener {
         // Avoid printing full stack traces in debug to keep target stderr clean
         log.debug("Class '{}' verification failed: {}", c.getName(), e.toString());
         sendCommand(
-            new MessageCommand(
+            MessageCommand.line(
                 "[BTRACE WARN] Class verification failed: "
                     + c.getName()
                     + " ("

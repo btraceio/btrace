@@ -49,6 +49,23 @@ public class MessageCommand extends DataCommand {
     this(0L, msg, urgent);
   }
 
+  /**
+   * Creates a message holding one complete line of text, appending the line separator unless the
+   * text already ends with a line break. Use it for diagnostics that are not probe output, since
+   * message text is printed as is.
+   */
+  public static MessageCommand line(String msg) {
+    return new MessageCommand(terminated(msg));
+  }
+
+  /** Returns {@code msg} ending with a line break, appending the line separator if needed. */
+  public static String terminated(String msg) {
+    if (msg == null || msg.endsWith("\n")) {
+      return msg;
+    }
+    return msg + System.lineSeparator();
+  }
+
   protected MessageCommand() {
     this(0L, null);
   }
@@ -100,12 +117,9 @@ public class MessageCommand extends DataCommand {
       out.print(" : ");
     }
     if (msg != null) {
-      // println() in a probe sends the line separator as part of the message
-      if (msg.endsWith(System.lineSeparator())) {
-        out.print(msg);
-      } else {
-        out.println(msg);
-      }
+      // The message carries its own line breaks: println() in a probe sends the line separator as
+      // part of the message, while print() deliberately leaves the line open.
+      out.print(msg);
     }
     if (isUrgent()) {
       out.flush();

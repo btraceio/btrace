@@ -39,8 +39,26 @@ class MessageCommandPrintTest {
   }
 
   @Test
-  void messageWithoutLineSeparatorIsTerminated() {
-    assertEquals("hello" + NL, printed("hello"));
+  void messageWithoutLineSeparatorIsPrintedAsIs() {
+    // print() in a probe must not end the line
+    assertEquals("hello", printed("hello"));
+  }
+
+  @Test
+  void printFollowedByPrintlnFormsOneLine() {
+    StringWriter target = new StringWriter();
+    try (PrintWriter out = new PrintWriter(target)) {
+      new MessageCommand("entered ").print(out);
+      new MessageCommand("Foo.bar" + NL).print(out);
+    }
+    assertEquals("entered Foo.bar" + NL, target.toString());
+  }
+
+  @Test
+  void lineFactoryTerminatesMessageOnce() {
+    assertEquals("warn" + NL, MessageCommand.line("warn").getMessage());
+    assertEquals("warn" + NL, MessageCommand.line("warn" + NL).getMessage());
+    assertEquals("warn\n", MessageCommand.line("warn\n").getMessage());
   }
 
   @Test

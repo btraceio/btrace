@@ -341,7 +341,7 @@ public final class BTraceRuntime {
         printStringMap(null, m);
       }
     } else {
-      print(BTraceUtils.Strings.str(map));
+      println(BTraceUtils.Strings.str(map));
     }
   }
 
