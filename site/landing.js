@@ -66,11 +66,11 @@ const EXTS = [
   { name: 'btrace-utils', desc: 'Common helper functions for probes.' }
 ];
 const PRESETS = [
-  { id: 'every', label: 'How long does each call take?', s: { cls: 'OrderService', meth: 'processOrder', loc: 'return', thr: 0, fields: { method: true, duration: true } } },
-  { id: 'slow', label: 'Which calls are slower than 200 ms?', s: { cls: 'OrderService', meth: '*', loc: 'return', thr: 200, fields: { method: true, duration: true } } },
+  { id: 'every', label: 'How long does each call take?', s: { cls: 'OrderService', meth: 'processOrder', loc: 'return', thr: 0, fields: { method: true, time: true } } },
+  { id: 'slow', label: 'Which calls are slower than 200 ms?', s: { cls: 'OrderService', meth: '*', loc: 'return', thr: 200, fields: { method: true, time: true } } },
   { id: 'err', label: 'Which method throws an exception, and where?', s: { cls: 'OrderService', meth: 'validateOrder', loc: 'error', thr: 0, fields: { method: true, stack: true } } }
 ];
-const FIELDS = ['method', 'args', 'duration', 'return', 'stack'];
+const FIELDS = ['method', 'args', 'return', 'time', 'stack'];
 const EVENTS = [
   { m: 'processOrder', d: 54, a: '[order-73547]', r: 'void' },
   { m: 'chargeCard', d: 345, a: '[order-94839]', r: 'void' },
@@ -117,7 +117,7 @@ const DOCS = [
 ].map(c => ({ title: c.title, links: c.links.map(([label, href]) => ({ label, href })) }));
 
 class LandingPage {
-  state = { t: 13, plugin: 'claude', aud: null, goal: null, cls: 'OrderService', meth: '*', loc: 'return', thr: 200, fields: { method: true, duration: true }, preset: 'slow', inst: 'source', doctor: 'ready', demo: 5, copied: null, active: 'agent' };
+  state = { t: 13, plugin: 'claude', aud: null, goal: null, cls: 'OrderService', meth: '*', loc: 'return', thr: 200, fields: { method: true, time: true }, preset: 'slow', inst: 'source', doctor: 'ready', demo: 5, copied: null, active: 'agent' };
   props = { animateHero: true, defaultAudience: 'sre' };
   setState(patch) {
     this.state = { ...this.state, ...(typeof patch === 'function' ? patch(this.state) : patch) };
@@ -182,17 +182,20 @@ class LandingPage {
 
     // oneliner builder
     const loc = s.loc;
-    const allowed = { method: true, args: true, duration: loc !== 'entry', return: loc === 'return', stack: true };
+    const allowed = { method: true, args: true, return: loc === 'return', time: loc !== 'entry', stack: true };
     const active = FIELDS.filter(f => s.fields[f] && allowed[f]);
     const useThr = loc !== 'entry' && s.thr > 0;
     const cmdMatcher = `${s.cls || 'MyClass'}::${s.meth || '*'}`;
     const cmdFilter = useThr ? ` if duration>${s.thr}ms` : '';
-    const cmdAction = active.length ? 'print ' + active.map(f => f === 'stack' ? 'stack' : f).join(', ') : 'count';
+    // `print` takes the value fields; `time` and `stack` are separate actions, printed in this order.
+    const printed = active.filter(f => f !== 'time' && f !== 'stack');
+    const actions = [printed.length ? 'print ' + printed.join(', ') : null, ...active.filter(f => f === 'time' || f === 'stack')].filter(Boolean);
+    const cmdAction = actions.length ? actions.join(', ') : 'count';
     const cmd = `btrace -n '${cmdMatcher} @${loc}${cmdFilter} { ${cmdAction} }' <PID>`;
     const mm = s.meth || '*';
     const matchM = e => mm === '*' || (mm.endsWith('*') ? e.m.startsWith(mm.slice(0, -1)) : e.m === mm);
     let evs;
-    if (loc === 'error') evs = [{ m: mm === '*' ? 'validateOrder' : mm.replace('*', ''), d: 2, a: '[order-35286]' }];
+    if (loc === 'error') evs = [{ m: mm === '*' ? 'validateOrder' : mm.replace('*', ''), d: 2, a: '[order-35286]' }].filter(e => !useThr || e.d > s.thr);
     else {
       evs = EVENTS.filter(matchM).filter(e => !useThr || e.d > s.thr);
       if (!evs.length && !EVENTS.some(matchM)) evs = [{ m: mm.replace('*', '') || 'call', d: 87, a: '[...]', r: '…' }];
@@ -204,17 +207,10 @@ class LandingPage {
       sampleOut = [{ text: `(no calls over ${s.thr} ms yet)`, color: TONE.dim }];
     } else {
       evs.slice(0, 4).forEach((e, i) => {
-        const parts = [];
-        active.forEach(f => {
-          if (f === 'method') parts.push(e.m);
-          if (f === 'args') parts.push(e.a);
-          if (f === 'duration') parts.push(`${e.d}171192`);
-          if (f === 'return') parts.push(e.r);
-        });
-        if (parts.length) sampleOut.push({ text: parts.join(' '), color: active.includes('duration') && e.d > 200 ? TONE.hl : TONE.cmd });
-        active.forEach(f => {
-          if (f === 'stack') STACK.forEach(l => sampleOut.push({ text: l, color: TONE.dim }));
-        });
+        const parts = printed.map(f => f === 'method' ? e.m : f === 'args' ? e.a : e.r);
+        if (parts.length) sampleOut.push({ text: parts.join(' '), color: TONE.cmd });
+        if (active.includes('time')) sampleOut.push({ text: `execution time: ${e.d} ms`, color: e.d > 200 ? TONE.hl : TONE.n });
+        if (active.includes('stack')) STACK.forEach(l => sampleOut.push({ text: l, color: TONE.dim }));
       });
     }
     const setB = patch => this.setState({ ...patch, preset: null });

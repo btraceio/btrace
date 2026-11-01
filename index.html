@@ -374,9 +374,9 @@
 
               <button type="button" aria-pressed="false" data-bt-click="18" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;padding:6px 10px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300);opacity:1">args</button>
 
-              <button type="button" aria-pressed="true" data-bt-click="19" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;padding:6px 10px;cursor:pointer;border:1px solid var(--color-accent);background:var(--color-accent);color:var(--color-bg);opacity:1">duration</button>
+              <button type="button" aria-pressed="false" data-bt-click="19" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;padding:6px 10px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300);opacity:1">return</button>
 
-              <button type="button" aria-pressed="false" data-bt-click="20" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;padding:6px 10px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300);opacity:1">return</button>
+              <button type="button" aria-pressed="true" data-bt-click="20" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;padding:6px 10px;cursor:pointer;border:1px solid var(--color-accent);background:var(--color-accent);color:var(--color-bg);opacity:1">time</button>
 
               <button type="button" aria-pressed="false" data-bt-click="21" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;padding:6px 10px;cursor:pointer;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300);opacity:1">stack</button>
             </bt-list>
@@ -389,14 +389,18 @@
             <span style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-500)">// command</span>
             <button class="bt-hover-12" type="button" aria-live="polite" data-bt-click="22" style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;background:transparent;color:var(--color-bg);border:1px solid var(--color-neutral-600);padding:6px 10px;cursor:pointer">Copy</button>
           </div>
-          <div style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;line-height:25px;word-break:break-word"><span style="color:var(--color-accent)">$ </span>btrace -n &#39;<span style="color:var(--color-bg)">OrderService::*</span> <span style="color:var(--color-accent-400)">@return</span><span style="color:var(--color-neutral-300)"> if duration&gt;200ms</span> { print method, duration }&#39; &lt;PID&gt;</div>
+          <div style="font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;line-height:25px;word-break:break-word"><span style="color:var(--color-accent)">$ </span>btrace -n &#39;<span style="color:var(--color-bg)">OrderService::*</span> <span style="color:var(--color-accent-400)">@return</span><span style="color:var(--color-neutral-300)"> if duration&gt;200ms</span> { print method, time }&#39; &lt;PID&gt;</div>
         </div>
         <div style="padding:24px;flex:1;font-family:&#39;JetBrains Mono&#39;,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;line-height:22px;overflow-x:auto;min-height:240px">
           <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-500);margin-bottom:12px">// simulated sample output</div>
           <bt-list style="display:contents">
-            <div style="white-space:pre;color:var(--color-accent-400)">chargeCard 345171192</div>
+            <div style="white-space:pre;color:var(--color-bg)">chargeCard</div>
 
-            <div style="white-space:pre;color:var(--color-accent-400)">processOrder 394171192</div>
+            <div style="white-space:pre;color:var(--color-accent-400)">execution time: 345 ms</div>
+
+            <div style="white-space:pre;color:var(--color-bg)">processOrder</div>
+
+            <div style="white-space:pre;color:var(--color-accent-400)">execution time: 394 ms</div>
           </bt-list>
         </div>
       </div>
