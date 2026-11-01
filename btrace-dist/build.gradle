@@ -450,7 +450,9 @@ task btraceJar(type: Jar) {
             'Boot-Class-Path': 'btrace.jar',
             'BTrace-Version': version,
             'BTrace-Agent-Main': 'io.btrace.agent.Main',
-            'BTrace-Client-Main': 'io.btrace.client.Main'
+            'BTrace-Client-Main': 'io.btrace.client.Main',
+            // `java -jar btrace.jar -l` lists JVMs through jvmstat (ignored by JDK 8)
+            'Add-Exports': 'jdk.internal.jvmstat/sun.jvmstat.monitor'
         )
     }
 
