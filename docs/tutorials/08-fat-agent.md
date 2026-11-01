@@ -16,8 +16,10 @@ otherwise — see the callouts marked **Heads up**.
 
 ## What you'll need
 
-- JDK 11 or newer on your PATH
-- A Gradle 8+ build with network access to resolve BTrace and extension artifacts
+- JDK 17 or newer on your PATH (Gradle 9 needs 17+)
+- Gradle 9.2 or newer (this repo builds with 9.8.2) with network access to resolve BTrace and
+  extension artifacts
+- BTrace 3.0 installed — `bin/btrace` and `bin/btracec` on your PATH, for Steps 4 and 5
 - Two terminal windows (same [demo app](demo/DemoApp.java) as the rest of this series)
 
 ## Step 1 — Get something to embed
@@ -56,11 +58,13 @@ cp btrace-extensions/btrace-metrics/build/distributions/btrace-metrics-*-extensi
 
 ## Step 2 — Configure the Gradle fat-agent plugin
 
-Copy the two demo project files in next to the zip:
+Copy the two demo project files in next to the zip, together with the demo app and the probe that
+Step 4 uses:
 
 ```sh
 cp docs/tutorials/demo/fat-agent-build.gradle ~/fat-agent-demo/build.gradle
 cp docs/tutorials/demo/fat-agent-settings.gradle ~/fat-agent-demo/settings.gradle
+cp docs/tutorials/demo/DemoApp.java docs/tutorials/demo/LatencyHistogram.java ~/fat-agent-demo/
 cd ~/fat-agent-demo
 ```
 
@@ -199,12 +203,12 @@ java -javaagent:build/libs/demo-btrace-agent.jar=debug=true,allowExtensions=btra
 
 **You should see** the usual demo app lines, plus (message text verified against
 `Main.java`/`ExtensionLoader.java`; exact log prefixes depend on your SLF4J SimpleLogger config;
-the count is 7 because the engine embeds the default extension set — see Step 3):
+the count is 8 because the engine embeds the default extension set — see Step 3):
 
 ```
 [demo] order service running - stop with Ctrl+C
 Initializing BTrace extension system
-Extension system initialized with 7 available extension(s)
+Extension system initialized with 8 available extension(s)
 [demo] processed 64 orders, 8 failed
 ```
 
@@ -245,8 +249,32 @@ processOrder  p50=58ms  p95=346ms  p99=402ms  (n=41)
 
 ## Step 5 — Add a startup probe
 
-The Gradle plugin can bundle a compiled probe so it starts with the target JVM. Configure the
-directory containing the compiled package tree and name the probe by its full binary name:
+The Gradle plugin can bundle a compiled probe so it starts with the target JVM. Write a small one
+that reports every order failing validation — it needs a package, because bundled probes are
+selected by their full binary name:
+
+```sh
+mkdir -p probes/com/example
+cat > probes/com/example/OrderStartupProbe.java <<'EOF'
+package com.example;
+
+import static io.btrace.BTrace.*;
+import io.btrace.core.annotations.*;
+
+@BTrace
+public class OrderStartupProbe {
+  @OnMethod(clazz = "OrderService", method = "processOrder", location = @Location(Kind.ERROR))
+  public static void onOrderFailed(Throwable t) {
+    println("order failed: " + str(t));
+  }
+}
+EOF
+btracec -d build/compiled-probes probes/com/example/OrderStartupProbe.java
+```
+
+`btracec` writes the class under its package path, as
+`build/compiled-probes/com/example/OrderStartupProbe.class`. Add the directory containing that
+package tree to `build.gradle`'s `btraceFatAgent { }` block and name the probe:
 
 ```groovy
 btraceFatAgent {
@@ -257,12 +285,20 @@ btraceFatAgent {
 }
 ```
 
-The class is stored at
+Rebuild with `./gradlew fatAgentJar`; the class is stored at
 `META-INF/btrace-probes/com/example/OrderStartupProbe.class`. Select it with:
 
 ```sh
 java -javaagent:build/libs/demo-btrace-agent.jar=probes=com.example.OrderStartupProbe,output=stdout \
      DemoApp.java
+```
+
+**You should see** the probe reporting from the moment the app starts (order ids will vary):
+
+```
+[demo] order service running - stop with Ctrl+C
+order failed: java.lang.IllegalStateException: order failed validation: order-15919
+order failed: java.lang.IllegalStateException: order failed validation: order-38543
 ```
 
 Probe names are exact Java binary names. Invalid names, configured classes that are missing at
