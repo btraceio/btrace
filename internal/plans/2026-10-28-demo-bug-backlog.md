@@ -137,13 +137,24 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   retransform took ~100s (restore ~160s), so large `btrace.retransform.batchSize` values are a bad
   idea there.
 
-### O10. Demo 01's second probe was still registered when the third installed (not explained)
+### O10. Demo 01's second probe was still registered when the third installed (most likely F11, not reproduced)
 
-- **Where:** agent exit path or the demo's client shutdown (not investigated).
+- **Where:** client shutdown and agent exit path.
 - **What:** in the demo 01 run that hit F12, the third probe's install saw the second probe
   (`OrderService::* @return if duration>200ms`) still registered, although `btrace_until` waits for
-  the second client to exit before starting the third. F12 made the overlap harmless, but an exited
-  probe that keeps running even briefly is still unexpected. Seen once in 16 runs on JDK 17.
+  the second client to exit before starting the third.
+- **Investigation (2026-11-01):** that run (2026-10-28 11:58 UTC) predates the F11 fix
+  (`8ab60867`, 2026-10-29). On TERM the client's shutdown hook sends `ExitCommand` and exits
+  without waiting for the echo; before F11 an echo that hit the closed socket skipped
+  `Client.onExit` and left the probe registered for good, which is what the third probe met 1–2 s
+  later. No other way for an exited probe to stay registered was found. The demo 01 sequence was
+  rerun on builds from just before F11 (`68a623c2`) and with F11 only (`8ab60867`), both without
+  F12 so a leftover probe shows as the verification warning: 0 hits in 24 runs each (Oracle JDK
+  17 idle and under CPU load, Temurin 17.0.19 idle). The echo rarely loses the race against
+  demo 01's mostly idle app, unlike demo 07's hot loop where it lost every time.
+- **Status:** no code change; F11's regression test covers the failure. Reopen if an exited probe
+  is seen still registered on a build with F11. A possible hardening, not done: have the client's
+  shutdown hook wait briefly for the exit echo, so the next probe always starts after cleanup.
 
 ## Fixed
 
