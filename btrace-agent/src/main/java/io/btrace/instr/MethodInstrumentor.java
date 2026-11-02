@@ -301,20 +301,25 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
     rejection = null;
     ValidationResult vr = checkArguments(om, actionArgTypes, methodArgTypes);
     if (!vr.isValid()) {
-      Map<OnMethod, String> rejections = helper != null ? helper.handlerRejections() : null;
-      if (rejections != null && !rejections.containsKey(om)) {
-        String reason =
-            rejection != null
-                ? rejection
-                : "its parameters ("
-                    + typeNames(actionArgTypes)
-                    + ") do not fit ("
-                    + typeNames(methodArgTypes)
-                    + ")";
-        rejections.put(om, reason + " at " + getName(true));
-      }
+      recordRejection(
+          om,
+          rejection != null
+              ? rejection
+              : "its parameters ("
+                  + typeNames(actionArgTypes)
+                  + ") do not fit ("
+                  + typeNames(methodArgTypes)
+                  + ")");
     }
     return vr;
+  }
+
+  /** Keeps the first reason this handler got no code in the class, for the client to hear. */
+  protected final void recordRejection(OnMethod om, String reason) {
+    Map<OnMethod, String> rejections = helper != null ? helper.handlerRejections() : null;
+    if (rejections != null && !rejections.containsKey(om)) {
+      rejections.put(om, reason + " at " + getName(true));
+    }
   }
 
   private static String typeNames(Type[] types) {

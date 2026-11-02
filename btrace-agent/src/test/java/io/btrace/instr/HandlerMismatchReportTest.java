@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Test;
  */
 class HandlerMismatchReportTest extends InstrumentorTestBase {
   private final List<Command> sent = new ArrayList<>();
-  private boolean failSends = false;
+  private int failSends = 0;
 
   @Test
   void mismatchedHandlerIsReportedOncePerClass() throws Exception {
@@ -82,11 +82,27 @@ class HandlerMismatchReportTest extends InstrumentorTestBase {
   }
 
   @Test
-  void aFailedReportKeepsTheInstrumentationOfOtherHandlers() throws Exception {
-    loadTargetClass("OnMethodTest");
-    failSends = true;
+  void aHandlerThatOnlyFitsAConstructorCallIsReported() throws Exception {
+    loadTargetClass("CallInBranchTarget");
 
-    instrument(recordingProbe("onmethod/ArgsMismatch"));
+    instrument(recordingProbe("onmethod/CallBeforeCtorOnly"));
+
+    assertEquals(1, sent.size(), "commands sent to the client: " + sent);
+    String message = ((MessageCommand) sent.get(0)).getMessage();
+    assertTrue(message.contains("constructor"), message);
+  }
+
+  @Test
+  void aFailedSendDoesNotAffectTheOtherHandlersOrSpendTheReport() throws Exception {
+    loadTargetClass("OnMethodTest");
+    BTraceProbe probe = recordingProbe("onmethod/ArgsMismatchTwice");
+    failSends = 1;
+
+    instrument(probe);
+    assertEquals(1, sent.size(), "the other handler still reports: " + sent);
+
+    instrument(probe);
+    assertEquals(2, sent.size(), "the failed report is sent on the next transform: " + sent);
   }
 
   @Test
@@ -95,8 +111,10 @@ class HandlerMismatchReportTest extends InstrumentorTestBase {
     int reported = 0;
     String last = null;
     for (int i = 0; i < 20; i++) {
-      String suffix = om.mismatchReportSuffix("com.acme.C" + i);
+      String clazz = "com.acme.C" + i;
+      String suffix = om.mismatchReportSuffix(clazz);
       if (suffix != null) {
+        om.mismatchReported(clazz);
         reported++;
         last = suffix;
       }
@@ -104,6 +122,13 @@ class HandlerMismatchReportTest extends InstrumentorTestBase {
     assertEquals(OnMethod.MAX_MISMATCH_REPORTS, reported);
     assertTrue(last.contains("further classes"), last);
     assertEquals(null, om.mismatchReportSuffix("com.acme.C0"), "a retransform stays quiet");
+  }
+
+  @Test
+  void aReportNotSentIsNotSpent() {
+    OnMethod om = new OnMethod();
+    assertEquals("", om.mismatchReportSuffix("com.acme.C"));
+    assertEquals("", om.mismatchReportSuffix("com.acme.C"));
   }
 
   private void instrument(BTraceProbe probe) throws Exception {
@@ -123,7 +148,7 @@ class HandlerMismatchReportTest extends InstrumentorTestBase {
                 new Class<?>[] {BTraceRuntime.Impl.class},
                 (proxy, method, args) -> {
                   if (method.getName().equals("sendCommand")) {
-                    if (failSends) {
+                    if (failSends-- > 0) {
                       throw new IllegalStateException("runtime is shutting down");
                     }
                     sent.add((Command) args[0]);

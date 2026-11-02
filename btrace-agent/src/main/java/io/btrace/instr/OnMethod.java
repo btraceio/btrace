@@ -346,17 +346,23 @@ public final class OnMethod extends SpecialParameterHolder {
   /**
    * Decides whether to tell the client this handler fits nothing in the given class, so that a
    * broad class pattern or a retransform cannot flood it. Returns the text to end the report with,
-   * or null to stay quiet.
+   * or null to stay quiet. Call {@link #mismatchReported} once the report has gone out.
    */
   String mismatchReportSuffix(String className) {
     synchronized (mismatchReportedClasses) {
       if (mismatchReportedClasses.size() >= MAX_MISMATCH_REPORTS
-          || !mismatchReportedClasses.add(className)) {
+          || mismatchReportedClasses.contains(className)) {
         return null;
       }
-      return mismatchReportedClasses.size() == MAX_MISMATCH_REPORTS
+      return mismatchReportedClasses.size() == MAX_MISMATCH_REPORTS - 1
           ? " (further classes will not be reported for this handler)"
           : "";
+    }
+  }
+
+  void mismatchReported(String className) {
+    synchronized (mismatchReportedClasses) {
+      mismatchReportedClasses.add(className);
     }
   }
 }
