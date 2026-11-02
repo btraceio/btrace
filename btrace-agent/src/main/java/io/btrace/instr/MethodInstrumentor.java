@@ -531,13 +531,12 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
 
   private void report(String msg) {
     rejection = msg;
-    String out = "[" + getName(true) + "] " + msg;
     if (Boolean.getBoolean("btrace.validation.warn")) {
-      log.warn(out);
+      log.warn("[{}] {}", getName(true), msg);
     } else if (Boolean.getBoolean("btrace.validation.info")) {
-      log.info(out);
-    } else {
-      log.debug(out);
+      log.info("[{}] {}", getName(true), msg);
+    } else if (log.isDebugEnabled()) {
+      log.debug("[{}] {}", getName(true), msg);
     }
   }
 
