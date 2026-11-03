@@ -25,8 +25,8 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -83,7 +83,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
   }
 
   static final int MAX_FAILURE_REPORTS = 10;
-  private final Map<BTraceProbe, AtomicInteger> failureReports = new ConcurrentHashMap<>();
+  private final Map<BTraceProbe, Set<String>> failureReports = new ConcurrentHashMap<>();
 
   public void register(BTraceProbe p) {
     try {
@@ -256,36 +256,71 @@ public final class BTraceTransformer implements ClassFileTransformer {
 
   /**
    * Tells the attached clients a class stays uninstrumented; otherwise a probe matching it just
-   * prints nothing. A failed transform can't be pinned on one probe, so all of them hear about it.
+   * prints nothing. A failed transform can't be pinned on one probe, so all of them hear about it,
+   * each about a limited number of classes and about each class once.
+   *
+   * <p>Runs in the catch for any Throwable, OOM included: nothing here may escape transform, and a
+   * step that fails must not cost the client the steps after it.
    */
   private void reportFailure(String className, Throwable failure) {
-    // Runs in the catch for any Throwable, OOM included: nothing here may escape transform
+    boolean reporting = false;
     try {
-      log.warn("Failed to transform class {}", className, failure);
+      for (BTraceProbe p : probes) {
+        reporting |= shouldReportFailure(p, className);
+      }
+    } catch (Throwable ignored) {
+      // Cannot tell, so do the cheap thing below
+    }
+    try {
+      if (reporting) {
+        log.warn("Failed to transform class {}", className, failure);
+      } else {
+        log.debug("Failed to transform class {}: {}", className, failure.getClass().getName());
+      }
+    } catch (Throwable ignored) {
+      // The clients can still be told
+    }
+    if (!reporting) {
+      return;
+    }
+    try {
       String message =
           "[BTRACE WARN] Could not instrument "
               + className.replace('/', '.')
               + ", no probe will run in it: "
-              + failure
+              + describe(failure)
               + " (stack trace in the target JVM's log)";
       for (BTraceProbe p : probes) {
         try {
-          int reported =
-              failureReports.computeIfAbsent(p, k -> new AtomicInteger()).incrementAndGet();
-          BTraceRuntime.Impl rt = reported <= MAX_FAILURE_REPORTS ? p.getRuntime() : null;
+          BTraceRuntime.Impl rt = shouldReportFailure(p, className) ? p.getRuntime() : null;
           if (rt != null) {
+            Set<String> reported = failureReports.get(p);
             rt.sendCommand(
                 new MessageCommand(
-                    reported == MAX_FAILURE_REPORTS
-                        ? message + " (further failures go only to that log)"
+                    reported.size() == MAX_FAILURE_REPORTS - 1
+                        ? message + " (further classes go only to that log)"
                         : message));
+            reported.add(className);
           }
         } catch (Throwable th) {
           log.warn("Failed to report the transform failure of {}", className, th);
         }
       }
     } catch (Throwable ignored) {
-      // Not even the failure could be described; returning null is all that is left to do
+      // Nothing is left to try; returning null keeps the class as it was
+    }
+  }
+
+  private boolean shouldReportFailure(BTraceProbe p, String className) {
+    Set<String> reported = failureReports.computeIfAbsent(p, k -> ConcurrentHashMap.newKeySet());
+    return reported.size() < MAX_FAILURE_REPORTS && !reported.contains(className);
+  }
+
+  private static String describe(Throwable failure) {
+    try {
+      return failure.toString();
+    } catch (Throwable ignored) {
+      return failure.getClass().getName();
     }
   }
 

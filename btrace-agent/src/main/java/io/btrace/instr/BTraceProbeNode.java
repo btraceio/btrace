@@ -203,9 +203,10 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     }
     Class<?> clz = delegate.defineClass(rt, code);
     HandlerRepositoryImpl.registerProbe(this);
+    // Before registering: a class loading right after may need the runtime to report to the client
+    this.rt = rt;
     t.register(this);
     transformer = t;
-    this.rt = rt;
     return clz;
   }
 

@@ -31,6 +31,7 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -64,22 +65,80 @@ class BTraceTransformerFailureReportTest {
   }
 
   @Test
-  void reportsStopAfterAFewFailures() throws Exception {
+  void aClassFailingAgainIsNotReportedAgain() throws Exception {
     List<Command> sent = new ArrayList<>();
     BTraceTransformer transformer = new BTraceTransformer(new DebugSupport(new SharedSettings()));
     transformer.register(failingProbe(TARGET.replace('/', '.'), recordingRuntime(sent)));
 
-    for (int i = 0; i < 25; i++) {
+    for (int i = 0; i < 3; i++) {
       transformer.transform(new ClassLoader(null) {}, TARGET, null, null, bytesOf(Target.class));
+    }
+
+    assertEquals(1, sent.size());
+  }
+
+  @Test
+  void reportsStopAfterAFewClasses() throws Exception {
+    List<Command> sent = new ArrayList<>();
+    BTraceTransformer transformer = new BTraceTransformer(new DebugSupport(new SharedSettings()));
+    List<OnMethod> oms = new ArrayList<>();
+    for (int i = 0; i < 25; i++) {
+      OnMethod om = new OnMethod();
+      om.setClazz("com.acme.Target" + i);
+      om.setMethod("run");
+      oms.add(om);
+    }
+    transformer.register(
+        failingProbe(
+            oms, recordingRuntime(sent), new IllegalStateException("instrumentation failed")));
+
+    for (int i = 0; i < 25; i++) {
+      transformer.transform(
+          new ClassLoader(null) {}, "com/acme/Target" + i, null, null, bytesOf(Target.class));
     }
 
     assertEquals(BTraceTransformer.MAX_FAILURE_REPORTS, sent.size());
     String last = ((MessageCommand) sent.get(sent.size() - 1)).getMessage();
-    assertTrue(last.contains("further failures"), last);
+    assertTrue(last.contains("further classes"), last);
   }
 
   @Test
-  void aFailureThatCannotBeDescribedDoesNotEscape() throws Exception {
+  void failuresPastTheCapAreNotDescribedAtAll() throws Exception {
+    List<Command> sent = new ArrayList<>();
+    BTraceTransformer transformer = new BTraceTransformer(new DebugSupport(new SharedSettings()));
+    List<OnMethod> oms = new ArrayList<>();
+    for (int i = 0; i < 25; i++) {
+      OnMethod om = new OnMethod();
+      om.setClazz("com.acme.Target" + i);
+      om.setMethod("run");
+      oms.add(om);
+    }
+    AtomicInteger described = new AtomicInteger();
+    Throwable counting =
+        new IllegalStateException() {
+          @Override
+          public String toString() {
+            described.incrementAndGet();
+            return "failure";
+          }
+        };
+    transformer.register(failingProbe(oms, recordingRuntime(sent), counting));
+
+    for (int i = 0; i < BTraceTransformer.MAX_FAILURE_REPORTS; i++) {
+      transformer.transform(
+          new ClassLoader(null) {}, "com/acme/Target" + i, null, null, bytesOf(Target.class));
+    }
+    int atTheCap = described.get();
+    for (int i = BTraceTransformer.MAX_FAILURE_REPORTS; i < 25; i++) {
+      transformer.transform(
+          new ClassLoader(null) {}, "com/acme/Target" + i, null, null, bytesOf(Target.class));
+    }
+
+    assertEquals(atTheCap, described.get(), "no logging or message building past the cap");
+  }
+
+  @Test
+  void aFailureThatCannotBeDescribedIsStillReported() throws Exception {
     List<Command> sent = new ArrayList<>();
     BTraceTransformer transformer = new BTraceTransformer(new DebugSupport(new SharedSettings()));
     Throwable unprintable =
@@ -94,6 +153,11 @@ class BTraceTransformerFailureReportTest {
 
     assertNull(
         transformer.transform(new ClassLoader(null) {}, TARGET, null, null, bytesOf(Target.class)));
+
+    assertEquals(1, sent.size(), "commands sent to the client: " + sent);
+    String message = ((MessageCommand) sent.get(0)).getMessage();
+    assertTrue(message.contains("com.acme.Target"), message);
+    assertTrue(message.contains(unprintable.getClass().getName()), message);
   }
 
   /** A probe matching {@code className} that throws as soon as instrumentation consults it. */
@@ -106,6 +170,11 @@ class BTraceTransformerFailureReportTest {
     OnMethod om = new OnMethod();
     om.setClazz(className);
     om.setMethod("run");
+    return failingProbe(Collections.singletonList(om), rt, failure);
+  }
+
+  private static BTraceProbe failingProbe(
+      List<OnMethod> oms, BTraceRuntime.Impl rt, Throwable failure) {
     return (BTraceProbe)
         Proxy.newProxyInstance(
             BTraceProbe.class.getClassLoader(),
@@ -113,7 +182,7 @@ class BTraceTransformerFailureReportTest {
             (proxy, method, args) -> {
               switch (method.getName()) {
                 case "onmethods":
-                  return Collections.singletonList(om);
+                  return oms;
                 case "getRuntime":
                   return rt;
                 case "notifyTransform":

@@ -601,6 +601,7 @@ public class Instrumentor extends ClassVisitor {
                     boolean isStaticCall = (opcode == INVOKESTATIC);
                     if (!isStaticCall) {
                       if (where == Where.BEFORE && cName.equals(Constants.CONSTRUCTOR)) {
+                        recordRejection(om, "no code can run before a constructor call");
                         return;
                       }
                     }
@@ -1851,11 +1852,12 @@ public class Instrumentor extends ClassVisitor {
   /**
    * A handler that fits nothing in a class it matched would otherwise just print nothing. The
    * verdict covers this class only: other classes may still fit, and may be transforming right now.
-   * Only a warning, so failing to send it must not cost the class its instrumentation.
+   * Only a warning, so failing to send it must not cost the class its instrumentation or the other
+   * handlers their warnings.
    */
   private void reportRejectedHandlers() {
-    try {
-      for (Map.Entry<OnMethod, String> rejected : handlerRejections.entrySet()) {
+    for (Map.Entry<OnMethod, String> rejected : handlerRejections.entrySet()) {
+      try {
         OnMethod om = rejected.getKey();
         if (calledOnMethods.contains(om)) {
           continue;
@@ -1873,10 +1875,11 @@ public class Instrumentor extends ClassVisitor {
                       + ": "
                       + rejected.getValue()
                       + suffix));
+          om.mismatchReported(clazz);
         }
+      } catch (Throwable t) {
+        log.warn("Failed to report a handler rejected in {}", className, t);
       }
-    } catch (Throwable t) {
-      log.warn("Failed to report the handlers rejected in {}", className, t);
     }
   }
 
