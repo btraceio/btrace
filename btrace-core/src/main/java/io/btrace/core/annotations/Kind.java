@@ -268,6 +268,10 @@ public enum Kind {
    *
    * <h2>Source line number</h2>
    *
+   * <p>Fires when the line given by {@link Location#line()} is reached, or at every line when it is
+   * {@code -1}, in the methods that {@link OnMethod#method()} and {@link OnMethod#type()} select;
+   * leave {@code method} empty to cover every method of the class.
+   *
    * <h3>Unannotated probe handler parameters:</h3>
    *
    * <ol>

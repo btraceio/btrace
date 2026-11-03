@@ -164,7 +164,7 @@ Specify where to inject code within a method using `@Location(Kind.XXX)`.
 ```java
 @Location(value = Kind.CALL, clazz = "/.*/", method = "/.*/")  // Any call
 @Location(value = Kind.CALL, clazz = "java.io.File", method = "delete")  // Specific call
-@Location(value = Kind.LINE, line = 42)  // Specific line number
+@Location(value = Kind.LINE, line = 42)  // Line 42, in the methods @OnMethod(method = ...) selects
 ```
 
 ## Parameter Annotations

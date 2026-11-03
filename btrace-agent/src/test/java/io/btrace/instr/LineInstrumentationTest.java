@@ -16,9 +16,18 @@
  */
 package io.btrace.instr;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.TreeSet;
 import org.junit.jupiter.api.Test;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
+import org.objectweb.asm.tree.MethodNode;
 
 /** {@code Kind.LINE} locations on lines that start where the method has a stack map frame. */
 class LineInstrumentationTest extends InstrumentorTestBase {
@@ -30,5 +39,29 @@ class LineInstrumentationTest extends InstrumentorTestBase {
 
     assertNotSame(originalBC, transformedBC, "the probe was not applied");
     assertVerifies();
+  }
+
+  @Test
+  void probeOnEveryLineOfOneMethodLeavesTheOtherMethodsAlone() throws Exception {
+    loadTargetClass("OnMethodTest");
+    transform("onmethod/LineInMethod");
+
+    assertEquals(Collections.singleton("caught"), methodsCallingHandler("LineInMethod$args"));
+    assertVerifies();
+  }
+
+  private Set<String> methodsCallingHandler(String handlerSuffix) {
+    ClassNode cn = new ClassNode();
+    new ClassReader(transformedBC).accept(cn, 0);
+    Set<String> methods = new TreeSet<>();
+    for (MethodNode mn : cn.methods) {
+      for (AbstractInsnNode insn : mn.instructions) {
+        if (insn instanceof InvokeDynamicInsnNode
+            && ((InvokeDynamicInsnNode) insn).name.endsWith(handlerSuffix)) {
+          methods.add(mn.name);
+        }
+      }
+    }
+    return methods;
   }
 }
