@@ -23,9 +23,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import org.jctools.maps.NonBlockingHashMap;
-import org.jctools.maps.NonBlockingIdentityHashMap;
 
 /**
  * A simple class cache holding {@linkplain ClassInfo} instances and being searchable either by
@@ -69,12 +68,15 @@ public final class ClassCache {
     }
   }
 
+  // JDK maps rather than JCTools' NonBlockingHashMap, which uses sun.misc.Unsafe and makes JDK 24+
+  // print a removal warning into the application's output. ClassLoaderReference keeps Object's
+  // identity equals and hashCode, so this map is still an identity map.
   private final Map<ClassLoaderReference, ClassLoaderReference> loaderRefs =
-      new NonBlockingIdentityHashMap<>();
+      new ConcurrentHashMap<>();
   private final ReferenceQueue<ClassLoader> cleanupQueue = new ReferenceQueue<>();
   private final ConcurrentMap<CacheKey, ConcurrentMap<ClassName, ClassInfo>> cacheMap =
-      new NonBlockingHashMap<>();
-  private final ConcurrentMap<ClassName, ClassInfo> bootstrapInfos = new NonBlockingHashMap<>(500);
+      new ConcurrentHashMap<>();
+  private final ConcurrentMap<ClassName, ClassInfo> bootstrapInfos = new ConcurrentHashMap<>(500);
 
   private final Timer cleanupTimer = new Timer(true);
 
@@ -116,7 +118,18 @@ public final class ClassCache {
   ClassInfo get(ClassLoader cl, ClassName className) {
     ConcurrentMap<ClassName, ClassInfo> infos = getInfos(cl);
 
-    return infos.computeIfAbsent(className, k -> new ClassInfo(ClassCache.this, cl, k));
+    // Not computeIfAbsent: creating a ClassInfo looks up its supertypes in this same map, and a
+    // ConcurrentHashMap refuses a recursive update. Two threads may both build a ClassInfo; the
+    // first one stored wins.
+    ClassInfo info = infos.get(className);
+    if (info == null) {
+      ClassInfo created = new ClassInfo(this, cl, className);
+      info = infos.putIfAbsent(className, created);
+      if (info == null) {
+        info = created;
+      }
+    }
+    return info;
   }
 
   ConcurrentMap<ClassName, ClassInfo> getInfos(ClassLoader cl) {
@@ -129,7 +142,7 @@ public final class ClassCache {
             getCacheKey(cl),
             k -> {
               rslt[0] = true;
-              return new NonBlockingHashMap<>(500);
+              return new ConcurrentHashMap<>(500);
             });
     if (rslt[0]) {
       ClassLoaderReference ref = new ClassLoaderReference(cl, cleanupQueue);
