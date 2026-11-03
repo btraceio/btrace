@@ -91,14 +91,6 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   fix. Decide which one before changing it.
 - **Repro:** start demo 06, deploy that probe and look at the reported line numbers.
 
-### O18. The MCP server's busy-port error tells the user about `-p`
-
-- **Where:** `Client.java` in btrace-client, and agent-plugins `McpServerE2ETest`.
-- **What:** `aBusyPortIsReportedWithTheArgumentThatAvoidsIt` expects `Port N unavailable` and a
-  mention of the `'port' argument`. The client now says `Port N is in use by another process ...
-  choose a free agent port with -p <port>`, and `-p` means nothing to an MCP user. The test fails
-  with or without the fix for F37.
-
 ## Fixed
 
 | # | Defect | Fix |
@@ -128,3 +120,4 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F35 | `classFileApiBackendTest` failed `./gradlew build` on a machine without JDK 28 | `btrace-agent/build.gradle`, 2026-11-01 |
 | F36 | `OnMethodInstrumenterTest` failed when run on its own | `InstrumentorTestBase`, 2026-11-01 |
 | F37 | A second deploy on one JVM left the first probe running where `exit_probe` could not reach it | agent-plugins `ClientManager`, deploy handlers, 2026-11-01 |
+| F38 | The MCP server's busy-port error told the user about the CLI's `-p` flag, and its e2e test failed against the current client | agent-plugins `BTraceClient` (#18), 2026-11-02 |
