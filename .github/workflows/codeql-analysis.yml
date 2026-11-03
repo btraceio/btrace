@@ -17,6 +17,8 @@ on:
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ develop ]
+  # Required checks must also report on the merge queue's groups, or the queue drops every entry
+  merge_group:
   schedule:
     - cron: '23 5 * * 4'
 

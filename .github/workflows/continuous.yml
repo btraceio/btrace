@@ -8,6 +8,8 @@ on:
     branches: [ develop ]
   pull_request:
     branches: [ develop ]
+  # Required checks must also report on the merge queue's groups, or the queue drops every entry
+  merge_group:
   workflow_dispatch:
 
 defaults:
