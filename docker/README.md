@@ -9,7 +9,7 @@ Images are published to the GitHub Container Registry as `ghcr.io/btraceio/btrac
 ```dockerfile
 # Copy BTrace into your application image
 FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
-FROM bellsoft/liberica-openjdk-debian:11-cds
+FROM bellsoft/liberica-openjdk-debian:21-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
 ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:/opt/btrace/bin"
@@ -22,7 +22,7 @@ ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:/opt/btrace/bin"
 ### `ghcr.io/btraceio/btrace:latest`
 **Debian-based** - Full distribution with all tools and shell access
 
-- **Base:** OpenJDK 11 JDK on Debian Slim
+- **Base:** OpenJDK 21 JDK on Debian Slim
 - **Use case:** General purpose, development, interactive debugging
 - **Includes:** Complete BTrace toolchain, shell access, samples
 - **Best for:** Development environments, interactive troubleshooting
@@ -34,7 +34,7 @@ FROM ghcr.io/btraceio/btrace:3.0.0
 ### `ghcr.io/btraceio/btrace:latest-alpine`
 **Alpine-based** - Smaller footprint for cloud environments
 
-- **Base:** Alpine Linux with OpenJDK 11
+- **Base:** Alpine Linux with OpenJDK 21
 - **Use case:** Kubernetes sidecars, resource-constrained environments
 - **Includes:** Complete BTrace toolchain, smaller base OS
 - **Best for:** Production sidecars, cloud deployments
@@ -46,14 +46,14 @@ FROM ghcr.io/btraceio/btrace:3.0.0-alpine
 ### `ghcr.io/btraceio/btrace:latest-distroless`
 **Distroless** - Minimal attack surface for security-focused deployments
 
-- **Base:** Google Distroless Java 11
+- **Base:** Google Distroless Java 21
 - **Use case:** Production agent mode, minimal security surface
 - **Includes:** BTrace runtime JARs only (no shell, no scripts)
 - **Best for:** Production applications using `-javaagent`
 
 ```dockerfile
 FROM ghcr.io/btraceio/btrace:3.0.0-distroless AS btrace
-FROM gcr.io/distroless/java11-debian11
+FROM gcr.io/distroless/java21-debian12
 COPY --from=btrace /opt/btrace/libs /opt/btrace/libs
 ```
 
@@ -65,7 +65,7 @@ Most common - copy BTrace into your application image:
 
 ```dockerfile
 FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
-FROM bellsoft/liberica-openjdk-debian:11-cds
+FROM bellsoft/liberica-openjdk-debian:21-cds
 WORKDIR /app
 
 COPY target/myapp.jar /app/
@@ -147,7 +147,7 @@ Minimal image with BTrace agent:
 
 ```dockerfile
 FROM ghcr.io/btraceio/btrace:3.0.0-distroless AS btrace
-FROM gcr.io/distroless/java11-debian11
+FROM gcr.io/distroless/java21-debian12
 WORKDIR /app
 
 COPY --from=build /app/target/myapp.jar /app/
@@ -187,9 +187,9 @@ services:
 
 | Variant | Base | Shell | Scripts | Use Case |
 |---------|------|-------|---------|----------|
-| **latest** | Debian (Liberica JDK 11) | ✓ | ✓ | Development, debugging |
-| **alpine** | Alpine (OpenJDK 11) | ✓ | ✓ | Kubernetes sidecar |
-| **distroless** | Distroless Java 11 | ✗ | ✗ | Production agent mode |
+| **latest** | Debian (Liberica JDK 21) | ✓ | ✓ | Development, debugging |
+| **alpine** | Alpine (OpenJDK 21) | ✓ | ✓ | Kubernetes sidecar |
+| **distroless** | Distroless Java 21 | ✗ | ✗ | Production agent mode |
 
 **Recommendations:**
 - **Development:** Use `btrace:latest` for full tooling
@@ -246,7 +246,7 @@ kubectl create configmap btrace-scripts \
 
 ```dockerfile
 FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
-FROM bellsoft/liberica-openjdk-debian:11-cds
+FROM bellsoft/liberica-openjdk-debian:21-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
 ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:${BTRACE_HOME}/bin"
