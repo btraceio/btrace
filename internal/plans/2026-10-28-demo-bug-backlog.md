@@ -10,15 +10,6 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 
 ## Open
 
-
-### O6. `list_jvms` keeps saying "BTrace: attached" after every probe is removed (MCP server)
-
-- **Where:** agent-plugins, `ListJvmsHandler`.
-- **What:** the flag reflects that the agent is loaded, which is permanent once attached, not that
-  a probe is running. Every recorded assistant then has to explain why "attached" does not mean a
-  probe is left behind.
-- **Suggested fix:** report "agent loaded, no active probes" (or the probe count) instead.
-
 ### O8. Build and test tooling papercuts found on the way
 
 - The Gradle plugin refuses to publish a SNAPSHOT version
@@ -88,7 +79,7 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   `isDisconnected()` clients); agent-plugins `ListProbesHandler` (also never closes its client).
 - **What:** `list_probes` returned an empty list while a probe was active and printing, so tutorial
   05's "check that no probe is left" step proves nothing for a connected probe. O1 and O6 still
-  reproduce as of agent-plugins `bdda18f`.
+  reproduced as of agent-plugins `bdda18f`; O6 has since been fixed (F39).
 
 ### O14. Cross-container attach fails when the target's working directory is read-only (not root-caused)
 
@@ -129,14 +120,6 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   `<init>` yet instruments every method, so a fix may be a behaviour change rather than a plain bug
   fix. Decide which one before changing it.
 - **Repro:** start demo 06, deploy that probe and look at the reported line numbers.
-
-### O18. The MCP server's busy-port error tells the user about `-p`
-
-- **Where:** `Client.java` in btrace-client, and agent-plugins `McpServerE2ETest`.
-- **What:** `aBusyPortIsReportedWithTheArgumentThatAvoidsIt` expects `Port N unavailable` and a
-  mention of the `'port' argument`. The client now says `Port N is in use by another process ...
-  choose a free agent port with -p <port>`, and `-p` means nothing to an MCP user. The test fails
-  with or without the fix for F37.
 
 ## Fixed
 
@@ -179,3 +162,5 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F35 | `classFileApiBackendTest` failed `./gradlew build` on a machine without JDK 28 | `btrace-agent/build.gradle`, 2026-11-01 |
 | F36 | `OnMethodInstrumenterTest` failed when run on its own | `InstrumentorTestBase`, 2026-11-01 |
 | F37 | A second deploy on one JVM left the first probe running where `exit_probe` could not reach it | agent-plugins `ClientManager`, deploy handlers, 2026-11-01 |
+| F38 | The MCP server's busy-port error told the user about the CLI's `-p` flag, and its e2e test failed against the current client | agent-plugins `BTraceClient` (#18), 2026-11-02 |
+| F39 | `list_jvms` said "attached" for any JVM with the agent loaded, even after every probe was removed | agent-plugins `ListJvmsHandler` (#17), 2026-11-03 |
