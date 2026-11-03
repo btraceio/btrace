@@ -59,6 +59,15 @@ public interface BTraceProbe {
 
   String getClassName(boolean internal);
 
+  /**
+   * Returns the probe class name as the script declares it, in dotted form. Unlike {@link
+   * #getClassName()} it does not reflect the agent's renaming of the probe class, so it is the name
+   * to use in messages for the user.
+   */
+  default String getDeclaredClassName() {
+    return getClassName();
+  }
+
   boolean isClassRenamed();
 
   boolean isTransforming();
