@@ -136,10 +136,17 @@ public final class ClassCache {
     if (cl == null) {
       return bootstrapInfos;
     }
+    // Look up first: on JDK 8 computeIfAbsent locks the bin even when the key is present, and this
+    // runs on every lookup for the loader.
+    CacheKey key = getCacheKey(cl);
+    ConcurrentMap<ClassName, ClassInfo> existing = cacheMap.get(key);
+    if (existing != null) {
+      return existing;
+    }
     boolean[] rslt = new boolean[] {false};
     ConcurrentMap<ClassName, ClassInfo> infos =
         cacheMap.computeIfAbsent(
-            getCacheKey(cl),
+            key,
             k -> {
               rslt[0] = true;
               return new ConcurrentHashMap<>(500);
