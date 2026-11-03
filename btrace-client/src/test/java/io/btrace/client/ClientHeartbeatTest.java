@@ -194,6 +194,47 @@ class ClientHeartbeatTest {
     }
   }
 
+  @Test
+  void noHeartbeatIsSentBeforeTheAgentAcceptsTheProbe() throws Exception {
+    // An agent that refuses a probe closes the connection; a heartbeat already sent would be
+    // unread input there, and on Linux that turns the close into a reset that loses the refusal.
+    try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+      Future<Integer> agent =
+          executor.submit(
+              () -> {
+                try (Socket socket = server.accept()) {
+                  PushbackInputStream input =
+                      ProtocolNegotiator.createNegotiationStream(socket.getInputStream());
+                  new ProtocolNegotiator(ProtocolVersion.V2)
+                      .negotiateAgent(input, socket.getOutputStream());
+                  WireProtocol protocol = new BinaryWireProtocol(input, socket.getOutputStream());
+                  protocol.read(); // SET_PARAMS
+                  protocol.read(); // INSTRUMENT
+                  int early = 0;
+                  socket.setSoTimeout((int) (3 * INTERVAL_MILLIS));
+                  try {
+                    protocol.read();
+                    early++;
+                  } catch (java.net.SocketTimeoutException expected) {
+                    // nothing was sent while the probe was being deployed
+                  }
+                  protocol.write(new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
+                  protocol.flush();
+                  return early;
+                }
+              });
+      Client client = client(server);
+
+      IOException failure =
+          assertThrows(
+              IOException.class,
+              () -> client.submit("localhost", "probe.class", code(), new String[0], c -> {}));
+
+      assertTrue(failure.getMessage().contains("Failed to start"), failure.toString());
+      assertEquals(0, (int) agent.get(10, TimeUnit.SECONDS), "heartbeat sent before deploy");
+    }
+  }
+
   /** Accepts one client, performs negotiation, consumes settings and instrument, accepts it. */
   private Future<Integer> startAgent(ServerSocket server, boolean v2, AgentScript script) {
     return executor.submit(

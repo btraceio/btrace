@@ -1623,16 +1623,19 @@ public class Client {
   /**
    * Runs the command loop until EXIT is received or {@code done} reports true after a command. A
    * probe session passes {@code heartbeat} so that a silently dropped connection is noticed.
+   * Heartbeats start once the agent confirms the deploy or reconnect: an agent that refuses the
+   * probe closes the connection, and on Linux closing a socket with unread input (a heartbeat
+   * already sent) resets the connection, which discards the refusal before the client reads it.
    */
   private void commandLoop(CommandListener listener, BooleanSupplier done, boolean heartbeat)
       throws IOException {
     assert protocol != null : "null protocol?";
-    HeartbeatMonitor monitor = heartbeat ? startHeartbeat() : null;
+    HeartbeatMonitor[] monitor = new HeartbeatMonitor[1];
     try {
-      runCommandLoop(listener, done, monitor);
+      runCommandLoop(listener, done, heartbeat, monitor);
     } finally {
-      if (monitor != null) {
-        monitor.close();
+      if (monitor[0] != null) {
+        monitor[0].close();
       }
     }
   }
@@ -1665,13 +1668,26 @@ public class Client {
   }
 
   private void runCommandLoop(
-      CommandListener listener, BooleanSupplier done, HeartbeatMonitor monitor) throws IOException {
+      CommandListener listener,
+      BooleanSupplier done,
+      boolean heartbeat,
+      HeartbeatMonitor[] monitorHolder)
+      throws IOException {
     AtomicBoolean exited = new AtomicBoolean(false);
+    boolean heartbeatPending = heartbeat;
+    HeartbeatMonitor monitor = null;
     while (true) {
       try {
         Command cmd = protocol.read();
         if (monitor != null) {
           monitor.received();
+        }
+        if (heartbeatPending
+            && cmd.getType() == Command.STATUS
+            && ((StatusCommand) cmd).isSuccess()) {
+          heartbeatPending = false;
+          monitor = startHeartbeat();
+          monitorHolder[0] = monitor;
         }
         if (cmd.getType() == Command.HEARTBEAT) {
           // A reply to our own heartbeat; it is not probe output.
