@@ -115,6 +115,20 @@ class HeartbeatTest {
   }
 
   @Test
+  void firstPingWaitsOneInterval() throws Exception {
+    AtomicInteger pings = new AtomicInteger();
+    HeartbeatMonitor monitor =
+        HeartbeatMonitor.pingAndWatch(
+            "test", 1_000, 5_000, nonce -> pings.incrementAndGet(), () -> {});
+    try {
+      Thread.sleep(300);
+      assertEquals(0, pings.get(), "pinged before the first interval elapsed");
+    } finally {
+      monitor.close();
+    }
+  }
+
+  @Test
   void stuckPingDoesNotDelayTheTimeout() throws Exception {
     CountDownLatch release = new CountDownLatch(1);
     CountDownLatch fired = new CountDownLatch(1);
