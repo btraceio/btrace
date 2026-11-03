@@ -19,7 +19,6 @@ package io.btrace.core.comm.v2;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Wire I/O implementation for the binary protocol. This replaces the original WireIO class that
@@ -27,9 +26,6 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class BinaryWireIO {
   public static final int VERSION = 2;
-
-  // Singleton lock for stream synchronization
-  private static final ReentrantLock writeLock = new ReentrantLock();
 
   private BinaryWireIO() {}
 
@@ -61,25 +57,26 @@ public class BinaryWireIO {
     return cmd;
   }
 
-  /** Write a command to the output stream */
+  /**
+   * Write a command to the output stream.
+   *
+   * <p>A command is written in several pieces, so concurrent writers on one stream must be
+   * serialized by the caller, per stream. A lock shared by every stream would let one connection
+   * whose peer stopped reading block the writes on all the others.
+   */
   public static void write(OutputStream out, BinaryCommand cmd) throws IOException {
-    writeLock.lock();
-    try {
-      // Write protocol version
-      BinaryProtocol.writeByte(out, BinaryProtocol.VERSION);
+    // Write protocol version
+    BinaryProtocol.writeByte(out, BinaryProtocol.VERSION);
 
-      // Write command type
-      BinaryProtocol.writeByte(out, cmd.getType());
+    // Write command type
+    BinaryProtocol.writeByte(out, cmd.getType());
 
-      // Write command data
-      cmd.write(out);
+    // Write command data
+    cmd.write(out);
 
-      // Flush if urgent
-      if (cmd.isUrgent()) {
-        out.flush();
-      }
-    } finally {
-      writeLock.unlock();
+    // Flush if urgent
+    if (cmd.isUrgent()) {
+      out.flush();
     }
   }
 }
