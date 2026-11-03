@@ -65,19 +65,47 @@ final class PolicyFile {
       }
   }
 
+  /**
+   * Applies {@code policy set} options. {@code --allowExtensions}/{@code --denyExtensions} replace
+   * that list, and every id they name is also removed from the opposite list, so the newest
+   * decision for an id wins instead of being shadowed by an older entry. Options not given keep
+   * their current values.
+   */
   void updateFromArgs(String[] args) {
+    List<String> allow = null;
+    List<String> deny = null;
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "--allowExtensions":
-          props.setProperty("allowExtensions", args[++i]);
+          allow = splitCsv(optionValue(args, ++i));
           break;
         case "--denyExtensions":
-          props.setProperty("denyExtensions", args[++i]);
+          deny = splitCsv(optionValue(args, ++i));
           break;
         case "--allowPrivileged":
-          props.setProperty("allowPrivileged", args[++i]);
+          props.setProperty("allowPrivileged", optionValue(args, ++i));
           break;
       }
+    }
+    if (allow != null && deny != null) {
+      for (String id : allow) {
+        if (deny.contains(id)) {
+          throw new IllegalArgumentException(
+              "Extension '" + id + "' cannot be both allowed and denied");
+        }
+      }
+    }
+    if (allow != null) {
+      List<String> remainingDeny = deny != null ? deny : new ArrayList<>(getDenyList());
+      remainingDeny.removeAll(allow);
+      props.setProperty("allowExtensions", String.join(",", allow));
+      props.setProperty("denyExtensions", String.join(",", remainingDeny));
+    }
+    if (deny != null) {
+      List<String> remainingAllow = new ArrayList<>(getAllowList());
+      remainingAllow.removeAll(deny);
+      props.setProperty("denyExtensions", String.join(",", deny));
+      props.setProperty("allowExtensions", String.join(",", remainingAllow));
     }
   }
 
@@ -169,6 +197,13 @@ final class PolicyFile {
         props.getProperty("allowExtensions", ""),
         props.getProperty("denyExtensions", ""),
         allowPriv);
+  }
+
+  private static String optionValue(String[] args, int i) {
+    if (i >= args.length) {
+      throw new IllegalArgumentException("Missing value for " + args[i - 1]);
+    }
+    return args[i];
   }
 
   private static List<String> splitCsv(String csv) {

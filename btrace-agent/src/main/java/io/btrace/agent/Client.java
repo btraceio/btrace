@@ -46,6 +46,7 @@ import io.btrace.instr.Instrumentor;
 import io.btrace.instr.MethodTrackingContext;
 import io.btrace.runtime.BTraceRuntimeAccess;
 import io.btrace.runtime.BTraceRuntimes;
+import io.btrace.runtime.ExtensionIndy;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -66,6 +67,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -353,6 +355,8 @@ abstract class Client implements CommandListener {
 
       // Validate that all injected service types are declared by available extensions
       validateDeclaredServices(probe);
+      // Refuse the probe when a required injected service cannot be linked
+      validateRequiredServices(probe);
     } catch (Throwable th) {
       log.debug("Failed to load BTrace probe code", th);
       errorExit(th);
@@ -489,6 +493,78 @@ abstract class Client implements CommandListener {
     } catch (ReflectiveOperationException e) {
       log.debug("Unable to inspect injected services for validation", e);
     }
+  }
+
+  /**
+   * Refuses a probe reading a required {@code @Injected} service (not optional, not in SHIM mode)
+   * that cannot be linked, e.g. because policy blocks its extension. Without this check the probe
+   * would deploy and then fail with a {@link BootstrapMethodError} at every call site.
+   */
+  private void validateRequiredServices(BTraceProbe probe) {
+    List<InjectedServiceUse> uses = InjectedServiceUse.scan(probe.getFullBytecode());
+    log.debug("Injected services read by {}: {}", probe.getClassName(), uses.size());
+    String error =
+        requiredServiceError(
+            probe.getClassName(),
+            uses,
+            use ->
+                ExtensionIndy.requiredServiceProblem(
+                    use.serviceClassName, use.optionalFlag, use.injectMode),
+            Client::extensionFailure);
+    if (error != null) {
+      throw new IllegalStateException(error);
+    }
+  }
+
+  /**
+   * @param problem why a use cannot be linked, or {@code null} if it can (or falls back)
+   * @param extensionFailure the recorded failure of the extension providing a service, or {@code
+   *     null}
+   * @return the error refusing the probe, or {@code null} if every required service is available
+   */
+  static String requiredServiceError(
+      String probeName,
+      List<InjectedServiceUse> uses,
+      Function<InjectedServiceUse, String> problem,
+      Function<String, String> extensionFailure) {
+    StringBuilder sb = null;
+    for (InjectedServiceUse use : uses) {
+      String reason = problem.apply(use);
+      if (reason == null) {
+        continue;
+      }
+      String failure = extensionFailure.apply(use.serviceClassName);
+      if (failure != null) {
+        reason = failure;
+      }
+      if (sb == null) {
+        sb = new StringBuilder("Probe ").append(probeName).append(" was not deployed:");
+      }
+      sb.append("\n  required @Injected service ")
+          .append(use.serviceClassName)
+          .append(" (field '")
+          .append(use.fieldName)
+          .append("') is unavailable: ")
+          .append(reason);
+    }
+    if (sb == null) {
+      return null;
+    }
+    return sb.append(
+            "\nAllow the extension in the permission policy, or declare the field"
+                + " @Injected(optional = true) to run with a fallback.")
+        .toString();
+  }
+
+  private static String extensionFailure(String serviceClassName) {
+    ExtensionLoader loader = Main.getExtensionLoader();
+    ExtensionDescriptorDTO ext =
+        loader != null ? loader.findExtensionForService(serviceClassName) : null;
+    if (ext == null) {
+      return null;
+    }
+    String reason = ExtensionRegistry.getFailedExtensions().get(ext.getId());
+    return reason != null ? ext.getId() + ": " + reason : null;
   }
 
   protected void closeAll() throws IOException {
@@ -652,7 +728,7 @@ abstract class Client implements CommandListener {
         // Avoid printing full stack traces in debug to keep target stderr clean
         log.debug("Class '{}' verification failed: {}", c.getName(), e.toString());
         sendCommand(
-            new MessageCommand(
+            MessageCommand.line(
                 "[BTRACE WARN] Class verification failed: "
                     + c.getName()
                     + " ("

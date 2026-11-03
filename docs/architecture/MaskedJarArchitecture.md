@@ -58,7 +58,12 @@ Can-Retransform-Classes: true
 Boot-Class-Path: .
 BTrace-Agent-Main: io.btrace.agent.Main
 BTrace-Client-Main: io.btrace.client.Main
+Add-Exports: jdk.internal.jvmstat/sun.jvmstat.monitor
 ```
+
+`Add-Exports` lets the client use jvmstat to list local JVMs when started with `java -jar`
+(the `bin/btrace` launcher passes `--add-exports` itself). Without it, for example on a `-cp`
+launch, the client lists JVMs through the Attach API instead.
 
 `Loader` is the single entry point for all three modes. The actual agent/client main classes are specified as manifest attributes and loaded reflectively via `MaskedClassLoader`.
 

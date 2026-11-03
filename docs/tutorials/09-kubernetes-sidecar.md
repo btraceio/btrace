@@ -38,11 +38,12 @@ BTrace publishes three image variants, each for a different job
 > **What just happened?** Those base images come straight from
 > [`docker/Dockerfile`](../../docker/Dockerfile), [`docker/Dockerfile.alpine`](../../docker/Dockerfile.alpine),
 > and [`docker/Dockerfile.distroless`](../../docker/Dockerfile.distroless). The first two `COPY`
-> the entire built distribution (`bin/`, `libs/`, `docs/`, `samples/`) to `/opt/btrace/` and put
-> `/opt/btrace/bin` on `PATH`; the distroless variant copies **only** `btrace/libs` to
-> `/opt/btrace/libs` — there's no `bin/` and no entrypoint script, because (per the Dockerfile's
-> own comment) "distroless has no shell". That one architectural difference is why Step 5 below
-> looks nothing like Steps 2–4.
+> the entire built distribution (`bin/`, `conf/`, `extensions/`, `libs/`, `samples/` — the
+> build context's [`.dockerignore`](../../docker/.dockerignore) leaves out only the Windows `.bat`
+> launchers and the license files) to `/opt/btrace/` and put `/opt/btrace/bin` on `PATH`; the
+> distroless variant copies **only** `btrace/libs` to `/opt/btrace/libs` — there's no `bin/` and
+> no entrypoint script, because (per the Dockerfile's own comment) "distroless has no shell". That
+> one architectural difference is why Step 5 below looks nothing like Steps 2–4.
 
 ## Step 2 — Layer BTrace onto your app with `COPY --from`
 
@@ -67,7 +68,8 @@ ENTRYPOINT ["java", "DemoApp.java"]
 ```
 
 > **What just happened?** `COPY --from=btrace /opt/btrace /opt/btrace` pulls the *entire* built
-> tree out of the first stage — `bin/`, `libs/`, `docs/`, `samples/` — into your final image; only
+> tree out of the first stage — `bin/`, `conf/`, `extensions/`, `libs/`, `samples/` — into your
+> final image; only
 > the official image's layers are discarded, not its files. `BTRACE_HOME` and `PATH` are set
 > exactly the way [`docker/README.md`](../../docker/README.md)'s Quick Start does it. `DemoApp.java`
 > runs via JDK 11+'s single-file source launch — no separate `javac`/`jar` step needed, same as
@@ -96,9 +98,14 @@ Now find the PID and attach exactly like Tutorial 1 — just via `docker exec` i
 shell:
 
 ```sh
-docker exec demo-app jps
+docker exec demo-app jps -m
 docker exec demo-app btrace -n 'OrderService::processOrder @return { print method, time }' <PID>
 ```
+
+`jps -m` prints `1 Main DemoApp.java`: the app is a single-file source launch, so plain `jps` shows
+only the launcher's class name, `Main` (`jps -l` spells it out as
+`jdk.compiler/com.sun.tools.javac.launcher.Main`), and `-m` adds the `DemoApp.java` argument that
+identifies it. It's PID `1` because the JVM is the container's entrypoint process.
 
 **You should see** the same shape of output as
 [Tutorial 1, Step 3](01-first-trace-in-2-minutes.md#step-3--your-first-trace) (numbers will vary):
@@ -136,6 +143,7 @@ spec:
   containers:
     - name: demo-app
       image: demo-app-with-btrace:local # <-- replace with your registry/tag
+      imagePullPolicy: IfNotPresent
 
     - name: btrace-sidecar
       image: ghcr.io/btraceio/btrace:3.0.0-alpine
@@ -185,9 +193,21 @@ worker=order-worker-2 order #3 total=414ms at 1783778034964
 > processes, never `demo-app`'s JVM (`docker/README.md`'s own Troubleshooting section calls this
 > out: `kubectl get pod myapp -o yaml | grep shareProcessNamespace` is the first thing to check when
 > attach fails). The sidecar uses the **alpine** variant, not the full or distroless one — it needs
-> a shell and the full toolchain (`btrace`, `jps`) to run interactively via `kubectl exec`, but
-> doesn't need the samples/docs the full image carries. `SYS_PTRACE` is called out
-> explicitly in `docker/README.md`'s Best Practices as a required capability alongside
+> a shell and the full toolchain (`btrace`, `jps`) to run interactively via `kubectl exec`, and
+> the alpine base is smaller than the Debian one.
+>
+> The sidecar does **not** make the app image BTrace-free, though: the app container still needs
+> BTrace installed at the **same path** (`/opt/btrace`). The client in the sidecar asks the target
+> JVM to load the agent with the Attach API, passing the agent jar's path
+> (`/opt/btrace/libs/btrace.jar`), and the target JVM opens that path in **its own** filesystem,
+> not the sidecar's. That's why `demo-app` runs the `demo-app-with-btrace` image from Step 2; point
+> the sidecar at an app image without `/opt/btrace` and the client fails with `Agent JAR not found
+> or no Agent-Class attribute` / `Failed to attach to PID 1`, while the app container's own log
+> shows `Error opening zip file or JAR manifest missing: /opt/btrace/libs/btrace.jar`. What the
+> sidecar buys you is the client side — the shell, the launcher scripts, your probe scripts —
+> kept out of the app container.
+>
+> `SYS_PTRACE` is called out explicitly in `docker/README.md`'s Best Practices as a required capability alongside
 > `shareProcessNamespace`; the rest of a hardened `securityContext` (`runAsNonRoot`,
 > `readOnlyRootFilesystem`, dropping `ALL` other capabilities) is standard Kubernetes practice, not
 > BTrace-specific, so it's left out of the minimal manifest above — add it per your own cluster's
@@ -197,9 +217,21 @@ worker=order-worker-2 order #3 total=414ms at 1783778034964
 
 For a permanently-running probe (rather than on-demand attach), skip the sidecar model entirely:
 copy just the BTrace runtime jar into a distroless image and load it as a `-javaagent` at JVM
-startup. This is `docker/README.md`'s "Pattern 4: Distroless Production" (like the README's own
-copy, this assumes an earlier `build` stage that compiles `myapp.jar` — not shown, since it's
-your application's own build, not BTrace's):
+startup. This is `docker/README.md`'s "Pattern 4: Distroless Production", made concrete (like the
+README's own copy, this assumes an earlier `build` stage that compiles `myapp.jar` — not shown,
+since it's your application's own build, not BTrace's).
+
+The agent only loads **precompiled** probes: it skips a `script=` path ending in `.java`, and it
+checks the file for the class-file magic number, so a source file under any other name is skipped
+too (in both cases silently at the default log level). Nothing in the distroless image provides
+your probe either, so compile it first and put it in the build context, here with the full image's
+`btracec` (from `docs/tutorials/demo/`):
+
+```sh
+mkdir -p scripts
+docker run --rm -v "$PWD":/work ghcr.io/btraceio/btrace:3.0.0 btracec -d scripts OrderTiming.java
+# -> scripts/OrderTiming.class
+```
 
 ```dockerfile
 # ... an earlier "build" stage that produces /app/target/myapp.jar goes here ...
@@ -209,11 +241,21 @@ FROM gcr.io/distroless/java11-debian11
 WORKDIR /app
 
 COPY --from=build /app/target/myapp.jar /app/
+COPY scripts/ /scripts/
 COPY --from=btrace /opt/btrace/libs /opt/btrace/libs
 
 ENTRYPOINT ["java", \
-  "-javaagent:/opt/btrace/libs/btrace.jar=script=/scripts/trace.btrace", \
+  "-javaagent:/opt/btrace/libs/btrace.jar=script=/scripts/OrderTiming.class,stdout=true", \
   "-jar", "/app/myapp.jar"]
+```
+
+**You should see** in `docker logs` the agent starting, then the probe's lines interleaved with the
+app's own output (illustrative):
+
+```
+[main] INFO io.btrace.extension.impl.ExtensionLoaderImpl - Discovered 0 extension(s):
+worker=order-worker-1 order #1 total=55ms at 1793530445096
+worker=order-worker-0 order #1 total=89ms at 1793530445129
 ```
 
 > **What just happened?** `Dockerfile.distroless` only ever `COPY`s `btrace/libs` — there's no
@@ -221,6 +263,18 @@ ENTRYPOINT ["java", \
 > shell at all). That's the trade-off: you get the smallest, lowest-attack-surface image, but you
 > give up on-demand `btrace <PID> script.java` attach entirely. The probe has to be decided at
 > container build/deploy time, baked in via `-javaagent`, exactly like any other Java agent.
+>
+> Three details follow from copying only `libs/`:
+>
+> - **Where the output goes.** Without `stdout=true` the agent writes the probe's output to a
+>   file in the JVM's working directory — here `/app/OrderTiming.class-.default.<timestamp>.btrace`
+>   — and logs `Redirecting output to ...`. With no shell in the image, read it with
+>   `docker cp <container>:/app/<file> .`; `stdout=true` sends it to the container log instead,
+>   which is usually what you want in Kubernetes.
+> - **No extensions.** There is no `extensions/` directory, so the agent reports `Discovered 0
+>   extension(s)`. A probe that needs one (for example `btrace-metrics`) needs the fat agent from
+>   Step 6.
+> - **No `conf/`.** The defaults apply; there's no `/opt/btrace/conf/extensions.conf` to edit.
 
 ## Step 6 — Optional: bake in a fat agent instead of a bare JVM script
 
@@ -260,12 +314,25 @@ needs `allowExtensions=<id>` (or `allowPrivileged=true`) among the agent argumen
 
 ## Troubleshooting
 
-- **`Cannot attach to process` / `Can not attach to PID`** — in plain Docker, check the target
-  container was started with process namespace sharing (`docker run --pid=container:<target>`);
-  in Kubernetes, confirm `shareProcessNamespace: true` actually applied:
+- **`Cannot attach to process` / `Can not attach to PID` / `BTrace server not available at port
+  2020`** — in plain Docker, a separate BTrace container has to join the target container's PID
+  namespace (to see and attach to the JVM) **and** its network namespace (after loading the agent,
+  the client connects to it on `localhost:2020`, which is only the target's localhost if the
+  network namespace is shared). From `docs/tutorials/demo/`, against Step 3's container:
+
+  ```sh
+  docker run --rm --pid=container:demo-app --network=container:demo-app -v "$PWD":/scripts \
+    ghcr.io/btraceio/btrace:3.0.0 btrace 1 /scripts/OrderTiming.java
+  ```
+
+  With `--pid` alone the agent loads but the client stops with `BTrace server not available at port
+  2020`. The target image must still contain BTrace at `/opt/btrace` (see Step 4). In Kubernetes, containers of one pod
+  already share the network namespace; confirm `shareProcessNamespace: true` actually applied:
   `kubectl get pod <pod> -o yaml | grep shareProcessNamespace`.
 - **`BTRACE_HOME not found`** — verify the `COPY --from` layer landed where you expect:
-  `docker exec <container> ls -la $BTRACE_HOME` and `docker exec <container> env | grep BTRACE`.
+  `docker exec <container> sh -c 'ls -la $BTRACE_HOME'` (quoted, so `$BTRACE_HOME` expands
+  inside the container rather than in your host shell) and
+  `docker exec <container> env | grep BTRACE`.
 - **`Java tools not available` (`jps`/`javac` missing)** — you copied a JRE-only base image
   instead of a full JDK; the sidecar/app image needs the JDK. On Java 9+ bases you may also need
   `--add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED` on `JAVA_OPTS` for PID

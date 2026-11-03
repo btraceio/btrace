@@ -76,6 +76,10 @@ public abstract class RuntimeTest {
   private static Path projectRoot = null;
   private static boolean forceDebug = false;
   private static String permissionsFile = null;
+
+  /** Policy file for the target JVM of the next test, instead of the permissive default. */
+  protected String permissionsOverride = null;
+
   private static long defaultTimeoutMs = Long.getLong("btrace.test.timeoutMs", 60000L);
   private static final ProtocolSettings FORCED_V2_PROTOCOL = new ProtocolSettings(2, false, true);
 
@@ -288,6 +292,7 @@ public abstract class RuntimeTest {
   }
 
   protected void reset() {
+    permissionsOverride = null;
     debugTestApp = false;
     debugBTrace = false;
     isUnsafe = false;
@@ -384,7 +389,9 @@ public abstract class RuntimeTest {
     System.out.println("===> test java: " + testJavaHome);
     String jfrFile = null;
     List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", cp));
-    if (permissionsFile != null) {
+    if (permissionsOverride != null) {
+      args.add("-Dbtrace.permissions=" + permissionsOverride);
+    } else if (permissionsFile != null) {
       args.add("-Dbtrace.permissions=" + permissionsFile);
     }
     if (attachDebugger) {
@@ -577,7 +584,9 @@ public abstract class RuntimeTest {
     String jfrFile = null;
     List<String> args =
         new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", targetAppCp));
-    if (permissionsFile != null) {
+    if (permissionsOverride != null) {
+      args.add("-Dbtrace.permissions=" + permissionsOverride);
+    } else if (permissionsFile != null) {
       args.add("-Dbtrace.permissions=" + permissionsFile);
     }
     if (attachDebugger) {
@@ -777,7 +786,9 @@ public abstract class RuntimeTest {
     if (cmdArgs != null && cmdArgs.length > 0) {
       args.addAll(Arrays.asList(cmdArgs));
     }
-    if (permissionsFile != null) {
+    if (permissionsOverride != null) {
+      args.add("-Dbtrace.permissions=" + permissionsOverride);
+    } else if (permissionsFile != null) {
       args.add("-Dbtrace.permissions=" + permissionsFile);
     }
     if (attachDebugger) {

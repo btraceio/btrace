@@ -126,7 +126,12 @@ public final class Main {
         System.out.println(target.describe(hasFlag(args, "--json")));
         break;
       case "set":
-        target.updateFromArgs(Arrays.copyOfRange(args, 1, args.length));
+        try {
+          target.updateFromArgs(Arrays.copyOfRange(args, 1, args.length));
+        } catch (IllegalArgumentException e) {
+          err(e.getMessage());
+          System.exit(2);
+        }
         target.save();
         System.out.println("Policy saved to " + target.getTarget());
         break;

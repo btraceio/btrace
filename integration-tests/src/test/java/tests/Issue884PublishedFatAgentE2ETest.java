@@ -28,25 +28,17 @@ import java.nio.file.StandardCopyOption;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import tests.harness.Completion;
 
-/** Proves the published-plugin external fat-agent path using only a temporary local repository. */
+/**
+ * Proves the published-plugin external fat-agent path, with every BTrace artifact resolved only
+ * from a temporary local repository.
+ */
 class Issue884PublishedFatAgentE2ETest {
   private static final String VERSION = "3.0.0";
-
-  /**
-   * Matches {@code version('asm', ..)} in the root {@code settings.gradle}, which is also what
-   * {@code btrace-gradle-plugin} declares. The external consumer build resolves from the staged
-   * repository alone, so an ASM version staged here that the plugin does not depend on leaves the
-   * consumer unable to resolve it. Deriving the value keeps that from drifting.
-   */
-  private static final Pattern CATALOG_ASM_VERSION =
-      Pattern.compile("version\\s*\\(\\s*'asm'\\s*,\\s*'([^']+)'\\s*\\)");
 
   /**
    * Budget for the nested Gradle builds this test forks.
@@ -124,25 +116,6 @@ class Issue884PublishedFatAgentE2ETest {
 
     publishPluginArtifacts(root, repository);
     publishArtifact(repository, "io/btrace", "btrace", VERSION, engineJar);
-    String asmVersion = catalogAsmVersion(root);
-    publishDependency(repository, "org.ow2.asm", "asm", asmVersion);
-    publishDependency(repository, "org.ow2.asm", "asm-tree", asmVersion);
-  }
-
-  /**
-   * Reads the ASM version from the root version catalog rather than restating it here.
-   *
-   * @param root the repository root
-   * @return the ASM version the Gradle plugin resolves against
-   */
-  private String catalogAsmVersion(Path root) throws IOException {
-    Path settings = root.resolve("settings.gradle");
-    assertTrue(Files.isRegularFile(settings), "missing root settings.gradle: " + settings);
-    Matcher matcher =
-        CATALOG_ASM_VERSION.matcher(
-            new String(Files.readAllBytes(settings), StandardCharsets.UTF_8));
-    assertTrue(matcher.find(), "version('asm', ..) not found in " + settings);
-    return matcher.group(1);
   }
 
   private void publishPluginArtifacts(Path root, Path repository) throws Exception {
@@ -176,50 +149,6 @@ class Issue884PublishedFatAgentE2ETest {
         StandardCharsets.UTF_8);
   }
 
-  private void publishDependency(Path repository, String group, String artifact, String version)
-      throws IOException {
-    Path source = locateCachedArtifact(group, artifact, version);
-    assertTrue(
-        source != null, "missing cached dependency: " + group + ":" + artifact + ":" + version);
-    Path directory = repository.resolve(group.replace('.', '/')).resolve(artifact).resolve(version);
-    Files.createDirectories(directory);
-    Files.copy(source, directory.resolve(artifact + "-" + version + ".jar"));
-    Files.writeString(
-        directory.resolve(artifact + "-" + version + ".pom"),
-        pom(group, artifact, version, ""),
-        StandardCharsets.UTF_8);
-  }
-
-  /**
-   * Locates a resolved dependency JAR inside the active Gradle dependency cache. The cache lives
-   * under {@code GRADLE_USER_HOME} (falling back to {@code ~/.gradle}); the per-artifact SHA-1
-   * subdirectory is discovered rather than hard-coded so the lookup survives cache-layout details.
-   */
-  private Path locateCachedArtifact(String group, String artifact, String version)
-      throws IOException {
-    String gradleUserHome = System.getenv("GRADLE_USER_HOME");
-    Path base =
-        (gradleUserHome != null && !gradleUserHome.isEmpty())
-            ? Paths.get(gradleUserHome)
-            : Paths.get(System.getProperty("user.home"), ".gradle");
-    Path moduleDirectory =
-        base.resolve("caches/modules-2/files-2.1")
-            .resolve(group)
-            .resolve(artifact)
-            .resolve(version);
-    if (!Files.isDirectory(moduleDirectory)) {
-      return null;
-    }
-    String fileName = artifact + "-" + version + ".jar";
-    try (java.util.stream.Stream<Path> entries = Files.walk(moduleDirectory)) {
-      return entries
-          .filter(path -> path.getFileName().toString().equals(fileName))
-          .filter(Files::isRegularFile)
-          .findFirst()
-          .orElse(null);
-    }
-  }
-
   private String pom(String group, String artifact, String version, String extra) {
     return "<project><modelVersion>4.0.0</modelVersion><groupId>"
         + group
@@ -238,9 +167,17 @@ class Issue884PublishedFatAgentE2ETest {
     String repositoryUri = repository.toUri().toString();
     Files.writeString(
         consumer.resolve("settings.gradle"),
-        "pluginManagement { repositories { maven { url = uri('"
+        // BTrace's plugins and engine resolve only from the staged repository; the plugins'
+        // third-party dependencies (Shadow and its tree) come from the Plugin Portal.
+        "pluginManagement { repositories {\n"
+            + "  exclusiveContent {\n"
+            + "    forRepository { maven { url = uri('"
             + repositoryUri
-            + "') } } }\nrootProject.name = 'issue-884-consumer'\n",
+            + "') } }\n"
+            + "    filter { includeGroupByRegex('io\\\\.btrace(\\\\..*)?') }\n"
+            + "  }\n"
+            + "  gradlePluginPortal()\n"
+            + "} }\nrootProject.name = 'issue-884-consumer'\n",
         StandardCharsets.UTF_8);
     Files.writeString(
         consumer.resolve("build.gradle"),

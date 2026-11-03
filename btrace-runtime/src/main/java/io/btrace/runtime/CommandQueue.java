@@ -57,7 +57,7 @@ final class CommandQueue {
         e -> {
           long dropped = droppedCommands.get();
           if (dropped > 0) {
-            c.accept(new MessageCommand("Dropped " + dropped + " commands"));
+            c.accept(MessageCommand.line("Dropped " + dropped + " commands"));
             droppedCommands.addAndGet(-dropped);
           }
           c.accept(e);

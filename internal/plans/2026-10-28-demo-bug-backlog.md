@@ -10,12 +10,13 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 
 ## Open
 
-### O4. `println` output reaches the client with an extra blank line
+### O8. Build and test tooling papercuts found on the way
 
-- **Where:** btrace runtime/client message formatting (not root-caused).
-- **What:** every `println(...)` line arrives followed by an empty line, both through the `btrace`
-  CLI and through the MCP server (`read_probe_output` returns `screen calls=196\n\n`).
-- **Repro:** any probe with two `println` calls; compare with the expected one line each.
+- The Gradle plugin refuses to publish a SNAPSHOT version
+  (`btrace-gradle-plugin/build.gradle:83-105`), so it cannot be staged locally for a tutorial run
+  without workarounds.
+- `:btrace-dist:buildDockerContext` fails Gradle's implicit-dependency validation: it reads
+  `copyExtensions` output without declaring a dependency on it.
 
 ### O9. A probe exit that overlaps the probe's own install (investigated, not reproduced)
 
@@ -58,7 +59,44 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
   is seen still registered on a build with F11. A possible hardening, not done: have the client's
   shutdown hook wait briefly for the exit echo, so the next probe always starts after cleanup.
 
-### O12. On JDK 24+ the target app prints a `sun.misc.Unsafe` removal warning once a probe attaches
+### O11. The plugin's MCP server cannot resolve BTrace for a fresh user (agent-plugins)
+
+- **Where:** agent-plugins, `plugins/btrace-observability/mcp/.../BTraceMcpServer.java:1`.
+- **What:** `//DEPS io.btrace:btrace:3.0.0-SNAPSHOT` with no `//REPOS` line. A clean `jbang` resolve
+  fails with "Could not find artifact io.btrace:btrace:jar:3.0.0-SNAPSHOT in mavencentral", so
+  the plugin's `btrace` MCP server never starts. It works here only because of `~/.m2`.
+- **Fix:** depend on `3.0.0` when the release is published.
+
+### O12. Pi installs the skills but not the `btrace` MCP server (agent-plugins)
+
+- **Where:** agent-plugins `package.json:20`.
+- **What:** `"mcp": "./plugins/jafar-perf/.mcp.json"` registers only the jafar server, so tutorial
+  05's flow cannot work on Pi. Whether Pi honours the key at all is not verified.
+
+### O13. `list_probes` cannot see connected probes
+
+- **Where:** `btrace-agent/src/main/java/io/btrace/agent/Client.java:279-288` (lists only
+  `isDisconnected()` clients); agent-plugins `ListProbesHandler` (also never closes its client).
+- **What:** `list_probes` returned an empty list while a probe was active and printing, so tutorial
+  05's "check that no probe is left" step proves nothing for a connected probe. O1 and O6 still
+  reproduced as of agent-plugins `bdda18f`; O6 has since been fixed (F39).
+
+### O14. Cross-container attach fails when the target's working directory is read-only (not root-caused)
+
+- **What:** a target started with `-w /app` on a `:ro` bind mount could not be attached from a
+  sidecar: "Unable to open socket file /proc/1/root/tmp/.java_pid1 ... doesn't respond". The same
+  setup with a writable working directory works.
+
+### O15. Smaller findings from the landing-page and tutorial check
+
+- The required-service refusal names the probe's internal class (`io.btrace.runtime.auxiliary.X`)
+  instead of the script.
+- With real Shadow the extension impl jar also contains the API classes (in-repo too, e.g.
+  `btrace-contracts-*-impl.jar`); check whether the duplicates matter for class loading.
+- Launching the client through JBang or `java -jar` skips `-XX:+AllowRedefinitionToAddDeleteMethods`,
+  which only the shell launchers pass.
+
+### O16. On JDK 24+ the target app prints a `sun.misc.Unsafe` removal warning once a probe attaches
 
 - **Where:** the JCTools 4.0.7 copy shaded into the agent (`io/btrace/libs/org/jctools`); no BTrace
   source calls `sun.misc.Unsafe::arrayBaseOffset`.
@@ -100,6 +138,18 @@ and its MCP server, under `plugins/btrace-observability/mcp`).
 | F11 | A client that exited right away could leave its probe installed: the failed exit echo skipped `Client.onExit` (demo 07 throughput stuck at a third of baseline) | `8ab60867` |
 | F12 | An `@error` probe added after a `@return` + `@Duration` probe on the same method failed verification ("Class verification failed: ... (null)" in demo 01): the earlier probe declared its duration locals at the later probe's handler | `InstrumentingMethodVisitor`, 2026-11-01 |
 | F13 | Demos failed with "Port 2020 unavailable." while another BTrace agent held the default port | `common.sh` picks the next free port, the client message suggests `-p`, 2026-11-01 |
+| F14 | `println` output arrived with an extra blank line (former O4), and `print()` still ended the line | `020c7d82`, `8d90ab3d` |
+| F15 | Launchers treated JMOD-less JDKs (JEP 493: Temurin 24, 26) as pre-9 and refused to start | `5efe4f7c` |
+| F16 | The site's oneliner builder generated `print duration` (nanoseconds) but showed `execution time: N ms` | gh-pages `81fbc0ca` |
+| F17 | The full Debian Docker image set a non-existent JAVA_HOME, and the build hid it | `2d0c5170` |
+| F18 | The extension Gradle plugin could never auto-apply Shadow for external consumers (now needs Gradle 9.2+) | `31424a83` |
+| F19 | The extension version was captured at plugin apply time, giving `unspecified` in the manifest | `4eacf060` |
+| F20 | Fat agents warned about duplicate embedded extensions when the same jar was seen twice | `db9c593b` |
+| F21 | Compiler errors reported wrong line numbers, and a commented import disabled the auto-import | `997e13ae` |
+| F22 | `-l` and `~name` crashed when the client ran without the shell launcher (JBang, `java -jar`) | `caa2e60b` |
+| F23 | `btracex policy set` could not flip an earlier deny to allow | `5816049e` |
+| F24 | A probe with an unavailable required `@Injected` service deployed and then threw at every call | `52c4c34f` |
+| F25 | The migration script listed unchanged lines after applying | `0adb2d22` |
 | F26 | A `Kind.CALL` `@Duration` probe whose call site pattern matched the `System.nanoTime()` call BTrace adds overflowed the stack while instrumenting, and no handler ran in the class | `Instrumentor`, 2026-11-01 |
 | F27 | A class that failed to transform was reported only in the target JVM's log, so its probes printed nothing with no explanation | `BTraceTransformer`, 2026-11-01 |
 | F28 | A `Kind.CALL` `@Duration` probe failed verification when the call sat inside a branch: a label's saved state came from the last jump to it, and an injected frame displaced the method's own frame at the same offset | `InstrumentingMethodVisitor`, `LastFrameAtOffsetVisitor`, 2026-11-01 |

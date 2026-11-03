@@ -7,8 +7,8 @@ one-liner can't have — in about 10 minutes.
 
 This picks up exactly where [Tutorial 1](01-first-trace-in-2-minutes.md) left off: same demo
 app, same JVM, same bug hunt. If you don't have it running anymore, start it again in one
-terminal (`java DemoApp.java`) and find its PID with `jps` in another — everything below uses
-that `<PID>`.
+terminal (`java DemoApp.java`) and find its PID with `jps -m` in another (the line reads
+`<PID> Main DemoApp.java`) — everything below uses that `<PID>`.
 
 ## What you'll need
 
@@ -33,6 +33,8 @@ JAVA_TOOL_OPTIONS="-Dbtrace.oneliner.dump=true" btrace -n 'OrderService::process
 
 ```
 Picked up JAVA_TOOL_OPTIONS: -Dbtrace.oneliner.dump=true
+OpenJDK 64-Bit Server VM warning: Option AllowRedefinitionToAddDeleteMethods was deprecated in version 13.0 and will likely be removed in a future release.
+[main] INFO io.btrace.client.Main - Attaching BTrace to PID: <PID>
 === Generated oneliner source (BTraceOneliner_1752219841233.java) ===
 package io.btrace.generated;
 
@@ -51,6 +53,8 @@ public class BTraceOneliner_1752219841233 {
     BTraceUtils.println("execution time: " + (duration / 1000000) + " ms");
   }
 }
+
+[main] INFO io.btrace.client.Client - Successfully started BTrace probe: BTraceOneliner_1752219841233.java
 processOrder
 execution time: 58 ms
 processOrder
@@ -58,8 +62,11 @@ execution time: 296 ms
 ```
 
 (The class name's numeric suffix is just `System.currentTimeMillis()` at compile time — yours
-will differ. The trace stream underneath is identical to Tutorial 1's, because it's the exact
-same generated class doing the work.)
+will differ. The `AllowRedefinitionToAddDeleteMethods` warning comes from the JDK, not from
+BTrace, and the two `[main] INFO` lines are the client reporting the attach; like every other
+listing in this series, the ones below leave those client lines out and show only the probe's
+output. The trace stream underneath is identical to Tutorial 1's, because it's the exact same
+generated class doing the work.)
 
 > **What just happened?** The oneliner compiler (`OnelinerCodeGenerator`) turned your probe
 > spec into a small, throwaway `@BTrace` class: one `@OnMethod` hook at `Kind.RETURN`, one
@@ -68,7 +75,7 @@ same generated class doing the work.)
 > flat DSL. But *your own* scripts get the flat DSL automatically, which is what the rest of this
 > tutorial is about.
 
-`Ctrl+C` to detach before moving on.
+Press `Ctrl+C`, then choose `1. exit` before moving on.
 
 ## Step 2 — The same probe, as a real script file
 
@@ -111,7 +118,7 @@ execution time: 342 ms
 > same auto-injection path whether the source came from a `.java` file like this one or was typed
 > straight into a oneliner.
 
-`Ctrl+C` to detach.
+Press `Ctrl+C`, then choose `1. exit`.
 
 ## Step 3 — Make the message richer
 
@@ -154,7 +161,7 @@ processOrder took 52ms at 1783778244520
 > since these are ordinary Java strings. Nothing here is flat-DSL-only syntax — it's just methods
 > you no longer have to import.
 
-`Ctrl+C` to detach again — one more change to make.
+Press `Ctrl+C` and choose `1. exit` again — one more change to make.
 
 ## Step 4 — Track state across probes with `@TLS`
 
@@ -238,8 +245,10 @@ the same slow-payment defect from Tutorial 1 again, this time with a number that
 
 ## Step 5 — Clean up
 
-`Ctrl+C` in the BTrace terminal detaches the client and disables the probe immediately — no
-restart needed, and you can redeploy as many times as you like while you iterate on a script.
+`Ctrl+C` in the BTrace terminal opens a small menu. Choose `1. exit` to end the session: the agent
+retracts the probe on the spot, with no restart needed, and you can redeploy as many times as you
+like while you iterate on a script. (`6. detach client` would instead leave the probe running in the
+target.)
 Stop the demo app with `Ctrl+C` in its terminal when you're done for good.
 
 ## Troubleshooting

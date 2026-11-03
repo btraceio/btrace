@@ -4,24 +4,22 @@
  * the pre-3.0 org.openjdk.btrace package so the tutorial has something real
  * to run scripts/migrate-btrace-script.sh against.
  */
-package demo;
 
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Duration;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
-import org.openjdk.btrace.core.annotations.Return;
 import static org.openjdk.btrace.core.BTraceUtils.println;
 import static org.openjdk.btrace.core.BTraceUtils.str;
 
 @BTrace
 public class SlowChargeProbe {
   @OnMethod(
-      clazz = "demo.OrderService",
+      clazz = "OrderService",
       method = "chargeCard",
       location = @Location(Kind.RETURN))
-  public static void onCharge(@Duration long duration, @Return Object result) {
+  public static void onCharge(@Duration long duration) {
     if (duration > 200_000_000L) {
       println("slow chargeCard: " + str(duration / 1_000_000) + " ms");
     }

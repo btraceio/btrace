@@ -18,6 +18,7 @@ package io.btrace.runtime;
 
 import io.btrace.core.ArgsMap;
 import io.btrace.core.comm.Command;
+import io.btrace.core.comm.MessageCommand;
 import io.btrace.core.extensions.Extension;
 import io.btrace.core.extensions.ExtensionContext;
 import io.btrace.core.extensions.Permission;
@@ -49,7 +50,8 @@ public final class ExtensionContextImpl implements ExtensionContext {
 
   @Override
   public void send(String message) {
-    runtime.send(message);
+    // an extension message is one line of output
+    runtime.send(MessageCommand.terminated(message));
   }
 
   @Override

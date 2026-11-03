@@ -24,6 +24,7 @@ import io.btrace.core.ArgsMap;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.ExitCommand;
 import io.btrace.core.comm.MessageCommand;
+import io.btrace.core.extensions.PermissionSet;
 import io.btrace.core.handlers.ExitHandler;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -129,6 +130,8 @@ class BTraceRuntimeImplBaseTest {
         if (command instanceof MessageCommand
             && ((MessageCommand) command).getMessage().startsWith("[BTRACE] terminal cleanup:")) {
           marker = index;
+          // message text is printed as is, so the diagnostic must end its own line
+          assertTrue(((MessageCommand) command).getMessage().endsWith("\n"));
         }
         if (command instanceof ExitCommand) {
           exits++;
@@ -152,6 +155,31 @@ class BTraceRuntimeImplBaseTest {
     assertEquals(-1, runtime.speculation());
     runtime.send(new MessageCommand("post-exit"));
     assertFalse(postExitMessage.await(250, TimeUnit.MILLISECONDS));
+  }
+
+  @Test
+  void extensionMessagesAreSentAsCompleteLines() throws Exception {
+    List<MessageCommand> messages = Collections.synchronizedList(new ArrayList<MessageCommand>());
+    CountDownLatch delivered = new CountDownLatch(2);
+    BTraceRuntimeImpl_8 runtime =
+        new BTraceRuntimeImpl_8(
+            "extension-message-test",
+            new ArgsMap(),
+            command -> {
+              if (command instanceof MessageCommand) {
+                messages.add((MessageCommand) command);
+                delivered.countDown();
+              }
+            },
+            null);
+    ExtensionContextImpl context =
+        new ExtensionContextImpl(runtime, "extension-message-test", PermissionSet.empty());
+    context.send("export failed");
+    context.send("already terminated\n");
+    assertTrue(delivered.await(5, TimeUnit.SECONDS));
+    assertEquals("export failed" + System.lineSeparator(), messages.get(0).getMessage());
+    assertEquals("already terminated\n", messages.get(1).getMessage());
+    runtime.handleExit(0);
   }
 
   /** Probe stand-in whose {@code @OnExit} handler blocks until the test releases it. */

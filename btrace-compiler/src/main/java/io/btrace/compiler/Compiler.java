@@ -29,6 +29,8 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -181,30 +183,86 @@ public class Compiler {
     }
   }
 
-  // No line breaks: the script's errors and debug info must keep its own line numbers
   private static final String DSL_IMPORT = "import static io.btrace.BTrace.*; ";
   private static final String ANNOTATIONS_IMPORT = "import io.btrace.core.annotations.*; ";
 
-  private static String injectDslImport(String source) {
-    boolean hasDsl =
-        source.contains("import static io.btrace.BTrace")
-            || source.contains("import static io.btrace.core.BTraceUtils");
-    boolean hasAnnotations = source.contains("import io.btrace.core.annotations");
+  private static final Pattern DSL_IMPORT_DECL =
+      Pattern.compile(
+          "(?:^|;)\\s*import\\s+static\\s+io\\s*\\.\\s*btrace\\s*\\.\\s*"
+              + "(?:BTrace|core\\s*\\.\\s*BTraceUtils)\\b",
+          Pattern.MULTILINE);
+  private static final Pattern ANNOTATIONS_IMPORT_DECL =
+      Pattern.compile(
+          "(?:^|;)\\s*import\\s+io\\s*\\.\\s*btrace\\s*\\.\\s*core\\s*\\.\\s*" + "annotations\\b",
+          Pattern.MULTILINE);
+  private static final Pattern PACKAGE_DECL =
+      Pattern.compile("^\\s*package\\s+[\\w.\\s]+;", Pattern.MULTILINE);
+
+  /**
+   * Adds the implicit DSL and annotation imports unless the script declares them. Comments and
+   * literals are ignored when looking for the declarations. The imports are inserted without line
+   * breaks (right after the package statement, or at the start of the first line) so that
+   * diagnostics keep reporting the line numbers of the user's file.
+   */
+  static String injectDslImport(String source) {
+    String code = blankCommentsAndLiterals(source);
+    boolean hasDsl = DSL_IMPORT_DECL.matcher(code).find();
+    boolean hasAnnotations = ANNOTATIONS_IMPORT_DECL.matcher(code).find();
     if (hasDsl && hasAnnotations) return source;
 
     String imports = (!hasDsl ? DSL_IMPORT : "") + (!hasAnnotations ? ANNOTATIONS_IMPORT : "");
-    String[] lines = source.split("\n", -1);
-    StringBuilder sb = new StringBuilder();
-    boolean injected = false;
-    for (String line : lines) {
-      if (!injected && line.trim().startsWith("package ") && line.contains(";")) {
-        int end = line.indexOf(';') + 1;
-        line = line.substring(0, end) + " " + imports + line.substring(end);
-        injected = true;
-      }
-      sb.append(line).append("\n");
+    Matcher pkg = PACKAGE_DECL.matcher(code);
+    if (pkg.find()) {
+      int insertAt = pkg.end();
+      return source.substring(0, insertAt) + " " + imports + source.substring(insertAt);
     }
-    return injected ? sb.toString() : imports + source;
+    return imports + source;
+  }
+
+  /**
+   * Replaces comments and string/char literals with spaces, keeping line breaks, so that the result
+   * has the same length and line structure as {@code source}.
+   */
+  static String blankCommentsAndLiterals(String source) {
+    char[] out = source.toCharArray();
+    int n = out.length;
+    int i = 0;
+    while (i < n) {
+      char c = out[i];
+      char next = i + 1 < n ? out[i + 1] : 0;
+      if (c == '/' && next == '/') {
+        while (i < n && out[i] != '\n' && out[i] != '\r') {
+          out[i++] = ' ';
+        }
+      } else if (c == '/' && next == '*') {
+        out[i++] = ' ';
+        out[i++] = ' ';
+        while (i < n && !(out[i] == '*' && i + 1 < n && out[i + 1] == '/')) {
+          if (out[i] != '\n' && out[i] != '\r') {
+            out[i] = ' ';
+          }
+          i++;
+        }
+        for (int k = 0; k < 2 && i < n; k++) {
+          out[i++] = ' ';
+        }
+      } else if (c == '"' || c == '\'') {
+        char quote = c;
+        out[i++] = ' ';
+        while (i < n && out[i] != quote && out[i] != '\n') {
+          if (out[i] == '\\' && i + 1 < n) {
+            out[i++] = ' ';
+          }
+          out[i++] = ' ';
+        }
+        if (i < n && out[i] == quote) {
+          out[i++] = ' ';
+        }
+      } else {
+        i++;
+      }
+    }
+    return new String(out);
   }
 
   public Map<String, byte[]> compile(File file, Writer err, String sourcePath, String classPath) {

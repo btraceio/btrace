@@ -17,6 +17,7 @@
 package io.btrace.client;
 
 import com.sun.tools.attach.VirtualMachine;
+import com.sun.tools.attach.VirtualMachineDescriptor;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
@@ -28,10 +29,6 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.jvmstat.monitor.MonitoredHost;
-import sun.jvmstat.monitor.MonitoredVm;
-import sun.jvmstat.monitor.MonitoredVmUtil;
-import sun.jvmstat.monitor.VmIdentifier;
 
 final class JpsUtils {
   private static final Logger log = LoggerFactory.getLogger(JpsUtils.class);
@@ -118,27 +115,18 @@ final class JpsUtils {
    */
   static Integer findVmByName(String name, VmChooser chooser) {
     if (isRegexTarget(name)) {
-      return findVmByRegex(name.substring(REGEX_PREFIX.length()), activeVms(), selfPid(), chooser);
+      return findVmByRegex(
+          name.substring(REGEX_PREFIX.length()), activeVms(false), selfPid(), chooser);
     }
     try {
       return Integer.parseInt(name);
     } catch (NumberFormatException ignored) {
-      Integer pid = null;
-      try {
-        MonitoredHost vmHost = MonitoredHost.getMonitoredHost((String) null);
-        for (Integer vmPid : MonitoredHost.getMonitoredHost("localhost").activeVms()) {
-          VmIdentifier id = new VmIdentifier(vmPid.toString());
-          MonitoredVm vm = vmHost.getMonitoredVm(id);
-          String mainClass = MonitoredVmUtil.mainClass(vm, false);
-          if (name.equalsIgnoreCase(mainClass)) {
-            pid = vmPid;
-            break;
-          }
+      for (VmInfo vm : activeVms(false)) {
+        if (name.equalsIgnoreCase(vm.mainClass)) {
+          return vm.pid;
         }
-      } catch (Exception e) {
-        log.warn("Unexpected exception", e);
       }
-      return pid;
+      return null;
     }
   }
 
@@ -189,28 +177,87 @@ final class JpsUtils {
     return matches.get(0).pid;
   }
 
-  private static List<VmInfo> activeVms() {
-    List<VmInfo> vms = new ArrayList<>();
+  /** A way of listing the local JVMs. */
+  interface VmSource {
+    List<VmInfo> list(boolean attachableOnly) throws Exception;
+  }
+
+  private static List<VmInfo> activeVms(boolean attachableOnly) {
+    return activeVms(JvmstatVms::list, JpsUtils::attachApiVms, attachableOnly);
+  }
+
+  /**
+   * Lists JVMs with {@code primary} (jvmstat), falling back to {@code fallback} (the Attach API)
+   * when it fails. jvmstat lives in the non-exported {@code jdk.internal.jvmstat} module, so it is
+   * inaccessible when the client runs without the launcher script and outside {@code java -jar}
+   * (e.g. from a {@code -cp} launch), and absent on runtimes without the module.
+   */
+  static List<VmInfo> activeVms(VmSource primary, VmSource fallback, boolean attachableOnly) {
     try {
-      MonitoredHost vmHost = MonitoredHost.getMonitoredHost((String) null);
-      for (Integer vmPid : MonitoredHost.getMonitoredHost("localhost").activeVms()) {
-        try {
-          MonitoredVm vm = vmHost.getMonitoredVm(new VmIdentifier(vmPid.toString()));
-          String mainClass = MonitoredVmUtil.mainClass(vm, false);
-          String commandLine = MonitoredVmUtil.commandLine(vm);
-          if (commandLine == null || commandLine.isEmpty() || "Unknown".equals(commandLine)) {
-            commandLine = mainClass;
-          }
-          vms.add(new VmInfo(vmPid, mainClass, commandLine));
-        } catch (Exception e) {
-          // the JVM may have exited or be inaccessible to this user
-          log.debug("Skipping JVM {}", vmPid, e);
-        }
-      }
+      return primary.list(attachableOnly);
+    } catch (LinkageError e) {
+      log.debug("jvmstat is not accessible, listing JVMs through the Attach API: {}", e.toString());
     } catch (Exception e) {
-      log.warn("Unexpected exception", e);
+      log.debug("jvmstat failed, listing JVMs through the Attach API", e);
+    }
+    try {
+      return fallback.list(attachableOnly);
+    } catch (Exception | LinkageError e) {
+      log.warn("Unable to list local JVMs: {}", e.toString());
+      return new ArrayList<>();
+    }
+  }
+
+  /** Lists attachable JVMs through the public Attach API; it sees attachable JVMs only. */
+  static List<VmInfo> attachApiVms(boolean attachableOnly) {
+    List<VmInfo> vms = new ArrayList<>();
+    for (VirtualMachineDescriptor vmd : VirtualMachine.list()) {
+      VmInfo vm = fromDescriptor(vmd.id(), vmd.displayName());
+      if (vm != null) {
+        vms.add(vm);
+      }
     }
     return vms;
+  }
+
+  /**
+   * Builds the JVM info from an Attach API descriptor whose display name is the command line.
+   *
+   * @return {@code null} if the id is not a PID
+   */
+  static VmInfo fromDescriptor(String id, String displayName) {
+    int pid;
+    try {
+      pid = Integer.parseInt(id);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+    String commandLine = displayName == null ? "" : displayName.trim();
+    String mainClass = mainClassOf(commandLine);
+    if (commandLine.isEmpty()) {
+      commandLine = mainClass;
+    }
+    return new VmInfo(pid, mainClass, commandLine);
+  }
+
+  /** Mirrors jvmstat's short main class name: the jar file name or the simple class name. */
+  static String mainClassOf(String commandLine) {
+    if (commandLine.isEmpty()) {
+      return "Unknown";
+    }
+    int space = commandLine.indexOf(' ');
+    String first = space < 0 ? commandLine : commandLine.substring(0, space);
+    int slash = Math.max(first.lastIndexOf('/'), first.lastIndexOf('\\'));
+    if (slash >= 0) {
+      first = first.substring(slash + 1);
+    }
+    if (!first.endsWith(".jar")) {
+      int dot = first.lastIndexOf('.');
+      if (dot >= 0) {
+        first = first.substring(dot + 1);
+      }
+    }
+    return first;
   }
 
   private static int selfPid() {
@@ -224,28 +271,17 @@ final class JpsUtils {
 
   static Collection<String> listVms() {
     Collection<String> vms = new ArrayList<>();
-    try {
-      MonitoredHost vmHost = MonitoredHost.getMonitoredHost((String) null);
-      for (Integer vmPid : MonitoredHost.getMonitoredHost("localhost").activeVms()) {
-        VmIdentifier id = new VmIdentifier(vmPid.toString());
-        MonitoredVm mvm = vmHost.getMonitoredVm(id);
-        if (MonitoredVmUtil.isAttachable(mvm)) {
-          String mainClass = MonitoredVmUtil.mainClass(mvm, false);
-
-          vms.add(
-              "("
-                  + (hasBTraceServer(vmPid) ? "+" : "-")
-                  + ") "
-                  + vmPid
-                  + " "
-                  + mainClass
-                  + " ["
-                  + MonitoredVmUtil.commandLine(mvm)
-                  + "]");
-        }
-      }
-    } catch (Exception e) {
-      log.warn("Unexpected exception", e);
+    for (VmInfo vm : activeVms(true)) {
+      vms.add(
+          "("
+              + (hasBTraceServer(vm.pid) ? "+" : "-")
+              + ") "
+              + vm.pid
+              + " "
+              + vm.mainClass
+              + " ["
+              + vm.commandLine
+              + "]");
     }
     return vms;
   }

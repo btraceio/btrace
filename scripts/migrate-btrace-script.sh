@@ -92,7 +92,10 @@ for f in "${FILES[@]}"; do
     # Portable in-place sed (works on both GNU and BSD sed); keep the backup.
     sed -i.bak "s/${OLD_PKG_RE}/${NEW_PKG}/g" "$f"
     echo "migrated: $f (backup: $f.bak)"
-    grep -n "$NEW_PKG" "$f" | sed 's/^/    /'
+    # List exactly the lines the rewrite changed (those that held the old package in the
+    # backup), as they read now; lines that already mentioned io.btrace are not echoed.
+    CHANGED_LINES=" $(grep -n "$OLD_PKG_RE" "$f.bak" | cut -d: -f1 | tr '\n' ' ')"
+    awk -v lines="$CHANGED_LINES" 'index(lines, " " NR " ") { print "    " NR ":" $0 }' "$f"
   fi
 done
 

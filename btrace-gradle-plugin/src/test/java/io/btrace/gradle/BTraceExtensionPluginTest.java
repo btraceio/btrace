@@ -11,8 +11,13 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
+import java.util.jar.Attributes;
 import java.util.jar.JarFile;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipFile;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
@@ -368,6 +373,77 @@ class BTraceExtensionPluginTest {
         assertTrue(pom.contains("<description>Fixture for extension plugin tests</description>"), pom);
         assertTrue(pom.contains("<url>https://github.com/example-org/my-extension</url>"), pom);
         assertTrue(pom.contains("<licenses>") && pom.contains("<developers>") && pom.contains("<scm>"), pom);
+    }
+
+    @Test
+    @DisplayName("the manifest uses the project version even when it is set after the plugin is applied")
+    void manifestUsesVersionAssignedAfterPluginsBlock() throws IOException {
+        writeExtensionProject();
+        Path buildFile = projectDir.resolve("ext/build.gradle");
+        String script = Files.readString(buildFile, StandardCharsets.UTF_8);
+        // Real build scripts assign the version after the plugins block, as the fixture does
+        assertTrue(script.indexOf("version = '1.0'") > script.indexOf("id 'io.btrace.extension'"));
+        writeFile(buildFile, script.replace("version = '1.0'", "version = '1.2.3'"));
+
+        BuildResult result = createRunner().withArguments(":ext:buildApiJar").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":ext:buildApiJar").getOutcome());
+        try (JarFile jar =
+                new JarFile(projectDir.resolve("ext/build/libs/ext-1.2.3-api.jar").toFile())) {
+            Attributes attrs = jar.getManifest().getMainAttributes();
+            assertEquals("1.2.3", attrs.getValue("BTrace-Extension-Version"));
+            assertEquals("ext-1.2.3-impl.jar", attrs.getValue("BTrace-Extension-Impl"));
+        }
+        assertTrue(projectDir.resolve("ext/build/libs/ext-1.2.3-impl.jar").toFile().isFile());
+    }
+
+    @Test
+    @DisplayName("a consumer applying only io.btrace.extension gets Shadow from the plugin itself")
+    void packagesWithoutShadowOnConsumerClasspath() throws IOException {
+        // No stub Shadow plugin: the consumer's build classpath has only what the plugin brings
+        // with it, exactly as for an external build that applies just id 'io.btrace.extension'.
+        deleteRecursively(projectDir.resolve("buildSrc"));
+        // The fixture's PublicValue has a public constructor; not what this test is about
+        writeExtensionProject("btraceExtension { apiCtorSeverity = 'off' }\n");
+        Path buildFile = projectDir.resolve("ext/build.gradle");
+        String script = Files.readString(buildFile, StandardCharsets.UTF_8);
+        writeFile(buildFile, script.replace("  id 'com.gradleup.shadow'\n", ""));
+        writeFile(
+                projectDir.resolve(
+                        "ext/src/main/resources/META-INF/services/com.example.api.PublicService"),
+                "com.example.impl.PublicServiceImpl\n");
+
+        BuildResult result = createRunner().withArguments(":ext:packageExtension").build();
+
+        assertFalse(
+                result.getOutput().contains("Unable to auto-apply Shadow plugin"),
+                result.getOutput());
+        assertEquals(TaskOutcome.SUCCESS, result.task(":ext:packageExtension").getOutcome());
+        try (ZipFile zip =
+                new ZipFile(
+                        projectDir
+                                .resolve("ext/build/distributions/ext-1.0-extension.zip")
+                                .toFile())) {
+            assertNotNull(zip.getEntry("ext-1.0-api.jar"));
+            assertNotNull(zip.getEntry("ext-1.0-impl.jar"));
+        }
+        try (JarFile impl =
+                new JarFile(projectDir.resolve("ext/build/libs/ext-1.0-impl.jar").toFile())) {
+            assertNotNull(impl.getEntry("com/example/impl/PublicServiceImpl.class"));
+        }
+    }
+
+    private static void deleteRecursively(Path root) throws IOException {
+        if (!Files.exists(root)) {
+            return;
+        }
+        List<Path> paths;
+        try (Stream<Path> walk = Files.walk(root)) {
+            paths = walk.sorted(Comparator.reverseOrder()).collect(Collectors.toList());
+        }
+        for (Path p : paths) {
+            Files.delete(p);
+        }
     }
 
     private static String listFiles(Path root) {

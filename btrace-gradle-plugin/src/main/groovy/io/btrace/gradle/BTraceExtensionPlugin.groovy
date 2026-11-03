@@ -33,7 +33,12 @@ class BTraceExtensionPlugin implements Plugin<Project> {
 
         // Create extension for metadata
         def extension = project.extensions.create('btraceExtension', BTraceExtensionMetadata)
-        extension.version = project.version
+        // Resolved when the manifest is written, not here: build scripts assign project.version
+        // after the plugins block, so reading it at apply time captures 'unspecified'.
+        def extensionVersion = {
+            def v = extension.version
+            return (v != null && !v.toString().trim().isEmpty()) ? v.toString() : project.version.toString()
+        }
 
         // Try to ensure Shadow is available; if resolution is blocked, we will emit a clear
         // error later with guidance. This is best-effort and safe when already applied.
@@ -835,7 +840,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                     manifest {
                         attributes(
                             'BTrace-Extension-Id': extension.id,
-                            'BTrace-Extension-Version': extension.version,
+                            'BTrace-Extension-Version': extensionVersion(),
                             'BTrace-Extension-Name': extension.name,
                             'BTrace-Extension-Description': extension.description,
                             'BTrace-API-Version': '3.0+',
@@ -847,7 +852,8 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                             }.call(),
                             'BTrace-Extension-Requires': requiresStr,
                             'BTrace-Shaded-Packages': shadedPkgs,
-                            'BTrace-Extension-Impl': "${project.name}-${extension.version}-impl.jar",
+                            // The impl jar is named by the Shadow task; reference its real file name
+                            'BTrace-Extension-Impl': implArchiveProvider.get().asFile.name,
                             'BTrace-Extension-Permissions': permsStr,
                             // Read exports index (if present) and add a short summary attribute
                             'BTrace-Extension-Exports': {
@@ -1441,6 +1447,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
 
 class BTraceExtensionMetadata {
     String id
+    /** Extension version for the manifest; defaults to project.version, resolved at build time. */
     String version
     String name
     String description

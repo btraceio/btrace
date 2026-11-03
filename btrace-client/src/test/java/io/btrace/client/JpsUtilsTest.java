@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.management.ManagementFactory;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
@@ -162,6 +163,79 @@ class JpsUtilsTest {
   }
 
   /** Answers in order, then end of input. */
+  @Test
+  void inaccessibleJvmstatFallsBackToAttachApi() {
+    List<JpsUtils.VmInfo> fallback =
+        Arrays.asList(new JpsUtils.VmInfo(42, "DemoApp", "DemoApp --fast"));
+    List<JpsUtils.VmInfo> vms =
+        JpsUtils.activeVms(
+            attachableOnly -> {
+              throw new IllegalAccessError(
+                  "class io.btrace.client.JvmstatVms cannot access class"
+                      + " sun.jvmstat.monitor.MonitoredHost");
+            },
+            attachableOnly -> fallback,
+            true);
+    assertEquals(fallback, vms);
+  }
+
+  @Test
+  void workingJvmstatIsPreferred() {
+    List<JpsUtils.VmInfo> primary = Arrays.asList(new JpsUtils.VmInfo(7, "A", "A"));
+    List<JpsUtils.VmInfo> vms =
+        JpsUtils.activeVms(
+            attachableOnly -> primary,
+            attachableOnly -> {
+              throw new AssertionError("fallback must not be used");
+            },
+            false);
+    assertEquals(primary, vms);
+  }
+
+  @Test
+  void failingFallbackYieldsNoJvmsInsteadOfThrowing() {
+    List<JpsUtils.VmInfo> vms =
+        JpsUtils.activeVms(
+            attachableOnly -> {
+              throw new NoClassDefFoundError("sun/jvmstat/monitor/MonitoredHost");
+            },
+            attachableOnly -> {
+              throw new IllegalStateException("attach provider missing");
+            },
+            true);
+    assertTrue(vms.isEmpty());
+  }
+
+  @Test
+  void attachDescriptorMapsToVmInfo() {
+    JpsUtils.VmInfo vm = JpsUtils.fromDescriptor("1234", "com.acme.DemoApp --port 8080");
+    assertEquals(1234, vm.pid);
+    assertEquals("DemoApp", vm.mainClass);
+    assertEquals("com.acme.DemoApp --port 8080", vm.commandLine);
+
+    JpsUtils.VmInfo jar = JpsUtils.fromDescriptor("55", "/opt/app/checkout-service.jar -v");
+    assertEquals("checkout-service.jar", jar.mainClass);
+
+    JpsUtils.VmInfo module =
+        JpsUtils.fromDescriptor(
+            "56", "jdk.compiler/com.sun.tools.javac.launcher.SourceLauncher RagSearchApp.java");
+    assertEquals("SourceLauncher", module.mainClass);
+
+    assertNull(JpsUtils.fromDescriptor("not-a-pid", "X"));
+    assertEquals("Unknown", JpsUtils.fromDescriptor("9", "").commandLine);
+  }
+
+  @Test
+  void attachApiListsThisJvm() {
+    String name = ManagementFactory.getRuntimeMXBean().getName();
+    int self = Integer.parseInt(name.substring(0, name.indexOf('@')));
+    boolean found = false;
+    for (JpsUtils.VmInfo vm : JpsUtils.attachApiVms(true)) {
+      found |= vm.pid == self;
+    }
+    assertTrue(found, "the Attach API should list the test JVM itself");
+  }
+
   private static Function<String, String> answers(String... lines) {
     Deque<String> queue = new ArrayDeque<>(Arrays.asList(lines));
     return prompt -> queue.poll();

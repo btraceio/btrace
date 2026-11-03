@@ -18,6 +18,8 @@ package io.btrace.compiler;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -175,5 +177,90 @@ public class AutoImportTest {
             .compile(scriptFile, new PrintWriter(err), null, System.getProperty("java.class.path"));
     assertNotNull(result, "File-based compilation should succeed: " + err);
     assertFalse(result.isEmpty(), "Should produce class bytes");
+  }
+
+  private static String compileErrors(String fileName, String script) {
+    StringWriter err = new StringWriter();
+    Map<String, byte[]> result =
+        new Compiler()
+            .compile(
+                fileName,
+                script,
+                new PrintWriter(err),
+                null,
+                System.getProperty("java.class.path"));
+    assertNull(result, "Compilation should fail");
+    return err.toString();
+  }
+
+  @Test
+  void oneLineScript_errorReportsLineOne() {
+    String errors = compileErrors("Bad.java", "@BTrace public class Bad { int x = ; }\n");
+    assertTrue(errors.contains("Bad.java:1:"), "Expected the error on line 1:\n" + errors);
+  }
+
+  @Test
+  void scriptWithoutImports_errorReportsUserLine() {
+    String script =
+        "@BTrace\n"
+            + "public class LineProbe {\n"
+            + "    @OnMethod(clazz=\"java.lang.String\", method=\"length\")\n"
+            + "    public static void onLength() {\n"
+            + "        println(undefinedName);\n"
+            + "    }\n"
+            + "}\n";
+    String errors = compileErrors("LineProbe.java", script);
+    assertTrue(errors.contains("LineProbe.java:5:"), "Expected the error on line 5:\n" + errors);
+  }
+
+  @Test
+  void scriptWithPackage_errorReportsUserLine() {
+    String script =
+        "package com.example; // probes\n"
+            + "@BTrace\n"
+            + "public class PkgLineProbe {\n"
+            + "    @OnMethod(clazz=\"java.lang.String\", method=\"length\")\n"
+            + "    public static void onLength() {\n"
+            + "        println(undefinedName);\n"
+            + "    }\n"
+            + "}\n";
+    String errors = compileErrors("PkgLineProbe.java", script);
+    assertTrue(errors.contains("PkgLineProbe.java:6:"), "Expected the error on line 6:\n" + errors);
+  }
+
+  @Test
+  void importsQuotedInCommentsDoNotDisableAutoImport() {
+    String script =
+        "// package com.example.commented;\n"
+            + "/**\n"
+            + " * Use it with: import static io.btrace.BTrace.*;\n"
+            + " * and import io.btrace.core.annotations.*;\n"
+            + " */\n"
+            + "@BTrace\n"
+            + "public class CommentedImportProbe {\n"
+            + "    // import static io.btrace.core.BTraceUtils.*;\n"
+            + "    @OnMethod(clazz=\"java.lang.String\", method=\"length\")\n"
+            + "    public static void onLength() {\n"
+            + "        println(\"import static io.btrace.BTrace.*;\");\n"
+            + "    }\n"
+            + "}\n";
+    StringWriter err = new StringWriter();
+    Map<String, byte[]> result =
+        new Compiler()
+            .compile(
+                "CommentedImportProbe.java",
+                script,
+                new PrintWriter(err),
+                null,
+                System.getProperty("java.class.path"));
+    assertNotNull(result, "Compilation should succeed: " + err);
+    assertFalse(result.isEmpty(), "Should produce class bytes");
+  }
+
+  @Test
+  void explicitImportOnPackageLineIsRecognized() {
+    String source =
+        "package p; import static io.btrace.BTrace.*;\nimport io.btrace.core.annotations.*;\n";
+    assertTrue(source.equals(Compiler.injectDslImport(source)));
   }
 }

@@ -230,8 +230,9 @@ and scores, as the demo does, read them off `@Return` the way `onSearch` does.
 
 ## Step 6 — Clean up
 
-`Ctrl+C` the `btrace` client to detach (probes disable immediately), then `Ctrl+C` `RagSearchApp`
-in terminal 1. The policy was passed on the app's command line, so there is nothing to undo.
+In the `btrace` terminal, press `Ctrl+C` and choose `1. exit` to remove the probe (choosing
+`6. detach client` would leave it running in the target), then `Ctrl+C` `RagSearchApp` in
+terminal 1. The policy was passed on the app's command line, so there is nothing to undo.
 
 ## Troubleshooting
 

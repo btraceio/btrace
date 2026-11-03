@@ -11,11 +11,12 @@ one-off script. **Time:** ~25 minutes (most of it is copy-pasting four small fil
 
 ## What you'll need
 
-- JDK 11 or newer on your PATH (the extension's own bytecode targets Java 8, but the plugin build
-  itself needs 11+; the demo app uses single-file source launch)
+- JDK 17 or newer on your PATH (the extension's own bytecode targets Java 8, but Gradle 9 itself
+  needs 17+; the demo app uses single-file source launch)
 - BTrace 3.0 installed — `bin/btrace` and `bin/btracex` on your PATH ([installation options](../GettingStarted.md#installation))
-- Gradle available to build the extension project (a wrapper is fine — this repo's own build uses
-  Gradle 9.5.1)
+- A `gradle` command on your PATH, used once to generate the project's Gradle wrapper (Step 1).
+  The wrapper pins Gradle 9.8.2, the version this repo builds with; the plugin needs Gradle 9.2 or
+  newer
 
 ## Step 1 — Scaffold the extension project
 
@@ -28,6 +29,7 @@ cd order-counter-ext
 cat > settings.gradle <<'EOF'
 rootProject.name = 'order-counter'
 EOF
+gradle wrapper --gradle-version 9.8.2
 cat > build.gradle <<'EOF'
 plugins {
     id 'io.btrace.extension' version '3.0.0'
@@ -59,7 +61,9 @@ btraceExtension {
 EOF
 ```
 
-> **What just happened?** `io.btrace.extension` is the plugin's real Gradle Plugin Portal ID
+> **What just happened?** `gradle wrapper` ran before `build.gradle` existed, so it only needed
+> `settings.gradle`; from here on, `./gradlew` uses the pinned Gradle 9.8.2 whatever version your
+> `gradle` command is. `io.btrace.extension` is the plugin's real Gradle Plugin Portal ID
 > (`btrace-gradle-plugin/build.gradle`'s `gradlePlugin { plugins { btraceExtension { id =
 > 'io.btrace.extension' ... } } }`). Applying it also auto-applies the Shadow plugin
 > (`com.gradleup.shadow`) for you unless you've turned that off, and registers the `btraceExtension
@@ -159,36 +163,44 @@ EOF
 ./gradlew packageExtension
 ```
 
-**You should see** (illustrative — reconstructed from the plugin's task graph and its own
-lifecycle log lines, since building this for real needs Maven Central access this environment
-doesn't have; every task name and log string below is taken directly from
-`BTraceExtensionPlugin.groovy`):
+**You should see** (with `--console=plain`; the default console shows the same task order more
+compactly):
 
 ```
+[BTRACE-EXT] Applying Shadow plugin automatically (com.gradleup.shadow) for :
 > Task :compileJava
-> Task :processResources
 > Task :generateServiceShims
 > Task :compileServiceShims
-> Task :generateShimIndex
 > Task :generateExportsIndex
 [BTRACE-EXT] exports: 1 types
+> Task :generateShimIndex
+> Task :processResources NO-SOURCE
+> Task :classes
+> Task :compileTestJava NO-SOURCE
 > Task :shadowJar
-> Task :buildImplJar
 > Task :buildApiJar
 [BTRACE-EXT] permissions: scanned=[THREADS] merged=[THREADS]
+> Task :buildImplJar
 > Task :validateServiceApis
+[BTRACE-EXT] validation report: build/reports/btrace/service-api-validation.txt
+[BTRACE-EXT] Missing nullability on parameter 0 of 'com.example.orderstats.OrderCounterService#count'
+[BTRACE-EXT] Missing nullability on parameter 0 of 'com.example.orderstats.OrderCounterService#increment'
 [BTRACE-EXT] validateServiceApis: OK for 1 service(s)
 > Task :packageExtension
 
 BUILD SUCCESSFUL
 ```
 
+The two `Missing nullability` lines are warnings, not failures: `validateServiceApis` defaults
+`nullabilitySeverity` to `warn` (see [Extension Interface Rules](../ExtensionInterfaceRules.md)).
+
 > **What just happened?** `packageExtension` (a `Zip` task) depends on `buildApiJar`,
 > `buildImplJar`, `compileServiceShims`, `generateShimIndex`, `generateExportsIndex`, and
 > `validateServiceApis` — all real task registrations in `BTraceExtensionPlugin.groovy`. Notice
-> `buildApiJar` runs *after* `shadowJar`/`buildImplJar`, not before: its manifest needs to scan the
-> already-built impl JAR for permissions, so the plugin wires `buildApiJar.dependsOn { <the impl
-> jar task> }` explicitly. The `[BTRACE-EXT] permissions: scanned=... merged=...` line is the
+> `buildApiJar` runs *after* `shadowJar`, not before: its manifest needs to scan the already-built
+> impl JAR for permissions, so the plugin makes `buildApiJar` depend on `shadowJar` explicitly
+> (`buildImplJar` is only a named wrapper around `shadowJar`). The
+> `[BTRACE-EXT] permissions: scanned=... merged=...` line is the
 > interesting one: because
 > `scanPermissions` defaults to `true`, the plugin doesn't trust your `@ServiceDescriptor`
 > annotation for the manifest — it decompiles `OrderCounterServiceImpl`'s bytecode
@@ -320,10 +332,10 @@ orders: succeeded=89 failed=8
 ```
 
 > **What just happened?** Unlike Tutorial 4's `LatencyHistogram`, `counter` here is a *required*
-> `@Injected` field — no `optional = true`. Per the Extension Interface Rules, "required
-> injections (`optional = false`) never fall back and fail fast if unavailable" — if you'd skipped
-> Step 6, BTrace would have refused to link this script at all, rather than running it with a
-> throwing stub. `processOrder`'s `@Location(Kind.ERROR)` fires whenever `validateOrder`'s
+> `@Injected` field — no `optional = true`. If you'd skipped Step 6, BTrace would have refused
+> the probe instead of running it: the client reports `Probe … was not deployed: required
+> @Injected service com.example.orderstats.OrderCounterService (field 'counter') is
+> unavailable: …` and exits with status 1. `processOrder`'s `@Location(Kind.ERROR)` fires whenever `validateOrder`'s
 > exception propagates uncaught through it — the same call path Tutorial 1 found with `@error` —
 > so `failed` tracks the ~8% validation failures and `succeeded` tracks everything else.
 
@@ -352,9 +364,10 @@ rm -rf "$BTRACE_HOME/extensions/order-counter" ~/.btrace/permissions.properties
 
 ## Troubleshooting
 
-- **`Shadow plugin ('com.gradleup.shadow') must be applied`** — the plugin tries to auto-apply
-  Shadow and only fails loudly if that can't resolve (e.g. offline, or the portal is unreachable).
-  Add `id 'com.gradleup.shadow'` to your `plugins { }` block explicitly and re-run.
+- **`[BTRACE-EXT] Shadow plugin is required`** — the plugin brings Shadow with it and applies it
+  automatically, so this only happens when you set `btraceExtension { autoApplyShadow = false }`.
+  Remove that line, or apply Shadow yourself with `id 'com.gradleup.shadow' version '9.6.1'` in
+  your `plugins { }` block.
 - **You left out `services = [...]` and nothing got exported** — automatic discovery only exports
   interfaces annotated with `io.btrace.core.extensions.ServiceDescriptor`. Confirm the annotation
   is on the compiled service interface (not only its implementation). An explicit `services` list
@@ -365,7 +378,7 @@ rm -rf "$BTRACE_HOME/extensions/order-counter" ~/.btrace/permissions.properties
   that version in their implementation manifest. External builds resolve only
   `io.btrace:btrace:<btraceVersion>` for the `@ExternalType` processor; an extension's own
   `version` may therefore follow its independent release scheme.
-- **The probe fails to link instead of running** — you deployed it before Step 6's permission
+- **`Probe … was not deployed: required @Injected service … is unavailable`** — you deployed it before Step 6's permission
   grant, or against a demo app process that was already running (and had already loaded an older
   policy) before you wrote the policy file. Start a fresh `java DemoApp.java` after Step 6.
 - **`btracex list` prints nothing** — it scans `$BTRACE_HOME/extensions/` and

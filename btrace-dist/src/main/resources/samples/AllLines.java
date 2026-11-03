@@ -23,7 +23,7 @@ import io.btrace.core.annotations.OnMethod;
 import io.btrace.core.annotations.ProbeClassName;
 import io.btrace.core.annotations.ProbeMethodName;
 
-import static io.btrace.BTrace.print;
+import static io.btrace.BTrace.println;
 
 /*
  * This sample prints a line every time any line
@@ -39,6 +39,6 @@ public class AllLines {
             location = @Location(value = Kind.LINE, line = -1)
     )
     public static void online(@ProbeClassName String pcn, @ProbeMethodName String pmn, int line) {
-        print(pcn + "." + pmn + ":" + line);
+        println(pcn + "." + pmn + ":" + line);
     }
 }

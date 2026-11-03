@@ -86,7 +86,12 @@ docker exec myapp btrace <PID> /scripts/trace.btrace
 
 ### Pattern 2: Kubernetes Sidecar
 
-Run BTrace as a sidecar container:
+Run the BTrace client as a sidecar container. The application image must **also** contain BTrace
+at the same path, `/opt/btrace` — build it with Pattern 1. The client asks the target JVM to load
+`/opt/btrace/libs/btrace.jar` through the Attach API, and the target JVM resolves that path in its
+own container filesystem, not the sidecar's. Against an application image without `/opt/btrace` the
+attach fails (`Agent JAR not found or no Agent-Class attribute` in the client, `Error opening zip
+file or JAR manifest missing: /opt/btrace/libs/btrace.jar` in the application's log).
 
 ```yaml
 apiVersion: v1
@@ -97,7 +102,7 @@ spec:
   shareProcessNamespace: true  # Required!
   containers:
   - name: myapp
-    image: myapp:latest
+    image: myapp:latest  # built with Pattern 1, so it contains /opt/btrace
 
   - name: btrace-sidecar
     image: ghcr.io/btraceio/btrace:3.0.0-alpine
@@ -115,8 +120,12 @@ spec:
 **Usage:**
 ```bash
 kubectl exec myapp-with-btrace -c btrace-sidecar -- \
-  sh -c 'btrace $(pgrep -f myapp) /scripts/trace.btrace'
+  sh -c 'btrace $(pgrep -f "[m]yapp.jar") /scripts/trace.btrace'
 ```
+
+`pgrep -f` matches full command lines, so the pattern must match only the application JVM: the
+`[m]` bracket keeps it from matching the `sh -c` wrapper, whose own command line contains the
+pattern. Adjust it to something unique to your application's `java` command line.
 
 ### Pattern 3: Development Image
 
@@ -294,10 +303,13 @@ ENTRYPOINT ["btracer", \
 
 ## Troubleshooting
 
-### "Cannot attach to process"
+### "Cannot attach to process" / "BTrace server not available at port 2020"
 ```bash
-# Ensure process namespace sharing
-docker run --pid=container:target-container ghcr.io/btraceio/btrace:latest
+# Plain Docker: share the target's PID namespace (to attach) and its network
+# namespace (the client then connects to the agent on localhost:2020).
+# The target image must contain BTrace at /opt/btrace (see Pattern 2).
+docker run --rm --pid=container:target-container --network=container:target-container \
+  -v "$PWD/scripts":/scripts ghcr.io/btraceio/btrace:3.0.0 btrace <PID> /scripts/trace.java
 
 # Kubernetes: verify shareProcessNamespace
 kubectl get pod myapp -o yaml | grep shareProcessNamespace
@@ -306,7 +318,7 @@ kubectl get pod myapp -o yaml | grep shareProcessNamespace
 ### "BTRACE_HOME not found"
 ```bash
 # Verify installation
-docker exec myapp ls -la $BTRACE_HOME
+docker exec myapp sh -c 'ls -la $BTRACE_HOME'
 docker exec myapp env | grep BTRACE
 ```
 
