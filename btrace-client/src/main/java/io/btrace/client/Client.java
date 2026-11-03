@@ -46,6 +46,7 @@ import io.btrace.core.comm.ProtocolNegotiator;
 import io.btrace.core.comm.ProtocolVersion;
 import io.btrace.core.comm.ReconnectCommand;
 import io.btrace.core.comm.SetSettingsCommand;
+import io.btrace.core.comm.SocketKeepAlive;
 import io.btrace.core.comm.StatusCommand;
 import io.btrace.core.comm.WireProtocol;
 import java.io.File;
@@ -443,6 +444,7 @@ public class Client {
 
   private WireProtocol createProtocol(Socket socket, String host, boolean allowFallback)
       throws IOException {
+    SocketKeepAlive.enable(socket);
     authenticate(socket);
     ProtocolConfig config = ProtocolConfig.fromSystemProperties();
     ProtocolVersion preferred = config.getVersion();
@@ -457,6 +459,7 @@ public class Client {
         closeSocketQuietly(socket);
         Socket fallback = new Socket(resolveHost(host), port);
         this.sock = fallback;
+        SocketKeepAlive.enable(fallback);
         authenticate(fallback);
         return createV1Protocol(fallback);
       }

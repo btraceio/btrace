@@ -125,7 +125,10 @@ class RemoteClientAuthenticationTest {
           executor.submit(
               () -> {
                 try (Socket socket = server.accept()) {
-                  return RemoteClient.getClient(context, socket, TOKEN.clone(), client -> null);
+                  Client session =
+                      RemoteClient.getClient(context, socket, TOKEN.clone(), client -> null);
+                  assertTrue(socket.getKeepAlive(), "keepalive not enabled on the agent side");
+                  return session;
                 }
               });
 
