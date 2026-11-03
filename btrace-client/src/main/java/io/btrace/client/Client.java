@@ -34,6 +34,8 @@ import io.btrace.core.comm.ConnectionAuthenticator;
 import io.btrace.core.comm.DisconnectCommand;
 import io.btrace.core.comm.EventCommand;
 import io.btrace.core.comm.ExitCommand;
+import io.btrace.core.comm.HeartbeatCommand;
+import io.btrace.core.comm.HeartbeatMonitor;
 import io.btrace.core.comm.InstrumentCommand;
 import io.btrace.core.comm.JavaSerializationProtocol;
 import io.btrace.core.comm.ListFailedExtensionsCommand;
@@ -1252,7 +1254,8 @@ public class Client {
               }
             }
           },
-          () -> failure.get() != null);
+          () -> failure.get() != null,
+          true);
       if (failure.get() != null) {
         throw failure.get();
       }
@@ -1352,7 +1355,8 @@ public class Client {
               }
             }
           },
-          () -> failure.get() != null);
+          () -> failure.get() != null,
+          true);
       if (failure.get() != null) {
         throw failure.get();
       }
@@ -1608,13 +1612,68 @@ public class Client {
     commandLoop(listener, () -> false);
   }
 
-  /** Runs the command loop until EXIT is received or {@code done} reports true after a command. */
+  /** Runs the command loop of a short request, which needs no heartbeats. */
   private void commandLoop(CommandListener listener, BooleanSupplier done) throws IOException {
+    commandLoop(listener, done, false);
+  }
+
+  /**
+   * Runs the command loop until EXIT is received or {@code done} reports true after a command. A
+   * probe session passes {@code heartbeat} so that a silently dropped connection is noticed.
+   */
+  private void commandLoop(CommandListener listener, BooleanSupplier done, boolean heartbeat)
+      throws IOException {
     assert protocol != null : "null protocol?";
+    HeartbeatMonitor monitor = heartbeat ? startHeartbeat() : null;
+    try {
+      runCommandLoop(listener, done, monitor);
+    } finally {
+      if (monitor != null) {
+        monitor.close();
+      }
+    }
+  }
+
+  /**
+   * Starts heartbeats on a v2 connection. A connection that drops without a reset, or an agent that
+   * stops answering, would otherwise leave the command loop blocked in a read forever. On timeout
+   * the socket is closed, which ends the read with an error and reports the session as lost.
+   */
+  private HeartbeatMonitor startHeartbeat() {
+    WireProtocol session = protocol;
+    Socket socket = sock;
+    if (session == null || session.getVersion() != ProtocolVersion.V2) {
+      // A v1 peer, such as a 2.x agent, would treat a HEARTBEAT as a broken stream.
+      return null;
+    }
+    long timeoutMillis = HeartbeatMonitor.timeoutMillis();
+    return HeartbeatMonitor.pingAndWatch(
+        "BTrace client heartbeat",
+        HeartbeatMonitor.intervalMillis(),
+        timeoutMillis,
+        nonce -> session.write(new HeartbeatCommand(nonce)),
+        () -> {
+          log.warn(
+              "No reply from the BTrace agent on port {} for {} ms; closing the connection",
+              port,
+              timeoutMillis);
+          closeSocketQuietly(socket);
+        });
+  }
+
+  private void runCommandLoop(
+      CommandListener listener, BooleanSupplier done, HeartbeatMonitor monitor) throws IOException {
     AtomicBoolean exited = new AtomicBoolean(false);
     while (true) {
       try {
         Command cmd = protocol.read();
+        if (monitor != null) {
+          monitor.received();
+        }
+        if (cmd.getType() == Command.HEARTBEAT) {
+          // A reply to our own heartbeat; it is not probe output.
+          continue;
+        }
         if (log.isDebugEnabled()) {
           log.debug("received command {}", cmd);
         }
@@ -1629,6 +1688,15 @@ public class Client {
         }
       } catch (IOException e) {
         if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));
+        if (monitor != null && monitor.isTimedOut()) {
+          throw new IOException(
+              "No reply from the BTrace agent on port "
+                  + port
+                  + " for "
+                  + HeartbeatMonitor.timeoutMillis()
+                  + " ms",
+              e);
+        }
         throw e;
       } catch (ClassNotFoundException e) {
         if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));

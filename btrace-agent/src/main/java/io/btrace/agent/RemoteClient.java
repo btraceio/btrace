@@ -23,6 +23,8 @@ import io.btrace.core.comm.ConnectionAuthenticator;
 import io.btrace.core.comm.DisconnectCommand;
 import io.btrace.core.comm.EventCommand;
 import io.btrace.core.comm.ExitCommand;
+import io.btrace.core.comm.HeartbeatCommand;
+import io.btrace.core.comm.HeartbeatMonitor;
 import io.btrace.core.comm.InstrumentCommand;
 import io.btrace.core.comm.JavaSerializationProtocol;
 import io.btrace.core.comm.ListFailedExtensionsCommand;
@@ -279,6 +281,10 @@ class RemoteClient extends Client {
     Thread cmdHandler =
         new Thread(
             () -> {
+              // Watches the current transport once its client has sent a heartbeat; see
+              // HEARTBEAT below. Belongs to this thread only.
+              HeartbeatMonitor monitor = null;
+              WireProtocol monitoredTransport = null;
               try {
                 BTraceRuntime.enter();
                 while (!isShuttingDown()) {
@@ -288,6 +294,11 @@ class RemoteClient extends Client {
                     input = protocol;
                     inputSocket = sock;
                   }
+                  if (monitor != null && monitoredTransport != input) {
+                    monitor.close();
+                    monitor = null;
+                    monitoredTransport = null;
+                  }
                   try {
                     if (input == null) {
                       // Detached: wait for reconnect() to install a new transport.
@@ -295,7 +306,27 @@ class RemoteClient extends Client {
                       continue;
                     }
                     Command cmd = input.read();
+                    if (monitor != null) {
+                      monitor.received();
+                    }
                     switch (cmd.getType()) {
+                      case Command.HEARTBEAT:
+                        {
+                          input.write(new HeartbeatCommand(((HeartbeatCommand) cmd).getNonce()));
+                          if (monitor == null) {
+                            // A client that sends heartbeats keeps sending them, so from now on
+                            // silence means the connection is gone even if no reset arrived.
+                            // Closing the transport ends the read below with an error, and the
+                            // probe is kept running and reconnectable like after a normal close.
+                            monitor =
+                                HeartbeatMonitor.watch(
+                                    "BTrace heartbeat " + getClassName(),
+                                    HeartbeatMonitor.timeoutMillis(),
+                                    () -> closeSilentTransport(input, inputSocket));
+                            monitoredTransport = monitor != null ? input : null;
+                          }
+                          break;
+                        }
                       case Command.EXIT:
                         {
                           log.debug("received exit command");
@@ -363,6 +394,9 @@ class RemoteClient extends Client {
                   }
                 }
               } finally {
+                if (monitor != null) {
+                  monitor.close();
+                }
                 BTraceRuntime.leave();
                 if (terminalHandshake.get() == null) {
                   try {
@@ -592,6 +626,29 @@ class RemoteClient extends Client {
       } catch (IOException ignore) {
         // best effort
       }
+    }
+  }
+
+  /**
+   * Closes a transport whose client stopped answering heartbeats. The blocked read then fails and
+   * the command handler releases the transport, leaving the probe detached but running.
+   */
+  private void closeSilentTransport(WireProtocol input, Socket inputSocket) {
+    log.warn(
+        "No heartbeat from the client of probe {} for {} ms; detaching it",
+        getClassName(),
+        HeartbeatMonitor.timeoutMillis());
+    // Close only the socket: a read on it fails with a SocketException, which releases the
+    // transport. A closed protocol would fail the next read with a plain IOException instead, and
+    // that path ends the probe.
+    try {
+      if (inputSocket != null) {
+        inputSocket.close();
+      } else {
+        input.close();
+      }
+    } catch (IOException ignore) {
+      // best effort
     }
   }
 

@@ -22,6 +22,7 @@ import io.btrace.core.comm.ErrorCommand;
 import io.btrace.core.comm.EventCommand;
 import io.btrace.core.comm.ExitCommand;
 import io.btrace.core.comm.GridDataCommand;
+import io.btrace.core.comm.HeartbeatCommand;
 import io.btrace.core.comm.InstrumentCommand;
 import io.btrace.core.comm.ListFailedExtensionsCommand;
 import io.btrace.core.comm.ListProbesCommand;
@@ -144,6 +145,9 @@ public class CommandAdapter {
         BinaryReconnectCommand reconnectCmd = (BinaryReconnectCommand) binaryCmd;
         return new ReconnectCommand(reconnectCmd.getProbeId());
 
+      case BinaryCommand.HEARTBEAT:
+        return new HeartbeatCommand(((BinaryHeartbeatCommand) binaryCmd).getNonce());
+
       default:
         throw new IllegalArgumentException(
             "Unsupported command type for conversion: " + binaryCmd.getType());
@@ -258,6 +262,9 @@ public class CommandAdapter {
         BinaryListFailedExtensionsCommand binaryFailedCmd = new BinaryListFailedExtensionsCommand();
         binaryFailedCmd.setFailures(listFailedCmd.getFailedExtensions());
         return binaryFailedCmd;
+
+      case Command.HEARTBEAT:
+        return new BinaryHeartbeatCommand(((HeartbeatCommand) originalCmd).getNonce());
 
       default:
         throw new IllegalArgumentException(

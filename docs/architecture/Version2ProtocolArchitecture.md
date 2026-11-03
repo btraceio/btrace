@@ -28,7 +28,8 @@ The BTrace v2 binary protocol is a performance-optimized communication protocol 
 - Custom binary serialization (vs Java ObjectInputStream/ObjectOutputStream)
 - Automatic protocol negotiation (once per connection)
 - Compression support for large payloads (>1KB threshold)
-- Thread-safe using ReentrantLock (vs synchronized blocks)
+- Thread-safe using a ReentrantLock per connection (vs synchronized blocks)
+- Heartbeats that detect a connection which went silent without being closed
 - Full backward compatibility with v1 protocol
 - Zero-configuration auto-detection
 
@@ -395,6 +396,47 @@ Command status = wire.read(in);
 
 **Key Insight:** Old clients always work with new agents, new clients always work with old agents
 
+### Connection Liveness
+
+A connection can go silent without being closed: a network partition, a suspended host, firewall
+state that was lost, or a peer that is alive but no longer reading. A blocking socket read then never
+returns, so without help the client would wait forever and the agent would keep treating the probe as
+connected. v2 sessions use heartbeats to notice.
+
+**Command:** `HEARTBEAT` (type 18) carries one `long` nonce:
+
+```
+┌──────────────┬──────────────┬──────────────────┐
+│ Version (1B) │ Type = 0x12  │ Nonce (8B, long) │
+└──────────────┴──────────────┴──────────────────┘
+```
+
+**Client** (probe sessions only: deploy and reconnect, not `-lp` or other one-shot requests):
+- sends a `HEARTBEAT` every interval, whether or not probe output is arriving, so the agent always
+  has something to observe;
+- consumes the agent's replies; they never reach the probe's output;
+- when nothing at all has arrived for the timeout, closes the socket. The blocked read fails and the
+  session ends as a lost connection (the listener gets `ExitCommand(-1)`).
+
+**Agent:**
+- answers each `HEARTBEAT` with a `HEARTBEAT` carrying the same nonce;
+- after the first heartbeat on a connection, watches it: when nothing arrives from that client for
+  the timeout, it closes the connection. The probe keeps running and becomes detached, exactly as
+  when a client closes its socket, so it shows up in the probe list and can be resumed with `-r`.
+  Closing the socket also releases a probe thread stuck writing to a peer that stopped reading.
+- never times out a client that sends no heartbeats.
+
+**Compatibility:** v1 has no `HEARTBEAT`; a v1 reader treats an unknown command type as a broken
+stream, so heartbeats are only ever sent on a v2 connection. Every v2 peer understands them.
+
+**Configuration** (milliseconds; 0 or less disables):
+```bash
+-Dbtrace.heartbeat.interval=10000   # client: time between heartbeats
+-Dbtrace.heartbeat.timeout=30000    # client and agent: silence before the connection is closed
+```
+The client reads both from its own JVM; the agent reads `btrace.heartbeat.timeout` from the target
+JVM. Keep the agent's timeout well above the client's interval.
+
 ---
 
 ## Wire Format Specification
@@ -410,7 +452,7 @@ Command status = wire.read(in);
 
 **Version Byte:** Current version is `0x03` (bumped from `0x02` after binary format changes to ErrorCommand and GridDataCommand)
 
-**Type Byte:** Command type identifier (0-16)
+**Type Byte:** Command type identifier (0-18)
 
 | Type | Hex  | Command Name                       |
 |------|------|------------------------------------|
@@ -431,6 +473,8 @@ Command status = wire.read(in);
 | 14   | 0x0E | LIST_PROBES                        |
 | 15   | 0x0F | DISCONNECT                         |
 | 16   | 0x10 | RECONNECT                          |
+| 17   | 0x11 | LIST_FAILED_EXTENSIONS             |
+| 18   | 0x12 | HEARTBEAT (v2 only, see [Connection Liveness](#connection-liveness)) |
 
 ### Primitive Type Encoding
 
@@ -711,7 +755,8 @@ public class WireIOV2Adapter implements WireProtocol {
 
 #### 3. Thread Safety: ReentrantLock
 **v1:** `synchronized (ObjectOutputStream)`
-**v2:** `ReentrantLock` in BinaryWireIO
+**v2:** a `ReentrantLock` per connection in `BinaryWireProtocol`; a write blocked on one connection
+never holds up another
 
 **Benefits:**
 - Better scalability under contention
