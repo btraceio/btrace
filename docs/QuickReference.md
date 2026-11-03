@@ -442,7 +442,7 @@ form (`"status": "preparation_required"`).
 - `--version` - Show the version as `BTrace v.<version> (<build commit>)`; a build made outside a git checkout prints `dev` as the commit
 - `-v` - Run in verbose mode
 - `-l` - List all locally attachable JVMs
-- `-lp` - List active probes in the given JVM (expects PID or app name)
+- `-lp` - List the probes in the given JVM that no client is connected to (detached, or whose client went away), which `-r` can reconnect to; a probe a client is still connected to is not listed (expects PID or app name)
 - `-le` - List failed extensions in the given JVM (expects PID or app name)
 - `-r <probe-id>` - Reconnect to an active disconnected probe. If the probe id is unknown, or the JVM has no BTrace control endpoint, `-r` prints the reason and exits with code 1
 - `-r help` - Show help on remote commands
@@ -467,7 +467,7 @@ btrace 12345 MyTrace.java
 # Verbose with output file
 btrace -v -o trace.log 12345 MyTrace.java
 
-# List active probes in a JVM
+# List detached probes in a JVM
 btrace -lp 12345
 
 # Reconnect to an active probe

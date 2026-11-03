@@ -108,7 +108,9 @@ loose on something that matters.
 
 ## Step 5 — Clean up
 
-Make sure no probe is left (prompt 4 does exactly this), then stop the demo app with `Ctrl+C` in its
+Make sure no probe is left (prompt 4 does exactly this). `list_probes` shows the probe the
+assistant's MCP server is connected to and any detached probe; a probe you attached yourself with
+the `btrace` CLI and are still connected to does not appear there. Then stop the demo app with `Ctrl+C` in its
 terminal, or `kill <PID>`. To remove the plugin, use `/plugin` in Claude Code.
 
 ## Troubleshooting
