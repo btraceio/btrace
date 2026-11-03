@@ -270,7 +270,11 @@ public enum Kind {
    *
    * <p>Fires when the line given by {@link Location#line()} is reached, or at every line when it is
    * {@code -1}, in the methods that {@link OnMethod#method()} and {@link OnMethod#type()} select;
-   * leave {@code method} empty to cover every method of the class.
+   * leave {@code method} empty to cover every method of the class. javac compiles some source lines
+   * into other methods: a lambda body into {@code lambda$<method>$<n>}, an instance field
+   * initializer into {@code <init>} and a static initializer into {@code <clinit>}. A probe on such
+   * a line must select that method too, for example {@code method =
+   * "/process|lambda\\$process\\$\\d+/"}, or leave {@code method} empty.
    *
    * <h3>Unannotated probe handler parameters:</h3>
    *

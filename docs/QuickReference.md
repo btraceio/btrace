@@ -167,6 +167,10 @@ Specify where to inject code within a method using `@Location(Kind.XXX)`.
 @Location(value = Kind.LINE, line = 42)  // Line 42, in the methods @OnMethod(method = ...) selects
 ```
 
+A `Kind.LINE` probe only sees the lines of the methods it selects. Lines in a lambda body belong to
+`lambda$<method>$<n>`, field initializers to `<init>` or `<clinit>`; select those too, or leave
+`method` empty to cover the whole class.
+
 ## Parameter Annotations
 
 Inject context information into probe handler parameters.
