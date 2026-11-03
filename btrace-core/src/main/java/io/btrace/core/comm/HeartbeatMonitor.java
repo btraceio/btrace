@@ -167,7 +167,9 @@ public final class HeartbeatMonitor {
 
   private void run() {
     long nonce = 0;
-    long nextPing = System.nanoTime();
+    // The first ping waits one interval: a session that ends at once (a refused probe, an exit
+    // right after reconnecting) then never has a heartbeat in flight when the peer closes.
+    long nextPing = System.nanoTime() + intervalNanos;
     Future<?> pendingPing = null;
     try {
       while (!closed) {

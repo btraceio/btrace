@@ -412,9 +412,12 @@ connected. v2 sessions use heartbeats to notice.
 ```
 
 **Client** (probe sessions only: deploy and reconnect, not `-lp` or other one-shot requests):
-- starts once the agent confirms the deploy or reconnect with a successful `STATUS`. An agent that
-  refuses a probe closes the connection, and on Linux closing a socket with unread input (an early
-  heartbeat) sends a reset that would discard the refusal before the client reads it;
+- never has a heartbeat in flight when it expects the agent to close the connection. On Linux,
+  closing a socket with unread input (a heartbeat the agent never read) sends a reset, which can
+  discard the agent's last messages, such as a refusal or the final `EXIT`, before the client reads
+  them. So heartbeats start once the agent confirms the deploy or reconnect with a successful
+  `STATUS`, the first one goes out one interval later, and they stop before the client sends `EXIT`
+  or `DISCONNECT`;
 - sends a `HEARTBEAT` every interval, whether or not probe output is arriving, so the agent always
   has something to observe;
 - consumes the agent's replies; they never reach the probe's output;

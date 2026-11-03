@@ -154,6 +154,8 @@ public class Client {
   // connection state to the traced JVM
   private volatile Socket sock;
   private volatile WireProtocol protocol;
+  // heartbeats of the running probe session, if any
+  private volatile HeartbeatMonitor heartbeat;
 
   private boolean disconnected = false;
 
@@ -1387,6 +1389,7 @@ public class Client {
 
   /** Sends ExitCommand to the traced JVM. */
   public void sendExit(int code) throws IOException {
+    stopHeartbeat();
     send(new ExitCommand(code));
   }
 
@@ -1394,7 +1397,20 @@ public class Client {
     if (log.isDebugEnabled()) {
       log.debug("sending command {}", DisconnectCommand.class.getSimpleName());
     }
+    stopHeartbeat();
     send(new DisconnectCommand());
+  }
+
+  /**
+   * Stops heartbeats before a command after which the agent closes the connection. A heartbeat the
+   * agent never reads would be unread input when it closes, and on Linux that resets the connection
+   * and can discard the agent's last messages before the client reads them.
+   */
+  private void stopHeartbeat() {
+    HeartbeatMonitor monitor = heartbeat;
+    if (monitor != null) {
+      monitor.close();
+    }
   }
 
   /** Sends an EventCommand to the traced JVM. */
@@ -1619,21 +1635,19 @@ public class Client {
 
   /**
    * Runs the command loop until EXIT is received or {@code done} reports true after a command. A
-   * probe session passes {@code heartbeat} so that a silently dropped connection is noticed.
+   * probe session passes {@code withHeartbeat} so that a silently dropped connection is noticed.
    * Heartbeats start once the agent confirms the deploy or reconnect: an agent that refuses the
    * probe closes the connection, and on Linux closing a socket with unread input (a heartbeat
    * already sent) resets the connection, which discards the refusal before the client reads it.
    */
-  private void commandLoop(CommandListener listener, BooleanSupplier done, boolean heartbeat)
+  private void commandLoop(CommandListener listener, BooleanSupplier done, boolean withHeartbeat)
       throws IOException {
     assert protocol != null : "null protocol?";
-    HeartbeatMonitor[] monitor = new HeartbeatMonitor[1];
     try {
-      runCommandLoop(listener, done, heartbeat, monitor);
+      runCommandLoop(listener, done, withHeartbeat);
     } finally {
-      if (monitor[0] != null) {
-        monitor[0].close();
-      }
+      stopHeartbeat();
+      this.heartbeat = null;
     }
   }
 
@@ -1664,14 +1678,10 @@ public class Client {
         });
   }
 
-  private void runCommandLoop(
-      CommandListener listener,
-      BooleanSupplier done,
-      boolean heartbeat,
-      HeartbeatMonitor[] monitorHolder)
+  private void runCommandLoop(CommandListener listener, BooleanSupplier done, boolean withHeartbeat)
       throws IOException {
     AtomicBoolean exited = new AtomicBoolean(false);
-    boolean heartbeatPending = heartbeat;
+    boolean heartbeatPending = withHeartbeat;
     HeartbeatMonitor monitor = null;
     while (true) {
       try {
@@ -1684,7 +1694,7 @@ public class Client {
             && ((StatusCommand) cmd).isSuccess()) {
           heartbeatPending = false;
           monitor = startHeartbeat();
-          monitorHolder[0] = monitor;
+          this.heartbeat = monitor;
         }
         if (cmd.getType() == Command.HEARTBEAT) {
           // A reply to our own heartbeat; it is not probe output.
