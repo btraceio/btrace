@@ -245,6 +245,25 @@ jobs:
             btrace-qe/build/qe-report/**/*
             btrace-qe/build/reports/**/*
 
+  # btrace-gradle-plugin is an included build, so the root `build` does not run its tests; until
+  # this job they ran only in the release gate.
+  gradle-plugin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Set up Java
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          java-version: 21
+          distribution: temurin
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+      - name: Gradle plugin tests
+        working-directory: btrace-gradle-plugin
+        run: ../gradlew --no-daemon test
+
   # Deterministic checks of the agent configuration and contributor docs (scripts/guardrails/).
   # Each check's own tests run first: a gate whose tests fail cannot be trusted to pass.
   guardrails:
@@ -293,20 +312,24 @@ jobs:
       - test
       - qe
       - guardrails
+      - gradle-plugin
     runs-on: ubuntu-latest
     steps:
-      - name: Require build, every test lane, the harness and the guardrails to succeed
+      - name: Require build, every test lane, the harness, the guardrails and the plugin tests to succeed
         env:
           BUILD_RESULT: ${{ needs.build.result }}
           TEST_RESULT: ${{ needs.test.result }}
           QE_RESULT: ${{ needs.qe.result }}
           GUARDRAILS_RESULT: ${{ needs.guardrails.result }}
+          PLUGIN_RESULT: ${{ needs.gradle-plugin.result }}
         run: |
-          echo "build: ${BUILD_RESULT}, test: ${TEST_RESULT}, qe: ${QE_RESULT}, guardrails: ${GUARDRAILS_RESULT}"
-          if [ "${BUILD_RESULT}" != "success" ] || [ "${TEST_RESULT}" != "success" ] || [ "${QE_RESULT}" != "success" ] || [ "${GUARDRAILS_RESULT}" != "success" ]; then
-            echo "::error::build, all test lanes, the qe harness and the guardrails must succeed (build=${BUILD_RESULT}, test=${TEST_RESULT}, qe=${QE_RESULT}, guardrails=${GUARDRAILS_RESULT})"
-            exit 1
-          fi
+          echo "build: ${BUILD_RESULT}, test: ${TEST_RESULT}, qe: ${QE_RESULT}, guardrails: ${GUARDRAILS_RESULT}, gradle-plugin: ${PLUGIN_RESULT}"
+          for result in "${BUILD_RESULT}" "${TEST_RESULT}" "${QE_RESULT}" "${GUARDRAILS_RESULT}" "${PLUGIN_RESULT}"; do
+            if [ "${result}" != "success" ]; then
+              echo "::error::build, all test lanes, the qe harness, the guardrails and the plugin tests must succeed (build=${BUILD_RESULT}, test=${TEST_RESULT}, qe=${QE_RESULT}, guardrails=${GUARDRAILS_RESULT}, gradle-plugin=${PLUGIN_RESULT})"
+              exit 1
+            fi
+          done
 
   publish:
     if: github.ref == 'refs/heads/develop'
