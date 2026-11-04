@@ -21,4 +21,4 @@ steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
 expect:
   outputMustMatch:
     - "^=== Latency Report ===$"
-    - "^chargeCard\\s+p50=\\d+ms\\s+p95=\\d+ms\\s+p99=\\d+ms\\s+\\(n=\\d+\\)$"
+    - "^chargeCard\\s+p50=[1-9]\\d*ms\\s+p95=[1-9]\\d*ms\\s+p99=[1-9]\\d*ms\\s+\\(n=[1-9]\\d*\\)$"
