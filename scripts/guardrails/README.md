@@ -1,9 +1,12 @@
 # Guardrails
 
 Deterministic checks for rules that advisory text (AGENTS.md, CLAUDE.md, skills) cannot enforce.
-G1, G2 and G4 run in the `guardrails` job of `.github/workflows/continuous.yml`, which
-`tests-passed` requires, so a violation blocks the merge. G5 runs in `pr-metadata.yml`; it blocks
-only once its `pr-metadata` check is marked required in the repository's branch rules.
+G1, G2 and G4 run in the `guardrails` job of `.github/workflows/continuous.yml`, which feeds the
+aggregate `tests-passed` check. G5 runs in `pr-metadata.yml` as the `pr-metadata` check. A failing
+check blocks merging only if the repository's branch rules require it: as of 2026-11-04 the
+"Merging" ruleset for `develop` and `master` requires only `build`, so `tests-passed` (and with it
+the integration lanes, the qe harness and these guardrails) and `pr-metadata` still need to be
+added there.
 
 | Check | Rule | Run locally |
 | --- | --- | --- |

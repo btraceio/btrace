@@ -46,6 +46,13 @@ They **are** gated: Google Java Format's Spotless step removes them, and adding 
 root `build.gradle` carried a second, dead Spotless block (unpinned `googleJavaFormat()`, targeting the
 source-less root project); it misled this audit and the steward skill.
 
+**What actually blocks a merge [V]** (`gh api repos/btraceio/btrace/rulesets/26315659`, read
+2026-11-04): the active "Merging" ruleset for `develop`/`master` requires **one** status check,
+`build`. `tests-passed` — which `continuous.yml:248-252` says to "make … required instead" — is not
+required, so the integration matrix, the qe harness and anything added to `tests-passed` cannot block
+a merge today. `require_code_owner_review` is `false`. The ruleset is settings, not code: it is the
+largest gap between what the repository says is gated and what is.
+
 **Swallowed failures** **[S]**: Docker-tagged integration tests skip with a warning when Docker is absent
 (`integration-tests/build.gradle:197-221`, also under `-PCI`); `v2-protocol-tests.yml` summary counts
 `failures=` but ignores `errors=`; `run_tests.sh:17` `|| true` (not used by CI).
@@ -271,7 +278,9 @@ gate must be seen to fail; doc placement), each with its case file and a "mechan
 2. **Blocking:** **all gates G1–G5 block.** Consequence for G5: it reads the PR title/body, so it runs in
    its own workflow on `pull_request` (`opened`, `edited`, `synchronize`, `reopened`) and passes trivially
    on `merge_group`; it is made required through branch protection (outside the repo), not through
-   `tests-passed`. G1–G4 join `tests-passed.needs` via the `guardrails` job.
+   `tests-passed`. G1–G4 join `tests-passed.needs` via the `guardrails` job. **Blocking needs a
+   settings change:** the Merging ruleset requires only `build` (section 1.2), so `tests-passed` and
+   `pr-metadata` must be added to it — pending the maintainer.
 3. **Session-local directories:** `docs/superpowers/` moves to `internal/superpowers/`;
    `internal/libretti/` and `internal/superpowers/` stay tracked; `scratchpad/`, `.codex/`,
    `__pycache__/` and `.gradle-home` are gitignored. Pushed history is accepted as-is (no rewrite).
