@@ -18,6 +18,7 @@ package io.btrace.instr;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Collection;
 import org.junit.jupiter.api.Test;
 
 class BackendSelectorTest {
@@ -35,9 +36,54 @@ class BackendSelectorTest {
   }
 
   @Test
-  void nonAsmBackendOrFallbackForJava28Plus() {
-    InstrumentationBackend b = BackendSelector.select(72);
-    assertNotNull(b);
+  void java28PlusUsesClassFileApiBackendOrSaysWhyNot() {
+    if (javaFeatureVersion() >= 24) {
+      assertEquals(
+          "io.btrace.instr.ClassFileApiBackend", BackendSelector.select(72).getClass().getName());
+    } else {
+      // The backend targets Java 24 and cannot load here; the reason must surface, not ASM.
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> BackendSelector.select(72));
+      assertTrue(e.getMessage().contains("needs the ClassFile API backend"), e.getMessage());
+      assertNotNull(e.getCause());
+    }
+  }
+
+  @Test
+  void loadedClassFileApiBackendHandlesVersionsAboveTheAsmCeiling() {
+    InstrumentationBackend classFileApi = new StubBackend();
+    assertSame(classFileApi, BackendSelector.choose(72, classFileApi, null));
+    assertInstanceOf(
+        AsmInstrumentationBackend.class, BackendSelector.choose(71, classFileApi, null));
+  }
+
+  @Test
+  void failedClassFileApiBackendIsReportedInsteadOfFallingBackToAsm() {
+    Throwable loadFailure = new NoClassDefFoundError("java/lang/classfile/ClassFile");
+    IllegalStateException e =
+        assertThrows(
+            IllegalStateException.class, () -> BackendSelector.choose(72, null, loadFailure));
+    assertSame(loadFailure, e.getCause());
+    assertTrue(e.getMessage().contains("major version 72"), e.getMessage());
+    assertTrue(e.getMessage().contains("java/lang/classfile/ClassFile"), e.getMessage());
+  }
+
+  private static int javaFeatureVersion() {
+    String spec = System.getProperty("java.specification.version");
+    return Integer.parseInt(spec.startsWith("1.") ? spec.substring(2) : spec);
+  }
+
+  private static final class StubBackend implements InstrumentationBackend {
+    @Override
+    public boolean supports(int classFileMajorVersion) {
+      return true;
+    }
+
+    @Override
+    public byte[] instrument(
+        ClassLoader loader, byte[] classfileBuffer, Collection<BTraceProbe> probes) {
+      return null;
+    }
   }
 
   @Test

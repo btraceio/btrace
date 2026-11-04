@@ -60,24 +60,20 @@ The `ClassMeta` interface complements the SPI: it exposes the minimal class meta
 
 ## Backend Selection
 
-`BackendSelector` chooses a backend based on the class file major version. The selection logic, verbatim:
-
-```java
-static InstrumentationBackend select(int classFileMajorVersion) {
-  if (!ASM.supports(classFileMajorVersion) && CLASSFILE_API != null) {
-    return CLASSFILE_API;
-  }
-  return ASM;
-}
-```
-
-In other words:
+`BackendSelector` chooses a backend based on the class file major version:
 
 1. Class file version ≤ 71 → ASM backend (the default, full-featured path).
-2. Class file version > 71 and the ClassFile API backend is available → ClassFile API backend.
-3. Class file version > 71 but the ClassFile API backend is unavailable (agent running on JDK < 24) → falls back to ASM, which will fail to parse the class; instrumentation of that class is effectively skipped.
+2. Class file version > 71 → ClassFile API backend.
+3. Class file version > 71 and the ClassFile API backend failed to load → `select` throws an
+   `IllegalStateException` that names the load failure. The class stays uninstrumented, and the
+   transformer reports it to the attached clients as `[BTRACE WARN] Could not instrument <class> …`
+   (once per class, for a limited number of classes per probe).
+   Handing the class to ASM instead would only produce ASM's "unsupported class file version"
+   error and hide the real cause.
 
-The ClassFile API backend is loaded **reflectively** at class-initialization time so the main (Java 8-compiled) source set has no compile-time dependency on `java.lang.classfile`:
+The ClassFile API backend is loaded **reflectively** so the main (Java 8-compiled) source set has no
+compile-time dependency on `java.lang.classfile`, and **lazily**, the first time a class file newer
+than the ASM ceiling arrives:
 
 ```java
 Class<?> cls =
@@ -86,7 +82,10 @@ Class<?> cls =
 return (InstrumentationBackend) cls.getDeclaredConstructor().newInstance();
 ```
 
-On JDK < 24 the `Class.forName` fails (the compiled class targets class file version 68/Java 24 and references `java.lang.classfile`), the failure is logged at debug level, and the field stays `null`.
+Such class files only reach the agent on a JVM new enough to run them, and every such JVM has the
+ClassFile API, so a load failure means a broken installation (for example a class missing from the
+masked JAR). It is logged once at WARN with its stack trace, and every later class that needs the
+backend fails with the same cause.
 
 ## ClassFile API Backend
 
@@ -134,7 +133,7 @@ jar {
 Important consequences:
 
 - The agent jar is **NOT a Multi-Release JAR** — there is no `META-INF/versions/24/` entry and no `Multi-Release` manifest attribute. The compiled-at-24 `ClassFileApiBackend.class` sits at the jar root next to the Java 8-compatible classes.
-- The class is never referenced directly from Java 8-compiled code; it is only ever loaded **reflectively** by `BackendSelector`. On older JDKs the reflective load fails cleanly (`UnsupportedClassVersionError` caught as `Throwable`), and BTrace continues with the ASM backend only.
+- The class is never referenced directly from Java 8-compiled code; it is only ever loaded **reflectively** by `BackendSelector`, and only when a class file newer than the ASM ceiling arrives. An older JDK never loads such a class file, so it never attempts the load and runs on the ASM backend alone; see [Backend Selection](#backend-selection) for what happens if the load fails on a newer JDK.
 
 ## Related Documents
 
