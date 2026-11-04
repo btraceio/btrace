@@ -21,7 +21,9 @@ Get up and running in 5 minutes with installation, your first script, and common
 | **[MCP Server](MCPServer.md)** | Pointer to the `btrace-observability` MCP plugin, which ships in the external [btraceio/agent-plugins](https://github.com/btraceio/agent-plugins) repository | AI-assisted debugging, LLM integrations |
 | **[Migration Guide 2.x → 3.0](Migration-2.x-to-3.0.md)** | Upgrading from BTrace 2.x: package rename, Java version policy, breaking changes | Existing 2.x users |
 | **[Extension Development Guide](BTraceExtensionDevelopmentGuide.md)** | Writing, packaging, and publishing BTrace extensions | Extension authors, platform maintainers |
+| **[Extension Interface Rules](ExtensionInterfaceRules.md)** | Rules for extension API interfaces, the Gradle plugin's build-time checks, shims and stubs | Extension authors |
 | **[3.0 Release Checklist](ReleaseChecklist.md)** | JDK, protocol, security, packaging, and RC go/no-go gates | Release maintainers |
+| **[Releasing](releasing.md)** | The automated release process (`scripts/release.sh`, release workflow, release candidates) | Release maintainers |
 | **[QE Agent](QEAgent.md)** | Reproducible harness probing BTrace's own spec conformance and misuse resilience | Contributors, maintainers |
 
 ## Learning Paths
@@ -117,6 +119,7 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 - **Bundled Extensions** → [Extension Development Guide: Bundled Extensions](BTraceExtensionDevelopmentGuide.md#bundled-extensions) — the eight shipped extensions, their services and privilege status
 - **Instrumentation Backends (ASM / ClassFile API)** → [Instrumentation Backends](architecture/InstrumentationBackends.md) — automatic backend selection for future JDK class files
 - **Agent Library Attributes** → [Agent Manifest Library Attributes](architecture/agent-manifest-libs.md) — declaring boot/system JARs via the agent manifest
+- **Moving off libs/profiles** → [Migrating from libs/profiles to Extensions](architecture/migrating-from-libs-profiles.md), [Provided-Style Extensions for App Integrations](architecture/provided-style-extensions.md)
 
 ### Hands-On Tutorials
 

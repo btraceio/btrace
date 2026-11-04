@@ -1196,7 +1196,7 @@ Expected: changes are limited to `ClassFileApiBackend.java`, `ClassFileApiBacken
 - [ ] **Step 8: Commit**
 
 ```bash
-git add btrace-agent/src/main/java24/io/btrace/instr/ClassFileApiBackend.java btrace-agent/src/test/java/io/btrace/instr/ClassFileApiBackendTest.java docs/superpowers/plans/2026-06-04-classfileapi-call-targetinstance.md
+git add btrace-agent/src/main/java24/io/btrace/instr/ClassFileApiBackend.java btrace-agent/src/test/java/io/btrace/instr/ClassFileApiBackendTest.java internal/superpowers/plans/2026-06-04-classfileapi-call-targetinstance.md
 git commit -m "test(agent): cover ClassFile API call probe edge cases"
 ```
 

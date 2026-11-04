@@ -54,3 +54,10 @@ compile.log
 gradle/gradle-daemon-jvm.properties
 # JVM thread-dump artifacts from stalled integration tests
 javacore.*.txt
+
+# Session-local agent and tool state (never belongs in the repository)
+/scratchpad/
+/.codex/
+__pycache__/
+# Older docs used this Gradle cache name; .gradle-user (above) is the documented one
+.gradle-home

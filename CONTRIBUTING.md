@@ -4,17 +4,21 @@ Thanks for your interest in contributing! This guide covers local development, r
 
 ## Local Development
 
-- JDK: Use a reasonably recent JDK (11+ recommended). The project targets a broad range but tests run comfortably on 11/17.
+- JDKs: the build uses Gradle toolchains and does not download them, so install these locally (Gradle finds SDKMAN and standard install locations, or list them in `org.gradle.java.installations.paths`):
+  - JDK 8: compiles `btrace-agent` and provides `tools.jar` and `javadoc` (`common.gradle`).
+  - JDK 11: the default compiler for the other modules.
+  - JDK 24: compiles the ClassFile API backend (`btrace-agent` `java24` source set).
+  - JDK 28: runs `:btrace-agent:classFileApiBackendTest`, which `check` depends on. Without it the task is skipped locally (and fails under `CI`), so those tests did not run.
 - Wrapper: Use the bundled `./gradlew` wrapper. It will download the pinned Gradle version if needed.
-- Local Gradle cache (optional but recommended):
-  - macOS/Linux: `export GRADLE_USER_HOME="$PWD/.gradle-home"`
-  - Windows (PowerShell): `$env:GRADLE_USER_HOME = "$PWD/.gradle-home"`
+- Local Gradle cache (optional but recommended; `.gradle-user` is gitignored):
+  - macOS/Linux: `export GRADLE_USER_HOME="$PWD/.gradle-user"`
+  - Windows (PowerShell): `$env:GRADLE_USER_HOME = "$PWD/.gradle-user"`
 
 ## Running Tests
 
-- All unit tests (skip integration tests):
+- All unit tests (integration tests run only with `-Pintegration`, see below):
   ```sh
-  ./gradlew --no-daemon test -x integration-tests:test
+  ./gradlew --no-daemon test
   ```
 
 - Per-module tests:
@@ -29,18 +33,11 @@ Thanks for your interest in contributing! This guide covers local development, r
   ./gradlew test -PupdateTestData
   ```
 
-- Integration tests (spawn JVMs, exercise agent and extensions):
+- Integration tests (spawn JVMs, exercise agent and extensions). They need `-Pintegration`: without it `:integration-tests:test` is skipped and the build still succeeds, having run nothing. The task builds the distribution it needs and writes the extension permission policy for the target JVMs itself.
   ```sh
-  ./gradlew --no-daemon integration-tests:test
+  ./gradlew --no-daemon -Pintegration :integration-tests:test
   ```
-  - If tests fail due to denied privileged extensions, pass a policy file to the tested JVMs:
-    - Create `permissions.properties`:
-      ```properties
-      allowPrivileged=true
-      allowExtensions=btrace-metrics,btrace-utils
-      ```
-    - Export path: `export BTRACE_PERMS=$PWD/permissions.properties`
-    - Run Gradle with: `-Dbtrace.permissions=$BTRACE_PERMS`
+  Check the test count in `integration-tests/build/test-results/test/` rather than the exit status.
 
 ## Gradle Tips
 
@@ -57,13 +54,12 @@ Thanks for your interest in contributing! This guide covers local development, r
 
 ## Troubleshooting
 
-- Gradle wrapper needs to download Gradle: ensure network is allowed once; subsequent runs use the local cache under `.gradle-home`.
+- Gradle wrapper needs to download Gradle: ensure network is allowed once; subsequent runs use the local cache under `.gradle-user`.
+- `Cannot find a Java installation ... matching: {languageVersion=N}`: install JDK N (see Local Development).
 - Error: `Could not determine a usable wildcard IP for this machine`:
   - Set the IPv4 flags shown above or ensure local networking is available.
 - Permission errors when Gradle writes outside the workspace:
   - Use a local Gradle cache via `GRADLE_USER_HOME` as shown above.
-- Integration tests failing with permissions denied:
-  - Provide a policy file and pass it via `-Dbtrace.permissions=/path/to/permissions.properties`.
 
 ## Code Style & Scope
 
