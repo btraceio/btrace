@@ -1,5 +1,7 @@
 plugins {
     id "jacoco"
+    // Formatting is configured per subproject in gradle/spotless.gradle; applied here only for the
+    // `check` lifecycle task, which verifies the extension publications below.
     alias(libs.plugins.spotless)
     alias(libs.plugins.publish)
 }
@@ -121,21 +123,6 @@ task mergedJavadoc(type: Javadoc, description: 'Creates Javadoc from all the pro
     }
     classpath.from {
         subprojects*.configurations*.compile*.copyRecursive({ !(it instanceof ProjectDependency) })*.resolve()
-    }
-}
-
-spotless {
-    java {
-        target 'src/*/java/**/*.java'
-        // note: you can use an empty string for all the imports you didn't specify explicitly, and '\\#` prefix for static imports
-        importOrder('java', 'javax', 'io.btrace', '', '\\#io.btrace', '\\#')
-        removeUnusedImports()
-
-        googleJavaFormat()   // has its own section below
-
-        formatAnnotations()  // fixes formatting of type annotations, see below
-
-        licenseHeaderFile rootProject.file('license.header')
     }
 }
 
