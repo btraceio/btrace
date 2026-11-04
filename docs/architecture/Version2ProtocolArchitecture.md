@@ -443,6 +443,13 @@ stream, so heartbeats are only ever sent on a v2 connection. Every v2 peer under
 The client reads both from its own JVM; the agent reads `btrace.heartbeat.timeout` from the target
 JVM. Keep the agent's timeout well above the client's interval.
 
+**TCP keepalive** is a backstop for sessions without heartbeats (v1, or a peer from BTrace 2.x).
+Both the client socket and the agent's accepted socket enable `SO_KEEPALIVE`. Where the JDK offers
+the extended socket options (JDK 11+, looked up reflectively so the code still runs on JDK 8), probes
+start after 30 s idle, every 10 s, and give up after 3; elsewhere the OS defaults apply, which on
+Linux means about two hours. Keepalive only detects a dead or unreachable peer, not one that is
+alive but no longer reading.
+
 ---
 
 ## Wire Format Specification

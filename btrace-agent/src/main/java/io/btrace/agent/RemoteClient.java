@@ -35,6 +35,7 @@ import io.btrace.core.comm.ProtocolNegotiator;
 import io.btrace.core.comm.ProtocolVersion;
 import io.btrace.core.comm.ReconnectCommand;
 import io.btrace.core.comm.SetSettingsCommand;
+import io.btrace.core.comm.SocketKeepAlive;
 import io.btrace.core.comm.StatusCommand;
 import io.btrace.core.comm.WireProtocol;
 import io.btrace.extension.ExtensionRegistry;
@@ -118,6 +119,7 @@ class RemoteClient extends Client {
       byte[] authenticationToken,
       Function<Client, Future<?>> initCallback)
       throws IOException {
+    SocketKeepAlive.enable(sock);
     ProtocolConfig config = ProtocolConfig.fromSystemProperties();
     InputStream rawInput = sock.getInputStream();
     OutputStream output = sock.getOutputStream();
