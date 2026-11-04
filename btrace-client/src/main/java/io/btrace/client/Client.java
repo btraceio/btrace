@@ -34,6 +34,8 @@ import io.btrace.core.comm.ConnectionAuthenticator;
 import io.btrace.core.comm.DisconnectCommand;
 import io.btrace.core.comm.EventCommand;
 import io.btrace.core.comm.ExitCommand;
+import io.btrace.core.comm.HeartbeatCommand;
+import io.btrace.core.comm.HeartbeatMonitor;
 import io.btrace.core.comm.InstrumentCommand;
 import io.btrace.core.comm.JavaSerializationProtocol;
 import io.btrace.core.comm.ListFailedExtensionsCommand;
@@ -152,6 +154,8 @@ public class Client {
   // connection state to the traced JVM
   private volatile Socket sock;
   private volatile WireProtocol protocol;
+  // heartbeats of the running probe session, if any
+  private volatile HeartbeatMonitor heartbeat;
 
   private boolean disconnected = false;
 
@@ -1252,7 +1256,8 @@ public class Client {
               }
             }
           },
-          () -> failure.get() != null);
+          () -> failure.get() != null,
+          true);
       if (failure.get() != null) {
         throw failure.get();
       }
@@ -1352,7 +1357,8 @@ public class Client {
               }
             }
           },
-          () -> failure.get() != null);
+          () -> failure.get() != null,
+          true);
       if (failure.get() != null) {
         throw failure.get();
       }
@@ -1383,6 +1389,7 @@ public class Client {
 
   /** Sends ExitCommand to the traced JVM. */
   public void sendExit(int code) throws IOException {
+    stopHeartbeat();
     send(new ExitCommand(code));
   }
 
@@ -1390,7 +1397,20 @@ public class Client {
     if (log.isDebugEnabled()) {
       log.debug("sending command {}", DisconnectCommand.class.getSimpleName());
     }
+    stopHeartbeat();
     send(new DisconnectCommand());
+  }
+
+  /**
+   * Stops heartbeats before a command after which the agent closes the connection. A heartbeat the
+   * agent never reads would be unread input when it closes, and on Linux that resets the connection
+   * and can discard the agent's last messages before the client reads them.
+   */
+  private void stopHeartbeat() {
+    HeartbeatMonitor monitor = heartbeat;
+    if (monitor != null) {
+      monitor.close();
+    }
   }
 
   /** Sends an EventCommand to the traced JVM. */
@@ -1608,13 +1628,78 @@ public class Client {
     commandLoop(listener, () -> false);
   }
 
-  /** Runs the command loop until EXIT is received or {@code done} reports true after a command. */
+  /** Runs the command loop of a short request, which needs no heartbeats. */
   private void commandLoop(CommandListener listener, BooleanSupplier done) throws IOException {
+    commandLoop(listener, done, false);
+  }
+
+  /**
+   * Runs the command loop until EXIT is received or {@code done} reports true after a command. A
+   * probe session passes {@code withHeartbeat} so that a silently dropped connection is noticed.
+   * Heartbeats start once the agent confirms the deploy or reconnect: an agent that refuses the
+   * probe closes the connection, and on Linux closing a socket with unread input (a heartbeat
+   * already sent) resets the connection, which discards the refusal before the client reads it.
+   */
+  private void commandLoop(CommandListener listener, BooleanSupplier done, boolean withHeartbeat)
+      throws IOException {
     assert protocol != null : "null protocol?";
+    try {
+      runCommandLoop(listener, done, withHeartbeat);
+    } finally {
+      stopHeartbeat();
+      this.heartbeat = null;
+    }
+  }
+
+  /**
+   * Starts heartbeats on a v2 connection. A connection that drops without a reset, or an agent that
+   * stops answering, would otherwise leave the command loop blocked in a read forever. On timeout
+   * the socket is closed, which ends the read with an error and reports the session as lost.
+   */
+  private HeartbeatMonitor startHeartbeat() {
+    WireProtocol session = protocol;
+    Socket socket = sock;
+    if (session == null || session.getVersion() != ProtocolVersion.V2) {
+      // A v1 peer, such as a 2.x agent, would treat a HEARTBEAT as a broken stream.
+      return null;
+    }
+    long timeoutMillis = HeartbeatMonitor.timeoutMillis();
+    return HeartbeatMonitor.pingAndWatch(
+        "BTrace client heartbeat",
+        HeartbeatMonitor.intervalMillis(),
+        timeoutMillis,
+        nonce -> session.write(new HeartbeatCommand(nonce)),
+        () -> {
+          log.warn(
+              "No reply from the BTrace agent on port {} for {} ms; closing the connection",
+              port,
+              timeoutMillis);
+          closeSocketQuietly(socket);
+        });
+  }
+
+  private void runCommandLoop(CommandListener listener, BooleanSupplier done, boolean withHeartbeat)
+      throws IOException {
     AtomicBoolean exited = new AtomicBoolean(false);
+    boolean heartbeatPending = withHeartbeat;
+    HeartbeatMonitor monitor = null;
     while (true) {
       try {
         Command cmd = protocol.read();
+        if (monitor != null) {
+          monitor.received();
+        }
+        if (heartbeatPending
+            && cmd.getType() == Command.STATUS
+            && ((StatusCommand) cmd).isSuccess()) {
+          heartbeatPending = false;
+          monitor = startHeartbeat();
+          this.heartbeat = monitor;
+        }
+        if (cmd.getType() == Command.HEARTBEAT) {
+          // A reply to our own heartbeat; it is not probe output.
+          continue;
+        }
         if (log.isDebugEnabled()) {
           log.debug("received command {}", cmd);
         }
@@ -1629,6 +1714,15 @@ public class Client {
         }
       } catch (IOException e) {
         if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));
+        if (monitor != null && monitor.isTimedOut()) {
+          throw new IOException(
+              "No reply from the BTrace agent on port "
+                  + port
+                  + " for "
+                  + HeartbeatMonitor.timeoutMillis()
+                  + " ms",
+              e);
+        }
         throw e;
       } catch (ClassNotFoundException e) {
         if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));

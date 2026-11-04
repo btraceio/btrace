@@ -98,6 +98,10 @@ public class WireIO {
 
   @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   public static void write(ObjectOutput out, Command cmd) throws IOException {
+    if (cmd.getType() == Command.HEARTBEAT) {
+      // Refuse before writing the type byte, so the stream stays intact.
+      throw new IOException("HEARTBEAT is only supported by the v2 protocol");
+    }
     synchronized (out) {
       out.writeByte(cmd.getType());
       cmd.write(out);

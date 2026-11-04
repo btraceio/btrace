@@ -625,6 +625,8 @@ Client and agent communicate over a pluggable wire protocol: V1 (Java serializat
 | `btrace.comm.autoNegotiate` | `true` | Enable automatic protocol negotiation |
 | `btrace.comm.forceVersion` | `false` | Force the configured version without negotiation (mutually exclusive with auto-negotiation) |
 | `btrace.protocol.negotiation.timeout` | `5000` | Negotiation timeout in milliseconds |
+| `btrace.heartbeat.interval` | `10000` | Client: milliseconds between heartbeats on a V2 probe session; `0` disables them |
+| `btrace.heartbeat.timeout` | `30000` | Client and agent: milliseconds of silence after which a V2 connection is closed (the agent detaches the probe, which keeps running); `0` disables the check |
 
 ## Built-in Functions
 

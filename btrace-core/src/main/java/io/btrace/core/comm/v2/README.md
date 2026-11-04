@@ -48,6 +48,7 @@ The binary protocol supports all the command types from the original protocol:
 | 15 | DISCONNECT | Disconnect command |
 | 16 | RECONNECT | Reconnect command |
 | 17 | LIST_FAILED_EXTENSIONS | List failed extensions command |
+| 18 | HEARTBEAT | Connection liveness check (V2 only) |
 
 ## Data Types
 

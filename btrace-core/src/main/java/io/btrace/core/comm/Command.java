@@ -41,8 +41,14 @@ public abstract class Command implements Serializable {
   public static final byte RECONNECT = 16;
   public static final byte LIST_FAILED_EXTENSIONS = 17;
 
+  /**
+   * Liveness check on an idle connection. v2 (binary) protocol only: a v1 peer treats an unknown
+   * command type as a broken stream.
+   */
+  public static final byte HEARTBEAT = 18;
+
   public static final byte FIRST_COMMAND = ERROR;
-  public static final byte LAST_COMMAND = LIST_FAILED_EXTENSIONS;
+  public static final byte LAST_COMMAND = HEARTBEAT;
 
   @SuppressWarnings("RedundantThrows")
   public static final Command NULL =

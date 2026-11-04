@@ -47,9 +47,10 @@ public abstract class BinaryCommand {
   public static final byte DISCONNECT = 15;
   public static final byte RECONNECT = 16;
   public static final byte LIST_FAILED_EXTENSIONS = 17;
+  public static final byte HEARTBEAT = 18;
 
   public static final byte FIRST_COMMAND = ERROR;
-  public static final byte LAST_COMMAND = LIST_FAILED_EXTENSIONS;
+  public static final byte LAST_COMMAND = HEARTBEAT;
 
   // Used for command registration and creation
   private static final Map<Byte, Supplier<BinaryCommand>> COMMAND_FACTORIES = new HashMap<>();
@@ -74,6 +75,7 @@ public abstract class BinaryCommand {
     registerCommand(DISCONNECT, BinaryDisconnectCommand::new);
     registerCommand(RECONNECT, BinaryReconnectCommand::new);
     registerCommand(LIST_FAILED_EXTENSIONS, BinaryListFailedExtensionsCommand::new);
+    registerCommand(HEARTBEAT, BinaryHeartbeatCommand::new);
   }
 
   /** Register a command factory for a specific command type */
