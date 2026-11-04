@@ -1,7 +1,7 @@
 # BTrace Docker Image - Distroless variant
 # Minimal attack surface for production use with BTrace agent
 # Runtime JARs only, no shell or unnecessary tools
-FROM gcr.io/distroless/java11-debian11
+FROM gcr.io/distroless/java21-debian12
 
 ARG BTRACE_VERSION=3.0.0-SNAPSHOT
 

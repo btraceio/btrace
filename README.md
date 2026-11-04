@@ -201,7 +201,7 @@ sudo dpkg -i btrace-*.deb
 ```dockerfile
 # Copy BTrace into your application image
 FROM ghcr.io/btraceio/btrace:latest AS btrace
-FROM bellsoft/liberica-openjdk-debian:11-cds
+FROM bellsoft/liberica-openjdk-debian:21-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
 ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:${BTRACE_HOME}/bin"

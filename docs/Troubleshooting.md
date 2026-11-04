@@ -753,6 +753,32 @@ spec:
 
 **Note:** With `shareProcessNamespace: true`, all containers can see each other's processes.
 
+### Sidecar attach times out when the app's working directory is read-only
+
+**Problem:** attaching from a sidecar fails with
+`Unable to open socket file /proc/1/root/tmp/.java_pid1: target process 1 doesn't respond`, but
+only when the application's working directory is not writable (for example a read-only volume
+used as `workingDir`).
+
+**Cause:** the attaching JVM first creates a trigger file, `.attach_pid<pid>`, in the target's
+working directory. When that fails, a JDK 11 or 17 client (11.0.32 and 17.0.21 tested) falls back
+to the target's `/tmp` only if the target's PID differs between the two containers. With a shared
+PID namespace it does not, so the client creates the trigger in its own `/tmp`, the target never
+sees it, and the attach times out. JDK 21 and later (21.0.13 and 25.0.5 tested) fall back to the
+target's `/tmp`.
+
+**Solution:** run the client on JDK 21 or later. On an older client, create the trigger in the
+target's `/tmp` before attaching (`<pid>` as seen from the sidecar, `<nspid>` the target's PID in
+its own namespace, the last value of the `NSpid` line in `/proc/<pid>/status`):
+
+```bash
+touch /proc/<pid>/root/tmp/.attach_pid<nspid>
+btrace <pid> script.java
+```
+
+Either way the target's `/tmp` must be writable; with `readOnlyRootFilesystem: true`, mount an
+`emptyDir` at `/tmp` in the application container.
+
 ### Port Conflicts in Pods
 
 **Problem:** BTrace fails with port already in use
@@ -827,14 +853,14 @@ Error: tools.jar not found
 **Option 1: Use JDK base image**
 ```dockerfile
 # Instead of JRE
-FROM openjdk:11-jre
+FROM eclipse-temurin:21-jre
 # Use JDK
-FROM bellsoft/liberica-openjdk-debian:11-cds
+FROM bellsoft/liberica-openjdk-debian:21-cds
 ```
 
 **Option 2: Install JDK in running pod** (temporary)
 ```bash
-kubectl exec <pod> -- apt-get update && apt-get install -y openjdk-11-jdk
+kubectl exec <pod> -- apt-get update && apt-get install -y openjdk-21-jdk
 ```
 
 **Option 3: Sidecar with JDK**
@@ -845,7 +871,7 @@ spec:
   - name: app
     image: myapp-jre:latest  # Can use JRE
   - name: btrace
-    image: bellsoft/liberica-openjdk-debian:11-cds     # Sidecar has JDK
+    image: bellsoft/liberica-openjdk-debian:21-cds     # Sidecar has JDK
 ```
 
 ### Service Mesh Compatibility

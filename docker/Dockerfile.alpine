@@ -12,9 +12,9 @@ LABEL maintainer="BTrace Project <https://github.com/btraceio/btrace>" \
       org.opencontainers.image.version="${BTRACE_VERSION}" \
       org.opencontainers.image.licenses="Apache-2.0"
 
-# Install OpenJDK 11 and required tools
+# Install OpenJDK 21 and required tools
 RUN apk add --no-cache \
-        openjdk11-jdk \
+        openjdk21-jdk \
         bash \
         procps \
         curl \

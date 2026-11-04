@@ -31,9 +31,9 @@ BTrace publishes three image variants, each for a different job
 
 | Variant | Base image (from the Dockerfile) | Ships | Best for |
 |---|---|---|---|
-| `ghcr.io/btraceio/btrace:3.0.0` | `bellsoft/liberica-openjdk-debian:11.0.32.1-cds` | Full toolchain, shell, samples | Development, interactive debugging |
-| `ghcr.io/btraceio/btrace:3.0.0-alpine` | `alpine:3.24` + `openjdk11-jdk` | Full toolchain, smaller OS | Kubernetes sidecars, resource-constrained environments |
-| `ghcr.io/btraceio/btrace:3.0.0-distroless` | `gcr.io/distroless/java11-debian11` | Runtime JARs only — **no shell, no scripts** | Production apps using `-javaagent` |
+| `ghcr.io/btraceio/btrace:3.0.0` | `bellsoft/liberica-openjdk-debian:21.0.13.0.3-cds` | Full toolchain, shell, samples | Development, interactive debugging |
+| `ghcr.io/btraceio/btrace:3.0.0-alpine` | `alpine:3.24` + `openjdk21-jdk` | Full toolchain, smaller OS | Kubernetes sidecars, resource-constrained environments |
+| `ghcr.io/btraceio/btrace:3.0.0-distroless` | `gcr.io/distroless/java21-debian12` | Runtime JARs only — **no shell, no scripts** | Production apps using `-javaagent` |
 
 > **What just happened?** Those base images come straight from
 > [`docker/Dockerfile`](../../docker/Dockerfile), [`docker/Dockerfile.alpine`](../../docker/Dockerfile.alpine),
@@ -55,7 +55,7 @@ series' demo app
 
 ```dockerfile
 FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
-FROM bellsoft/liberica-openjdk-debian:11.0.32.1-cds
+FROM bellsoft/liberica-openjdk-debian:21.0.13.0.3-cds
 
 WORKDIR /app
 COPY DemoApp.java /app/
@@ -237,7 +237,7 @@ docker run --rm -v "$PWD":/work ghcr.io/btraceio/btrace:3.0.0 btracec -d scripts
 # ... an earlier "build" stage that produces /app/target/myapp.jar goes here ...
 
 FROM ghcr.io/btraceio/btrace:3.0.0-distroless AS btrace
-FROM gcr.io/distroless/java11-debian11
+FROM gcr.io/distroless/java21-debian12
 WORKDIR /app
 
 COPY --from=build /app/target/myapp.jar /app/
@@ -286,7 +286,7 @@ BTrace builds for exactly this situation, covered in depth in [Tutorial 8](08-fa
 No official image contains one, so you can't `COPY --from=btrace` it: `btrace-dist/build.gradle`
 deliberately writes the fat agent to `btrace-dist/build/fat-agent/` — *outside* the distribution
 tree the images copy, so it never rides along into the zip/tarball/deb/rpm — and
-`buildDockerContext` depends on `btraceJar` only. Build it yourself and put it in your Docker build
+`buildDockerContext` does not build it. Build it yourself and put it in your Docker build
 context:
 
 ```sh
@@ -302,7 +302,7 @@ cp btrace-dist/build/fat-agent/btrace-agent-fat.jar ./btrace-agent-fat.jar
 Then copy it from the build context rather than from an image:
 
 ```dockerfile
-FROM gcr.io/distroless/java11-debian11
+FROM gcr.io/distroless/java21-debian12
 
 # Copy only the fat agent (no BTRACE_HOME, no /opt/btrace/libs needed)
 COPY btrace-agent-fat.jar /opt/btrace/
