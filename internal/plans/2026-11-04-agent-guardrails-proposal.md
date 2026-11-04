@@ -218,6 +218,17 @@ Layout: source in `.agents/skills/<name>/SKILL.md`; `.claude/skills/<name>` → 
 | `steward` | (exists) moved to `.agents/skills`, symlinked | PR shepherding |
 | `qe-explore` | (exists) | unchanged |
 
+**Outcome (2026-11-04): no new skills.** Following the skill-writing discipline (watch an agent fail
+without the skill first), two no-guidance baselines ran against this repository after the drift fixes:
+"verify a change to the client's `-p` option" and "fix multi-return `@Duration` in the ASM instrumentor
+when three golden files diff". Both agents, using only AGENTS.md, CLAUDE.md, CONTRIBUTING.md and the
+`steward` skill, chose `-Pintegration` and read test counts rather than exit status, flagged JDK 28 /
+`classFileApiBackendTest` as not verified when absent, reviewed golden diffs before regenerating, covered
+the ClassFile API backend, and planned a revert-to-fail check. With no baseline failure there is nothing
+for `btrace-verify` or `btrace-instr-change` to fix, and `btrace-dist-change` would only restate the
+nine-line masked-JAR section — so none were written, and AGENTS.md/CLAUDE.md were not slimmed (the
+baselines show the always-loaded text working). Revisit if a recorded agent failure points at a gap.
+
 AGENTS.md keeps: map, invariants (Java 8 target; masked-JAR deliberate assignment; e2e for cross-boundary;
 gate must be seen to fail; doc placement), each with its case file and a "mechanized by G*" or
 "procedure: skill X" pointer. Target ≤ 70 lines; CLAUDE.md shrinks to orientation + skill list.
