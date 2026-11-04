@@ -22,6 +22,7 @@ import io.btrace.core.comm.v2.CommandAdapter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Wire protocol implementation using custom binary format (V2 protocol).
@@ -34,7 +35,8 @@ import java.io.OutputStream;
  *   <li>2-5x smaller payload sizes (10-100x with compression)
  *   <li>Automatic compression for payloads &gt; 1KB
  *   <li>Zero-copy optimizations where possible
- *   <li>Thread-safe with ReentrantLock
+ *   <li>Writes are serialized per connection with a ReentrantLock; one connection never waits for
+ *       another
  *   <li>Magic byte prefix: 0x42 0x54 0x52 0x32 ("BTR2")
  * </ul>
  *
@@ -46,6 +48,7 @@ public class BinaryWireProtocol implements WireProtocol {
 
   private final InputStream inputStream;
   private final OutputStream outputStream;
+  private final ReentrantLock writeLock = new ReentrantLock();
   private volatile boolean closed = false;
 
   /**
@@ -86,13 +89,23 @@ public class BinaryWireProtocol implements WireProtocol {
     BinaryCommand binaryCmd = CommandAdapter.toBinaryCommand(command);
 
     // Write binary command
-    BinaryWireIO.write(outputStream, binaryCmd);
+    writeLock.lock();
+    try {
+      BinaryWireIO.write(outputStream, binaryCmd);
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   @Override
   public void flush() throws IOException {
     if (!closed) {
-      outputStream.flush();
+      writeLock.lock();
+      try {
+        outputStream.flush();
+      } finally {
+        writeLock.unlock();
+      }
     }
   }
 
