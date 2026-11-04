@@ -380,7 +380,7 @@ the original cause. Target initializer and constructor failures remain transpare
 
 Use generated adapters only for the supported row below. The manual path is the normal solution for version-variant or target-only APIs; it is not an error condition.
 
-| Capability | Phase 1 support | Author action |
+| Capability | Support | Author action |
 |---------|--------|-------------------|
 | Public, uniquely named static or virtual methods with exact erased signatures | Supported | Use `@ExternalType`; use `Object` only where the target member itself uses `Object`. |
 | A direct target-library `Object` parameter or return type | Supported | Mark it with `@ExternalType.Type(OtherContract.class) Object`; chain opaque results into another generated adapter. |

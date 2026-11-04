@@ -97,7 +97,7 @@ jobs:
     # per-class startup overhead on top of a suite that was already close to the old 15-minute
     # ceiling. A job hitting timeout-minutes gets forcibly cancelled by GitHub Actions -- which
     # looks identical to a flaky test failure in the run summary, but isn't one. Widened to give
-    # real headroom; see docs/superpowers/plans/2026-07-12-extension-loader-classcircularity-investigation.md.
+    # real headroom; see internal/superpowers/plans/2026-07-12-extension-loader-classcircularity-investigation.md.
     timeout-minutes: 30
     strategy:
       fail-fast: false

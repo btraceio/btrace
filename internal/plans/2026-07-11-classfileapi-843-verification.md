@@ -10,7 +10,7 @@ row of #837. Before drafting a plan, verified the current state of `develop` HEA
 - Issue #837's own comment (2026-05-18) says PR #843 added `@Return`/`@Duration` and defers
   `@TargetInstance`/`Kind.CALL` to #844. That comment predates PR #843's actual merge
   (2026-07-06) by ~7 weeks.
-- Plan docs `docs/superpowers/plans/2026-06-04-classfileapi-call-targetinstance.md` and
+- Plan docs `internal/superpowers/plans/2026-06-04-classfileapi-call-targetinstance.md` and
   `2026-06-05-classfileapi-remaining-*.md` (dated *after* that comment) show the `Kind.CALL`/
   `@TargetInstance` work was folded into PR #843's scope before it merged, rather than shipped
   as a separate PR against #844. Neither issue was linked/closed when #843 merged.

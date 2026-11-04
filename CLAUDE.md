@@ -15,7 +15,7 @@ GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-agent:test
 GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :btrace-agent:test --tests '*InstrStackTest'
 GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew spotlessCheck
 
-# Integration tests: build the distribution first
+# Integration tests: -Pintegration is required, or the task is skipped and runs nothing
 GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew -Pintegration :integration-tests:test
 
 # Intentional instrumentation-bytecode changes only
