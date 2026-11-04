@@ -1,0 +1,11 @@
+# Agent configuration, CI and the guardrails that enforce them: changes need the maintainer's
+# review. GitHub requests the review automatically; it blocks merging only where the branch rules
+# require code-owner review.
+/AGENTS.md                         @jbachorik
+/CLAUDE.md                         @jbachorik
+/.agents/                          @jbachorik
+/.claude/                          @jbachorik
+/.github/copilot-instructions.md   @jbachorik
+/.github/workflows/                @jbachorik
+/.github/CODEOWNERS                @jbachorik
+/scripts/guardrails/               @jbachorik
