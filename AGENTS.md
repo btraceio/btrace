@@ -17,7 +17,7 @@ For the developer command reference and code-navigation pointers, see [CLAUDE.md
 
 - Do not commit unless the changes are fully tested or the user explicitly requests a commit.
 - Preserve unrelated working-tree changes.
-- In Java code, import types and use simple names; do not introduce fully qualified type names in source.
+- In Java code, import types and use simple names; do not introduce fully qualified type names in source. CI rejects new ones (`scripts/guardrails/check_fqn.py`); for a genuine simple-name clash, end the line with `// fqn: <reason>`.
 - Main code targets Java 8. The build needs JDK 8, 11, 24 and 28 toolchains installed locally (see [CONTRIBUTING.md](CONTRIBUTING.md#local-development)); without JDK 28, `classFileApiBackendTest` is skipped and has not verified anything. Follow Spotless/Google Java Format.
 - Unit tests live in `src/test/java` and use `*Test`; integration tests live in `integration-tests/src/test/java`.
 - Changes to user-visible behavior that crosses modules or process boundaries must include end-to-end functional coverage in `integration-tests`; unit and component tests are required where useful but are not a substitute for exercising the real client, agent, target JVM, and protocol interaction.
