@@ -92,7 +92,7 @@ import javax.management.NotificationListener;
 import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 import org.jctools.queues.MessagePassingQueue;
-import org.jctools.queues.MpmcArrayQueue;
+import org.jctools.queues.atomic.MpmcAtomicArrayQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -310,7 +310,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     // next speculative buffer id
     private int nextSpeculationId;
     // speculative buffers map
-    private final ConcurrentHashMap<Integer, MpmcArrayQueue<Command>> speculativeQueues;
+    private final ConcurrentHashMap<Integer, MpmcAtomicArrayQueue<Command>> speculativeQueues;
     // per thread current speculative buffer id
     private final ThreadLocal<Integer> currentSpeculationId;
     private final ReentrantReadWriteLock lifecycleLock = new ReentrantReadWriteLock();
@@ -344,7 +344,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
         afterOpenCheck("speculation");
         int nextId = getNextSpeculationId();
         if (nextId != -1) {
-          speculativeQueues.put(nextId, new MpmcArrayQueue<>(MAX_SPECULATIVE_MSG_LIMIT));
+          speculativeQueues.put(nextId, new MpmcAtomicArrayQueue<>(MAX_SPECULATIVE_MSG_LIMIT));
         }
         return nextId;
       } finally {
@@ -359,7 +359,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
         afterOpenCheck("send");
         Integer curId = currentSpeculationId.get();
         if ((curId != null) && (cmd.getType() != Command.EXIT)) {
-          MpmcArrayQueue<Command> sb = speculativeQueues.get(curId);
+          MpmcAtomicArrayQueue<Command> sb = speculativeQueues.get(curId);
           if (sb != null) {
             if (!sb.offer(cmd)) {
               sb.clear();
@@ -393,7 +393,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
         afterOpenCheck("commit");
         validateId(id);
         currentSpeculationId.set(null);
-        MpmcArrayQueue<Command> sb = speculativeQueues.get(id);
+        MpmcAtomicArrayQueue<Command> sb = speculativeQueues.get(id);
         if (sb != null) {
           result.addAll(sb);
           sb.clear();
@@ -411,7 +411,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
         afterOpenCheck("discard");
         validateId(id);
         currentSpeculationId.set(null);
-        MpmcArrayQueue<Command> sb = speculativeQueues.get(id);
+        MpmcAtomicArrayQueue<Command> sb = speculativeQueues.get(id);
         if (sb != null) {
           sb.clear();
           speculativeQueues.remove(id);
