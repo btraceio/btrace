@@ -1,0 +1,35 @@
+name: PR metadata
+
+# Checks the PR title (the squash-merge commit subject) and description (gate G5,
+# scripts/guardrails/check_pr_metadata.py). A separate workflow so that editing the title or
+# description re-runs only this check, not the build matrix.
+on:
+  pull_request:
+    types: [ opened, edited, synchronize, reopened ]
+  # Required checks must also report on the merge queue's groups, or the queue drops every entry.
+  # The title and description were checked on the PR; the script passes non-PR events.
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  pr-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # The changed-file list is a diff against the base branch
+          fetch-depth: 0
+      - name: List changed files
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BASE: ${{ github.base_ref }}
+        run: git diff --name-only "origin/${PR_BASE}...HEAD" > "${RUNNER_TEMP}/changed-files.txt"
+      - name: Check title and description
+        run: |
+          changed="${RUNNER_TEMP}/changed-files.txt"
+          [ -f "${changed}" ] || : > "${changed}"
+          python3 -I scripts/guardrails/check_pr_metadata.py "${GITHUB_EVENT_PATH}" "${changed}"
