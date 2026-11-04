@@ -648,7 +648,7 @@ docker exec -it <container-id> btrace <PID> script.java
 ```dockerfile
 # Option 1: Copy BTrace into your application image (recommended)
 FROM ghcr.io/btraceio/btrace:latest AS btrace
-FROM bellsoft/liberica-openjdk-debian:11-cds
+FROM bellsoft/liberica-openjdk-debian:21-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
 ENV BTRACE_HOME=/opt/btrace
@@ -661,7 +661,7 @@ ENTRYPOINT ["java", "-jar", "/app/myapp.jar"]
 
 **Alternative: Manual installation (if not using official images):**
 ```dockerfile
-FROM bellsoft/liberica-openjdk-debian:11-cds
+FROM bellsoft/liberica-openjdk-debian:21-cds
 RUN mkdir -p /opt/btrace \
     && curl -L https://github.com/btraceio/btrace/releases/download/v3.0.0/btrace-v3.0.0-bin.tar.gz \
     | tar -xz -C /opt/btrace
