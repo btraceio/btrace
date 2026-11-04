@@ -97,6 +97,16 @@ def validatePublicationVersion = {
     }
 }
 
+// Maven local is not a release channel: also accept X.Y.Z-SNAPSHOT there, so a development build of
+// the plugins can be staged for a local tutorial or demo run.
+def validateLocalPublicationVersion = {
+    if (requestedBTraceVersion == null ||
+            !(requestedBTraceVersion ==~ /[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?/)) {
+        throw new GradleException(
+                'Publishing BTrace Gradle plugins to Maven local requires -PbtraceVersion=<X.Y.Z or X.Y.Z-SNAPSHOT>.')
+    }
+}
+
 def signingKey = System.getenv('GPG_SIGNING_KEY')
 def signingPassword = System.getenv('GPG_SIGNING_PWD')
 if (signingKey != null && !signingKey.trim().isEmpty()) {
@@ -111,7 +121,7 @@ if (signingKey != null && !signingKey.trim().isEmpty()) {
 }
 
 tasks.matching { it.name.startsWith('publish') }.configureEach {
-    doFirst(validatePublicationVersion)
+    doFirst(it.name.endsWith('ToMavenLocal') ? validateLocalPublicationVersion : validatePublicationVersion)
 }
 
 publishing {
