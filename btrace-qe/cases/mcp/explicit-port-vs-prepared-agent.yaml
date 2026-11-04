@@ -21,4 +21,4 @@ steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
 expect:
   outputMustMatch:
     - "^work$"
-    - "^execution time: \\d+ ms$"
+    - "^execution time: [1-9]\\d* ms$"
