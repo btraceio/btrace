@@ -275,6 +275,7 @@ gate must be seen to fail; doc placement), each with its case file and a "mechan
 4. **Merge ownership:** `.github/CODEOWNERS` names the maintainer as required reviewer for `AGENTS.md`,
    `CLAUDE.md`, `.agents/`, `.claude/`, `.github/copilot-instructions.md`, `.github/workflows/`,
    `scripts/guardrails/`.
-5. **PR shape:** independent PRs off `develop`; the drift-fix PR goes first; the `guardrails` CI job
-   lands with G1 and later gates extend it.
+5. **PR shape:** stacked PRs, starting from the drift-fix PR (#1000), one step per level; the
+   `guardrails` CI job lands with G1 and later gates extend it. (First answered "independent PRs";
+   changed to stacked by the maintainer after #1000 was opened.)
 6. **G3:** a formatting-only `spotlessApply` PR lands first; the gate PR then flips the config.

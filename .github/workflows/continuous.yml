@@ -245,6 +245,19 @@ jobs:
             btrace-qe/build/qe-report/**/*
             btrace-qe/build/reports/**/*
 
+  # Deterministic checks of the agent configuration and contributor docs (scripts/guardrails/).
+  # Each check's own tests run first: a gate whose tests fail cannot be trusted to pass.
+  guardrails:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Test the guardrail checks
+        run: python3 -m unittest discover -s scripts/guardrails/tests -p 'test_*.py' -v
+      - name: Agent configuration and doc placement (G1)
+        run: python3 -I scripts/guardrails/check_agent_config.py .
+
   # Single required status check for the test matrix. Matrix jobs report as `test (8)`,
   # `test (11)`, ...; branch protection matches check names exactly, so it cannot require the
   # matrix as a whole, and listing every lane goes stale when a lane is added or dropped. Make
@@ -256,17 +269,19 @@ jobs:
       - build
       - test
       - qe
+      - guardrails
     runs-on: ubuntu-latest
     steps:
-      - name: Require build, every test lane and the harness to succeed
+      - name: Require build, every test lane, the harness and the guardrails to succeed
         env:
           BUILD_RESULT: ${{ needs.build.result }}
           TEST_RESULT: ${{ needs.test.result }}
           QE_RESULT: ${{ needs.qe.result }}
+          GUARDRAILS_RESULT: ${{ needs.guardrails.result }}
         run: |
-          echo "build: ${BUILD_RESULT}, test: ${TEST_RESULT}, qe: ${QE_RESULT}"
-          if [ "${BUILD_RESULT}" != "success" ] || [ "${TEST_RESULT}" != "success" ] || [ "${QE_RESULT}" != "success" ]; then
-            echo "::error::build, all test lanes and the qe harness must succeed (build=${BUILD_RESULT}, test=${TEST_RESULT}, qe=${QE_RESULT})"
+          echo "build: ${BUILD_RESULT}, test: ${TEST_RESULT}, qe: ${QE_RESULT}, guardrails: ${GUARDRAILS_RESULT}"
+          if [ "${BUILD_RESULT}" != "success" ] || [ "${TEST_RESULT}" != "success" ] || [ "${QE_RESULT}" != "success" ] || [ "${GUARDRAILS_RESULT}" != "success" ]; then
+            echo "::error::build, all test lanes, the qe harness and the guardrails must succeed (build=${BUILD_RESULT}, test=${TEST_RESULT}, qe=${QE_RESULT}, guardrails=${GUARDRAILS_RESULT})"
             exit 1
           fi
 

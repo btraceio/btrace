@@ -32,7 +32,7 @@ Closes #
 
 ```text
 # Example:
-# GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :module:test
+# GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :<module>:test
 ```
 
 ## Documentation and release impact
