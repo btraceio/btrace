@@ -133,7 +133,7 @@ jar {
 Important consequences:
 
 - The agent jar is **NOT a Multi-Release JAR** — there is no `META-INF/versions/24/` entry and no `Multi-Release` manifest attribute. The compiled-at-24 `ClassFileApiBackend.class` sits at the jar root next to the Java 8-compatible classes.
-- The class is never referenced directly from Java 8-compiled code; it is only ever loaded **reflectively** by `BackendSelector`. On older JDKs the reflective load fails cleanly (`UnsupportedClassVersionError` caught as `Throwable`), and BTrace continues with the ASM backend only.
+- The class is never referenced directly from Java 8-compiled code; it is only ever loaded **reflectively** by `BackendSelector`, and only when a class file newer than the ASM ceiling arrives. An older JDK never loads such a class file, so it never attempts the load and runs on the ASM backend alone; see [Backend Selection](#backend-selection) for what happens if the load fails on a newer JDK.
 
 ## Related Documents
 
