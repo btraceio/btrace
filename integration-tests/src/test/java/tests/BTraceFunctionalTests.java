@@ -338,6 +338,11 @@ public class BTraceFunctionalTests extends RuntimeTest {
                           + " (field 'metrics') is unavailable: btrace-metrics: Blocked by policy"
                           + " (denyExtensions)"),
                   "Expected the probe to be refused:\n" + all);
+              assertTrue(
+                  all.contains("Probe btrace.RequiredServiceDeniedTest was not deployed:"),
+                  "Expected the refusal to name the script's class, not the agent's internal"
+                      + " name for it:\n"
+                      + all);
               assertFalse(all.contains("Successfully started"), "Probe must not deploy:\n" + all);
               assertFalse(all.contains("REQUIRED: metrics recorded"), all);
               assertFalse(all.contains("BootstrapMethodError"), all);

@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 import org.jctools.queues.MessagePassingQueue;
-import org.jctools.queues.MpscChunkedArrayQueue;
+import org.jctools.queues.atomic.MpscChunkedAtomicArrayQueue;
 
 final class CommandQueue {
   private static final long DROP_TIMEOUT_MS =
@@ -32,11 +32,11 @@ final class CommandQueue {
       Integer.getInteger("io.btrace.runtime.cmd.backoffYieldIters", 3000);
   private static final int BACKOFF_SLEEP_ITERS =
       Integer.getInteger("io.btrace.runtime.cmd.backoffSleepIters", 100);
-  private final MpscChunkedArrayQueue<Command> queue;
+  private final MpscChunkedAtomicArrayQueue<Command> queue;
   private final AtomicLong droppedCommands = new AtomicLong();
 
   CommandQueue(int capacity) {
-    queue = new MpscChunkedArrayQueue<>(capacity);
+    queue = new MpscChunkedAtomicArrayQueue<>(capacity);
   }
 
   public boolean addAll(Collection<? extends Command> c) {

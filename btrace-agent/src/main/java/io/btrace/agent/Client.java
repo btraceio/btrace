@@ -505,7 +505,7 @@ abstract class Client implements CommandListener {
     log.debug("Injected services read by {}: {}", probe.getClassName(), uses.size());
     String error =
         requiredServiceError(
-            probe.getClassName(),
+            probe.getDeclaredClassName(),
             uses,
             use ->
                 ExtensionIndy.requiredServiceProblem(
