@@ -513,6 +513,11 @@ public class BTraceProbePersisted implements BTraceProbe {
   }
 
   @Override
+  public String getDeclaredClassName() {
+    return delegate.getOrigName().replace('/', '.');
+  }
+
+  @Override
   public boolean isClassRenamed() {
     return delegate.isClassRenamed();
   }

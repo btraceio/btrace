@@ -2028,7 +2028,7 @@ See [MCPServer.md](MCPServer.md) for installation and runtime requirements.
 | `list_jvms` | List all local JVMs with their PIDs, main class, and BTrace attachment status |
 | `deploy_oneliner` | Deploy a single-expression probe using oneliner syntax (auto-attaches agent) |
 | `deploy_script` | Deploy a full BTrace script file to a target JVM |
-| `list_probes` | List probes that have been detached from and are available to reconnect to (via the plain CLI's `-r` flag) |
+| `list_probes` | List the probe this server is connected to and the detached probes still running (which the plain CLI's `-r` flag can reconnect to); a probe connected through another client is not listed |
 | `send_event` | Send a named event to trigger `@OnEvent` handlers |
 | `detach_probe` | Disconnect the client from a probe; the probe keeps running |
 | `exit_probe` | Stop and remove the probe this client session is tracking |
