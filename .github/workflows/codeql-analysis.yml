@@ -52,6 +52,11 @@ jobs:
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
+    - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
+      uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+      with:
+        java-version: 8
+        distribution: temurin
     - name: Set up Java 24
       uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
       with:

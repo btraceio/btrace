@@ -191,6 +191,11 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     return delegate.getClassName(internal);
   }
 
+  @Override
+  public String getDeclaredClassName() {
+    return delegate.getOrigName().replace('/', '.');
+  }
+
   String translateOwner(String owner) {
     return delegate.translateOwner(owner);
   }
