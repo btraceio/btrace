@@ -228,7 +228,7 @@ Failed Extensions:
 ```
 
 > **What just happened?** `-le` attaches, asks the agent for its failure registry, and disconnects
-> — it doesn't touch any running probes (same shape as `-lp` for listing active probes). Had the
+> — it doesn't touch any running probes (same shape as `-lp` for listing detached probes). Had the
 > extension instead been blocked for being *privileged and ungranted* (the state you'd be in with
 > an empty policy file and no `allowExtensions`/`allowPrivileged` at all), the reason string would
 > instead read `Blocked privileged extension. Required=[THREADS, REFLECTION, CLASSLOADER]` — the same registry, a different
