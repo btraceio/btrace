@@ -312,10 +312,12 @@ The embedded extensions are automatically discovered and loaded at agent startup
 ### Publish Plugins Locally
 
 ```bash
-./gradlew :btrace-gradle-plugin:publishToMavenLocal
+./gradlew -p btrace-gradle-plugin -PbtraceVersion=3.0.0-SNAPSHOT publishToMavenLocal
 ```
 
-Then in your project, add `mavenLocal()` to repositories or pluginManagement.
+`-PbtraceVersion` is required; Maven local accepts a `-SNAPSHOT` version, other repositories and the
+Plugin Portal accept only a release version. Then in your project, add `mavenLocal()` to repositories
+or pluginManagement.
 
 ### Testing Fat Agent Build
 
