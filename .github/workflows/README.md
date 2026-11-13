@@ -17,7 +17,7 @@ This directory contains GitHub Actions workflows for continuous integration and 
 
 **Jobs:**
 - **build:** Compiles the project and runs all tests
-  - Gradle on Java 21 (Temurin) with Java 24 and 28-ea toolchains (java24 source set, ClassFile API backend tests)
+  - Gradle on Java 21 (Temurin) with Java 8, 24 and 28-ea toolchains (java24 source set, ClassFile API backend tests)
   - Parallel build with caching
   - **V2 Protocol Tests:** Runs dedicated v2 protocol test suite
   - Uploads dist build artifacts
