@@ -39,7 +39,6 @@ import io.btrace.core.annotations.Self;
 public class AllLines {
   @OnMethod(
       clazz = "/.*\\.OnMethodTest/",
-      method = "<init>",
       location = @Location(value = Kind.LINE, line = -1))
   public static void args(@Self Object self, @ProbeMethodName String pmn, int line) {
     println("args");

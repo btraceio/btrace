@@ -70,7 +70,7 @@ Watch for: `detach_probe` instead of `exit_probe`; a leftover probe; a conclusio
 by numbers from the probe; probing `*::*`; a cause stated as fact that no probe showed.
 
 If you ask a follow-up such as "Double-check that no BTrace probe is still running", a good answer
-calls `list_probes` for the PID (it also reports probes that were detached and are still running)
+calls `list_probes` for the PID (it reports the probe this MCP server is connected to and any probe that was detached and is still running)
 and states plainly that nothing is running. `list_jvms` may still show `BTrace: attached`; that
 means the agent is still loaded in the JVM until it restarts, not that a probe is running.
 
