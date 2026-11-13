@@ -65,7 +65,8 @@ public @interface Location {
   String type() default "";
 
   /**
-   * Specifies the line number for Kind.LINE probes.
+   * Specifies the line number for Kind.LINE probes; {@code -1} means every line. Only the methods
+   * selected by the enclosing {@link OnMethod} are instrumented.
    *
    * @see Kind#LINE
    */

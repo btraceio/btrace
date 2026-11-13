@@ -1,0 +1,60 @@
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L2
+ALOAD 0
+LDC "caught"
+LDC 169
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$LineInMethod$args(Ljava/lang/Object;Ljava/lang/String;I)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/LineInMethod"
+]
+L2
+FRAME SAME
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L3
+ALOAD 0
+LDC "caught"
+LDC 170
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$LineInMethod$args(Ljava/lang/Object;Ljava/lang/String;I)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/LineInMethod"
+]
+L3
+FRAME SAME1 java/lang/RuntimeException
+L4
+LINENUMBER 171 L4
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L5
+ALOAD 0
+LDC "caught"
+LDC 171
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$LineInMethod$args(Ljava/lang/Object;Ljava/lang/String;I)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/LineInMethod"
+]
+L5
+FRAME APPEND [java/lang/RuntimeException]
+L6
+LINENUMBER 173 L6
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L7
+ALOAD 0
+LDC "caught"
+LDC 173
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$LineInMethod$args(Ljava/lang/Object;Ljava/lang/String;I)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/LineInMethod"
+]
+L7
+FRAME SAME
+L8
+LOCALVARIABLE e Ljava/lang/RuntimeException; L4 L6 1
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L8 0
+MAXSTACK = 4

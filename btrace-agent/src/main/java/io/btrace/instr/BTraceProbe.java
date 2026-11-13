@@ -59,6 +59,16 @@ public interface BTraceProbe {
 
   String getClassName(boolean internal);
 
+  /**
+   * Returns the probe class name as it was loaded, before the agent renamed the probe class, in
+   * dotted form; this is the name to use in messages for the user. For a probe compiled from a
+   * script it is the class the script declares. A probe pack written by BTrace 2.x already stores
+   * the renamed name, so for those this is the migrated {@code io.btrace.runtime.auxiliary} name.
+   */
+  default String getDeclaredClassName() {
+    return getClassName();
+  }
+
   boolean isClassRenamed();
 
   boolean isTransforming();
