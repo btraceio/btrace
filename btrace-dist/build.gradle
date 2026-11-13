@@ -745,7 +745,7 @@ task releaseSmoke(type: Exec) {
 }
 
 // Docker build tasks
-task buildDockerContext(type: Copy, dependsOn: [btraceJar, copyDtraceLib, processResources, fixPermissions]) {
+task buildDockerContext(type: Copy, dependsOn: [btraceJar, copyDtraceLib, processResources, fixPermissions, explodeExtensions]) {
     group 'Docker'
     description 'Prepare Docker build context with BTrace distribution'
 

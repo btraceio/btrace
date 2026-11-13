@@ -20,7 +20,6 @@ import static org.objectweb.asm.Opcodes.*;
 
 import io.btrace.core.BTraceRuntime;
 import io.btrace.core.MethodID;
-import io.btrace.core.annotations.Kind;
 import io.btrace.core.annotations.Sampled;
 import io.btrace.core.annotations.Where;
 import io.btrace.core.comm.MessageCommand;
@@ -128,34 +127,29 @@ public class Instrumentor extends ClassVisitor {
     Set<OnMethod> annotationMatchers = new HashSet<>();
 
     for (OnMethod om : applicableOnMethods) {
-      if (om.getLocation().getValue() == Kind.LINE) {
-        appliedOnMethods.add(om);
-      } else {
-        if (om.isMethodAnnotationMatcher()) {
-          annotationMatchers.add(om);
-          continue;
-        }
-        String methodName = om.getMethod();
-        boolean regexMatch = om.isMethodRegexMatcher();
-        if (methodName.isEmpty()) {
-          methodName = ".*"; // match all the methods
-          regexMatch = true;
-        }
-        if (methodName.equals("#")) {
-          methodName = om.getTargetName(); // match just the same-named method
-        }
+      if (om.isMethodAnnotationMatcher()) {
+        annotationMatchers.add(om);
+        continue;
+      }
+      String methodName = om.getMethod();
+      boolean regexMatch = om.isMethodRegexMatcher();
+      if (methodName.isEmpty()) {
+        methodName = ".*"; // match all the methods
+        regexMatch = true;
+      }
+      if (methodName.equals("#")) {
+        methodName = om.getTargetName(); // match just the same-named method
+      }
 
-        if (methodName.equals(name) && typeMatches(om.getType(), desc, om.isExactTypeMatch())) {
-          appliedOnMethods.add(om);
-        } else if (regexMatch) {
-          try {
-            if (name.matches(methodName)
-                && typeMatches(om.getType(), desc, om.isExactTypeMatch())) {
-              appliedOnMethods.add(om);
-            }
-          } catch (PatternSyntaxException pse) {
-            reportPatternSyntaxException(name);
+      if (methodName.equals(name) && typeMatches(om.getType(), desc, om.isExactTypeMatch())) {
+        appliedOnMethods.add(om);
+      } else if (regexMatch) {
+        try {
+          if (name.matches(methodName) && typeMatches(om.getType(), desc, om.isExactTypeMatch())) {
+            appliedOnMethods.add(om);
           }
+        } catch (PatternSyntaxException pse) {
+          reportPatternSyntaxException(name);
         }
       }
     }
