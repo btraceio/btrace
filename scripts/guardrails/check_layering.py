@@ -15,7 +15,7 @@ fails on a violation that is not listed and on a listed one that is gone. Rules,
 per-file exceptions live in layering_rules.json; an exception that no longer suppresses anything is
 reported as stale, as the baseline is.
 
-Imports and literals are read with check_fqn.strip_code, so names in comments, Javadoc and (for
+Imports and literals are read with _common.strip_code, so names in comments, Javadoc and (for
 imports) string literals are ignored. Every source set under src/<set>/java* is scanned, which
 includes the java9, java11 and java24 roots and the api and impl sets of extensions. Text-block
 contents are not scanned for literals.

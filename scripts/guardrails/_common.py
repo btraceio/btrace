@@ -6,10 +6,51 @@ Checks import it after inserting their own directory into sys.path, because CI r
 
 import subprocess
 
-from check_fqn import CODE, strip_code
-
 # A base that names no commit: a push or merge-queue event without a previous commit.
 NO_BASE = ("", "0" * 40)
+
+
+CODE, BLOCK, TEXT = "code", "block", "text"
+
+
+def strip_code(line, state, literals=None):
+    """Returns (the line's code without comments and literals, state after the line).
+
+    state is CODE, BLOCK (inside /* */) or TEXT (inside a \"\"\" text block); both may span lines.
+    When literals is a list, the raw contents of each single-line string or char literal are
+    appended to it; text blocks are not collected.
+    """
+    out, i, n = [], 0, len(line)
+    while i < n:
+        if state == BLOCK:
+            end = line.find("*/", i)
+            if end < 0:
+                return "".join(out), BLOCK
+            i, state = end + 2, CODE
+        elif state == TEXT:
+            end = line.find('"""', i)
+            if end < 0:
+                return "".join(out), TEXT
+            i, state = end + 3, CODE
+        elif line.startswith('"""', i):
+            i, state = i + 3, TEXT
+        elif line.startswith("/*", i):
+            i, state = i + 2, BLOCK
+        elif line.startswith("//", i):
+            break
+        elif line[i] in "\"'":
+            quote, i = line[i], i + 1
+            start = i
+            while i < n and line[i] != quote:
+                i += 2 if line[i] == "\\" else 1
+            if literals is not None:
+                literals.append(line[start:i])
+            i += 1
+            out.append('""')
+        else:
+            out.append(line[i])
+            i += 1
+    return "".join(out), state
 
 
 class CheckError(Exception):

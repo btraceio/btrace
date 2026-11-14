@@ -12,60 +12,25 @@ A genuine simple-name clash is allowed with a trailing marker on the same line:
 Usage:
   check_fqn.py BASE [HEAD]      check lines added in BASE...HEAD (HEAD defaults to the work tree)
   check_fqn.py --all            report every occurrence in tracked files (for measurement only)
+
+An empty or all-zero BASE (a push or merge-queue event without a previous commit) checks nothing
+and says so.
 """
 
+import os
 import re
-import subprocess
 import sys
+
+# CI runs checks as `python3 -I`, which drops the script directory from sys.path.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from _common import CODE, NO_BASE, CheckError, run_git, strip_code  # noqa: E402
 
 # A lower-case package chain of at least two segments followed by a capitalised type name,
 # e.g. java.io.IOException, javax.management.ObjectName, io.btrace.core.BTraceUtils.
 FQN_RE = re.compile(r"(?<![\w.@])((?:[a-z][a-z0-9_]*\.){2,}[A-Z]\w*)")
 PACKAGE_ROOTS = ("java.", "javax.", "jdk.", "sun.", "com.sun.", "org.", "io.", "com.", "net.")
 MARKER_RE = re.compile(r"//\s*fqn:\s*\S")
-CODE, BLOCK, TEXT = "code", "block", "text"
-
-
-def strip_code(line, state, literals=None):
-    """Returns (the line's code without comments and literals, state after the line).
-
-    state is CODE, BLOCK (inside /* */) or TEXT (inside a \"\"\" text block); both may span lines.
-    When literals is a list, the raw contents of each single-line string or char literal are
-    appended to it; text blocks are not collected.
-    """
-    out, i, n = [], 0, len(line)
-    while i < n:
-        if state == BLOCK:
-            end = line.find("*/", i)
-            if end < 0:
-                return "".join(out), BLOCK
-            i, state = end + 2, CODE
-        elif state == TEXT:
-            end = line.find('"""', i)
-            if end < 0:
-                return "".join(out), TEXT
-            i, state = end + 3, CODE
-        elif line.startswith('"""', i):
-            i, state = i + 3, TEXT
-        elif line.startswith("/*", i):
-            i, state = i + 2, BLOCK
-        elif line.startswith("//", i):
-            break
-        elif line[i] in "\"'":
-            quote, i = line[i], i + 1
-            start = i
-            while i < n and line[i] != quote:
-                i += 2 if line[i] == "\\" else 1
-            if literals is not None:
-                literals.append(line[start:i])
-            i += 1
-            out.append('""')
-        else:
-            out.append(line[i])
-            i += 1
-    return "".join(out), state
-
-
 def violations(line, state):
     code, state = strip_code(line, state)
     stripped = code.strip()
@@ -79,14 +44,21 @@ def violations(line, state):
 
 
 def added_lines(base, head):
-    cmd = ["git", "diff", "-U0", "--no-color", "--diff-filter=AM"]
+    # Pin the diff format so user git config (diff.noprefix, diff.mnemonicPrefix, external diff or
+    # textconv drivers) cannot change what the parser sees; run_git also sets core.quotepath=off.
+    cmd = ["diff", "-U0", "--no-color", "--no-ext-diff", "--no-textconv",
+           "--src-prefix=a/", "--dst-prefix=b/", "--diff-filter=AMR"]
     cmd += [base + "..." + head] if head else [base]
-    cmd += ["--", "*.java"]
-    diff = subprocess.run(cmd, check=True, capture_output=True, text=True).stdout
+    diff = run_git(*cmd, "--", "*.java")
     path, line_no = None, 0
     for raw in diff.splitlines():
         if raw.startswith("+++ "):
-            path = raw[6:] if raw.startswith("+++ b/") else None
+            if raw == "+++ /dev/null":
+                path = None
+            elif raw.startswith("+++ b/"):
+                path = raw[6:].rstrip("\t")
+            else:
+                raise ValueError("cannot map diff header to a file path: " + raw)
         elif raw.startswith("@@"):
             line_no = int(re.search(r"\+(\d+)", raw).group(1))
         elif raw.startswith("+") and path:
@@ -95,9 +67,7 @@ def added_lines(base, head):
 
 
 def all_lines():
-    files = subprocess.run(
-        ["git", "ls-files", "--", "*.java"], check=True, capture_output=True, text=True
-    ).stdout.split()
+    files = [p for p in run_git("ls-files", "--", "*.java").split("\n") if p]
     for path in files:
         with open(path, encoding="utf-8", errors="replace") as f:
             for no, line in enumerate(f, 1):
@@ -108,14 +78,21 @@ def main(argv):
     if len(argv) < 2:
         print(__doc__)
         return 2
+    if argv[1] != "--all" and argv[1] in NO_BASE:
+        print("fqn: no base commit given; nothing checked")
+        return 0
     lines = all_lines() if argv[1] == "--all" else added_lines(argv[1], argv[2] if len(argv) > 2 else None)
     errors, state, current = [], CODE, None
-    for path, no, line in lines:
-        if path != current:
-            current, state = path, CODE
-        found, state = violations(line, state)
-        for fqn in found:
-            errors.append("%s:%d: fully-qualified type %s; import it and use the simple name" % (path, no, fqn))
+    try:
+        for path, no, line in lines:
+            if path != current:
+                current, state = path, CODE
+            found, state = violations(line, state)
+            for fqn in found:
+                errors.append("%s:%d: fully-qualified type %s; import it and use the simple name" % (path, no, fqn))
+    except (ValueError, CheckError) as e:
+        print("fqn: %s; the diff was not checked" % e)
+        return 1
     for e in errors:
         print("fqn: " + e)
     if errors:
