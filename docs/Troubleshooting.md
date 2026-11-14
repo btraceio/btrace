@@ -748,7 +748,7 @@ spec:
   - name: app
     image: myapp:latest
   - name: btrace-sidecar
-    image: btrace:latest
+    image: ghcr.io/btraceio/btrace:3.0.0-alpine
 ```
 
 **Note:** With `shareProcessNamespace: true`, all containers can see each other's processes.

@@ -76,6 +76,21 @@ class MainTest {
   }
 
   @Test
+  void trustedSystemPropertyWithoutAgentArgumentIsReported() {
+    String warning = Main.ineffectiveTrustedPropertyWarning("true", false);
+
+    assertTrue(warning.contains("btrace.trusted=true"), warning);
+    assertTrue(warning.contains("has no effect"), warning);
+    assertTrue(warning.contains("trusted=true agent argument"), warning);
+  }
+
+  @Test
+  void trustedSystemPropertyIsNotReportedWhenUnsetOrTrustedAnyway() {
+    assertNull(Main.ineffectiveTrustedPropertyWarning(null, false));
+    assertNull(Main.ineffectiveTrustedPropertyWarning("true", true));
+  }
+
+  @Test
   void locateScriptsEmpty() {
     ArgsMap argsMap = new ArgsMap();
     List<String> scripts = Main.locateScripts(argsMap);

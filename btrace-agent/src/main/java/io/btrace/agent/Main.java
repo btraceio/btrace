@@ -181,6 +181,7 @@ public final class Main {
                   "volatile",
                   "while")));
   private static final String BUNDLED_PROBE_ROOT = "META-INF/btrace-probes/";
+  private static final String TRUSTED_PROPERTY = "btrace.trusted";
   private static final SharedSettings settings = SharedSettings.GLOBAL;
   private static final BTraceTransformer transformer =
       new BTraceTransformer(new DebugSupport(settings));
@@ -1218,6 +1219,32 @@ public final class Main {
           }
       }
     }
+    String ineffective =
+        ineffectiveTrustedPropertyWarning(
+            System.getProperty(TRUSTED_PROPERTY), settings.isTrusted());
+    if (ineffective != null) {
+      log.warn(ineffective);
+    }
+  }
+
+  /**
+   * Trusted mode is enabled only by the {@code trusted=true} agent argument. A {@code
+   * -Dbtrace.trusted} system property looks like the same switch and is read by nothing, so name
+   * the argument that works instead of leaving a security-relevant setting silently ignored. Agent
+   * initialization runs once per target JVM, so this is reported at most once.
+   *
+   * @return the warning, or {@code null} when the property is unset or trusted mode is on anyway
+   */
+  static String ineffectiveTrustedPropertyWarning(String propertyValue, boolean trusted) {
+    if (propertyValue == null || trusted) {
+      return null;
+    }
+    return "Ignoring system property "
+        + TRUSTED_PROPERTY
+        + "="
+        + propertyValue
+        + ": it has no effect. Trusted mode is enabled only by the trusted=true agent argument"
+        + " (-javaagent:btrace.jar=trusted=true,... or the client's -u flag).";
   }
 
   private static void processClasspaths() throws ClassNotFoundException {
@@ -1308,8 +1335,10 @@ public final class Main {
     if (sysAppend != null && !sysAppend.isEmpty()) {
       if (!settings.isTrusted()) {
         log.warn(
-            "Ignoring btrace.system.appendJar: requires trusted=true. "
-                + "Use extensions or migration patterns instead.");
+            "Ignoring btrace.system.appendJar: it requires the trusted=true agent argument"
+                + " (-javaagent:btrace.jar=trusted=true,... or the client's -u flag); a system"
+                + " property does not enable trusted mode."
+                + " Use extensions or migration patterns instead.");
       } else {
         try {
           Path p = Paths.get(sysAppend).toAbsolutePath().normalize();

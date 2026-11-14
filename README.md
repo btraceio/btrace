@@ -6,7 +6,7 @@
 [![Release](https://img.shields.io/github/v/release/btraceio/btrace?sort=semver)](https://github.com/btraceio/btrace/releases/latest)
 [![codecov](https://codecov.io/github/btraceio/btrace/coverage.svg?branch=develop)](https://codecov.io/github/btraceio/btrace?branch=develop)
 
-BTrace dynamically instruments running Java applications to inject tracing code at runtime. No restarts. No recompilation. Production-safe.
+BTrace dynamically instruments running Java applications to inject tracing code at runtime. No restarts. No recompilation. Built for use on production JVMs.
 
 > **Quick links:** [Quick Reference](docs/QuickReference.md) · [Step-by-Step Tutorial](docs/GettingStarted.md)
 
@@ -15,9 +15,9 @@ BTrace dynamically instruments running Java applications to inject tracing code 
 ## Why BTrace?
 
 - **Zero downtime** - Attach to running JVMs without restart
-- **Production safe** - Verified scripts can't crash your application
+- **Safe by design** - Scripts are verified against a [restricted subset](docs/QuickReference.md#restrictions) (no loops, no new threads, no external calls) before they are loaded; the subset is designed to avoid side effects on the traced application. Verification does not bound overhead: see [production precautions](docs/FAQ.md#is-btrace-safe-to-use-in-production) and the [misuse-resilience QE](docs/QEAgent.md)
 - **Flexible probes** - Method entry/exit, timings, field access, allocations
-- **Low overhead** - Bytecode injection with minimal performance impact
+- **Low overhead** - Bytecode is injected only at the probe points you select; cost scales with how hot they are
 
 ### Supported Java Versions
 
@@ -68,10 +68,11 @@ See the [Oneliner Guide](docs/OnelinerGuide.md) for complete syntax.
 
 ## Install
 
+The 30-second path above needs nothing else. Alternatives:
+
 ```sh
-# JBang (recommended - zero installation)
-jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
-jbang btrace@btraceio <PID> script.java
+# JBang by Maven coordinate (no catalog needed, version pinned)
+jbang io.btrace:btrace:3.0.0 <PID> script.java
 
 # SDKMan
 sdk install btrace
@@ -79,9 +80,17 @@ sdk install btrace
 # Manual download (assets are versioned: btrace-v<version>-bin.tar.gz)
 BTRACE_VERSION=3.0.0
 curl -LO https://github.com/btraceio/btrace/releases/download/v${BTRACE_VERSION}/btrace-v${BTRACE_VERSION}-bin.tar.gz
+
+# Docker: copy /opt/btrace from a version-pinned image into your own
+#   FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
 ```
 
-See [Installation Guide](docs/GettingStarted.md#installation) for Docker, package managers, and more options.
+With an installed distribution the commands are `btrace <PID> <script.java>` (attach), `btracec <script.java>` (compile) and `btracer <script.class> <java-application-and-args>` (launch with the agent).
+
+Details for every option live in one place each:
+- [Installation](docs/GettingStarted.md#installation): archives, RPM/DEB packages, JBang, using the agent JAR with `-javaagent`
+- [Four ways to run BTrace](docs/GettingStarted.md#four-ways-to-run-btrace) and the [startup-mode security boundary](docs/GettingStarted.md#startup-modes-and-the-30-security-boundary)
+- [Docker images](docker/README.md): the Debian, Alpine and distroless variants, tags and Kubernetes patterns
 
 ---
 
@@ -95,145 +104,11 @@ See [Installation Guide](docs/GettingStarted.md#installation) for Docker, packag
 | [Oneliners](docs/OnelinerGuide.md) | DTrace-style quick probes |
 | [Extensions](docs/BTraceExtensionDevelopmentGuide.md) | StatsD, custom integrations |
 | [Documentation Hub](docs/README.md) | All docs and guides |
+| [Wiki](https://github.com/btraceio/btrace/wiki/Home) | External wiki with additional resources |
 
 ---
-
-## Building from Source
-
-```sh
-git clone https://github.com/btraceio/btrace.git
-cd btrace
-./gradlew :btrace-dist:build
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup (required JDK toolchains, running tests) and [docs/README.md](docs/README.md) for architecture.
-
----
-
-## Community & Contributing
-
-**Get help:** [Slack](http://btrace.slack.com/) · [GitHub Issues](https://github.com/btraceio/btrace/issues)
-
-Tips:
-- Prefer IPv4 if your environment has odd local IPs: set `GRADLE_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"`.
-- Run specific modules:
-  - Runtime: `./gradlew :btrace-runtime:test`
-  - Core (incl. extension SPI): `./gradlew :btrace-core:test`
-  - Compiler: `./gradlew :btrace-compiler:test`
-  - Agent (incl. instrumentation): `./gradlew :btrace-agent:test`
-- Update instrumentor golden files when bytecode output changes: `./gradlew test -PupdateTestData`.
-
-Integration tests (optional; without `-Pintegration` the task is skipped and runs nothing):
-```sh
-./gradlew --no-daemon -Pintegration :integration-tests:test
-```
-
-Misuse-resilience QE (optional):
-```sh
-./gradlew :btrace-qe:qe
-```
-Runs the abuse corpus in `btrace-qe/cases/` against real JVMs and writes a findings report to `btrace-qe/build/qe-report/`. See the [QE Agent guide](docs/QEAgent.md). Every abuse idea explored so far (kept, rejected, blocked, open leads) is logged in [btrace-qe/EXPLORATION.md](btrace-qe/EXPLORATION.md); check it before proposing new cases.
-
 
 ## Using BTrace
-
-### Installation
-
-#### JBang (Easiest - Recommended)
-
-Use [JBang](https://www.jbang.dev/) to run BTrace without manual installation:
-
-```sh
-# Install JBang (one time)
-curl -Ls https://sh.jbang.dev | bash -s - app setup
-
-# Use BTrace immediately (replace <version> with desired version, e.g., 3.0.0)
-jbang io.btrace:btrace:<version> <PID> <script.java>
-
-# Or, after `jbang catalog add --name btraceio ...` (see above), use the catalog alias
-jbang btrace@btraceio <PID> <script.java>
-```
-
-**Note:** Replace `<version>` with the desired BTrace version (e.g., `3.0.0`). See [releases](https://github.com/btraceio/btrace/releases) for available versions.
-
-**Extensions:** The published artifact bundles the default extensions, so scripts that inject
-services such as `MetricsService` or `PrinterService` work under jbang with nothing extra to
-install.
-
-**Benefits:** Zero installation, automatic version management, works everywhere (Windows/macOS/Linux/containers), perfect for CI/CD.
-
-**Agent JAR:** The client automatically discovers the masked agent JAR (`btrace.jar`) on its classpath — no extraction step is needed. If you want to use the agent JAR directly (e.g., with `-javaagent`), find it in the Maven local repository after the first jbang run:
-```sh
-# ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar
-```
-
-For launch-time use, review the [startup-mode security boundary](docs/GettingStarted.md#startup-modes-and-the-30-security-boundary). Use `noServer=true` for startup scripts that do not need later client connections; BTrace 3.0 does not support an unauthenticated remote prepared-mode endpoint.
-
-See [Getting Started Guide](docs/GettingStarted.md#jbang-installation-recommended-for-quick-start) for complete JBang documentation and examples.
-
-#### Binary Distribution
-
-**Download:** Get the latest release from the [release page](https://github.com/btraceio/btrace/releases/latest)
-
-```sh
-# Extract the archive
-tar -xzf btrace-*.tar.gz
-# or
-unzip btrace-*.zip
-
-# Set environment variables (optional but recommended)
-export BTRACE_HOME=/path/to/btrace
-export PATH=$BTRACE_HOME/bin:$PATH
-```
-
-#### Package Installation
-
-```sh
-# RPM-based systems
-sudo rpm -i btrace-*.rpm
-
-# Debian-based systems
-sudo dpkg -i btrace-*.deb
-```
-
-**Docker images:**
-```dockerfile
-# Copy BTrace into your application image
-FROM ghcr.io/btraceio/btrace:latest AS btrace
-FROM bellsoft/liberica-openjdk-debian:21-cds
-
-COPY --from=btrace /opt/btrace /opt/btrace
-ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:${BTRACE_HOME}/bin"
-
-# Your application...
-```
-
-Available variants:
-- `ghcr.io/btraceio/btrace:latest` - Debian-based, full tooling
-- `ghcr.io/btraceio/btrace:latest-alpine` - Alpine-based, smaller
-- `ghcr.io/btraceio/btrace:latest-distroless` - Distroless, agent-only (no shell)
-
-See [docker/README.md](docker/README.md) for complete Docker documentation.
-
-### Quick Start
-
-**With JBang (no installation required):**
-```sh
-# Attach to running application (after `jbang catalog add --name btraceio ...`)
-jbang btrace@btraceio <PID> <trace_script.java>
-```
-
-**With installed BTrace:**
-```sh
-# Attach to running application
-btrace <PID> <trace_script.java>
-
-# Compile BTrace script
-btracec <trace_script.java>
-
-# Launch application with BTrace agent
-btracer <compiled_script.class> <java-application-and-args>
-```
 
 ### Extensions and Removed libs/profiles
 
@@ -244,7 +119,7 @@ Note: The legacy `libs`/profiles mechanism has been removed. Passing `libs=<prof
 - `docs/architecture/provided-style-extensions.md`
 - `docs/examples/README.md`
 
-As a last resort (discouraged), you may append a single jar to the system classpath: set `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM together with the `trusted=true` **agent argument** (`-javaagent:btrace.jar=trusted=true,...`); the `-Dbtrace.trusted` system property has no effect and the agent ignores the jar without the agent argument.
+As a last resort (discouraged), you may append a single jar to the system classpath: set `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM together with the `trusted=true` **agent argument** (`-javaagent:btrace.jar=trusted=true,...`); the `-Dbtrace.trusted` system property has no effect and the agent ignores the jar without the agent argument. In both cases the agent logs a warning that names the `trusted=true` agent argument.
 
 ### Fat Agent JAR (Single-JAR Deployment)
 
@@ -283,38 +158,6 @@ btraceFatAgent {
 ```
 
 See [Fat Agent Plugin Architecture](docs/architecture/fat-agent-plugin.md) and [Gradle Plugin README](btrace-gradle-plugin/README.md) for details.
-
-### Oneliner Quick Examples
-
-BTrace now supports DTrace-style oneliners for quick debugging without writing full Java scripts:
-
-```sh
-# Trace method entry with arguments
-btrace -n 'javax.swing.*::setText @entry { print method, args }' <PID>
-
-# Find slow database queries (>100ms)
-btrace -n 'java.sql.Statement::execute* @return if duration>100ms { print method, duration }' <PID>
-
-# Count method invocations
-btrace -n 'java.util.HashMap::get @entry { count }' <PID>
-
-# Print stack trace on OutOfMemoryError
-btrace -n 'java.lang.OutOfMemoryError::<init> @return { stack(10) }' <PID>
-```
-
-**Supported features:**
-- **Locations**: `@entry`, `@return`, `@error`
-- **Actions**: `print`, `count`, `time`, `stack`
-- **Filters**: `if duration>NUMBERms`, `if args[N]==VALUE`
-- **Patterns**: Wildcards (`*`, `?`) and regex (`/pattern/`)
-
-See [Oneliner Guide](docs/OnelinerGuide.md) for complete syntax and examples.
-
-### Documentation
-For comprehensive documentation, tutorials, and guides:
-* **[BTrace Documentation Hub](docs/README.md)** - Complete documentation index with learning paths, quick reference, troubleshooting, and more
-* **[Getting Started Guide](docs/GettingStarted.md)** - Get up and running in 5 minutes
-* **[BTrace Wiki](https://github.com/btraceio/btrace/wiki/Home)** - External wiki with additional resources
 
 ### Extensions and Permissions
 BTrace supports extensions (like the bundled StatsD extension) that provide additional functionality. Extensions require explicit permissions for security:
@@ -392,19 +235,43 @@ and creates no telemetry thread; only the explicit `telemetry=true` agent argume
 `agent_start` event. See [Getting Started: Optional agent telemetry](docs/GettingStarted.md#optional-agent-telemetry)
 for what is sent and how to disable it again.
 
-## Contributing
+## Building from Source
 
-Contributions are accepted under the [Apache License 2.0](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and expectations.
+```sh
+git clone https://github.com/btraceio/btrace.git
+cd btrace
+./gradlew :btrace-dist:build
+```
 
-### Development
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup (required JDK toolchains, running tests) and [docs/README.md](docs/README.md) for architecture.
 
-See [CLAUDE.md](CLAUDE.md) for detailed development guidelines and project architecture.
+Tips:
+- Prefer IPv4 if your environment has odd local IPs: set `GRADLE_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"`.
+- Run specific modules:
+  - Runtime: `./gradlew :btrace-runtime:test`
+  - Core (incl. extension SPI): `./gradlew :btrace-core:test`
+  - Compiler: `./gradlew :btrace-compiler:test`
+  - Agent (incl. instrumentation): `./gradlew :btrace-agent:test`
+- Update instrumentor golden files when bytecode output changes: `./gradlew test -PupdateTestData`.
 
-## Community
+Integration tests (optional; without `-Pintegration` the task is skipped and runs nothing):
+```sh
+./gradlew --no-daemon -Pintegration :integration-tests:test
+```
+
+Misuse-resilience QE (optional):
+```sh
+./gradlew :btrace-qe:qe
+```
+Runs the abuse corpus in `btrace-qe/cases/` against real JVMs and writes a findings report to `btrace-qe/build/qe-report/`. See the [QE Agent guide](docs/QEAgent.md). Every abuse idea explored so far (kept, rejected, blocked, open leads) is logged in [btrace-qe/EXPLORATION.md](btrace-qe/EXPLORATION.md); check it before proposing new cases.
+
+## Community & Contributing
 
 - **Slack:** [btrace.slack.com](http://btrace.slack.com/)
 - **Gitter:** [gitter.im/btraceio/btrace](https://gitter.im/btraceio/btrace)
 - **Issues:** [GitHub Issues](https://github.com/btraceio/btrace/issues)
+
+Contributions are accepted under the [Apache License 2.0](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and expectations, and [AGENTS.md](AGENTS.md) for the rules coding agents follow.
 
 ## License
 
