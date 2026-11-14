@@ -306,6 +306,8 @@ jobs:
         run: python3 -I scripts/guardrails/check_runtime_safety.py .
       - name: Every message key used in code exists in messages.properties (G12)
         run: python3 -I scripts/guardrails/check_message_keys.py .
+      - name: Documented release version, archive names and image tags (G14)
+        run: python3 -I scripts/guardrails/check_doc_versions.py .
       - name: No new fully-qualified type names (G2)
         env:
           EVENT: ${{ github.event_name }}

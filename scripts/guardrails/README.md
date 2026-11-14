@@ -5,7 +5,8 @@ Deterministic checks for rules that advisory text (AGENTS.md, CLAUDE.md, skills)
 ## Where each gate runs and what blocks a merge
 
 - The Python checks G1, G2, G4, G6, G9 (`check_launchers.py`, `check_kind_dispatch.py`), G10, G11
-  (`check_runtime_safety.py`), G12 (`check_message_keys.py`) and G13, and their own tests, run in
+  (`check_runtime_safety.py`), G12 (`check_message_keys.py`), G13 and G14
+  (`check_doc_versions.py`), and their own tests, run in
   the `guardrails` job of `.github/workflows/continuous.yml`. That job feeds the aggregate
   `tests-passed` check, together with `build`, the integration test lanes, the qe harness and the
   Gradle plugin tests.
@@ -43,6 +44,7 @@ guardrail files, baselines and exception lists but does not block a merge withou
 | `HandlerAnnotationClassificationTest` (G12) | Every annotation of `io.btrace.core.annotations` whose `@Target` includes `METHOD` is in `Preprocessor.RT_AWARE_ANNOTS` or `GUARDED_ANNOTS`, in the test's `NOT_HANDLERS` list (`Location`, `Sampled`, each with its reason), or in `btrace-agent/src/test/resources/handler-annotation-baseline.txt` (today `OnLowMemory`). Entries that became classified or whose annotation is gone fail as stale. Finding no method annotation at all fails. A JUnit test in `btrace-agent` | `./gradlew :btrace-agent:test --tests '*HandlerAnnotationClassificationTest'` |
 | `check_message_keys.py` (G12) | Every string-literal key passed to `Messages.get`, `Messages.format`, `reportError` or `reportSafetyError` in `src/main/java*` sources exists in `messages.properties`; keys built by concatenation or held in variables are not checkable and are ignored. An unreadable or empty properties file, or a scan that finds no key literal, is an error, not a pass | `python3 scripts/guardrails/check_message_keys.py .` |
 | `common.gradle` (G8) | Main code on the Java 8 target compiles against the Java 8 API: `--release 8` on a JDK 9+ compiler, or the JDK 8 compiler for the modules that use `sun.misc`, `jdk.jfr` or tools.jar APIs (listed under P3 in `docs/architecture/DesignPrinciples.md`). A compiler setting, so it runs in every build, not in the `guardrails` job | `./gradlew compileJava` |
+| `check_doc_versions.py` (G14) | User documentation names one release: every pinned image tag, Maven coordinate, download URL and archive name equals the `BTRACE_VERSION=<x.y.z>` that `README.md` declares; archive names are the ones the release publishes (`btrace-v<version>-bin.*`); `FROM` and `image:` lines pin a version instead of a floating `latest` tag. `doc-version: <reason>` on a line exempts it; `internal/` and release notes are out of scope | `python3 scripts/guardrails/check_doc_versions.py` |
 
 Each check has tests under `tests/` that build throw-away trees or repositories and assert the
 check fails on bad input with the expected message, and passes on good input. Three tests in
