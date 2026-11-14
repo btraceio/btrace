@@ -251,7 +251,9 @@ jobs:
           # the unit tests produced, and the integration jobs download them as test-trace
           scripts/run-release-gate.sh full-distribution release-gate-logs -- \
             ./gradlew --no-daemon --parallel --build-cache :btrace-dist:build :btrace-agent:compileTestProbes
-          find btrace-agent/build/classes/traces -name '*.class' -type f | grep -q .
+          # -print -quit, not `| grep -q .`: under pipefail, grep exiting at the first match can
+          # SIGPIPE find and fail the step even though the traces are there
+          test -n "$(find btrace-agent/build/classes/traces -name '*.class' -type f -print -quit)"
 
       - name: Add filtered release-gate logs to summary
         if: always()
