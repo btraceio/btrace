@@ -54,11 +54,18 @@ import java.util.concurrent.ConcurrentMap;
  * themselves are unloadable — they live in per-probe ClassLoaders / hidden classes — but the
  * residual call sites in target classes are what force the mutable choice.)
  *
- * <p><b>Important:</b> This class lives in the bootstrap classloader and must not reference SLF4J
- * or any other logging framework. SLF4J initialization in the bootstrap classloader context can
- * fail, causing this class's static initializer to throw, which prevents the repository from being
- * wired up. Handler resolution failures are logged by {@code
- * HandlerRepositoryImpl.resolveHandler()} on the agent-classloader side.
+ * <p><b>No logging here.</b> This class is loaded by the bootstrap class loader and does not log;
+ * handler resolution failures are logged by {@code HandlerRepositoryImpl.resolveHandler()} on the
+ * agent side. Logging from bootstrap code works: the relocated SLF4J and its provider registration
+ * are root classes of {@code btrace.jar}, and the agent itself logs through that bootstrap copy
+ * before this class is initialised ({@link ExtensionIndy} logs too). This class stays silent for
+ * two other reasons. {@link #bootstrap} and the trampoline run on application threads at every
+ * handler call site, the trampoline on every call until resolution succeeds, so a log line there
+ * would repeat at call-site rate. And {@code HandlerRepositoryImpl} wires {@link #repository} from
+ * its static initialiser, which only warns if this class fails to initialise and leaves every
+ * handler a noop, so this static initialiser keeps no dependency it does not need. (An earlier
+ * layout registered no SLF4J provider for the relocated copy, and a logger here broke exactly that
+ * wiring.)
  */
 public final class IndyDispatcher {
 
@@ -180,8 +187,8 @@ public final class IndyDispatcher {
     try {
       return repo.resolveHandler(probeClassName, name, type);
     } catch (Throwable t) {
-      // Logged on the agent-CL side (HandlerRepositoryImpl). SLF4J must not be
-      // referenced from bootstrap-CL code. The trampoline will retry on next call.
+      // Logged on the agent side (HandlerRepositoryImpl); this class does not log, see the
+      // class comment. The trampoline will retry on next call.
       return null;
     }
   }
