@@ -30,7 +30,7 @@ Block the agent port at the firewall and avoid exposing it to untrusted networks
 
 **Patched behavior (this branch and forward-port):**
 
-* V1 payloads rewritten to **typed primitive schemas** — `TypedEncoding` (`btrace-core/.../comm/TypedEncoding.java`) with explicit `TAG_*` bytes, no `readObject`/`writeObject`. Affects `SetSettingsCommand`, `ErrorCommand`, `NumberDataCommand`, `NumberMapDataCommand`, `GridDataCommand`, `RetransformClassNotification`, `InstrumentCommand` limits.
+* V1 payloads rewritten to **type-safe encoding** — `TypedEncoding` (`btrace-core/.../comm/TypedEncoding.java`) handles supported value types explicitly without Java object serialization. Affects `SetSettingsCommand`, `ErrorCommand`, `NumberDataCommand`, `NumberMapDataCommand`, `GridDataCommand`, `RetransformClassNotification`, `InstrumentCommand` limits.
 * Defense-in-depth `ValidatingObjectInputStream` with allow-list (`resolveClass` + reflective `ObjectInputFilter` on JDK 9+) — `btrace-core/.../comm/ValidatingObjectInputStream.java`. Used by `RemoteClient.getClient()`.
 * `WireIO.read()` validates `type` range before dispatch (`IOException` not `RuntimeException`).
 * Agent default bind changed to **loopback** (`127.0.0.1`). Override with `bindAddress=<host>` agent arg or `-Dbtrace.bindAddress=<host>`. Non-loopback binds log `WARN`; `0.0.0.0` explicitly warns `unauthenticated remote access allowed`.

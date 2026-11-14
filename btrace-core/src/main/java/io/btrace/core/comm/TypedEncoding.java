@@ -25,11 +25,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Shared typed encoding for BTRACE-005 hardening.
+ * Type-safe encoding for command payloads.
  *
- * <p>Centralizes TAG constants and read/write helpers that were previously duplicated across {@link
- * SetSettingsCommand}, {@link NumberDataCommand}, {@link GridDataCommand}. All command payloads now
- * use explicit primitive schemas instead of {@code writeObject/readObject}.
+ * <p>Provides explicit serialization for command parameters using type discriminators instead of
+ * Java object serialization. This prevents unsafe deserialization while preserving type information
+ * for supported value types. Centralizes helpers previously duplicated across {@link
+ * SetSettingsCommand}, {@link NumberDataCommand}, {@link GridDataCommand}.
  */
 public final class TypedEncoding {
 
@@ -121,7 +122,9 @@ public final class TypedEncoding {
       out.writeByte(TAG_STRING);
       out.writeUTF(v.toString());
     } else {
-      throw new IOException("Unsupported settings value type: " + v.getClass().getName());
+      throw new IOException(
+          "Invalid settings value type: expected String/Number/Boolean, got "
+              + v.getClass().getName());
     }
   }
 
@@ -151,7 +154,7 @@ public final class TypedEncoding {
       case TAG_BIGDEC:
         return new BigDecimal(in.readUTF());
       default:
-        throw new IOException("Unknown value tag: " + tag);
+        throw new IOException("Invalid settings value type: unknown tag " + tag);
     }
   }
 
@@ -210,7 +213,7 @@ public final class TypedEncoding {
       case NUM_BIGDEC:
         return new BigDecimal(in.readUTF());
       default:
-        throw new IOException("Unknown number tag: " + tag);
+        throw new IOException("Invalid data type: expected Number, got tag " + tag);
     }
   }
 
@@ -266,7 +269,7 @@ public final class TypedEncoding {
       case CELL_HISTOGRAM:
         return in.readUTF();
       default:
-        throw new IOException("Unknown grid cell tag: " + tag);
+        throw new IOException("Invalid data type: unknown grid cell tag " + tag);
     }
   }
 }

@@ -34,14 +34,13 @@ import java.util.Set;
 /**
  * Hardened {@link ObjectInputStream} that enforces an allow-list on deserialized classes.
  *
- * <p>This is the defense-in-depth layer for btrace_005. Even after migrating command payloads to
- * explicit primitive schemas (no {@code readObject()}), the underlying stream could still be abused
- * if a future command re-introduces object deserialization. The filter ensures only expected BTrace
- * command types and primitive wrappers are materialized.
+ * <p>This is a defense-in-depth layer for safe deserialization. Even after migrating command
+ * payloads to type-safe encoding, the underlying stream could still be abused if a future command
+ * re-introduces object serialization. The filter ensures only expected BTrace command types and
+ * primitive wrappers are materialized.
  *
- * <p>On JDK 9+ we also try to install an {@code ObjectInputFilter} via reflection for additional
- * protection, but the {@code resolveClass} override is authoritative and works on Java 8 (BTrace's
- * sourceCompatibility).
+ * <p>On JDK 9+ an {@code ObjectInputFilter} is also installed via reflection for additional
+ * protection, but the {@code resolveClass} override is authoritative and works on Java 8.
  */
 public class ValidatingObjectInputStream extends ObjectInputStream {
 

@@ -17,7 +17,7 @@ On V2 branches, V1 must be opt-in via `btrace.comm.allowV1`:
 2. **`ProtocolNegotiator.java` / `RemoteClient.java`** — after `negotiate()` / `detectFromPrefix()`:
    ```java
    if (negotiated == ProtocolVersion.V1 && !ProtocolConfig.fromSystemProperties().isV1Allowed()) {
-     throw new IOException("V1 protocol disabled by security policy (BTRACE-005). "
+     throw new IOException("V1 protocol disabled by security policy. "
          + "Set -Dbtrace.comm.allowV1=true to re-enable for legacy clients.");
    }
    ```

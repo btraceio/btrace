@@ -150,11 +150,12 @@ class RemoteClient extends Client {
         negotiated = ProtocolVersion.V1;
       }
 
-      // BTRACE-005: V2-only by default, V1 requires -Dbtrace.comm.allowV1=true
+      // V1 is disabled by default for safe deserialization; legacy clients may opt-in via
+      // -Dbtrace.comm.allowV1=true
       if (negotiated == ProtocolVersion.V1
           && !ProtocolConfig.fromSystemProperties().isV1Allowed()) {
         throw new IOException(
-            "V1 protocol disabled by security policy (BTRACE-005). "
+            "V1 protocol disabled by security policy. "
                 + "Set -Dbtrace.comm.allowV1=true to re-enable for legacy clients.");
       }
       WireProtocol wireProtocol =

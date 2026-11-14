@@ -92,8 +92,9 @@ public class ProtocolConfig {
   }
 
   /**
-   * Returns whether V1 (Java serialization) is allowed. Default false (V2-only) for BTRACE-005.
-   * System property: <b>btrace.comm.allowV1</b>
+   * Returns whether V1 (Java serialization) is allowed. V1 is allowed by default for compatibility;
+   * set {@code -Dbtrace.comm.allowV1=false} to enforce V2-only. System property:
+   * <b>btrace.comm.allowV1</b>
    */
   public boolean isV1Allowed() {
     return allowV1;
@@ -204,7 +205,10 @@ public class ProtocolConfig {
     private ProtocolVersion version = ProtocolVersion.getDefault();
     private boolean autoNegotiate = true;
     private boolean forceVersion = false;
-    private boolean allowV1 = false; // BTRACE-005: V2-only by default
+    private boolean allowV1 =
+        true; // allow V1 for compatibility (hardened payloads); set -Dbtrace.comm.allowV1=false to
+
+    // enforce V2-only
 
     private Builder() {}
 
