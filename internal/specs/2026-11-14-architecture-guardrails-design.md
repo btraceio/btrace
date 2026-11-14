@@ -232,7 +232,6 @@ in the `build` job. Python gates run in the `guardrails` job, which feeds `tests
   **[S]**; harmless under parent-first loading, and `MaskedClassLoader`'s Javadoc says section-first.
 - `ExtensionIndy` is bootstrap-visible and holds an SLF4J logger, against the comment in
   `IndyDispatcher.java:57-61` **[S]**.
-- Unknown agent options are not rejected **[S]**.
 - An unhandled probe kind falls through silently: `Instrumentor.java:281` has no `default`, and
   `ClassFileApiBackend.java:225` logs at debug **[S]**.
 - The extension API validator (`validateServiceApis`) has no negative tests, and two of its documented

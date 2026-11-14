@@ -607,6 +607,10 @@ endpoint on port 2020. The command server starts unless `noServer=true` is given
   does the same
 - `bootClassPath=<path>`, `systemClassPath=<path>` - Additional boot / system classpath
 
+Any other `name=value` is passed to scripts as a script argument. A name that differs from a
+parameter above only in letter case, or (from five characters) by one typo, is logged as a warning
+such as `Unknown agent option 'debgu': did you mean 'debug'?`; the agent still starts.
+
 **Examples:**
 ```bash
 # Startup script with no command endpoint
