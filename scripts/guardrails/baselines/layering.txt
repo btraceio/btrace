@@ -4,16 +4,22 @@
 # The check fails on a violation that is not listed here and on a listed entry that is gone, so
 # this file only shrinks. Fix the violation, then delete its line.
 
-import btrace-extensions/btrace-ext-test/src/main/java/io/btrace/test/ext/ExternalTypeTestServiceImpl.java:io.btrace.extension  # extension impl imports io.btrace.extension.util helpers outside io.btrace.core.extensions
-import btrace-extensions/btrace-otel/src/main/java/io/btrace/otel/OTelImpl.java:io.btrace.core  # extension impl imports core internals (ArgsMap, SharedSettings) outside io.btrace.core.extensions
-import btrace-extensions/btrace-otel/src/test/java/io/btrace/otel/OTelImplTest.java:io.btrace.core  # test of an impl class that itself imports BTrace internals
-import btrace-extensions/btrace-otel/src/test/java/io/btrace/otel/OTelOtlpConformanceTest.java:io.btrace.core  # test of an impl class that itself imports BTrace internals
-import btrace-extensions/btrace-statsd/src/main/java/io/btrace/statsd/StatsdImpl.java:io.btrace.core  # extension impl imports core internals (ArgsMap, SharedSettings) outside io.btrace.core.extensions
-import btrace-extensions/btrace-statsd/src/test/java/io/btrace/statsd/StatsdImplTest.java:io.btrace.core  # test of an impl class that itself imports BTrace internals
-import btrace-extensions/examples/btrace-hadoop/src/impl/java/org/example/btrace/hadoop/impl/HadoopApiImpl.java:io.btrace.extension  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
-import btrace-extensions/examples/btrace-hadoop/src/main/java/org/example/btrace/hadoop/impl/HadoopApiImpl.java:io.btrace.extension  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
-import btrace-extensions/examples/btrace-spark/src/impl/java/org/example/btrace/spark/impl/SparkApiImpl.java:io.btrace.extension  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
-import btrace-extensions/examples/btrace-spark/src/main/java/org/example/btrace/spark/impl/SparkApiImpl.java:io.btrace.extension  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
+import btrace-extensions/btrace-ext-test/src/main/java/io/btrace/test/ext/ExternalTypeTestServiceImpl.java:io.btrace.extension.util.ClassLoadingUtil  # extension impl imports io.btrace.extension.util helpers outside io.btrace.core.extensions
+import btrace-extensions/btrace-otel/src/main/java/io/btrace/otel/OTelImpl.java:io.btrace.core.ArgsMap  # extension impl imports core internals outside io.btrace.core.extensions
+import btrace-extensions/btrace-otel/src/test/java/io/btrace/otel/OTelImplTest.java:io.btrace.core.ArgsMap  # test of an impl class that itself imports BTrace internals
+import btrace-extensions/btrace-otel/src/test/java/io/btrace/otel/OTelImplTest.java:io.btrace.core.comm.Command  # test of an impl class that itself imports BTrace internals
+import btrace-extensions/btrace-otel/src/test/java/io/btrace/otel/OTelOtlpConformanceTest.java:io.btrace.core.ArgsMap  # test of an impl class that itself imports BTrace internals
+import btrace-extensions/btrace-otel/src/test/java/io/btrace/otel/OTelOtlpConformanceTest.java:io.btrace.core.comm.Command  # test of an impl class that itself imports BTrace internals
+import btrace-extensions/btrace-statsd/src/main/java/io/btrace/statsd/StatsdImpl.java:io.btrace.core.SharedSettings  # extension impl imports core internals outside io.btrace.core.extensions
+import btrace-extensions/btrace-statsd/src/test/java/io/btrace/statsd/StatsdImplTest.java:io.btrace.core.SharedSettings  # test of an impl class that itself imports BTrace internals
+import btrace-extensions/examples/btrace-hadoop/src/impl/java/org/example/btrace/hadoop/impl/HadoopApiImpl.java:io.btrace.extension.util.ClassLoadingUtil  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
+import btrace-extensions/examples/btrace-hadoop/src/impl/java/org/example/btrace/hadoop/impl/HadoopApiImpl.java:io.btrace.extension.util.MethodHandleCache  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
+import btrace-extensions/examples/btrace-hadoop/src/main/java/org/example/btrace/hadoop/impl/HadoopApiImpl.java:io.btrace.extension.util.ClassLoadingUtil  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
+import btrace-extensions/examples/btrace-hadoop/src/main/java/org/example/btrace/hadoop/impl/HadoopApiImpl.java:io.btrace.extension.util.MethodHandleCache  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
+import btrace-extensions/examples/btrace-spark/src/impl/java/org/example/btrace/spark/impl/SparkApiImpl.java:io.btrace.extension.util.ClassLoadingUtil  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
+import btrace-extensions/examples/btrace-spark/src/impl/java/org/example/btrace/spark/impl/SparkApiImpl.java:io.btrace.extension.util.MethodHandleCache  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
+import btrace-extensions/examples/btrace-spark/src/main/java/org/example/btrace/spark/impl/SparkApiImpl.java:io.btrace.extension.util.ClassLoadingUtil  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
+import btrace-extensions/examples/btrace-spark/src/main/java/org/example/btrace/spark/impl/SparkApiImpl.java:io.btrace.extension.util.MethodHandleCache  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
 literal btrace-agent/src/main/java/io/btrace/instr/Preprocessor.java:io.btrace.agent.Main  # instr loads io.btrace.agent.Main reflectively
 literal btrace-core/src/main/java/io/btrace/extension/impl/ExtensionBridgeImpl.java:io.btrace.runtime.ExtensionIndy  # core reaches ExtensionIndy in btrace-runtime reflectively
 literal btrace-runtime/src/main/java/io/btrace/runtime/BTraceRuntimeImplBase.java:io.btrace.agent.PerfReaderImpl  # runtime creates the agent's PerfReaderImpl reflectively

@@ -21,7 +21,7 @@ check fails CI.
 
 **Rule:** Dependencies between BTrace modules follow one direction. `btrace-boot` and `btrace-core` import no other BTrace module; inside `btrace-agent`, `io.btrace.instr` does not import `io.btrace.agent`; `btrace-client` does not import `io.btrace.agent.*`; extensions import only `io.btrace.core.extensions.*`; `btrace-qe` and `integration-tests` do not import agent, instr or runtime classes. No string literal in a lower layer names a class of a higher one, and no Java package is split across modules.
 
-**Why:** Nothing in the build checks it, so the exceptions accumulate quietly: three extensions import BTrace types outside `io.btrace.core.extensions` (`OTelImpl`, `StatsdImpl`, `ExternalTypeTestServiceImpl`), `BTraceRuntimeImplBase` names `io.btrace.agent.PerfReaderImpl` in a string literal, and the package `io.btrace.runtime` exists in both `btrace-core` and `btrace-runtime`.
+**Why:** Nothing in the build checks it, so the exceptions accumulate quietly: extension implementations import BTrace types outside `io.btrace.core.extensions` (for example `OTelImpl`, `StatsdImpl`, `ExternalTypeTestServiceImpl`; `scripts/guardrails/baselines/layering.txt` lists them all), `BTraceRuntimeImplBase` names `io.btrace.agent.PerfReaderImpl` in a string literal, and the package `io.btrace.runtime` exists in both `btrace-core` and `btrace-runtime`.
 
 **Enforced by:** `scripts/guardrails/check_layering.py`
 

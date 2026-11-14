@@ -27,7 +27,7 @@ RULES = {
         {
             "module": "btrace-client",
             "forbidden": ["io.btrace.instr"],
-            "exceptions": {"btrace-client/src/main/java/io/btrace/client/ProbePrinter.java": ["io.btrace.instr"]},
+            "exceptions": {"btrace-client/src/main/java/io/btrace/client/ProbePrinter.java": ["io.btrace.instr.Printer"]},
         },
         {
             "module": "btrace-extensions",
@@ -36,6 +36,7 @@ RULES = {
         },
     ],
     "upper_layer_literals": [{"module": "btrace-runtime", "forbidden": ["io.btrace.agent"]}],
+    "dynamic_project_references": [],
 }
 
 BUILD_FILES = {
@@ -164,12 +165,61 @@ class LayeringCheckTest(unittest.TestCase):
         self.write_build("btrace-core", [":btrace-extensions:btrace-otel"])
         self.assertFails("btrace-core->btrace-extensions:btrace-otel")
 
-    def test_project_reference_outside_dependencies_is_not_an_edge(self):
+    def test_literal_project_outside_dependencies_block_is_an_edge(self):
+        self.write("btrace-core/build.gradle", "tasks.jar.dependsOn project(':btrace-agent').tasks.jar\n")
+        self.assertFails("edge btrace-core/build.gradle:btrace-core->btrace-agent")
+
+    def test_self_reference_is_not_an_edge(self):
+        self.write_build("btrace-core", [], "}\ndef me = project(':btrace-core')\ndependencies {\n")
+        self.assertPasses()
+
+    def test_project_in_comments_is_ignored(self):
         self.write(
             "btrace-core/build.gradle",
-            "def dist = project(':btrace-dist')\ntasks.jar.dependsOn project(':btrace-boot').tasks.jar\n",
+            "// implementation project(':btrace-agent')\n/* implementation project(':btrace-agent')\n"
+            "   project(somePath) */\nx = 1 // project(':btrace-agent')\n",
         )
         self.assertPasses()
+
+    def test_slashes_in_a_string_do_not_start_a_comment(self):
+        self.write(
+            "btrace-core/build.gradle",
+            "def url = 'http://example.com'; dependencies { implementation project(':btrace-agent') }\n",
+        )
+        self.assertFails("btrace-core->btrace-agent")
+
+    def test_block_comment_inside_string_is_not_a_comment(self):
+        self.write(
+            "btrace-core/build.gradle", "def g = '/*'; dependencies { implementation project(':btrace-agent') }; def h = '*/'\n"
+        )
+        self.assertFails("btrace-core->btrace-agent")
+
+    def test_unlisted_non_literal_project_reference_fails(self):
+        self.write("btrace-core/build.gradle", "def p = project(somePath)\n")
+        self.assertFails("cannot parse project reference", "btrace-core/build.gradle:1", "somePath")
+
+    def test_listed_non_literal_project_reference_passes(self):
+        self.write("btrace-core/build.gradle", "def p = project(somePath)\n")
+        self.write_rules(
+            dict(
+                RULES,
+                dynamic_project_references=[
+                    {"file": "btrace-core/build.gradle", "expression": "somePath", "reason": "task wiring"}
+                ],
+            )
+        )
+        self.assertPasses()
+
+    def test_listed_non_literal_project_reference_that_is_gone_fails(self):
+        self.write_rules(
+            dict(
+                RULES,
+                dynamic_project_references=[
+                    {"file": "btrace-core/build.gradle", "expression": "somePath", "reason": "task wiring"}
+                ],
+            )
+        )
+        self.assertFails("stale dynamic_project_references", "somePath")
 
     def test_unparseable_project_reference_is_an_error(self):
         self.write_build("btrace-client", [":btrace-core"], "    implementation project(somePath)\n")
@@ -247,16 +297,37 @@ class LayeringCheckTest(unittest.TestCase):
 
     def test_baselined_violation_passes(self):
         rel = self.java("btrace-client", "io.btrace.client", "X", "import io.btrace.agent.Main;")
-        self.write("baseline.txt", "import %s:io.btrace.agent  # known\n" % rel)
+        self.write("baseline.txt", "import %s:io.btrace.agent.Main  # known\n" % rel)
         self.assertPasses()
+
+    def test_baselined_file_gaining_a_second_import_under_the_same_prefix_fails(self):
+        rel = self.java(
+            "btrace-client", "io.btrace.client", "X", "import io.btrace.agent.Main;\nimport io.btrace.agent.Other;"
+        )
+        self.write("baseline.txt", "import %s:io.btrace.agent.Main\n" % rel)
+        self.assertFails("new violation: import %s:io.btrace.agent.Other" % rel)
+
+    def test_wildcard_import_detail_is_the_import_as_written(self):
+        rel = self.java("btrace-client", "io.btrace.client", "X", "import io.btrace.agent.*;")
+        self.write("baseline.txt", "import %s:io.btrace.agent.*\n" % rel)
+        self.assertPasses()
+
+    def test_exception_covers_only_the_named_import(self):
+        self.java(
+            "btrace-client",
+            "io.btrace.client",
+            "ProbePrinter",
+            "import io.btrace.instr.Printer;\nimport io.btrace.instr.Other;",
+        )
+        self.assertFails("ProbePrinter.java:io.btrace.instr.Other")
 
     def test_fixed_but_still_baselined_fails(self):
         rel = self.java("btrace-client", "io.btrace.client", "X", "import java.util.List;")
-        self.write("baseline.txt", "import %s:io.btrace.agent\n" % rel)
+        self.write("baseline.txt", "import %s:io.btrace.agent.Main\n" % rel)
         self.assertFails("stale baseline entry")
 
     def test_baseline_entry_for_deleted_file_reports_stale(self):
-        self.write("baseline.txt", "import btrace-client/src/main/java/io/btrace/client/Gone.java:io.btrace.agent\n")
+        self.write("baseline.txt", "import btrace-client/src/main/java/io/btrace/client/Gone.java:io.btrace.agent.Main\n")
         self.assertFails("stale baseline entry (remove it): import btrace-client/src/main/java/io/btrace/client/Gone.java")
 
     def test_allowed_exception_file_passes(self):
@@ -268,7 +339,7 @@ class LayeringCheckTest(unittest.TestCase):
 
     def test_exception_does_not_cover_other_files(self):
         self.java("btrace-client", "io.btrace.client", "Other", "import io.btrace.instr.Printer;")
-        self.assertFails("import btrace-client/src/main/java/io/btrace/client/Other.java:io.btrace.instr")
+        self.assertFails("import btrace-client/src/main/java/io/btrace/client/Other.java:io.btrace.instr.Printer")
 
     def test_missing_rules_file_is_an_error(self):
         os.remove(os.path.join(self.root, "rules.json"))

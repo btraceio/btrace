@@ -94,11 +94,23 @@
     ],
     [
       "btrace-dist",
+      "btrace-boot"
+    ],
+    [
+      "btrace-dist",
       "btrace-client"
     ],
     [
       "btrace-dist",
       "btrace-compiler"
+    ],
+    [
+      "btrace-dist",
+      "btrace-core"
+    ],
+    [
+      "btrace-dist",
+      "btrace-dtrace"
     ],
     [
       "btrace-dtrace",
@@ -157,6 +169,10 @@
       "btrace-core"
     ],
     [
+      "btrace-qe",
+      "btrace-dist"
+    ],
+    [
       "btrace-runtime",
       "btrace-core"
     ],
@@ -171,6 +187,10 @@
     [
       "integration-tests",
       "btrace-core"
+    ],
+    [
+      "integration-tests",
+      "btrace-dist"
     ],
     [
       "integration-tests",
@@ -226,7 +246,10 @@
       ],
       "exceptions": {
         "btrace-client/src/main/java/io/btrace/client/ProbePrinter.java": [
-          "io.btrace.instr"
+          "io.btrace.instr.BTraceProbe",
+          "io.btrace.instr.BTraceProbeFactory",
+          "io.btrace.instr.OnMethod",
+          "io.btrace.instr.OnProbe"
         ]
       }
     },
@@ -272,7 +295,7 @@
       ],
       "exceptions": {
         "btrace-boot/src/main/java/io/btrace/boot/Loader.java": [
-          "io.btrace.agent"
+          "io.btrace.agent.Main"
         ]
       },
       "source_sets": [
@@ -313,6 +336,18 @@
       "source_sets": [
         "main"
       ]
+    }
+  ],
+  "dynamic_project_references": [
+    {
+      "file": "build.gradle",
+      "expression": "path",
+      "reason": "root build script configures every subproject by a path variable; it declares no dependency"
+    },
+    {
+      "file": "btrace-dist/build.gradle",
+      "expression": "extensionProjectPath",
+      "reason": "distribution packages each extension project listed in its own build script; task wiring, not a dependency declaration"
     }
   ]
 }
