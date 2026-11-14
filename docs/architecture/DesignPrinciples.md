@@ -15,7 +15,10 @@ Each section has the same four fields:
 `scripts/guardrails/check_agent_config.py` verifies that every path under **Enforced by** exists
 and that every `scripts/guardrails/check_*.py` is named here or in the
 [guardrails README](../../scripts/guardrails/README.md), so a catalog that points at a deleted
-check fails CI.
+check fails CI. It also fails when the catalog does not hold exactly the principles P1 to P9 in
+order, so a principle cannot be deleted unnoticed. Which CI job runs each check, and which checks
+the branch rules require, is in
+[Where each gate runs](../../scripts/guardrails/README.md#where-each-gate-runs-and-what-blocks-a-merge).
 
 ## P1. Module layering is fixed
 
@@ -51,17 +54,17 @@ check fails CI.
 
 **Rule:** When the same behavior exists twice, a change to one copy is a change to both or says why not. This covers the two instrumentation backends (ASM and the ClassFile API), the V1 and V2 wire command tables, every `Kind` handled by both backends, and the shell and batch launchers.
 
-**Why:** Fixes keep landing in only one of two siblings. 22d3f9a3 applied a `Kind.LINE` probe only to the methods it selects; c81a2d43 fixed `@Duration` at every return but the first. The `btracex` and `btracec` shell launchers lack `-XX:+AllowRedefinitionToAddDeleteMethods`, which their `.bat` twins pass. See [instrumentation backends](InstrumentationBackends.md). Four sibling pairs are enforced: `check_launchers.py` compares the JVM flags and main class of each shell launcher and its `.bat` twin, `check_kind_dispatch.py` asserts that both backends dispatch every `Kind` constant, and `CommandTableParityTest` asserts that the V1 and V2 wire command tables declare the same types and convert into each other. `check_pr_metadata.py` requires a `Sibling: <reason>` line in the description of a pull request that changes only one of the two backends; it checks that a reason is present, not that it is adequate. Runtime-variant source sets (`java9`, `java11`, `java24`) are checked by the compiler only.
+**Why:** The two backends drift apart when a fix lands in only one of them. 22d3f9a3 made the ASM backend apply a `Kind.LINE` probe only to the methods it selects, as the ClassFile API backend already did; c81a2d43 made the ASM backend measure `@Duration` at every return instead of only the first, which the ClassFile API backend already did. The `btracex` and `btracec` shell launchers lack `-XX:+AllowRedefinitionToAddDeleteMethods`, which their `.bat` twins pass. See [instrumentation backends](InstrumentationBackends.md). `check_launchers.py` compares the JVM flags and main class of each shell launcher and its `.bat` twin, `check_kind_dispatch.py` asserts that both backends dispatch every `Kind` constant, and `CommandTableParityTest` asserts that the V1 and V2 wire command tables declare the same types and convert into each other. `check_pr_metadata.py` requires a `Sibling: <reason>` line in the description of a pull request that changes only one of the two backends (the ClassFile API backend is the `java24` source set of `btrace-agent`); it checks that a reason is present, not that it is adequate. The per-JDK runtime implementations (`BTraceRuntimeImpl_8` in `btrace-runtime`'s main source set, `BTraceRuntimeImpl_9` and `BTraceRuntimeImpl_11` in its `java9` and `java11` source sets) are kept in step by the compiler only.
 
 **Enforced by:** `scripts/guardrails/check_launchers.py`, `scripts/guardrails/check_kind_dispatch.py`, `btrace-core/src/test/java/io/btrace/core/comm/CommandTableParityTest.java`, `scripts/guardrails/check_pr_metadata.py`
 
-**Exceptions:** None.
+**Exceptions:** `scripts/guardrails/baselines/launchers.txt` lists the launcher differences that predate the check, each with its reason; it only shrinks. `HEARTBEAT` is the one command the V1 stream refuses: it exists on the V2 protocol only, and `CommandTableParityTest` fails if the V1 stream refuses any other type. A `Sibling: <reason>` line in the pull request description accepts a change to one backend, and pull requests opened by a bot are exempt from that rule.
 
 ## P5. Never fail open
 
 **Rule:** A dropped handler, a failed transform or an ignored option is logged at warn or above and reaches the client; it is never swallowed. A `catch` of `Throwable`, `Exception` or `RuntimeException` does not end with an empty body, a debug or trace log, or a bare `return` or `continue`. `BTraceTransformer.reportFailure` is the model.
 
-**Why:** Failing open looks like success. 1d069ce0 logged handler mismatches at debug only, 9c4f4a63 did the same for classes that could not be instrumented, and 0962eaaf caught the failure to build a level guard and returned the unguarded handler. Silent `catch` blocks are common in main sources.
+**Why:** Failing open looks like success. Each of these commits fixes a case of it: before 1d069ce0 a handler that fit no method of a matching class was skipped with at most a debug log line; before 9c4f4a63 a class that could not be instrumented was logged only in the target JVM and the client was told nothing; before 0962eaaf a failure to build a handler's level guard was caught and the unguarded handler returned, so a level-gated probe fired on every call. `python3 scripts/guardrails/check_swallow.py --all` lists the swallowing `catch` blocks that predate the check.
 
 **Enforced by:** `scripts/guardrails/check_swallow.py`
 
@@ -69,7 +72,7 @@ check fails CI.
 
 ## P6. Nothing disturbs the application thread
 
-**Rule:** Probe handling must not change the behavior of the thread it runs on. `Thread.interrupted()` is never called in `btrace-runtime`, because it clears the application's interrupt flag. A failure in the transformer reports and returns the original bytes instead of propagating into class loading.
+**Rule:** Probe handling must not change the behavior of the thread it runs on. `Thread.interrupted()` is never called in `btrace-runtime`, because it clears the application's interrupt flag. A failure in the transformer is reported to the client and `transform` returns `null`, so the class keeps its original bytes, instead of propagating into class loading.
 
 **Why:** The comment in `CommandQueue` explains how clearing the flag from probe code loses an interrupt the application was waiting for.
 
@@ -91,7 +94,7 @@ check fails CI.
 
 **Rule:** A main-source Java file over 1,000 lines does not get longer, and no new file starts over 1,000 lines. The list of public top-level types in `btrace-core` changes only deliberately. No new `...ForTest` or `...ForTests` method goes into main sources.
 
-**Why:** Oversized files such as `btrace-client`'s `Client.java` keep getting longer, and `btrace-core`'s public surface keeps growing; the current size exceptions, public type snapshot and hooks are the files named under Exceptions. Main sources already carry test-only hooks (`Client.setRuntimeForTest`, `BTraceRuntimeImplBase.speculativeQueueCountForTest`).
+**Why:** Oversized files such as `btrace-client`'s `Client.java`, well over 1,000 lines, kept getting longer, and `btrace-core`'s public surface keeps growing; the current size exceptions, public type snapshot and hooks are the files named under Exceptions. Main sources already carry test-only hooks (`btrace-agent`'s `Client.setRuntimeForTest`, `BTraceRuntimeImplBase.speculativeQueueCountForTest`).
 
 **Enforced by:** `scripts/guardrails/check_growth.py`
 

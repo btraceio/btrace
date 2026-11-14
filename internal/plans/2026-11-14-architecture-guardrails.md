@@ -1,5 +1,13 @@
 # Architecture and Design Guardrails Implementation Plan
 
+> **Executed 2026-11-14.** This plan is kept as written. Some files it names were renamed or
+> removed during execution (for example `test-hooks.txt` is `main-test-hooks.txt`,
+> `BTraceTransformerFailureTest` was dropped for the existing `BTraceTransformerFailureReportTest`,
+> and there is no `UNGUARDED_ANNOTS`), and some premises were wrong (24 Java 9+ call sites, the
+> `HEARTBEAT` exception). The spec's
+> [As built (2026-11-14)](../specs/2026-11-14-architecture-guardrails-design.md#as-built-2026-11-14)
+> section lists every deviation with its commit.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Turn BTrace's structural and design rules into blocking CI checks plus one catalog that says what enforces each rule.

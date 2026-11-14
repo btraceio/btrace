@@ -1,7 +1,9 @@
 # Architecture and design guardrails — design
 
-Status: **draft, awaiting maintainer approval.** Branch `claude/btrace-agentic-guardrails-1b3753`,
-based on `origin/develop` c968df58. Nothing outside this file has been changed.
+Status: **approved and implemented** on branch `claude/btrace-agentic-guardrails-1b3753`, based on
+`origin/develop` c968df58. The sections below are the design as approved and are left as written;
+where execution disproved a premise or changed the design, the last section,
+[As built (2026-11-14)](#as-built-2026-11-14), records what was done instead and in which commit.
 
 Evidence key: **[V]** checked by hand in this worktree; **[S]** reported by a research pass over the
 code and the last twelve months of history, not re-derived. Every [S] number must be re-measured by
@@ -258,3 +260,67 @@ in the `build` job. Python gates run in the `guardrails` job, which feeds `tests
 - Whether G8 uses `--release 8` or the JDK 8 toolchain, by trying both.
 - The wording of each catalog entry, within the four fields of section 4.
 - Re-measuring every **[S]** baseline number when its gate is written.
+
+## As built (2026-11-14)
+
+What execution changed against the sections above. Commit hashes are on this branch; counts were
+read from the named files when this section was written, and the files are authoritative.
+
+- **G8, Java 8 API (section 5, P3).** The tree held 24 Java 9+ call sites, not 3, all in
+  `btrace-client`'s `io.btrace.extcli` (21 `Path.of`, 2 `Map.of`, 1 `List.of`); all were replaced
+  with Java 8 equivalents. `options.release = 8` rejected the internal APIs of `btrace-core`,
+  `btrace-compiler` and `btrace-client`, so those three compile their main code with the JDK 8
+  toolchain, like `btrace-agent`, `btrace-runtime` and `btrace-boot`; `common.gradle` sets
+  `--release 8` only for compile tasks whose compiler is JDK 9+. `integration-tests` opts out (its
+  fixtures use `jdk.jfr`). f7fec3a6.
+- **G7, bootstrap closure (P2).** The relocated-SLF4J exemption was removed: relocated SLF4J types
+  are bootstrap-visible only as root classes. The JDK prefix rule subtracts a deny-list of packages
+  that JDK 9+ defines to the platform or application loader,
+  `btrace-dist/src/test/resources/bootstrap-jdk-nonboot-packages.txt`, so the root annotation
+  processor's `java.compiler` references are baselined instead of passing. 4a0ac1fa (gate added in
+  af95fdd4). The deny-list lines are shape-checked since 7f86a07b.
+- **G12, handler annotations (P7).** No unguarded-annotation set was added to production code;
+  `Preprocessor` changed visibility only. `HandlerAnnotationClassificationTest` keeps the non-handler
+  annotations (`Location`, `Sampled`) in a test-side `NOT_HANDLERS` list, and
+  `btrace-agent/src/test/resources/handler-annotation-baseline.txt` holds `OnLowMemory`, a handler
+  in neither preprocessor set with no recorded reason. fd1db7b4.
+- **G9, wire commands (P4).** `CommandAdapter` converts `HEARTBEAT` both ways; the V2-only exception
+  is that the V1 stream (`WireIO`) refuses it. `CommandTableParityTest` converts every type and
+  asserts the V1 stream refuses exactly `HEARTBEAT`. 0a75ec8b.
+- **G11, transform failure (P6).** The JUnit half is the existing
+  `BTraceTransformerFailureReportTest`, which already asserted that a failing transform returns
+  `null` and reports to the client; the duplicate test added in 4c2f7228 was removed in d92ab830.
+- **G12, message keys (P7).** The check is Python, `scripts/guardrails/check_message_keys.py`, not
+  JUnit. fd1db7b4.
+- **G5, one-sided backend changes (P4).** `ASM_BACKEND` in `scripts/guardrails/check_pr_metadata.py`
+  lists 21 files, derived by `scripts/guardrails/derive_asm_backend.py`; a test fails when the two
+  differ. f29daacd, with the single-line `Sibling:` fix in 41bed3be.
+- **Baselines (section 6).** There is no single location. Python baselines are under
+  `scripts/guardrails/baselines/` (`launchers.txt`, `layering.txt`, `main-test-hooks.txt`); the size
+  allowlist is `scripts/guardrails/growth_allow.txt`, the API snapshot
+  `scripts/guardrails/api/btrace-core-public-types.txt`, and the layering rules with their per-file
+  exceptions `scripts/guardrails/layering_rules.json`. Java baselines are test resources of their
+  module: `bootstrap-root-allowlist.txt`, `bootstrap-closure-baseline.txt` and
+  `bootstrap-jdk-nonboot-packages.txt` in `btrace-dist`, `args-registry-baseline.txt` in
+  `btrace-core`, `handler-annotation-baseline.txt` in `btrace-agent`. Every Python baseline entry
+  must carry a `# reason` since 9797bc31, as the Java baselines did from the start.
+- **Baseline sizes**, entries per file: `launchers.txt` 3 (24da36d3; the spec named two launchers,
+  the third entry is `btracex`'s missing `--add-exports`); `layering.txt` 20 (0459ee82, 868e3412);
+  `main-test-hooks.txt` 10 entries in 9 files, not 8 files, after the rule was widened to
+  `...ForTests` and overloads (d7079ef0); `growth_allow.txt` none; the API snapshot 151 types
+  (6fd59435); `bootstrap-root-allowlist.txt` 21 lines; `bootstrap-closure-baseline.txt` 24 (the
+  `ExtensionContext` reference plus 23 from the annotation processor; af95fdd4, 4a0ac1fa);
+  `bootstrap-jdk-nonboot-packages.txt` 54 packages; `args-registry-baseline.txt` 9, against the
+  spec's 5: the usage text also omits `output`, and QuickReference also omits `help`, `probes` and
+  `output` (fd1db7b4, 5822dfc6); `handler-annotation-baseline.txt` 1.
+- **What blocks a merge (section 7).** The maintainer updated the "Merging" ruleset on 2026-11-14:
+  it now requires `build`, `tests-passed` and `pr-metadata`, with `require_code_owner_review: false`.
+  `scripts/guardrails/README.md` records the reading and which job runs each gate.
+- **Delivery (section 7).** Delivered so far as one branch of commits, one or more per gate, not as
+  stacked PRs; how they are split into PRs is the maintainer's call.
+- **Final review fixes.** 9797bc31 moved the helpers the checks had copied into
+  `scripts/guardrails/_common.py` and closed vacuous passes (catalog must hold P1 to P9; launchers
+  need a main class or a `-javaagent:` launch; `Thread::interrupted` is matched). 7f86a07b declared
+  `docs/QuickReference.md` as an input of `:btrace-core:test` so the build cache cannot skip
+  `ArgsRegistryTest`. 1df91df9 put the catalog and the four tests that hold exception lists under
+  code-owner review.
