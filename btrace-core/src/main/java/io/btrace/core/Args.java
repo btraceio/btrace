@@ -19,7 +19,6 @@ package io.btrace.core;
 public final class Args {
   public static final String SYSTEM_CLASS_PATH = "systemClassPath";
   public static final String BOOT_CLASS_PATH = "bootClassPath";
-  public static final String AGENT_JAR = "agentJar";
   public static final String CONFIG = "config";
   public static final String SCRIPT = "script";
   public static final String SCRIPT_DIR = "scriptdir";
@@ -43,7 +42,6 @@ public final class Args {
   public static final String STDOUT = "stdout";
   public static final String NO_SERVER = "noServer";
   public static final String HELP = "help";
-  public static final String LIBS = "libs";
   public static final String GRANT = "grant";
   public static final String DENY = "deny";
   public static final String GRANT_ALL = "grantAll";

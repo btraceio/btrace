@@ -31,7 +31,6 @@ import static io.btrace.core.Args.FILE_ROLL_MILLISECONDS;
 import static io.btrace.core.Args.GRANT;
 import static io.btrace.core.Args.GRANT_ALL;
 import static io.btrace.core.Args.HELP;
-import static io.btrace.core.Args.LIBS;
 import static io.btrace.core.Args.NO_SERVER;
 import static io.btrace.core.Args.OUTPUT;
 import static io.btrace.core.Args.PROBES;
@@ -980,17 +979,6 @@ public final class Main {
       usage();
     }
 
-    String libs = argMap.get(LIBS);
-    if (libs != null && !libs.isEmpty()) {
-      // Reported as an error, not a warning: this used to load jars and no longer does, so a
-      // milder message would let a target start up looking healthy while every probe that relied
-      // on those classes fails later with an unrelated-looking NoClassDefFoundError.
-      log.error(
-          "The 'libs' profile feature has been removed and has no effect: '{}' will not be loaded. "
-              + "Package the integration as a BTrace extension instead. "
-              + "See docs/architecture/migrating-from-libs-profiles.md for migration guidance.",
-          libs);
-    }
     // Read before processClasspaths, which consults it for the btrace.system.appendJar escape
     // hatch. The main argument loop below runs later and would leave the hatch permanently
     // unreachable.

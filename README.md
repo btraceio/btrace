@@ -114,7 +114,7 @@ Details for every option live in one place each:
 
 Extensions add functionality via a stable API on bootstrap and an isolated implementation. See the extension development guide and examples.
 
-Note: The legacy `libs`/profiles mechanism has been removed. Passing `libs=<profile>` logs an error and loads nothing, so custom classes that used to arrive that way will no longer resolve. Package integrations as extensions and use provided-style class loading patterns (object hand-off + TCCL). For migration guidance and examples, see:
+Note: The legacy `libs`/profiles mechanism has been removed. The `libs=<profile>` argument is ignored like any unknown argument and loads nothing, so custom classes that used to arrive that way will no longer resolve. Package integrations as extensions and use provided-style class loading patterns (object hand-off + TCCL). For migration guidance and examples, see:
 - `docs/architecture/migrating-from-libs-profiles.md`
 - `docs/architecture/provided-style-extensions.md`
 - `docs/examples/README.md`
