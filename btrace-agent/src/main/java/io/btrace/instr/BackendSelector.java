@@ -35,10 +35,14 @@ final class BackendSelector {
   // defineClass() failure — avoiding a startup-path JAR-read that was delaying first-transform
   // on slow CI machines and intermittently pushing tests over their 10-second timeout.
   private static volatile InstrumentationBackend classFileApiBackend;
+  private static volatile Throwable classFileApiFailure;
   private static volatile boolean classFileApiAttempted;
 
   private BackendSelector() {}
 
+  // Attempted only when a class newer than ASM supports arrives, which happens only on a JVM that
+  // has
+  // the ClassFile API. A failure here is therefore a broken installation, never an expected state.
   private static InstrumentationBackend loadClassFileApiBackend() {
     try {
       Class<?> cls =
@@ -46,7 +50,8 @@ final class BackendSelector {
               "io.btrace.instr.ClassFileApiBackend", true, BackendSelector.class.getClassLoader());
       return (InstrumentationBackend) cls.getDeclaredConstructor().newInstance();
     } catch (Throwable t) {
-      log.debug("ClassFile API backend unavailable (expected on JDK < 24): {}", t.getMessage());
+      classFileApiFailure = t;
+      log.warn("ClassFile API backend failed to load; newer class files cannot be instrumented", t);
       return null;
     }
   }
@@ -56,7 +61,11 @@ final class BackendSelector {
    *
    * <p>Uses the ASM backend for versions &le; {@link
    * AsmInstrumentationBackend#MAX_ASM_MAJOR_VERSION} (71, Java 27). For higher versions uses the
-   * ClassFile API backend when available, otherwise falls back to ASM.
+   * ClassFile API backend.
+   *
+   * @throws IllegalStateException if the version needs the ClassFile API backend and it failed to
+   *     load; the message names the load failure, which ASM's own "unsupported class file version"
+   *     error would hide
    */
   static InstrumentationBackend select(int classFileMajorVersion) {
     if (ASM.supports(classFileMajorVersion)) {
@@ -77,6 +86,22 @@ final class BackendSelector {
       }
       cfApi = classFileApiBackend;
     }
-    return cfApi != null ? cfApi : ASM;
+    return choose(classFileMajorVersion, cfApi, classFileApiFailure);
+  }
+
+  static InstrumentationBackend choose(
+      int classFileMajorVersion, InstrumentationBackend classFileApi, Throwable loadFailure) {
+    if (ASM.supports(classFileMajorVersion)) {
+      return ASM;
+    }
+    if (classFileApi != null) {
+      return classFileApi;
+    }
+    throw new IllegalStateException(
+        "Class file major version "
+            + classFileMajorVersion
+            + " needs the ClassFile API backend, which failed to load: "
+            + loadFailure,
+        loadFailure);
   }
 }
