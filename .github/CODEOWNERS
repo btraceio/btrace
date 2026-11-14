@@ -11,5 +11,6 @@
 /scripts/guardrails/               @jbachorik
 /btrace-dist/src/test/resources/bootstrap-root-allowlist.txt   @jbachorik
 /btrace-dist/src/test/resources/bootstrap-closure-baseline.txt @jbachorik
+/btrace-dist/src/test/resources/bootstrap-jdk-nonboot-packages.txt @jbachorik
 /btrace-core/src/test/resources/args-registry-baseline.txt             @jbachorik
 /btrace-agent/src/test/resources/handler-annotation-baseline.txt        @jbachorik

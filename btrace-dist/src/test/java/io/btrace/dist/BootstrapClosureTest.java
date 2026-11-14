@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -34,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +48,9 @@ import java.util.jar.JarFile;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -72,27 +76,37 @@ import org.objectweb.asm.Type;
  *
  * <p>The types a root class references are the classes named in its constant pool ({@code
  * CONSTANT_Class}, and the descriptors of {@code CONSTANT_NameAndType} and {@code
- * CONSTANT_MethodType}) plus the descriptors of its declared fields and methods. Array types count
- * as their element type and primitive types are ignored. Annotation descriptors and generic
- * signatures are not counted: a missing annotation type is skipped by reflection and a signature is
- * erased, so neither can fail linking. A referenced type is bootstrap-visible when it is a JDK type
- * (internal name under {@code java/}, {@code javax/}, {@code jdk/}, {@code sun/} or {@code
- * com/sun/management/}, which is in {@code rt.jar} on JDK 8 and in the boot-loader module {@code
- * jdk.management} from JDK 9), an SLF4J type in the package the distribution relocates it to
- * ({@code io/btrace/libs/org/slf4j/}, from {@code relocate 'org.slf4j', 'io.btrace.libs.org.slf4j'}
- * in {@code btrace-dist/build.gradle}), or another root class. Any other reference must be listed
- * in {@code bootstrap-closure-baseline.txt} as {@code <root class> -> <referenced class> # reason},
- * in internal names. An unlisted reference fails as new and a listed one that no longer occurs
- * fails as stale, so the baseline only shrinks.
+ * CONSTANT_MethodType}, which also covers method handles and {@code invokedynamic} bootstrap
+ * arguments) plus the descriptors of its declared fields and methods. Array types count as their
+ * element type and primitive types are ignored. Annotation descriptors and generic signatures are
+ * not counted: a missing annotation type is skipped by reflection and a signature is erased, so
+ * neither can fail linking.
+ *
+ * <p>A referenced type is bootstrap-visible when it is another root class, or a JDK type the boot
+ * loader defines. JDK types are recognised by a fixed rule, so the result does not depend on the
+ * JDK running the test: the internal name is under {@code java/}, {@code javax/}, {@code jdk/},
+ * {@code sun/} or {@code com/sun/management/} (in {@code rt.jar} on JDK 8 and in the boot-loader
+ * module {@code jdk.management} from JDK 9), and its package is not listed in {@code
+ * bootstrap-jdk-nonboot-packages.txt}. That file lists the packages exported by JDK 9+ modules
+ * defined to the platform or application loader, such as {@code java.sql} and {@code
+ * java.compiler}; how it was generated is in its header. Relocated SLF4J types ({@code
+ * io/btrace/libs/org/slf4j/}) get no exemption: they are bootstrap-visible only as root classes.
+ *
+ * <p>Any other reference must be listed in {@code bootstrap-closure-baseline.txt} as {@code <root
+ * class> -> <referenced class> # reason}, in internal names. An unlisted reference fails as new and
+ * a listed one that no longer occurs fails as stale, so the baseline only shrinks.
+ *
+ * <p>The tests whose names start with {@code fixture} exercise the extraction and matching logic on
+ * classes built in memory, so the gate is seen failing on bad input independently of the jar.
  */
 class BootstrapClosureTest {
   private static final String ALLOWLIST = "bootstrap-root-allowlist.txt";
   private static final String BASELINE = "bootstrap-closure-baseline.txt";
+  private static final String NON_BOOT_PACKAGES = "bootstrap-jdk-nonboot-packages.txt";
 
   private static final List<String> JDK_PREFIXES =
       Collections.unmodifiableList(
           Arrays.asList("java/", "javax/", "jdk/", "sun/", "com/sun/management/"));
-  private static final String RELOCATED_SLF4J = "io/btrace/libs/org/slf4j/";
 
   private static final int CONSTANT_CLASS = 7;
   private static final int CONSTANT_NAME_AND_TYPE = 12;
@@ -102,16 +116,211 @@ class BootstrapClosureTest {
   void rootClassesMatchTheAllowlist() throws IOException {
     List<String> allowlist = readEntries(ALLOWLIST, false);
     assertFalse(allowlist.isEmpty(), ALLOWLIST + " lists nothing");
-    for (String line : allowlist) {
-      assertTrue(
-          line.endsWith("/") || line.endsWith(".class"),
-          ALLOWLIST + ": '" + line + "' is neither a package (ending in /) nor a .class entry");
-    }
+    List<String> errors = allowlistErrors(allowlist, readRootClasses().keySet());
+    assertTrue(errors.isEmpty(), String.join("\n", errors));
+  }
 
-    Set<String> rootClasses = readRootClasses().keySet();
-    List<String> unlisted = new ArrayList<>();
+  @Test
+  void rootClassesReferenceOnlyBootstrapVisibleTypes() throws IOException {
+    Set<String> nonBootPackages = new HashSet<>(readEntries(NON_BOOT_PACKAGES, false));
+    assertFalse(nonBootPackages.isEmpty(), NON_BOOT_PACKAGES + " lists nothing");
+    Map<String, Set<String>> references = new TreeMap<>();
+    for (Map.Entry<String, byte[]> root : readRootClasses().entrySet()) {
+      references.put(internalName(root.getKey()), referencedTypes(root.getKey(), root.getValue()));
+    }
+    Set<String> baseline = new TreeSet<>(readEntries(BASELINE, true));
+    List<String> errors = closureErrors(references, baseline, nonBootPackages);
+    assertTrue(errors.isEmpty(), String.join("\n", errors));
+  }
+
+  // ---- fixtures for the gate's own logic ----
+
+  @Test
+  void fixtureArrayClassConstantCountsAsItsElementType() {
+    byte[] bytes =
+        fixtureClass(
+            cw -> {
+              MethodVisitor mv = method(cw, "m", "()V");
+              mv.visitInsn(Opcodes.ACONST_NULL);
+              mv.visitTypeInsn(Opcodes.CHECKCAST, "[[Lfixture/ArrayElement;");
+              mv.visitInsn(Opcodes.POP);
+              mv.visitInsn(Opcodes.RETURN);
+              end(mv);
+            });
+    Set<String> types = referencedTypes("fixture/Root.class", bytes);
+    assertTrue(types.contains("fixture/ArrayElement"), types.toString());
+    for (String type : types) {
+      assertFalse(type.startsWith("["), "array descriptor leaked: " + type);
+    }
+  }
+
+  @Test
+  void fixtureMethodDescriptorsAndMethodTypesAreRead() {
+    byte[] bytes =
+        fixtureClass(
+            cw -> {
+              MethodVisitor mv = method(cw, "m", "(Lfixture/Param;)[Lfixture/Result;");
+              mv.visitInsn(Opcodes.ACONST_NULL);
+              mv.visitMethodInsn(
+                  Opcodes.INVOKESTATIC, "fixture/Owner", "call", "(Lfixture/CallArg;)V", false);
+              mv.visitLdcInsn(Type.getMethodType("(Lfixture/LdcArg;)Lfixture/LdcResult;"));
+              mv.visitInsn(Opcodes.POP);
+              mv.visitInsn(Opcodes.ACONST_NULL);
+              mv.visitInsn(Opcodes.ARETURN);
+              end(mv);
+            });
+    Set<String> types = referencedTypes("fixture/Root.class", bytes);
+    assertTrue(
+        types.containsAll(
+            Arrays.asList(
+                "fixture/Param",
+                "fixture/Result",
+                "fixture/Owner",
+                "fixture/CallArg",
+                "fixture/LdcArg",
+                "fixture/LdcResult")),
+        types.toString());
+  }
+
+  @Test
+  void fixtureUnusedFieldTypeIsRead() {
+    byte[] bytes =
+        fixtureClass(
+            cw ->
+                cw.visitField(Opcodes.ACC_PRIVATE, "unused", "Lfixture/FieldType;", null, null)
+                    .visitEnd());
+    assertTrue(referencedTypes("fixture/Root.class", bytes).contains("fixture/FieldType"));
+  }
+
+  @Test
+  void fixtureInvokedynamicBootstrapArgumentsAreRead() {
+    byte[] bytes =
+        fixtureClass(
+            cw -> {
+              MethodVisitor mv = method(cw, "m", "()V");
+              Handle bsm =
+                  new Handle(
+                      Opcodes.H_INVOKESTATIC,
+                      "fixture/Bootstraps",
+                      "bootstrap",
+                      "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;"
+                          + "Ljava/lang/invoke/MethodType;[Ljava/lang/Object;)"
+                          + "Ljava/lang/invoke/CallSite;",
+                      false);
+              mv.visitInvokeDynamicInsn(
+                  "site",
+                  "()V",
+                  bsm,
+                  Type.getObjectType("fixture/BsmClassArg"),
+                  Type.getMethodType("(Lfixture/BsmMethodTypeArg;)V"));
+              mv.visitInsn(Opcodes.RETURN);
+              end(mv);
+            });
+    Set<String> types = referencedTypes("fixture/Root.class", bytes);
+    assertTrue(
+        types.containsAll(
+            Arrays.asList("fixture/Bootstraps", "fixture/BsmClassArg", "fixture/BsmMethodTypeArg")),
+        types.toString());
+  }
+
+  @Test
+  void fixtureMalformedClassFailsNamingTheEntry() {
+    AssertionError error =
+        assertThrows(
+            AssertionError.class,
+            () -> referencedTypes("fixture/Broken.class", new byte[] {(byte) 0xCA, (byte) 0xFE}));
+    assertTrue(error.getMessage().contains("fixture/Broken.class"), error.getMessage());
+  }
+
+  @Test
+  void fixtureClosureReportsNewStaleAndDenyListedReferences() {
+    Map<String, Set<String>> references = new TreeMap<>();
+    references.put(
+        "fixture/Root",
+        new TreeSet<>(
+            Arrays.asList(
+                "java/lang/String",
+                "fixture/Other",
+                "java/sql/Connection",
+                "io/btrace/libs/org/slf4j/Logger",
+                "fixture/Masked")));
+    references.put("fixture/Other", new TreeSet<>(Arrays.asList("fixture/Root")));
+    Set<String> baseline =
+        new TreeSet<>(
+            Arrays.asList("fixture/Root -> fixture/Masked", "fixture/Root -> fixture/Gone"));
+    Set<String> nonBoot = new HashSet<>(Arrays.asList("java/sql/"));
+
+    List<String> errors = closureErrors(references, baseline, nonBoot);
+
+    assertEquals(
+        Arrays.asList(
+            "new violation: fixture/Root -> io/btrace/libs/org/slf4j/Logger",
+            "new violation: fixture/Root -> java/sql/Connection",
+            "stale " + BASELINE + " entry (remove it): fixture/Root -> fixture/Gone"),
+        errors);
+  }
+
+  @Test
+  void fixtureDenyListMatchesOnlyTheListedPackage() {
+    Set<String> nonBoot = new HashSet<>(Arrays.asList("javax/lang/model/"));
+    Set<String> roots = Collections.emptySet();
+    assertFalse(isBootstrapVisible("javax/lang/model/SourceVersion", roots, nonBoot));
+    assertTrue(isBootstrapVisible("javax/lang/model/element/Element", roots, nonBoot));
+    assertTrue(isBootstrapVisible("com/sun/management/OperatingSystemMXBean", roots, nonBoot));
+    assertFalse(isBootstrapVisible("com/sun/tools/attach/VirtualMachine", roots, nonBoot));
+  }
+
+  @Test
+  void fixtureAllowlistReportsUnlistedClassesAndUnusedLines() {
+    List<String> allowlist =
+        Arrays.asList("fixture/pkg/", "fixture/Single.class", "fixture/unused/", "bad-line");
+    Set<String> entries =
+        new TreeSet<>(
+            Arrays.asList(
+                "fixture/pkg/A.class",
+                "fixture/pkg/sub/B.class",
+                "fixture/Single.class",
+                "fixture/Single$Nested.class",
+                "fixture/SingleOther.class"));
+
+    List<String> errors = allowlistErrors(allowlist, entries);
+
+    assertEquals(
+        Arrays.asList(
+            ALLOWLIST + ": 'bad-line' is neither a package (ending in /) nor a .class entry",
+            "root class not in " + ALLOWLIST + ": fixture/SingleOther.class",
+            "root class not in " + ALLOWLIST + ": fixture/pkg/sub/B.class",
+            ALLOWLIST + " line matches no root class (remove it): bad-line",
+            ALLOWLIST + " line matches no root class (remove it): fixture/unused/"),
+        errors);
+  }
+
+  @Test
+  void fixtureBaselineLineWithoutReasonFails() {
+    AssertionError error =
+        assertThrows(
+            AssertionError.class,
+            () ->
+                parseEntries(
+                    BASELINE, Arrays.asList("# header", "", "a -> b  # reason", "c -> d"), true));
+    assertTrue(error.getMessage().contains(BASELINE + ":4: entry has no '# reason'"));
+    assertEquals(
+        Arrays.asList("a -> b", "c -> d"),
+        parseEntries(BASELINE, Arrays.asList("a -> b  # reason", "c -> d"), false));
+  }
+
+  // ---- the gate's logic ----
+
+  static List<String> allowlistErrors(List<String> allowlist, Set<String> rootEntries) {
+    List<String> errors = new ArrayList<>();
+    for (String line : allowlist) {
+      if (!line.endsWith("/") && !line.endsWith(".class")) {
+        errors.add(
+            ALLOWLIST + ": '" + line + "' is neither a package (ending in /) nor a .class entry");
+      }
+    }
     Set<String> unused = new TreeSet<>(allowlist);
-    for (String entry : rootClasses) {
+    for (String entry : new TreeSet<>(rootEntries)) {
       boolean matched = false;
       for (String line : allowlist) {
         if (matches(line, entry)) {
@@ -120,68 +329,70 @@ class BootstrapClosureTest {
         }
       }
       if (!matched) {
-        unlisted.add(entry);
+        errors.add("root class not in " + ALLOWLIST + ": " + entry);
       }
-    }
-
-    List<String> errors = new ArrayList<>();
-    for (String entry : unlisted) {
-      errors.add("root class not in " + ALLOWLIST + ": " + entry);
     }
     for (String line : unused) {
       errors.add(ALLOWLIST + " line matches no root class (remove it): " + line);
     }
-    assertTrue(errors.isEmpty(), String.join("\n", errors));
+    return errors;
   }
 
-  @Test
-  void rootClassesReferenceOnlyBootstrapVisibleTypes() throws IOException {
-    Map<String, byte[]> rootClasses = readRootClasses();
-    Set<String> rootNames = new TreeSet<>();
-    for (String entry : rootClasses.keySet()) {
-      rootNames.add(internalName(entry));
-    }
-
+  /**
+   * Returns the new and stale violations, given each root class's referenced types by internal
+   * name.
+   */
+  static List<String> closureErrors(
+      Map<String, Set<String>> references, Set<String> baseline, Set<String> nonBootPackages) {
+    Set<String> rootNames = references.keySet();
     Set<String> found = new TreeSet<>();
-    for (Map.Entry<String, byte[]> root : rootClasses.entrySet()) {
-      String rootName = internalName(root.getKey());
-      for (String type : referencedTypes(root.getKey(), root.getValue())) {
-        if (!isJdkType(type) && !type.startsWith(RELOCATED_SLF4J) && !rootNames.contains(type)) {
-          found.add(rootName + " -> " + type);
+    for (Map.Entry<String, Set<String>> root : references.entrySet()) {
+      for (String type : root.getValue()) {
+        if (!isBootstrapVisible(type, rootNames, nonBootPackages)) {
+          found.add(root.getKey() + " -> " + type);
         }
       }
     }
-
-    Set<String> listed = new TreeSet<>(readEntries(BASELINE, true));
     List<String> errors = new ArrayList<>();
     for (String violation : found) {
-      if (!listed.contains(violation)) {
+      if (!baseline.contains(violation)) {
         errors.add("new violation: " + violation);
       }
     }
-    for (String entry : listed) {
+    for (String entry : new TreeSet<>(baseline)) {
       if (!found.contains(entry)) {
         errors.add("stale " + BASELINE + " entry (remove it): " + entry);
       }
     }
-    assertTrue(errors.isEmpty(), String.join("\n", errors));
+    return errors;
   }
 
-  private static boolean matches(String line, String entry) {
-    if (line.endsWith("/")) {
-      return entry.startsWith(line) && entry.indexOf('/', line.length()) < 0;
+  static boolean isBootstrapVisible(
+      String internalName, Set<String> rootNames, Set<String> nonBootPackages) {
+    if (rootNames.contains(internalName)) {
+      return true;
     }
-    String outer = line.substring(0, line.length() - ".class".length());
-    return entry.equals(line) || entry.startsWith(outer + "$");
-  }
-
-  private static boolean isJdkType(String internalName) {
+    String pkg = internalName.substring(0, internalName.lastIndexOf('/') + 1);
+    if (nonBootPackages.contains(pkg)) {
+      return false;
+    }
     for (String prefix : JDK_PREFIXES) {
       if (internalName.startsWith(prefix)) {
         return true;
       }
     }
     return false;
+  }
+
+  private static boolean matches(String line, String entry) {
+    if (line.endsWith("/")) {
+      return entry.startsWith(line) && entry.indexOf('/', line.length()) < 0;
+    }
+    if (!line.endsWith(".class")) {
+      return false;
+    }
+    String outer = line.substring(0, line.length() - ".class".length());
+    return entry.equals(line) || entry.startsWith(outer + "$");
   }
 
   private static String internalName(String entry) {
@@ -225,14 +436,20 @@ class BootstrapClosureTest {
     return btraceJar;
   }
 
-  /** Returns the internal names of the non-primitive types the class file references. */
-  private static Set<String> referencedTypes(String entry, byte[] bytes) {
-    ClassReader reader;
+  /**
+   * Returns the internal names of the non-primitive types the class file references. A class file
+   * ASM cannot parse fails with an {@link AssertionError} naming the entry.
+   */
+  static Set<String> referencedTypes(String entry, byte[] bytes) {
     try {
-      reader = new ClassReader(bytes);
+      return parseReferencedTypes(bytes);
     } catch (RuntimeException e) {
-      throw new AssertionError("cannot read root class " + entry, e);
+      throw new AssertionError("cannot read root class " + entry + ": " + e, e);
     }
+  }
+
+  private static Set<String> parseReferencedTypes(byte[] bytes) {
+    ClassReader reader = new ClassReader(bytes);
     Set<String> types = new TreeSet<>();
     char[] buffer = new char[reader.getMaxStringLength()];
     for (int i = 1; i < reader.getItemCount(); i++) {
@@ -298,34 +515,43 @@ class BootstrapClosureTest {
     }
   }
 
-  /**
-   * Reads the entries of a test resource: blank lines and lines starting with {@code #} are
-   * ignored, and a trailing {@code # reason} is stripped. When {@code reasonRequired} is set, every
-   * entry must carry a reason.
-   */
+  /** Reads the entries of a test resource; see {@link #parseEntries}. */
   private static List<String> readEntries(String resource, boolean reasonRequired)
       throws IOException {
     InputStream in = BootstrapClosureTest.class.getResourceAsStream("/" + resource);
     assertNotNull(in, "missing test resource " + resource);
-    Map<String, Integer> entries = new LinkedHashMap<>();
+    List<String> lines = new ArrayList<>();
     try (BufferedReader reader =
         new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
       String line;
-      int number = 0;
       while ((line = reader.readLine()) != null) {
-        number++;
-        String trimmed = line.trim();
-        if (trimmed.isEmpty() || trimmed.startsWith("#")) {
-          continue;
-        }
-        String[] parts = trimmed.split("\\s+#", 2);
-        String entry = parts[0];
-        if (reasonRequired && (parts.length < 2 || parts[1].trim().isEmpty())) {
-          fail(resource + ":" + number + ": entry has no '# reason': " + trimmed);
-        }
-        if (entries.put(entry, number) != null) {
-          fail(resource + ":" + number + ": duplicate entry: " + entry);
-        }
+        lines.add(line);
+      }
+    }
+    return parseEntries(resource, lines, reasonRequired);
+  }
+
+  /**
+   * Blank lines and lines starting with {@code #} are ignored, and a trailing {@code # reason} is
+   * stripped. When {@code reasonRequired} is set, every entry must carry a reason. A duplicate
+   * entry fails.
+   */
+  static List<String> parseEntries(String source, List<String> lines, boolean reasonRequired) {
+    Map<String, Integer> entries = new LinkedHashMap<>();
+    int number = 0;
+    for (String line : lines) {
+      number++;
+      String trimmed = line.trim();
+      if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+        continue;
+      }
+      String[] parts = trimmed.split("\\s+#", 2);
+      String entry = parts[0];
+      if (reasonRequired && (parts.length < 2 || parts[1].trim().isEmpty())) {
+        fail(source + ":" + number + ": entry has no '# reason': " + trimmed);
+      }
+      if (entries.put(entry, number) != null) {
+        fail(source + ":" + number + ": duplicate entry: " + entry);
       }
     }
     return new ArrayList<>(entries.keySet());
@@ -339,5 +565,30 @@ class BootstrapClosureTest {
       out.write(chunk, 0, read);
     }
     return out.toByteArray();
+  }
+
+  // ---- fixture class builders ----
+
+  private interface ClassBody {
+    void write(ClassWriter cw);
+  }
+
+  private static byte[] fixtureClass(ClassBody body) {
+    ClassWriter cw = new ClassWriter(0);
+    cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, "fixture/Root", null, "java/lang/Object", null);
+    body.write(cw);
+    cw.visitEnd();
+    return cw.toByteArray();
+  }
+
+  private static MethodVisitor method(ClassWriter cw, String name, String descriptor) {
+    MethodVisitor mv = cw.visitMethod(Opcodes.ACC_STATIC, name, descriptor, null, null);
+    mv.visitCode();
+    return mv;
+  }
+
+  private static void end(MethodVisitor mv) {
+    mv.visitMaxs(4, 4);
+    mv.visitEnd();
   }
 }

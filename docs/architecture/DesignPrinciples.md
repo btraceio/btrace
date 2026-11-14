@@ -29,13 +29,13 @@ check fails CI.
 
 ## P2. Masked-JAR placement is deliberate
 
-**Rule:** The classes at the root of `btrace.jar` are a fixed list of packages and classes, and every type a root class references is a JDK type, a relocated SLF4J type, or another root class.
+**Rule:** The classes at the root of `btrace.jar` are a fixed list of packages and classes, and every type a root class references is another root class or a JDK type defined by the boot loader. Relocated SLF4J types count only as root classes, and JDK packages of modules that JDK 9+ defines to the platform or application loader (`java.sql`, `java.compiler` and others) do not count as bootstrap-visible.
 
-**Why:** Root classes are visible to the bootstrap class loader, which cannot see the masked sections. A root class that references a masked type fails with `NoClassDefFoundError` inside the target application. Today `ExtensionContext` references `io.btrace.core.comm.Command`, which the distribution build excludes from the root. [Masked JAR architecture](MaskedJarArchitecture.md) describes the layout.
+**Why:** Root classes are visible to the bootstrap class loader, which cannot see the masked sections. A root class that references a masked type fails with `NoClassDefFoundError` inside the target application. Today `ExtensionContext` references `io.btrace.core.comm.Command`, which the distribution build excludes from the root, and the root annotation processor `ExternalTypeProcessor` references `java.compiler` types; javac loads it from the processor path, not through the boot class path. [Masked JAR architecture](MaskedJarArchitecture.md) describes the layout.
 
 **Enforced by:** `btrace-dist/src/test/java/io/btrace/dist/BootstrapClosureTest.java`
 
-**Exceptions:** `btrace-dist/src/test/resources/bootstrap-root-allowlist.txt` lists the packages and classes allowed at the root. `btrace-dist/src/test/resources/bootstrap-closure-baseline.txt` lists the references that predate the check, each with its reason; it only shrinks.
+**Exceptions:** `btrace-dist/src/test/resources/bootstrap-root-allowlist.txt` lists the packages and classes allowed at the root. `btrace-dist/src/test/resources/bootstrap-jdk-nonboot-packages.txt` lists the JDK packages that are not boot-loader visible on JDK 9+, with the command that generated it. `btrace-dist/src/test/resources/bootstrap-closure-baseline.txt` lists the references that predate the check, each with its reason; it only shrinks.
 
 ## P3. Main code uses only the Java 8 API
 
