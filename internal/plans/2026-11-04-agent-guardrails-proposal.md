@@ -39,9 +39,12 @@ also runs on `merge_group` (`:12`):
 - CodeQL (`codeql-analysis.yml`, PR + merge_group); renovate config validation (path-filtered only).
 
 **Not gated on PRs** **[V/S]**: API/binary compatibility; `btrace-gradle-plugin` tests (included build,
-release-only — `release.yml`/`scripts/run-release-gate.sh`); unused imports (real Spotless config has no
-`removeUnusedImports()`; the root `build.gradle:127-140` block that has it targets the source-less root
-project and is dead config **[V]**); docs/links; anything about agent configuration.
+release-only — `release.yml`/`scripts/run-release-gate.sh`); docs/links; anything about agent
+configuration. *Correction:* an earlier draft listed unused imports here, from reading the config only.
+They **are** gated: Google Java Format's Spotless step removes them, and adding one to
+`btrace-boot/.../Loader.java` fails `spotlessCheck` **[V, by running it]**. What was true is that the
+root `build.gradle` carried a second, dead Spotless block (unpinned `googleJavaFormat()`, targeting the
+source-less root project); it misled this audit and the steward skill.
 
 **Swallowed failures** **[S]**: Docker-tagged integration tests skip with a warning when Docker is absent
 (`integration-tests/build.gradle:197-221`, also under `-PCI`); `v2-protocol-tests.yml` summary counts
@@ -150,7 +153,7 @@ JDK 28).
 | --- | --- | --- |
 | No FQN type names (AGENTS.md:20) | **Mechanize** — G2 | Grep-checkable; violated 5× since written |
 | Spotless / GJF / license header | Already gated | — |
-| Unused imports (copilot-instructions:35 "remove unused imports") | **Mechanize** — G3 (`removeUnusedImports()`) | Claimed enforced, isn't |
+| Unused imports (copilot-instructions:35 "remove unused imports") | Already gated (GJF via `spotlessCheck`) | Dead root Spotless block removed instead (G3) |
 | Plans/specs never under `docs/`; no singular `doc/` (AGENTS.md:53-57) | **Mechanize** — G1 | Path check; violated 5× |
 | Skills live in `.agents/skills`, `.claude/skills/*` are symlinks (QEAgent.md:64) | **Mechanize** — G1 | steward drifted the same day |
 | Relative links / task paths in agent & contributor docs resolve | **Mechanize** — G1 (links), G4 (Gradle task paths via `--dry-run`) | D1, D3 |
@@ -178,7 +181,7 @@ blocking (decision 8.2).
 | --- | --- | --- | --- |
 | **G1** `check-agent-config.sh` | `.claude/skills/X` not a symlink into `.agents/skills/X`; SKILL.md missing `name`/`description` or name≠dir; any file under `docs/**/{plans,specs,superpowers}/` or a `doc/` dir; broken relative link in AGENTS.md, CLAUDE.md, CONTRIBUTING.md, `.github/*.md`, `.agents/**`, `docs/**` (top-level files included); module name `btrace-*` named in agent docs but absent from `settings.gradle`/dirs | fixtures: plain-file skill, skill without frontmatter, `docs/superpowers/plans/x.md`, dangling link in a top-level file, `btrace-instr` mention | steward (D8), docs/superpowers (D6), copilot `btrace-instr` (D3) |
 | **G2** `check_fqn.py` (diff vs merge base, Java only, ignores imports/package/comments/strings; `// fqn: <reason>` escape for genuine simple-name clashes) | added line with `java.io.IOException` etc. | fixture diff reproducing #998's `RemoteClientHeartbeatTest.java:122` line; fixture with clash + marker passes | #998 |
-| **G3** Spotless `removeUnusedImports()` in `gradle/spotless.gradle`; delete dead root block | unused import | Gradle: `spotlessCheck` on a fixture source set (or prove by adding an unused import locally and recording the failure in the PR) | tree-wide: unknown until run — may need a one-off `spotlessApply` commit |
+| **G3** *(revised)* delete the dead root Spotless block; no new gate — unused imports are already rejected | — | adding an unused import still fails `spotlessCheck` after the change | — |
 | **G4** `check-doc-commands.sh` | a `./gradlew <task>` in agent/contributor docs whose task path doesn't resolve (`./gradlew --dry-run`); `integration-tests:test` without `-Pintegration` | fixture doc with `:btrace-instr:test` and bare `integration-tests:test` | D1 |
 | **G5** `check-pr-metadata.sh` (reads `$GITHUB_EVENT_PATH`) | non-CC title; empty "Commands and results"; `instrumentorTestData` changed without `-PupdateTestData` in body | fixture event JSONs | 13/95 titles, 25/95 bodies |
 
@@ -241,7 +244,7 @@ gate must be seen to fail; doc placement), each with its case file and a "mechan
 | 1 | `docs: correct drifted agent and contributor instructions` — D1–D20 (copilot file → pointer); `git mv docs/superpowers/* internal/superpowers/`; steward → `.agents/skills` + symlink; `.gitignore` additions (decision 8.3) | Run every changed command; record `integration-tests:test` SKIPPED vs `-Pintegration` executing N tests |
 | 2 | `ci: add agent-config guardrail (G1)` + test runner + `guardrails` job | test.sh shows each fixture failing; job run on PR 1's parent fails, on PR 1 passes |
 | 3 | `ci: reject new fully-qualified type names (G2)` | fixture of #998 line fails |
-| 4 | `build: enforce unused-import removal (G3)`, drop dead root block | unused import added → `spotlessCheck` fails (log in PR) |
+| 4 | `build: remove the root Spotless block that formats nothing` (G3, revised) | unused import added → `spotlessCheck` still fails |
 | 5 | `ci: check Gradle task paths in docs (G4)` | fixture with D1 fails |
 | 6 | `ci: check PR title and verification section (G5)` | fixture events |
 | 7 | `docs(agents): move procedures into skills; slim AGENTS.md/CLAUDE.md` | G1 green; each moved paragraph has a pointer |
@@ -256,7 +259,7 @@ gate must be seen to fail; doc placement), each with its case file and a "mechan
   only #998's FQN line, the BackendSelector fallback, the golden-path bypass, and D1–D9 were re-checked by hand.
 - Whether CodeQL is a required check (branch protection is not in the repo).
 - Whether Copilot coding agent reads AGENTS.md in this repo's configuration.
-- Whether `removeUnusedImports()` produces a tree-wide diff (not run).
+- *(resolved)* `removeUnusedImports()` produces no diff: the tree has no unused imports because they are already gated.
 - The docs sweep covered the 15 agent/contributor files, not all of `docs/**` (tutorials were audited
   by #984). No documented command was executed end-to-end; only task existence and build-script
   semantics were checked.
@@ -279,3 +282,5 @@ gate must be seen to fail; doc placement), each with its case file and a "mechan
    `guardrails` CI job lands with G1 and later gates extend it. (First answered "independent PRs";
    changed to stacked by the maintainer after #1000 was opened.)
 6. **G3:** a formatting-only `spotlessApply` PR lands first; the gate PR then flips the config.
+   *Moot:* unused imports turned out to be gated already (section 1.2), so there is no formatting PR
+   and G3 shrinks to removing the dead root Spotless block.
