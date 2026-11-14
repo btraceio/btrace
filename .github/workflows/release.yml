@@ -277,9 +277,10 @@ jobs:
         with:
           name: dist-build
           retention-days: 1
-          path: |
-            btrace-dist/build
-            btrace-agent/build/classes/traces
+          # btrace-dist/build only: with a second path the artifact root becomes their common
+          # parent (the repository root), and the integration jobs, which download it into
+          # btrace-dist/build, would find it nested. The traces travel as test-trace.
+          path: btrace-dist/build
 
       - name: Upload test trace data
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
