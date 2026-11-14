@@ -247,8 +247,11 @@ jobs:
 
       - name: Full distribution build
         run: |
+          # compileTestProbes: the clean masked-JAR gate above deleted the compiled test traces
+          # the unit tests produced, and the integration jobs download them as test-trace
           scripts/run-release-gate.sh full-distribution release-gate-logs -- \
-            ./gradlew --no-daemon --parallel --build-cache :btrace-dist:build
+            ./gradlew --no-daemon --parallel --build-cache :btrace-dist:build :btrace-agent:compileTestProbes
+          find btrace-agent/build/classes/traces -name '*.class' -type f | grep -q .
 
       - name: Add filtered release-gate logs to summary
         if: always()
