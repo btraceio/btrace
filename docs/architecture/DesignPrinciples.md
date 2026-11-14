@@ -51,9 +51,9 @@ check fails CI.
 
 **Rule:** When the same behavior exists twice, a change to one copy is a change to both or says why not. This covers the two instrumentation backends (ASM and the ClassFile API), the V1 and V2 wire command tables, every `Kind` handled by both backends, and the shell and batch launchers.
 
-**Why:** Fixes keep landing in only one of two siblings. 22d3f9a3 applied a `Kind.LINE` probe only to the methods it selects; c81a2d43 fixed `@Duration` at every return but the first. The `btracex` and `btracec` shell launchers lack `-XX:+AllowRedefinitionToAddDeleteMethods`, which their `.bat` twins pass. See [instrumentation backends](InstrumentationBackends.md).
+**Why:** Fixes keep landing in only one of two siblings. 22d3f9a3 applied a `Kind.LINE` probe only to the methods it selects; c81a2d43 fixed `@Duration` at every return but the first. The `btracex` and `btracec` shell launchers lack `-XX:+AllowRedefinitionToAddDeleteMethods`, which their `.bat` twins pass. See [instrumentation backends](InstrumentationBackends.md). Only the launcher pairs are enforced so far: `check_launchers.py` compares the JVM flags and main class of each shell launcher and its `.bat` twin. The other sibling pairs (backends, probe kinds, wire command tables, one-sided backend changes) are not yet enforced.
 
-**Enforced by:** unenforced (judgment)
+**Enforced by:** `scripts/guardrails/check_launchers.py`
 
 **Exceptions:** None.
 

@@ -1,7 +1,7 @@
 # Guardrails
 
 Deterministic checks for rules that advisory text (AGENTS.md, CLAUDE.md, skills) cannot enforce.
-G1, G2, G4, G6 and G10 run in the `guardrails` job of `.github/workflows/continuous.yml`, which feeds the
+G1, G2, G4, G6, G9 and G10 run in the `guardrails` job of `.github/workflows/continuous.yml`, which feeds the
 aggregate `tests-passed` check. G5 runs in `pr-metadata.yml` as the `pr-metadata` check. A failing
 check blocks merging only if the repository's branch rules require it: as of 2026-11-04 the
 "Merging" ruleset for `develop` and `master` requires only `build`, so `tests-passed` (and with it
@@ -16,6 +16,7 @@ added there.
 | `check_doc_commands.py` (G4) | A Gradle command in agent or contributor docs or a tracked shell script must not invoke a task its build script skips without a property (today: `integration-tests:test` needs `-Pintegration`). Each rule cites the `onlyIf` guard it mirrors | `python3 scripts/guardrails/check_doc_commands.py` |
 | `check_pr_metadata.py` (G5) | The PR title is a Conventional Commit subject (it becomes the squash-merge subject); a human-authored description has a filled Testing / How verified section; a change to golden instrumentation data says it was regenerated with `-PupdateTestData`. Runs in its own workflow, `.github/workflows/pr-metadata.yml`, so editing the description re-runs only this check | `python3 scripts/guardrails/check_pr_metadata.py event.json changed-files.txt` |
 | `check_layering.py` (G6) | Module layering is fixed: every `project(':x')` in a `build.gradle` is an edge and the edges equal the allowlist in `layering_rules.json` (a non-literal `project(expr)` needs a listed reason); `btrace-boot`, `btrace-core`, `btrace-client`, extensions, `btrace-qe`, `integration-tests` and `io.btrace.instr` import no forbidden package (single-type, static and wildcard imports, every source set); no string literal in a lower layer names a higher-layer class; no Java package is split across modules. Existing violations are in `baselines/layering.txt` and the check fails on a new one and on a listed one that is gone | `python3 scripts/guardrails/check_layering.py .` |
+| `check_launchers.py` (G9) | Each `btrace-dist/.../bin/<name>` and its `.bat` twin pass the same JVM flags (`-X`, `-XX:`, `-D`, `--add-exports`/`--add-opens` with their argument) and start the same main class; CRLF and `^`/`\` continuations are normalised. A missing twin, an unreadable script, a script with no java command line or no flag at all is an error, not a pass. Existing differences are in `baselines/launchers.txt`. Other sibling pairs under P4 are not yet checked | `python3 scripts/guardrails/check_launchers.py .` |
 | `common.gradle` (G8) | Main code on the Java 8 target compiles against the Java 8 API: `--release 8` on a JDK 9+ compiler, or the JDK 8 compiler for the modules that use `sun.misc`, `jdk.jfr` or tools.jar APIs (listed under P3 in `docs/architecture/DesignPrinciples.md`). A compiler setting, so it runs in every build, not in the `guardrails` job | `./gradlew compileJava` |
 
 Each check has hermetic tests under `tests/` that build throw-away repositories and assert the
