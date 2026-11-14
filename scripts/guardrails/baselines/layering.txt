@@ -20,7 +20,4 @@ import btrace-extensions/examples/btrace-spark/src/impl/java/org/example/btrace/
 import btrace-extensions/examples/btrace-spark/src/impl/java/org/example/btrace/spark/impl/SparkApiImpl.java:io.btrace.extension.util.MethodHandleCache  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
 import btrace-extensions/examples/btrace-spark/src/main/java/org/example/btrace/spark/impl/SparkApiImpl.java:io.btrace.extension.util.ClassLoadingUtil  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
 import btrace-extensions/examples/btrace-spark/src/main/java/org/example/btrace/spark/impl/SparkApiImpl.java:io.btrace.extension.util.MethodHandleCache  # example extension impl imports io.btrace.extension.util helpers; also duplicated under src/impl and src/main
-literal btrace-agent/src/main/java/io/btrace/instr/Preprocessor.java:io.btrace.agent.Main  # instr loads io.btrace.agent.Main reflectively
-literal btrace-core/src/main/java/io/btrace/extension/impl/ExtensionBridgeImpl.java:io.btrace.runtime.ExtensionIndy  # core reaches ExtensionIndy in btrace-runtime reflectively
-literal btrace-runtime/src/main/java/io/btrace/runtime/BTraceRuntimeImplBase.java:io.btrace.agent.PerfReaderImpl  # runtime creates the agent's PerfReaderImpl reflectively
 split-package btrace-core/src/main/java/io/btrace/runtime:btrace-runtime  # package io.btrace.runtime exists in btrace-core and btrace-runtime
