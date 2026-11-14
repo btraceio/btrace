@@ -10,7 +10,11 @@ Fails, listing every violation, when:
   - a relative Markdown link, or its `#anchor`, in an agent or contributor document does not
     resolve;
   - a Gradle project path such as `:btrace-instr:test` in an agent or contributor document names
-    a project that does not exist.
+    a project that does not exist;
+  - the design principles catalog (`docs/architecture/DesignPrinciples.md`) has a `## P<n>.`
+    section without its four fields, an "Enforced by" that is neither `unenforced (judgment)` nor
+    existing backticked paths, or a `scripts/guardrails/check_*.py` that neither the catalog nor
+    `scripts/guardrails/README.md` names.
 
 Usage: check_agent_config.py [REPO_ROOT]   (default: the current directory)
 Only files tracked by git are checked, so build output and local tool state are ignored.
@@ -39,6 +43,12 @@ LINK_RE = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 INLINE_CODE_RE = re.compile(r"`[^`]*`")
 GRADLE_PATH_RE = re.compile(r"(?<![\w/.-])((?::[a-z][\w-]*)+):([a-zA-Z][\w]*)\b")
+CATALOG = "docs/architecture/DesignPrinciples.md"
+GUARDRAILS_README = "scripts/guardrails/README.md"
+UNENFORCED = "unenforced (judgment)"
+PRINCIPLE_RE = re.compile(r"^##\s+(P\d+)\.\s")
+CATALOG_FIELDS = ("Rule", "Why", "Enforced by", "Exceptions")
+BACKTICKED_RE = re.compile(r"`([^`]+)`")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
 HTML_ANCHOR_RE = re.compile(r"<a\s+(?:name|id)=\"([^\"]+)\"", re.IGNORECASE)
 
@@ -203,6 +213,69 @@ def check_gradle_paths(root, files, errors):
                     )
 
 
+def catalog_sections(path):
+    """Returns [(id, line_no, {field: (line_no, value)})] for each `## P<n>.` section."""
+    sections = []
+    with open(path, encoding="utf-8") as f:
+        for no, line in enumerate(f, 1):
+            m = PRINCIPLE_RE.match(line)
+            if m:
+                sections.append((m.group(1), no, {}))
+            elif line.startswith("## "):
+                sections.append((None, no, {}))
+            elif sections and sections[-1][0]:
+                for field in CATALOG_FIELDS:
+                    prefix = "**%s:**" % field
+                    if line.startswith(prefix):
+                        sections[-1][2].setdefault(field, (no, line[len(prefix) :].strip()))
+    return [s for s in sections if s[0]]
+
+
+def check_enforced_by(root, errors):
+    """Checks the principles catalog and that every guardrail check is named by it or the README."""
+    scripts = sorted(
+        p
+        for p in tracked_files(root)
+        if re.fullmatch(r"scripts/guardrails/check_[^/]+\.py", p)
+    )
+    catalog = os.path.join(root, CATALOG)
+    if not os.path.isfile(catalog):
+        if scripts:
+            errors.append("%s: missing (it lists what enforces each principle)" % CATALOG)
+        return
+    for pid, no, fields in catalog_sections(catalog):
+        for field in CATALOG_FIELDS:
+            if field not in fields:
+                errors.append("%s:%d: %s has no **%s:** line" % (CATALOG, no, pid, field))
+        if "Enforced by" not in fields:
+            continue
+        at, value = fields["Enforced by"]
+        paths = BACKTICKED_RE.findall(value)
+        if value == UNENFORCED:
+            continue
+        if not paths:
+            errors.append(
+                "%s:%d: %s Enforced by must be '%s' or backticked repository paths, got: %s"
+                % (CATALOG, at, pid, UNENFORCED, value or "(empty)")
+            )
+        for rel in paths:
+            if not os.path.exists(os.path.join(root, rel)):
+                errors.append(
+                    "%s:%d: %s Enforced by names %s, which does not exist" % (CATALOG, at, pid, rel)
+                )
+    named = ""
+    for doc in (CATALOG, GUARDRAILS_README):
+        if os.path.isfile(os.path.join(root, doc)):
+            with open(os.path.join(root, doc), encoding="utf-8") as f:
+                named += f.read()
+    for script in scripts:
+        if os.path.basename(script) not in named:
+            errors.append(
+                "%s: named by no principle in %s and absent from %s"
+                % (script, CATALOG, GUARDRAILS_README)
+            )
+
+
 def main(argv):
     root = os.path.abspath(argv[1] if len(argv) > 1 else ".")
     files = tracked_files(root)
@@ -211,6 +284,7 @@ def main(argv):
     check_placement(files, errors)
     check_links(root, files, errors)
     check_gradle_paths(root, files, errors)
+    check_enforced_by(root, errors)
     for e in errors:
         print("agent-config: " + e)
     if errors:
