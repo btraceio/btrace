@@ -4,7 +4,7 @@
 
 **Goal:** Implement the remaining Java 26+ `ClassFileApiBackend` feature parity work in ordered, testable slices.
 
-**Reference Plan:** `docs/superpowers/plans/2026-06-05-classfileapi-remaining-features.md`
+**Reference Plan:** `internal/superpowers/plans/2026-06-05-classfileapi-remaining-features.md`
 
 **Primary Files:**
 - `btrace-agent/src/main/java24/io/btrace/instr/ClassFileApiBackend.java`

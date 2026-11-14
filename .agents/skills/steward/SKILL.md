@@ -20,7 +20,7 @@ Repository rules in [AGENTS.md](../../../AGENTS.md) apply throughout; this file 
 
 ## CI triage
 
-- **`spotlessCheck` failing on files the PR did not touch** means the formatter changed, not the code. An unpinned `googleJavaFormat()` in `gradle/spotless.gradle` follows the Spotless plugin's default, so a Spotless bump can move it; check whether the formatter pin or the Spotless plugin version moved before running `spotlessApply` across the tree.
+- **`spotlessCheck` failing on files the PR did not touch** means the formatter changed, not the code. `gradle/spotless.gradle` pins `googleJavaFormat('1.30.0')` because an unpinned one follows the Spotless plugin's default and a Spotless bump can move it; check whether that pin or the Spotless plugin version moved before running `spotlessApply` across the tree.
 - **`Cannot find a Java installation ... matching: {languageVersion=N}`** means a workflow no longer installs a JDK the build needs. The `setup-java` steps in `.github/workflows/` are toolchain requirements (JDK 24 feeds `btrace-agent`'s `java24` source set); restore the step rather than changing the build.
 - **JUnit resolving a JDK 17+ artifact for a JVM 8 configuration** means the JUnit 5.14.4 pin was bumped. `btrace-agent` and `integration-tests` compile tests with a JDK 8 javac, and `btrace-gradle-plugin` keeps Java 8-compatible test dependencies; the pin is intentional.
 - Maven Central can answer `429 Too Many Requests` during dependency resolution. That is an infrastructure failure: one re-run is justified; a second identical failure needs reporting, not more re-runs.

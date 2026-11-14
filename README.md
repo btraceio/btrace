@@ -106,7 +106,7 @@ cd btrace
 ./gradlew :btrace-dist:build
 ```
 
-See [CLAUDE.md](CLAUDE.md) for development setup and architecture.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup (required JDK toolchains, running tests) and [docs/README.md](docs/README.md) for architecture.
 
 ---
 
@@ -123,11 +123,10 @@ Tips:
   - Agent (incl. instrumentation): `./gradlew :btrace-agent:test`
 - Update instrumentor golden files when bytecode output changes: `./gradlew test -PupdateTestData`.
 
-Integration tests (optional):
+Integration tests (optional; without `-Pintegration` the task is skipped and runs nothing):
 ```sh
-./gradlew --no-daemon integration-tests:test
+./gradlew --no-daemon -Pintegration :integration-tests:test
 ```
-These may exercise privileged extensions. If you run into permission denials, provide a policy file and pass it to the test JVMs via `-Dbtrace.permissions=/path/to/permissions.properties`.
 
 Misuse-resilience QE (optional):
 ```sh

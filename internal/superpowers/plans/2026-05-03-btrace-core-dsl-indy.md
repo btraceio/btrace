@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 8 source compatibility, Java 11 toolchain, ASM 9, `java.lang.invoke`, Gradle, JUnit 5
 
-**Spec:** `docs/superpowers/specs/2026-05-03-btrace-core-dsl-indy-design.md`
+**Spec:** `internal/superpowers/specs/2026-05-03-btrace-core-dsl-indy-design.md`
 
 **Out of scope (separate plan):** `btrace-migrate` CLI tool.
 

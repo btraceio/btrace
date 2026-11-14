@@ -13,6 +13,7 @@ This directory contains GitHub Actions workflows for continuous integration and 
 **Triggers:**
 - Push to `develop` branch
 - Pull requests to `develop`
+- Merge queue groups (`merge_group`), so the required check reports on queued merges
 - Manual workflow dispatch
 
 **Jobs:**
@@ -42,11 +43,12 @@ This directory contains GitHub Actions workflows for continuous integration and 
 **Purpose:** Comprehensive testing suite specifically for Binary Protocol v2.
 
 **Triggers:**
-- Push to `develop`, `master`, or `jb/comm_v2` branches
-- Pull requests to `develop`
-- Changes to protocol-related files
+- Pull requests labeled `test:v2-protocol` (the `labeled` event)
+- Weekly schedule (Sunday 02:00 UTC)
 - Manual workflow dispatch
-- Commit messages containing `[benchmark]`
+
+It does not run on ordinary pushes or pull requests; the `build` job of `continuous.yml` runs the v2
+protocol subset on every PR.
 
 **Jobs:**
 
@@ -71,7 +73,9 @@ This directory contains GitHub Actions workflows for continuous integration and 
 
 #### **jmh-benchmarks** (Manual/Opt-in)
 - Runs JMH performance benchmarks
-- Triggered by workflow dispatch or `[benchmark]` in commit message
+- Triggered by workflow dispatch. The job also tests for `[benchmark]` in `head_commit.message`, but
+  that field exists only on push events, which this workflow does not handle, so a commit message
+  cannot trigger it.
 - Quick benchmarks: warmup=1, iterations=2, fork=1
 - Focuses on serialization performance
 - Uploads JMH results for 30 days
@@ -101,7 +105,8 @@ This directory contains GitHub Actions workflows for continuous integration and 
 
 **Purpose:** CodeQL security scanning for vulnerability detection.
 
-**Triggers:** Push/PR to default branch
+**Triggers:** Push to `develop` and `master`, pull requests to `develop`, merge queue groups, and a
+weekly schedule.
 
 ### 4. `dependency-auto-merge.yml` - Dependency Bot Auto-Merge
 
@@ -235,15 +240,8 @@ The workflows ensure comprehensive testing of the v2 protocol implementation:
 
 ### Trigger Benchmark Run
 
-**Option 1: Workflow Dispatch**
-```bash
-# Via GitHub UI: Actions → V2 Protocol Tests → Run workflow
-```
-
-**Option 2: Commit Message**
-```bash
-git commit -m "Optimize binary protocol [benchmark]"
-```
+Use workflow dispatch (GitHub UI: Actions → V2 Protocol Tests → Run workflow). A `[benchmark]`
+commit message does not trigger it; see the `jmh-benchmarks` job above.
 
 ### Benchmark Configuration
 

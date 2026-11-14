@@ -29,8 +29,8 @@ import org.junit.jupiter.api.Test;
  * target-JVM startup can race the JVM's own concurrent {@code java.lang.invoke} initialization and
  * throw {@code ClassCircularityError} (observed via {@code java.lang.ClassCircularityError:
  * java/lang/invoke/MethodHandle$1}) -- see
- * docs/superpowers/plans/2026-07-12-extension-loader-classcircularity-investigation.md for the full
- * root-cause writeup.
+ * internal/superpowers/plans/2026-07-12-extension-loader-classcircularity-investigation.md for the
+ * full root-cause writeup.
  *
  * <p>Scans from two roots: {@code Main.<clinit>} (the class's static field initializers, which run
  * unconditionally as soon as {@code Main} is first referenced -- before {@code premain()}'s body

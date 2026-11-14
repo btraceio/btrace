@@ -1,6 +1,6 @@
 # Implementation plan — stall watchdog for integration tests
 
-Design: `docs/superpowers/specs/2026-07-29-issue-932-client-close-deadlock-design.md`.
+Design: `internal/superpowers/specs/2026-07-29-issue-932-client-close-deadlock-design.md`.
 Branch: `agent/issue-932-client-close-deadlock`, worktree `.worktrees/issue-932-client-close`.
 Base: `origin/develop` @ `840564e9`. Independent of PR #934.
 
