@@ -342,40 +342,40 @@ jobs:
           path: test-reports
 
       - name: Generate Test Summary
+        # Parses the JUnit XML: errors count as failures, and no reports or zero tests is a failure,
+        # not "all passed" (an upstream job that dies before uploading leaves nothing to count).
         run: |
-          echo "# V2 Protocol Test Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          python3 - <<'PY'
+          import glob, os, sys
+          import xml.etree.ElementTree as ET
 
-          # Count test results
-          total_tests=0
-          passed_tests=0
-          failed_tests=0
+          reports = glob.glob("test-reports/*/test-results/test/*.xml")
+          total = failed = errored = 0
+          for report in reports:
+              root = ET.parse(report).getroot()
+              for suite in [root] if root.tag == "testsuite" else root.iter("testsuite"):
+                  total += int(suite.get("tests", 0))
+                  failed += int(suite.get("failures", 0))
+                  errored += int(suite.get("errors", 0))
+          passed = total - failed - errored
 
-          for report in test-reports/*/test-results/test/*.xml; do
-            if [ -f "$report" ]; then
-              tests=$(grep -oP 'tests="\K[0-9]+' "$report" || echo "0")
-              failures=$(grep -oP 'failures="\K[0-9]+' "$report" || echo "0")
-              total_tests=$((total_tests + tests))
-              failed_tests=$((failed_tests + failures))
-            fi
-          done
-
-          passed_tests=$((total_tests - failed_tests))
-
-          echo "- **Total Tests:** $total_tests" >> $GITHUB_STEP_SUMMARY
-          echo "- **Passed:** ✅ $passed_tests" >> $GITHUB_STEP_SUMMARY
-          echo "- **Failed:** ❌ $failed_tests" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ $failed_tests -eq 0 ]; then
-            echo "✅ All V2 protocol tests passed!" >> $GITHUB_STEP_SUMMARY
-            exit 0
-          else
-            echo "❌ Some tests failed. Please review the reports." >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
+          lines = ["# V2 Protocol Test Summary", "", "## Test Results", "",
+                   "- **Reports:** %d" % len(reports),
+                   "- **Total Tests:** %d" % total,
+                   "- **Passed:** ✅ %d" % passed,
+                   "- **Failed:** ❌ %d" % failed,
+                   "- **Errors:** ❌ %d" % errored, ""]
+          if total == 0:
+              verdict, code = "❌ No test results were found; the test jobs did not report.", 1
+          elif failed or errored:
+              verdict, code = "❌ Some tests failed. Please review the reports.", 1
+          else:
+              verdict, code = "✅ All V2 protocol tests passed!", 0
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("\n".join(lines + [verdict]) + "\n")
+          print(verdict)
+          sys.exit(code)
+          PY
 
   code-coverage:
     name: Code Coverage

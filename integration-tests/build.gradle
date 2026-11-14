@@ -182,50 +182,46 @@ test {
 
     def dockerAvailable = false
     if (project.hasProperty("integration")) {
+        // Gradle 9 removed Project.exec; providers.exec is the supported replacement. A probe that
+        // throws must not read as "Docker is missing": the reason is reported, and under -PCI a
+        // missing Docker fails the build instead of silently skipping the tests tagged 'docker'.
+        def run = { List<String> cmd, Map<String, String> env ->
+            def result = providers.exec {
+                commandLine cmd
+                ignoreExitValue = true
+                env.each { k, v -> environment k, v }
+            }
+            [result.result.get().exitValue,
+             (result.standardOutput.asText.get() + result.standardError.asText.get()).trim()]
+        }
         String dockerHost = System.getenv("DOCKER_HOST")
+        String dockerProblem = null
         try {
             if (dockerHost == null || dockerHost.trim().isEmpty()) {
-                def defaultSocket = new File("/var/run/docker.sock")
-                if (defaultSocket.exists()) {
-                    dockerHost = "unix:///var/run/docker.sock"
-                }
-                def hostOutput = new ByteArrayOutputStream()
-                def hostResult = exec {
-                    commandLine 'docker', 'context', 'inspect', '--format', '{{.Endpoints.docker.Host}}'
-                    ignoreExitValue true
-                    standardOutput = hostOutput
-                    errorOutput = hostOutput
-                }
-                def hostText = hostOutput.toString().trim()
-                if (hostResult.exitValue == 0 && !hostText.isEmpty()) {
+                def (hostExit, hostText) = run(['docker', 'context', 'inspect', '--format', '{{.Endpoints.docker.Host}}'], [:])
+                if (hostExit == 0 && !hostText.isEmpty()) {
                     dockerHost = hostText
+                } else if (new File("/var/run/docker.sock").exists()) {
+                    dockerHost = "unix:///var/run/docker.sock"
                 } else {
-                    logger.warn("[integration-tests] Docker context host not available: ${hostText}.")
+                    dockerProblem = "no Docker context host (docker context inspect: ${hostText})"
                 }
             }
-
-            if (dockerHost != null && !dockerHost.trim().isEmpty()) {
-                def infoOutput = new ByteArrayOutputStream()
-                def infoResult = exec {
-                    commandLine 'docker', 'info', '--format', '{{.ServerVersion}}'
-                    ignoreExitValue true
-                    standardOutput = infoOutput
-                    errorOutput = infoOutput
-                    environment 'DOCKER_HOST', dockerHost
+            if (dockerProblem == null) {
+                def (infoExit, infoText) = run(['docker', 'info', '--format', '{{.ServerVersion}}'], ['DOCKER_HOST': dockerHost])
+                if (infoExit != 0 || infoText.isEmpty()) {
+                    dockerProblem = "docker info failed against ${dockerHost}: ${infoText}"
                 }
-                def infoText = infoOutput.toString().trim()
-                if (!(infoResult.exitValue == 0 && !infoText.isEmpty())) {
-                    logger.warn("[integration-tests] Docker not available (docker info returned: ${infoText}).")
-                }
-            } else {
-                logger.warn("[integration-tests] Docker host not configured.")
             }
         } catch (Exception e) {
-            logger.warn("[integration-tests] Docker not available (${e.getClass().getSimpleName()}: ${e.getMessage()}).")
+            dockerProblem = "probing Docker failed (${e.getClass().getSimpleName()}: ${e.getMessage()})"
         }
-        dockerAvailable = dockerHost != null && !dockerHost.trim().isEmpty()
+        dockerAvailable = dockerProblem == null
         if (!dockerAvailable) {
-            logger.warn("[integration-tests] Docker not available; skipping tests tagged 'docker'.")
+            if (project.hasProperty("CI")) {
+                throw new GradleException("[integration-tests] Docker is required under -PCI so the tests tagged 'docker' run: ${dockerProblem}")
+            }
+            logger.warn("[integration-tests] Docker not available (${dockerProblem}); skipping tests tagged 'docker'.")
         } else {
             if (System.getenv("DOCKER_HOST") == null || System.getenv("DOCKER_HOST").trim().isEmpty()) {
                 environment 'DOCKER_HOST', dockerHost
