@@ -181,6 +181,9 @@ class BootstrapClosureTest {
     assumeTrue(
         running != null,
         "JDK " + jdk + " has no module system; the " + NON_BOOT_PACKAGES + " check needs JDK 9+");
+    assertFalse(
+        running.isEmpty(),
+        "JDK " + jdk + " reports no non-boot JDK package; nothing was compared with the list");
     List<String> missing = missingNonBootPackages(running, readEntries(NON_BOOT_PACKAGES, false));
     assertTrue(
         missing.isEmpty(),
