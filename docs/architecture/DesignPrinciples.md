@@ -63,9 +63,9 @@ check fails CI.
 
 **Why:** Failing open looks like success. 1d069ce0 logged handler mismatches at debug only, 9c4f4a63 did the same for classes that could not be instrumented, and 0962eaaf caught the failure to build a level guard and returned the unguarded handler. Silent `catch` blocks are common in main sources.
 
-**Enforced by:** unenforced (judgment)
+**Enforced by:** `scripts/guardrails/check_swallow.py`
 
-**Exceptions:** None.
+**Exceptions:** `// swallow: <reason>` on the `catch` line.
 
 ## P6. Nothing disturbs the application thread
 
