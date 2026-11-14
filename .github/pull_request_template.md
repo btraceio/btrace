@@ -19,6 +19,10 @@ Closes #
 
 <!-- Mention API, CLI, probe, extension, protocol, packaging, or documentation changes. -->
 
+## Instrumentation backends
+
+<!-- Only if this PR changes one of the two backends (ASM: `Instrumentor` and its helpers; ClassFile API: `btrace-agent/src/main/java24/`) and not the other, add a line `Sibling: <why the other backend needs no change>`. Otherwise delete this section. -->
+
 ## Testing
 
 <!-- List the commands you ran and the relevant result. Follow the repository Gradle guidance. -->

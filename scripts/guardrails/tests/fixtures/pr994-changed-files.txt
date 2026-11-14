@@ -1,0 +1,8 @@
+btrace-agent/src/main/java/io/btrace/instr/Instrumentor.java
+btrace-agent/src/test/btrace/onmethod/AllLines.java
+btrace-agent/src/test/btrace/onmethod/LineInMethod.java
+btrace-agent/src/test/java/io/btrace/instr/LineInstrumentationTest.java
+btrace-agent/src/test/resources/instrumentorTestData/dynamic/onmethod/LineInMethod
+btrace-core/src/main/java/io/btrace/core/annotations/Kind.java
+btrace-core/src/main/java/io/btrace/core/annotations/Location.java
+docs/QuickReference.md
