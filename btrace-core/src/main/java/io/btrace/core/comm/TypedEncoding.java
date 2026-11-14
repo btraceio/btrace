@@ -3,11 +3,16 @@
  */
 package io.btrace.core.comm;
 
+import io.btrace.core.aggregation.HistogramData;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Shared typed encoding for BTRACE-005 hardening.
@@ -96,12 +101,12 @@ public final class TypedEncoding {
     } else if (v instanceof BigDecimal) {
       out.writeByte(TAG_BIGDEC);
       out.writeUTF(v.toString());
-    } else if (v instanceof java.util.concurrent.atomic.AtomicInteger) {
+    } else if (v instanceof AtomicInteger) {
       out.writeByte(TAG_INT);
-      out.writeInt(((java.util.concurrent.atomic.AtomicInteger) v).get());
-    } else if (v instanceof java.util.concurrent.atomic.AtomicLong) {
+      out.writeInt(((AtomicInteger) v).get());
+    } else if (v instanceof AtomicLong) {
       out.writeByte(TAG_LONG);
-      out.writeLong(((java.util.concurrent.atomic.AtomicLong) v).get());
+      out.writeLong(((AtomicLong) v).get());
     } else if (v instanceof Number) {
       out.writeByte(TAG_STRING);
       out.writeUTF(v.toString());
@@ -183,9 +188,9 @@ public final class TypedEncoding {
       out.writeByte(CELL_FLOAT); out.writeFloat((Float) cell);
     } else if (cell instanceof Boolean) {
       out.writeByte(CELL_BOOLEAN); out.writeBoolean((Boolean) cell);
-    } else if (cell instanceof io.btrace.core.aggregation.HistogramData) {
-      java.io.StringWriter sw = new java.io.StringWriter();
-      ((io.btrace.core.aggregation.HistogramData) cell).print(new java.io.PrintWriter(sw));
+    } else if (cell instanceof HistogramData) {
+      StringWriter sw = new StringWriter();
+      ((HistogramData) cell).print(new PrintWriter(sw));
       out.writeByte(CELL_HISTOGRAM); out.writeUTF(sw.toString());
     } else if (cell instanceof Number) {
       out.writeByte(CELL_DOUBLE); out.writeDouble(((Number) cell).doubleValue());

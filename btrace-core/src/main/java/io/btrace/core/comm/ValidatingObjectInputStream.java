@@ -9,8 +9,14 @@ import java.io.InputStream;
 import java.io.InvalidClassException;
 import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
+import java.lang.reflect.Method;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Set;
 
 /**
@@ -60,13 +66,13 @@ public class ValidatingObjectInputStream extends ObjectInputStream {
     s.add(Long.class.getName());
     s.add(Float.class.getName());
     s.add(Double.class.getName());
-    s.add(java.math.BigInteger.class.getName());
-    s.add(java.math.BigDecimal.class.getName());
+    s.add(BigInteger.class.getName());
+    s.add(BigDecimal.class.getName());
     s.add(Number.class.getName());
-    s.add(java.util.HashMap.class.getName());
-    s.add(java.util.ArrayList.class.getName());
-    s.add(java.util.LinkedHashMap.class.getName());
-    s.add(java.util.Collections.EMPTY_MAP.getClass().getName());
+    s.add(HashMap.class.getName());
+    s.add(ArrayList.class.getName());
+    s.add(LinkedHashMap.class.getName());
+    s.add(Collections.EMPTY_MAP.getClass().getName());
     // Throwable graph is intentionally NOT allowed by default - ErrorCommand now uses safe encoding.
     // Keep StackTraceElement for potential filtered error reporting.
     s.add(StackTraceElement.class.getName());
@@ -146,7 +152,7 @@ public class ValidatingObjectInputStream extends ObjectInputStream {
       Class<?> filterClass = Class.forName("java.io.ObjectInputFilter");
       // ObjectInputFilter.Config.createFilter("...") and setObjectInputFilter
       Class<?> configClass = Class.forName("java.io.ObjectInputFilter$Config");
-      java.lang.reflect.Method createFilter = configClass.getMethod("createFilter", String.class);
+      Method createFilter = configClass.getMethod("createFilter", String.class);
       // Build filter string: allow-list + reject all else
       StringBuilder pattern = new StringBuilder();
       for (String cn : ALLOWED_CLASS_NAMES) {
@@ -157,7 +163,7 @@ public class ValidatingObjectInputStream extends ObjectInputStream {
       pattern.append(";io.btrace.core.comm.*");
       pattern.append(";!*");
       Object filter = createFilter.invoke(null, pattern.toString());
-      java.lang.reflect.Method setFilter = ObjectInputStream.class.getMethod("setObjectInputFilter", filterClass);
+      Method setFilter = ObjectInputStream.class.getMethod("setObjectInputFilter", filterClass);
       setFilter.invoke(this, filter);
     } catch (Exception ignored) {
       // Java 8 or filter not available - resolveClass is sufficient
