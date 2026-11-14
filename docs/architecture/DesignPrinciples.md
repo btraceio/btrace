@@ -73,7 +73,7 @@ check fails CI.
 
 **Why:** The comment in `CommandQueue` explains how clearing the flag from probe code loses an interrupt the application was waiting for.
 
-**Enforced by:** `scripts/guardrails/check_runtime_safety.py` (no Thread.interrupted() call in btrace-runtime), `btrace-agent/src/test/java/io/btrace/instr/BTraceTransformerFailureTest.java` (a failing transform reports and returns null)
+**Enforced by:** `scripts/guardrails/check_runtime_safety.py` (no Thread.interrupted() call in btrace-runtime), `btrace-agent/src/test/java/io/btrace/instr/BTraceTransformerFailureReportTest.java` (a failing transform reports and returns null)
 
 **Exceptions:** None. Coverage of the catch-all around guarded handlers is partial: golden data covers the ASM backend only.
 

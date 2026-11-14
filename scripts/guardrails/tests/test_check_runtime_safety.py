@@ -1,6 +1,7 @@
 """Hermetic tests for check_runtime_safety.py: each builds a throw-away tree and runs the script."""
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -100,8 +101,8 @@ class RuntimeSafetyTest(unittest.TestCase):
         self.assertEqual(0, code, out)
 
     def test_missing_runtime_source_root_is_an_error(self):
-        os.remove(os.path.join(self.root, MAIN))
-        os.removedirs(os.path.dirname(os.path.join(self.root, MAIN)))
+        shutil.rmtree(os.path.join(self.root, "btrace-runtime", "src"))
+        self.assertTrue(os.path.isdir(os.path.join(self.root, "btrace-runtime")))
         self.assertFails("btrace-runtime/src/main does not exist")
 
     def test_no_java_files_is_an_error(self):
