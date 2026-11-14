@@ -352,6 +352,59 @@ class LayeringCheckTest(unittest.TestCase):
         self.assertEqual(1, code, out)
         self.assertIn("layering:", out)
 
+    OPT_OUT = "compileJava {\n    options.release.set((Integer) null)\n}\n"
+
+    def opt_out(self, module="btrace-client", text=OPT_OUT):
+        self.write_build(module, BUILD_FILES[module], extra=text)
+
+    def with_opt_outs(self, *files):
+        rules = dict(RULES, release_opt_outs=[{"file": f, "reason": "fixtures use jdk.jfr"} for f in files])
+        self.write_rules(rules)
+
+    def test_unlisted_release_opt_out_fails(self):
+        self.opt_out()
+        self.assertFails("btrace-client/build.gradle clears or changes options.release", "release_opt_outs")
+
+    def test_listed_release_opt_out_passes(self):
+        self.opt_out()
+        self.with_opt_outs("btrace-client/build.gradle")
+        self.assertPasses()
+
+    def test_every_assignment_form_is_an_opt_out(self):
+        for text in (
+            "compileJava { options.release = 11 }\n",
+            "compileJava { options.release.set(11) }\n",
+            "compileJava { options.release.convention(null) }\n",
+            "tasks.withType(JavaCompile) { options { release = 11 } }\n",
+            "compileJava {\n  options.release\n    .set(11)\n}\n",
+        ):
+            with self.subTest(text=text):
+                self.opt_out(text=text)
+                self.assertFails("options.release")
+
+    def test_stale_release_opt_out_listing_fails(self):
+        self.with_opt_outs("btrace-client/build.gradle")
+        self.assertFails("stale release_opt_outs", "btrace-client/build.gradle")
+
+    def test_release_opt_out_without_reason_fails(self):
+        self.opt_out()
+        self.write_rules(dict(RULES, release_opt_outs=[{"file": "btrace-client/build.gradle", "reason": " "}]))
+        self.assertFails("needs a reason")
+
+    def test_opt_out_in_a_comment_is_ignored(self):
+        self.opt_out(
+            text="// compileJava { options.release.set((Integer) null) }\n"
+            "/* options.release = 11 */\ncompileJava { options.encoding = 'UTF-8' }\n"
+        )
+        self.assertPasses()
+
+    def test_reading_release_or_jdk8_toolchain_is_not_an_opt_out(self):
+        self.opt_out(
+            text="compileJava {\n  javaCompiler = javaToolchains.compilerFor { languageVersion.set(JavaLanguageVersion.of(8)) }\n"
+            "  println options.release.get()\n}\nospackage { release = 1 }\n"
+        )
+        self.assertPasses()
+
 
 if __name__ == "__main__":
     unittest.main()

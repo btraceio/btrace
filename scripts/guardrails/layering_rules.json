@@ -349,5 +349,11 @@
       "expression": "extensionProjectPath",
       "reason": "distribution packages each extension project listed in its own build script; task wiring, not a dependency declaration"
     }
+  ],
+  "release_opt_outs": [
+    {
+      "file": "integration-tests/build.gradle",
+      "reason": "not shipped; its dummy test fixtures use jdk.jfr, which --release 8 omits"
+    }
   ]
 }

@@ -26,6 +26,13 @@ reference to the project itself is not. A `project(<expression>)` that is not a 
 error unless layering_rules.json lists that file and expression under `dynamic_project_references`
 with a reason; an entry that matches nothing is stale.
 
+A module build.gradle that assigns or clears `options.release` (also `options { release = ... }`)
+switches off the `--release 8` API gate that common.gradle sets, so it must be listed under
+`release_opt_outs` in layering_rules.json with a reason; a listed file that no longer does so is
+stale. Selecting the JDK 8 toolchain for main compilation is not an opt-out: javac 8 rejects JDK 9+
+APIs by itself, and leaving `options.release` alone keeps `--release 8` on every other toolchain, so
+the toolchain choice is not pinned.
+
 Baseline entries for imports and literals name the full imported or literal class name (a wildcard
 import as written, `io.btrace.agent.*`), so a baselined file cannot gain a second violation under
 the same prefix unnoticed. Per-file `exceptions` list those same full names.
@@ -153,6 +160,51 @@ def project_references(path, text):
     return edges, dynamic
 
 
+RELEASE_ASSIGN_RE = re.compile(r"\boptions\s*\.\s*release\b\s*(?:=(?!=)|\.\s*(?:set|convention)\s*\()")
+OPTIONS_BLOCK_RE = re.compile(r"\boptions\s*\{")
+RELEASE_IN_BLOCK_RE = re.compile(r"\brelease\b\s*(?:=(?!=)|\.\s*(?:set|convention)\s*\()")
+
+
+def opts_out_of_release(text):
+    """True when a build.gradle (comments removed) assigns or clears options.release."""
+    if RELEASE_ASSIGN_RE.search(text):
+        return True
+    for m in OPTIONS_BLOCK_RE.finditer(text):
+        depth, i = 1, m.end()
+        while i < len(text) and depth:
+            depth += {"{": 1, "}": -1}.get(text[i], 0)
+            i += 1
+        if RELEASE_IN_BLOCK_RE.search(text[m.end() : i]):
+            return True
+    return False
+
+
+def check_release_opt_outs(root, rules, errors):
+    listed = {}
+    for entry in rules["release_opt_outs"]:
+        if not str(entry.get("reason", "")).strip():
+            errors.append("release_opt_outs entry for %s needs a reason in layering_rules.json" % entry.get("file"))
+        listed[entry.get("file")] = entry
+    seen = set()
+    for path, name in walk(root, rules.get("separate_builds", [])):
+        if name != "build.gradle":
+            continue
+        with open(os.path.join(root, path), encoding="utf-8", errors="replace") as f:
+            text = strip_gradle_comments(f.read())
+        if opts_out_of_release(text):
+            seen.add(path)
+            if path not in listed:
+                errors.append(
+                    "%s clears or changes options.release, which switches off the --release 8 API check; "
+                    "list it under release_opt_outs in layering_rules.json with a reason, or remove it" % path
+                )
+    for path in sorted(set(listed) - seen):
+        errors.append(
+            "stale release_opt_outs entry (remove it from layering_rules.json): %s no longer changes options.release"
+            % path
+        )
+
+
 def check_edges(root, rules, found, errors):
     declared, used = set(), set()
     allowed_dynamic = {(d["file"], d["expression"]) for d in rules.get("dynamic_project_references", [])}
@@ -265,6 +317,7 @@ def load_rules(path):
         rules.setdefault("upper_layer_literals", [])
         rules.setdefault("edges", [])
         rules.setdefault("dynamic_project_references", [])
+        rules.setdefault("release_opt_outs", [])
         return rules
     except (OSError, ValueError) as e:
         raise RuleError("cannot read rules %s: %s" % (path, e))
@@ -283,6 +336,7 @@ def main(argv):
         return 1
     found, errors = set(), []
     check_edges(args.root, rules, found, errors)
+    check_release_opt_outs(args.root, rules, errors)
     scan_java(args.root, rules, found, errors)
     try:
         errors.extend(_baseline.compare(found, args.baseline))
