@@ -136,6 +136,10 @@ class AgentConfigCheckTest(unittest.TestCase):
         self.write(CATALOG, "# Design principles\n\n## P2. Bare\n\n**Enforced by:** unenforced (judgment)\n")
         self.assertFails("P2", "**Rule:**", "**Why:**", "**Exceptions:**")
 
+    def test_malformed_principle_heading_fails(self):
+        self.write(CATALOG, "# Design principles\n\n## P7 No dot\n\n**Rule:** x\n")
+        self.assertFails("DesignPrinciples.md:3", "must read '## P<n>. <title>'")
+
     def test_enforced_by_that_is_neither_literal_nor_path_fails(self):
         self.catalog(principle(1, "a reviewer, probably"))
         self.assertFails("P1", "unenforced (judgment)")

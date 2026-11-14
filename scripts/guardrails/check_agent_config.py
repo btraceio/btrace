@@ -214,13 +214,18 @@ def check_gradle_paths(root, files, errors):
 
 
 def catalog_sections(path):
-    """Returns [(id, line_no, {field: (line_no, value)})] for each `## P<n>.` section."""
-    sections = []
+    """Returns ([(id, line_no, {field: (line_no, value)})], [(line_no, heading)]).
+
+    The first list has one entry per `## P<n>.` section; the second lists `## P…` headings that do
+    not match that form, so their fields would otherwise go unchecked."""
+    sections, malformed = [], []
     with open(path, encoding="utf-8") as f:
         for no, line in enumerate(f, 1):
             m = PRINCIPLE_RE.match(line)
             if m:
                 sections.append((m.group(1), no, {}))
+            elif re.match(r"^##\s+P\d", line):
+                malformed.append((no, line.strip()))
             elif line.startswith("## "):
                 sections.append((None, no, {}))
             elif sections and sections[-1][0]:
@@ -228,7 +233,7 @@ def catalog_sections(path):
                     prefix = "**%s:**" % field
                     if line.startswith(prefix):
                         sections[-1][2].setdefault(field, (no, line[len(prefix) :].strip()))
-    return [s for s in sections if s[0]]
+    return [s for s in sections if s[0]], malformed
 
 
 def check_enforced_by(root, errors):
@@ -243,7 +248,10 @@ def check_enforced_by(root, errors):
         if scripts:
             errors.append("%s: missing (it lists what enforces each principle)" % CATALOG)
         return
-    for pid, no, fields in catalog_sections(catalog):
+    sections, malformed = catalog_sections(catalog)
+    for no, heading in malformed:
+        errors.append("%s:%d: heading '%s' must read '## P<n>. <title>'" % (CATALOG, no, heading))
+    for pid, no, fields in sections:
         for field in CATALOG_FIELDS:
             if field not in fields:
                 errors.append("%s:%d: %s has no **%s:** line" % (CATALOG, no, pid, field))

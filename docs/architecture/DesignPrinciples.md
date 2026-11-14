@@ -21,7 +21,7 @@ check fails CI.
 
 **Rule:** Dependencies between BTrace modules follow one direction. `btrace-boot` and `btrace-core` import no other BTrace module; inside `btrace-agent`, `io.btrace.instr` does not import `io.btrace.agent`; `btrace-client` does not import `io.btrace.agent.*`; extensions import only `io.btrace.core.extensions.*`; `btrace-qe` and `integration-tests` do not import agent, instr or runtime classes. No string literal in a lower layer names a class of a higher one, and no Java package is split across modules.
 
-**Why:** Nothing in the build checks it, so the exceptions accumulate quietly: three extensions import non-extension core types (`OTelImpl`, `StatsdImpl`, `ExternalTypeTestServiceImpl`), two lower-layer classes name agent classes in string literals (`BTraceRuntimeImplBase`, `Preprocessor`), `ExtensionBridgeImpl` reaches across layers reflectively, and `io.btrace.runtime` exists in both `btrace-core` and `btrace-runtime`.
+**Why:** Nothing in the build checks it, so the exceptions accumulate quietly: three extensions import BTrace types outside `io.btrace.core.extensions` (`OTelImpl`, `StatsdImpl`, `ExternalTypeTestServiceImpl`), `BTraceRuntimeImplBase` names `io.btrace.agent.PerfReaderImpl` in a string literal, and the package `io.btrace.runtime` exists in both `btrace-core` and `btrace-runtime`.
 
 **Enforced by:** unenforced (judgment)
 
@@ -51,7 +51,7 @@ check fails CI.
 
 **Rule:** When the same behavior exists twice, a change to one copy is a change to both or says why not. This covers the two instrumentation backends (ASM and the ClassFile API), the V1 and V2 wire command tables, every `Kind` handled by both backends, and the shell and batch launchers.
 
-**Why:** About nine fixes in a year landed in one of two siblings. 22d3f9a3 applied a `Kind.LINE` probe only to the methods it selects; c81a2d43 fixed `@Duration` at every return but the first. The `btracex` and `btracec` shell launchers lack `-XX:+AllowRedefinitionToAddDeleteMethods`, which their `.bat` twins pass. A probe kind unhandled by a backend falls through without failing. See [instrumentation backends](InstrumentationBackends.md).
+**Why:** Fixes keep landing in only one of two siblings. 22d3f9a3 applied a `Kind.LINE` probe only to the methods it selects; c81a2d43 fixed `@Duration` at every return but the first. The `btracex` and `btracec` shell launchers lack `-XX:+AllowRedefinitionToAddDeleteMethods`, which their `.bat` twins pass. See [instrumentation backends](InstrumentationBackends.md).
 
 **Enforced by:** unenforced (judgment)
 
@@ -61,7 +61,7 @@ check fails CI.
 
 **Rule:** A dropped handler, a failed transform or an ignored option is logged at warn or above and reaches the client; it is never swallowed. A `catch` of `Throwable`, `Exception` or `RuntimeException` does not end with an empty body, a debug or trace log, or a bare `return` or `continue`. `BTraceTransformer.reportFailure` is the model.
 
-**Why:** Failing open looks like success. 1d069ce0 logged handler mismatches at debug only, 9c4f4a63 did the same for classes that could not be instrumented, and 0962eaaf caught the failure to build a level guard and returned the unguarded handler. The number of silent `catch` blocks in main sources grew from 35 to 133 in a year.
+**Why:** Failing open looks like success. 1d069ce0 logged handler mismatches at debug only, 9c4f4a63 did the same for classes that could not be instrumented, and 0962eaaf caught the failure to build a level guard and returned the unguarded handler. Silent `catch` blocks are common in main sources.
 
 **Enforced by:** unenforced (judgment)
 
@@ -71,7 +71,7 @@ check fails CI.
 
 **Rule:** Probe handling must not change the behavior of the thread it runs on. `Thread.interrupted()` is never called in `btrace-runtime`, because it clears the application's interrupt flag. A failure in the transformer reports and returns the original bytes instead of propagating into class loading.
 
-**Why:** The comment in `CommandQueue` explains how clearing the flag from probe code loses an interrupt the application was waiting for. A transformer that throws aborts the target's class definition.
+**Why:** The comment in `CommandQueue` explains how clearing the flag from probe code loses an interrupt the application was waiting for.
 
 **Enforced by:** unenforced (judgment)
 
@@ -81,7 +81,7 @@ check fails CI.
 
 **Rule:** Adding to an extension point means adding to every place that lists it. Each `Args` option appears in the agent usage text and in [QuickReference](../QuickReference.md); each method-targeting annotation is classified in the preprocessor's annotation sets; each message key used in code exists in `messages.properties`.
 
-**Why:** Registries drift apart silently. The agent usage text omits `agentJar`, `libs` and `probes`, QuickReference omits `agentJar` and `libs`, and 51ac8280 fixed three agent options that were accepted and ignored.
+**Why:** Registries drift apart silently. 51ac8280 pins agent options that the agent drops without a word.
 
 **Enforced by:** unenforced (judgment)
 
@@ -91,7 +91,7 @@ check fails CI.
 
 **Rule:** A main-source Java file over 1,000 lines does not get longer, and no new file starts over 1,000 lines. The list of public top-level types in `btrace-core` changes only deliberately. No new `...ForTest` method goes into main sources.
 
-**Why:** `Client.java` grew from 821 to 1,838 lines in a year and the public types in `btrace-core` from 80 to 151. Eight main-source files already carry a test-only hook.
+**Why:** `btrace-client`'s `Client.java` is 1,838 lines, and `btrace-core`'s public surface keeps growing. Main sources already carry test-only hooks (`Client.setRuntimeForTest`, `BTraceRuntimeImplBase.speculativeQueueCountForTest`).
 
 **Enforced by:** unenforced (judgment)
 
@@ -101,7 +101,7 @@ check fails CI.
 
 **Rule:** No speculative modules and no re-implemented helpers. Code that no entry point reaches is not merged; a helper that already exists is reused.
 
-**Why:** About 7,000 lines were merged and later deleted as unreachable: the fat-agent Maven module (#900), the MCP server moved out of the tree (#864) and the PCPP preprocessor (#861). `readAllBytes` and `updateMinMax` each exist in more than one copy.
+**Why:** Large amounts of code were merged and later deleted as unreachable: the fat-agent Maven module (#900), the MCP server moved out of the tree (#864) and the PCPP preprocessor (#861). `readAllBytes` exists in several copies (`Main`, `ClassHeaderReader`) and `updateMinMax` in the contracts and GPU-bridge extensions.
 
 **Enforced by:** unenforced (judgment)
 
