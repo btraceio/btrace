@@ -17,9 +17,27 @@ ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:/opt/btrace/bin"
 # Your application...
 ```
 
+## Tags
+
+Every release publishes three version tags and moves the three floating ones
+(`.github/workflows/release.yml`, job `publish-container-images`):
+
+| Variant | Pinned tag | Floating tag |
+|---------|------------|--------------|
+| Debian | `3.0.0` | `latest` |
+| Alpine | `3.0.0-alpine` | `latest-alpine` |
+| Distroless | `3.0.0-distroless` | `latest-distroless` |
+
+Use a pinned tag for anything that is built or deployed more than once. The agent is injected into
+your application's JVM, so a floating tag makes the build non-reproducible and picks up the next
+major release unasked (4.0 removes support for Java < 17). For a byte-for-byte reproducible build,
+add the digest that `docker buildx imagetools inspect ghcr.io/btraceio/btrace:3.0.0` prints:
+`FROM ghcr.io/btraceio/btrace:3.0.0@sha256:<digest>`. The `latest` tags are a convenience for local
+experiments.
+
 ## Image Variants
 
-### `ghcr.io/btraceio/btrace:latest`
+### Debian: `ghcr.io/btraceio/btrace:<version>`
 **Debian-based** - Full distribution with all tools and shell access
 
 - **Base:** OpenJDK 21 JDK on Debian Slim
@@ -31,7 +49,7 @@ ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:/opt/btrace/bin"
 FROM ghcr.io/btraceio/btrace:3.0.0
 ```
 
-### `ghcr.io/btraceio/btrace:latest-alpine`
+### Alpine: `ghcr.io/btraceio/btrace:<version>-alpine`
 **Alpine-based** - Smaller footprint for cloud environments
 
 - **Base:** Alpine Linux with OpenJDK 21
@@ -43,7 +61,7 @@ FROM ghcr.io/btraceio/btrace:3.0.0
 FROM ghcr.io/btraceio/btrace:3.0.0-alpine
 ```
 
-### `ghcr.io/btraceio/btrace:latest-distroless`
+### Distroless: `ghcr.io/btraceio/btrace:<version>-distroless`
 **Distroless** - Minimal attack surface for security-focused deployments
 
 - **Base:** Google Distroless Java 21
@@ -187,14 +205,14 @@ services:
 
 | Variant | Base | Shell | Scripts | Use Case |
 |---------|------|-------|---------|----------|
-| **latest** | Debian (Liberica JDK 21) | ✓ | ✓ | Development, debugging |
+| **(default)** | Debian (Liberica JDK 21) | ✓ | ✓ | Development, debugging |
 | **alpine** | Alpine (OpenJDK 21) | ✓ | ✓ | Kubernetes sidecar |
 | **distroless** | Distroless Java 21 | ✗ | ✗ | Production agent mode |
 
 **Recommendations:**
-- **Development:** Use `btrace:latest` for full tooling
-- **Kubernetes Sidecar:** Use `btrace:latest-alpine` for size efficiency
-- **Production Agent:** Use `btrace:latest-distroless` for security
+- **Development:** Use `btrace:3.0.0` for full tooling
+- **Kubernetes Sidecar:** Use `btrace:3.0.0-alpine` for size efficiency
+- **Production Agent:** Use `btrace:3.0.0-distroless` for security
 
 ## Environment Variables
 
@@ -265,7 +283,7 @@ ENTRYPOINT ["btracer", \
 1. **Use specific version tags in production:**
    ```dockerfile
    FROM ghcr.io/btraceio/btrace:3.0.0  # Good
-   FROM ghcr.io/btraceio/btrace:latest  # Avoid in production
+   # Avoid outside local experiments: the floating `latest`, `latest-alpine`, `latest-distroless` tags
    ```
 
 2. **Multi-stage builds minimize size:**

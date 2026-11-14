@@ -732,7 +732,7 @@ spec:
 spec:
   initContainers:
   - name: setup-btrace
-    image: btrace:latest
+    image: ghcr.io/btraceio/btrace:3.0.0-alpine
     command: ["cp", "-r", "/opt/btrace", "/shared"]
     volumeMounts:
     - name: shared
