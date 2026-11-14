@@ -119,6 +119,8 @@ dependencies {
 
     testImplementation platform(libs.junit)
     testImplementation libs.junit.jupiter
+    // BootstrapClosureTest reads the constant pools of btrace.jar's root classes
+    testImplementation libs.asm
 }
 
 jar {

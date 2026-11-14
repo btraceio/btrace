@@ -9,3 +9,5 @@
 /.github/workflows/                @jbachorik
 /.github/CODEOWNERS                @jbachorik
 /scripts/guardrails/               @jbachorik
+/btrace-dist/src/test/resources/bootstrap-root-allowlist.txt   @jbachorik
+/btrace-dist/src/test/resources/bootstrap-closure-baseline.txt @jbachorik

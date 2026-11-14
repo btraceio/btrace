@@ -33,9 +33,9 @@ check fails CI.
 
 **Why:** Root classes are visible to the bootstrap class loader, which cannot see the masked sections. A root class that references a masked type fails with `NoClassDefFoundError` inside the target application. Today `ExtensionContext` references `io.btrace.core.comm.Command`, which the distribution build excludes from the root. [Masked JAR architecture](MaskedJarArchitecture.md) describes the layout.
 
-**Enforced by:** unenforced (judgment)
+**Enforced by:** `btrace-dist/src/test/java/io/btrace/dist/BootstrapClosureTest.java`
 
-**Exceptions:** None.
+**Exceptions:** `btrace-dist/src/test/resources/bootstrap-root-allowlist.txt` lists the packages and classes allowed at the root. `btrace-dist/src/test/resources/bootstrap-closure-baseline.txt` lists the references that predate the check, each with its reason; it only shrinks.
 
 ## P3. Main code uses only the Java 8 API
 
