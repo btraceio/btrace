@@ -15,9 +15,9 @@
 hs_err_pid*
 
 build
-dist
+/dist/
 make/netbeans/nbproject/private
-TEST-*
+TEST-*.xml
 !btrace-agent/src/test/resources/packed/test-pack.jar
 make/junit*
 make/private.properties
