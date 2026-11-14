@@ -231,8 +231,9 @@ in the `build` job. Python gates run in the `guardrails` job, which feeds `tests
   so `check_layering.py` still lists the `btrace-agent -> btrace-compiler` edge. The removed edge had
   been putting the agent's own jar, and with it the `java24` ClassFile API backend, on the agent's
   test classpath. `btrace-compiler`'s `runtimeOnly` on `btrace-agent` stays: the compiler finds the
-  agent's `PackGenerator` through `ServiceLoader`. One Gradle edge unused at source level remains
-  (`btrace-compiler/build.gradle:12`) **[S]**.
+  agent's `PackGenerator` through `ServiceLoader`, and it brings `btrace-runtime` with it. The
+  compiler's own `implementation` on `btrace-runtime` was unused (its one `io.btrace.runtime` import,
+  `BTraceRuntimeAccess`, is in `btrace-core`) and is removed; `btrace.jar` is unchanged.
 - About 150 classes present both in the JAR root and in a masked section, measured on a stale local JAR
   **[S]**; harmless under parent-first loading, and `MaskedClassLoader`'s Javadoc says section-first.
 - `ExtensionIndy` is bootstrap-visible and holds an SLF4J logger, against the comment in

@@ -85,10 +85,6 @@
       "btrace-extensions:btrace-metrics"
     ],
     [
-      "btrace-compiler",
-      "btrace-runtime"
-    ],
-    [
       "btrace-dist",
       "btrace-agent"
     ],
