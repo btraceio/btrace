@@ -987,8 +987,7 @@ public class Instrumentor extends ClassVisitor {
             }
             super.visitMethodPrologue();
           }
-        };
-      // </editor-fold>
+        }; // </editor-fold>
 
       case FIELD_GET:
         // <editor-fold defaultstate="collapsed" desc="Field Get Instrumentor">
@@ -1606,8 +1605,7 @@ public class Instrumentor extends ClassVisitor {
               }
             }
           }
-        };
-      // </editor-fold>
+        }; // </editor-fold>
 
       case SYNC_ENTRY:
         // <editor-fold defaultstate="collapsed" desc="SyncEntry Instrumentor">
@@ -1833,6 +1831,8 @@ public class Instrumentor extends ClassVisitor {
             }
           }
         }; // </editor-fold>
+      default:
+        UnhandledKindReport.report(bcn, om, className, "ASM");
     }
     return mv;
   }
