@@ -56,7 +56,11 @@ def swallows(body):
 
 
 def swallowed_blocks(text):
-    """Yields (first line, last line, marker line or None) of each swallowing broad catch."""
+    """Yields (first line, last line) of each swallowing broad catch.
+
+    A broad catch whose braces do not balance cannot be classified; it is yielded as
+    (first line, None) so the caller reports it instead of skipping it.
+    """
     raw = text.split("\n")
     code, state = [], CODE
     for line in raw:
@@ -86,7 +90,8 @@ def swallowed_blocks(text):
             depth += {"{": 1, "}": -1}.get(flat[i], 0)
             i += 1
         if depth:
-            continue  # unbalanced braces: not parseable, leave it alone
+            yield line_of(m.start()), None
+            continue
         if not swallows(flat[m.end() : i - 1]):
             continue
         first, header_end, last = line_of(m.start()), line_of(m.end() - 1), line_of(i - 1)
@@ -100,9 +105,13 @@ def touched(diff):
     out, path = {}, None
     for line in diff.splitlines():
         if line.startswith("+++ "):
-            path = line[6:] if line.startswith("+++ b/") else None
-            if path:
-                out.setdefault(path, (set(), set()))
+            if line == "+++ /dev/null":
+                path = None
+                continue
+            if not line.startswith("+++ b/"):
+                raise ValueError("cannot map diff header to a file path: " + line)
+            path = line[6:].rstrip("\t")
+            out.setdefault(path, (set(), set()))
         elif line.startswith("@@") and path:
             m = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@", line)
             start, count = int(m.group(1)), int(m.group(2) if m.group(2) is not None else 1)
@@ -119,7 +128,10 @@ def run_git(*args):
 
 
 def check_diff(base, head):
-    cmd = ["diff", "-U0", "--no-color", "--diff-filter=AMR"]
+    # Pin the diff format so user git config (diff.noprefix, diff.mnemonicPrefix, quotePath,
+    # external diff or textconv drivers) cannot change what the parser sees.
+    cmd = ["-c", "core.quotepath=off", "diff", "-U0", "--no-color", "--no-ext-diff", "--no-textconv",
+           "--src-prefix=a/", "--dst-prefix=b/", "--diff-filter=AMR"]
     cmd += [base + "..." + head] if head else [base]
     changes = touched(run_git(*cmd, "--", "*.java"))
     for path in sorted(changes):
@@ -133,16 +145,18 @@ def check_diff(base, head):
                 text = f.read()
         marks = added | gaps
         for first, last in swallowed_blocks(text):
-            if any(first <= n <= last for n in marks):
-                yield path, first
+            if last is None:
+                yield path, first, False
+            elif any(first <= n <= last for n in marks):
+                yield path, first, True
 
 
 def check_all():
     for path in run_git("ls-files", "--", "*.java").split("\n"):
         if path and SCOPE_RE.search(path):
             with open(path, encoding="utf-8", errors="replace") as f:
-                for first, _ in swallowed_blocks(f.read()):
-                    yield path, first
+                for first, last in swallowed_blocks(f.read()):
+                    yield path, first, last is not None
 
 
 def module_of(path):
@@ -157,13 +171,21 @@ def main(argv):
     if not everything and argv[1] in NO_BASE:
         print("swallow: no base commit given; nothing checked")
         return 0
-    found = list(check_all() if everything else check_diff(argv[1], argv[2] if len(argv) > 2 else None))
-    for path, no in found:
-        print("swallow: %s:%d: catch swallows the failure; log at warn or above, rethrow, or add "
-              "'// swallow: <reason>' to the catch line" % (path, no))
+    try:
+        found = list(check_all() if everything else check_diff(argv[1], argv[2] if len(argv) > 2 else None))
+    except ValueError as e:
+        print("swallow: %s; the diff was not checked" % e)
+        return 1
+    for path, no, parsed in found:
+        if parsed:
+            print("swallow: %s:%d: catch swallows the failure; log at warn or above, rethrow, or add "
+                  "'// swallow: <reason>' to the catch line" % (path, no))
+        else:
+            print("swallow: %s:%d: could not parse this catch block (unbalanced braces); "
+                  "it was not checked" % (path, no))
     if everything:
         per_module = {}
-        for path, _ in found:
+        for path, _, _ in found:
             per_module[module_of(path)] = per_module.get(module_of(path), 0) + 1
         for module in sorted(per_module):
             print("swallow: %s: %d" % (module, per_module[module]))
