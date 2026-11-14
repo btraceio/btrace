@@ -38,7 +38,7 @@ the branch rules require, is in
 
 **Enforced by:** `btrace-dist/src/test/java/io/btrace/dist/BootstrapClosureTest.java`
 
-**Exceptions:** `btrace-dist/src/test/resources/bootstrap-root-allowlist.txt` lists the packages and classes allowed at the root; a `tool-only <entry> uses <package>... # reason` line marks tool-only classes and their tool API packages, and fails when it matches no root class or lists a package its classes do not use. `btrace-dist/src/test/resources/bootstrap-jdk-nonboot-packages.txt` lists the JDK packages that are not boot-loader visible on JDK 9+, with the command that generated it. `btrace-dist/src/test/resources/bootstrap-closure-baseline.txt` lists the references that predate the check, each with its reason; it only shrinks.
+**Exceptions:** `btrace-dist/src/test/resources/bootstrap-root-allowlist.txt` lists the packages and classes allowed at the root; a `tool-only <entry> uses <package>... # reason` line marks tool-only classes and their tool API packages, and fails when it matches no root class or lists a package its classes do not use. `btrace-dist/src/test/resources/bootstrap-jdk-nonboot-packages.txt` lists the JDK packages that are not boot-loader visible on JDK 9+, with the command that generated it; on JDK 9+ the test fails when the list misses such a package of the JDK running it. `btrace-dist/src/test/resources/bootstrap-closure-baseline.txt` lists the references that predate the check, each with its reason; it only shrinks.
 
 ## P3. Main code uses only the Java 8 API
 

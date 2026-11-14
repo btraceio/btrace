@@ -288,6 +288,10 @@ read from the named files when this section was written, and the files are autho
   `tool-only ... uses javax/annotation/processing/ javax/lang/model/ javax/tools/`; a tool-only class
   may reference its tool API packages, and a bootstrap root class that references a tool-only class
   fails regardless of the baseline. The 23 entries were removed.
+  The deny-list, generated once on Temurin 21, is now checked against the JDK running the test: on
+  JDK 9+ `jdkDenyListCoversTheRunningJdk` reads the boot module layer and fails on a non-boot
+  package under the JDK prefixes that the list misses (34 such packages on JDK 21 and 26, all
+  listed); on JDK 8 it is reported as skipped. `:btrace-dist:test` runs on the Gradle JDK, 21 in CI.
 - **G12, handler annotations (P7).** No unguarded-annotation set was added to production code;
   `Preprocessor` changed visibility only. `HandlerAnnotationClassificationTest` keeps the non-handler
   annotations (`Location`, `Sampled`) in a test-side `NOT_HANDLERS` list, and

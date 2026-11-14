@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -92,8 +93,10 @@ import org.objectweb.asm.Type;
  * bootstrap-jdk-nonboot-packages.txt}. That file lists the packages exported by JDK 9+ modules
  * defined to the platform or application loader, such as {@code java.sql} and {@code
  * java.compiler}; how it was generated is in its header. Each of its lines must be a package in
- * internal form ending in {@code /}, or the test fails. Relocated SLF4J types ({@code
- * io/btrace/libs/org/slf4j/}) get no exemption: they are bootstrap-visible only as root classes.
+ * internal form ending in {@code /}, or the test fails. On JDK 9+ the test also fails when the list
+ * misses such a package of the JDK running it (see {@link #jdkDenyListCoversTheRunningJdk}).
+ * Relocated SLF4J types ({@code io/btrace/libs/org/slf4j/}) get no exemption: they are
+ * bootstrap-visible only as root classes.
  *
  * <p><em>Tool-only</em> root classes are the exception to that rule. They sit at the root so that
  * javac or a build tool can load them from {@code btrace.jar} as an ordinary class path or
@@ -157,7 +160,56 @@ class BootstrapClosureTest {
     assertTrue(errors.isEmpty(), String.join("\n", errors));
   }
 
+  /**
+   * Checks that {@code bootstrap-jdk-nonboot-packages.txt} still covers the JDK running the test,
+   * so a new JDK that moves a package off the boot loader cannot leave the deny-list stale. Every
+   * package under {@link #JDK_PREFIXES} that a module of the test JVM's boot layer exports without
+   * qualification, from a module defined to a loader other than the boot loader, must be listed.
+   * Only modules in the boot layer are seen; for a class-path application that is every system
+   * module exporting an API, the same set the file's generating command resolves, apart from
+   * incubator modules. The list may hold more, such as packages of older JDKs.
+   *
+   * <p>JDK 8 has no module system, so there the check is skipped, and JUnit reports it skipped with
+   * that reason rather than passed. {@code :btrace-dist:test} runs on the JDK that runs Gradle,
+   * which Gradle 9 requires to be 17 or later; CI's {@code build} job runs it on JDK 21. The module
+   * API is called reflectively so this class does not depend on the test compile level.
+   */
+  @Test
+  void jdkDenyListCoversTheRunningJdk() throws IOException {
+    String jdk = System.getProperty("java.version");
+    Map<String, String> running = runningJdkNonBootPackages();
+    assumeTrue(
+        running != null,
+        "JDK " + jdk + " has no module system; the " + NON_BOOT_PACKAGES + " check needs JDK 9+");
+    List<String> missing = missingNonBootPackages(running, readEntries(NON_BOOT_PACKAGES, false));
+    assertTrue(
+        missing.isEmpty(),
+        NON_BOOT_PACKAGES
+            + " misses packages that modules of the running JDK "
+            + jdk
+            + " export from a loader other than the boot loader. Add these lines, or regenerate"
+            + " the file with the command in its header:\n"
+            + String.join("\n", missing));
+    System.out.println(
+        NON_BOOT_PACKAGES
+            + " covers the "
+            + running.size()
+            + " non-boot JDK packages of JDK "
+            + jdk);
+  }
+
   // ---- fixtures for the gate's own logic ----
+
+  @Test
+  void fixtureDenyListSelfCheckReportsMissingPackages() {
+    Map<String, String> running = new TreeMap<>();
+    running.put("java/sql/", "java.sql");
+    running.put("javax/tools/", "java.compiler");
+    running.put("jdk/new/api/", "jdk.new");
+    assertEquals(
+        Arrays.asList("javax/tools/  # java.compiler", "jdk/new/api/  # jdk.new"),
+        missingNonBootPackages(running, Arrays.asList("java/sql/", "java/net/http/")));
+  }
 
   @Test
   void fixtureArrayClassConstantCountsAsItsElementType() {
@@ -618,6 +670,65 @@ class BootstrapClosureTest {
       }
     }
     return null;
+  }
+
+  /**
+   * Returns a deny-list line, {@code <package> # <module>}, for each running-JDK package that the
+   * list does not hold.
+   */
+  static List<String> missingNonBootPackages(Map<String, String> running, List<String> listed) {
+    Set<String> known = new HashSet<>(listed);
+    List<String> missing = new ArrayList<>();
+    for (Map.Entry<String, String> pkg : new TreeMap<>(running).entrySet()) {
+      if (!known.contains(pkg.getKey())) {
+        missing.add(pkg.getKey() + "  # " + pkg.getValue());
+      }
+    }
+    return missing;
+  }
+
+  /**
+   * Returns the packages under {@link #JDK_PREFIXES}, in internal form with a trailing {@code /},
+   * that modules of the boot layer defined to a loader other than the boot loader export without
+   * qualification, each mapped to its module; or {@code null} on JDK 8, which has no modules.
+   */
+  static Map<String, String> runningJdkNonBootPackages() {
+    Class<?> layerClass;
+    try {
+      layerClass = Class.forName("java.lang.ModuleLayer");
+    } catch (ClassNotFoundException e) {
+      return null;
+    }
+    try {
+      Class<?> moduleClass = Class.forName("java.lang.Module");
+      Class<?> descriptorClass = Class.forName("java.lang.module.ModuleDescriptor");
+      Class<?> exportsClass = Class.forName("java.lang.module.ModuleDescriptor$Exports");
+      Object bootLayer = layerClass.getMethod("boot").invoke(null);
+      Map<String, String> packages = new TreeMap<>();
+      for (Object module : (Set<?>) layerClass.getMethod("modules").invoke(bootLayer)) {
+        if (moduleClass.getMethod("getClassLoader").invoke(module) == null) {
+          continue;
+        }
+        Object descriptor = moduleClass.getMethod("getDescriptor").invoke(module);
+        String name = (String) descriptorClass.getMethod("name").invoke(descriptor);
+        for (Object export : (Set<?>) descriptorClass.getMethod("exports").invoke(descriptor)) {
+          if ((Boolean) exportsClass.getMethod("isQualified").invoke(export)) {
+            continue;
+          }
+          String source = (String) exportsClass.getMethod("source").invoke(export);
+          String pkg = source.replace('.', '/') + "/";
+          for (String prefix : JDK_PREFIXES) {
+            if (pkg.startsWith(prefix)) {
+              packages.put(pkg, name);
+              break;
+            }
+          }
+        }
+      }
+      return packages;
+    } catch (ReflectiveOperationException e) {
+      throw new AssertionError("cannot read the boot module layer: " + e, e);
+    }
   }
 
   static boolean isBootstrapVisible(
