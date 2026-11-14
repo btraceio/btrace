@@ -105,6 +105,12 @@ test {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
 
+    // ArgsRegistryTest reads this file; without declaring it, the build cache could restore the
+    // test result after a QuickReference change without running the test.
+    inputs.file(rootProject.file('docs/QuickReference.md'))
+        .withPropertyName('quickReference')
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+
     if (testJavaVersion) {
         javaLauncher = javaToolchains.launcherFor {
             languageVersion = JavaLanguageVersion.of(testJavaVersion as int)

@@ -44,9 +44,6 @@ import org.junit.jupiter.api.Test;
  */
 class CommandTableParityTest {
 
-  /** The only command the v1 stream (WireIO) refuses; it exists on the v2 protocol only. */
-  private static final byte V2_ONLY = Command.HEARTBEAT;
-
   @Test
   void v1AndV2DeclareTheSameTypeConstants() throws Exception {
     assertEquals(typeConstants(Command.class), typeConstants(BinaryCommand.class));

@@ -45,6 +45,7 @@ import java.util.TreeSet;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -89,7 +90,8 @@ import org.objectweb.asm.Type;
  * module {@code jdk.management} from JDK 9), and its package is not listed in {@code
  * bootstrap-jdk-nonboot-packages.txt}. That file lists the packages exported by JDK 9+ modules
  * defined to the platform or application loader, such as {@code java.sql} and {@code
- * java.compiler}; how it was generated is in its header. Relocated SLF4J types ({@code
+ * java.compiler}; how it was generated is in its header. Each of its lines must be a package in
+ * internal form ending in {@code /}, or the test fails. Relocated SLF4J types ({@code
  * io/btrace/libs/org/slf4j/}) get no exemption: they are bootstrap-visible only as root classes.
  *
  * <p>Any other reference must be listed in {@code bootstrap-closure-baseline.txt} as {@code <root
@@ -108,6 +110,10 @@ class BootstrapClosureTest {
       Collections.unmodifiableList(
           Arrays.asList("java/", "javax/", "jdk/", "sun/", "com/sun/management/"));
 
+  /** A package in internal form with its trailing slash, such as {@code java/sql/}. */
+  private static final Pattern PACKAGE_LINE =
+      Pattern.compile("[A-Za-z_$][\\w$]*(/[A-Za-z_$][\\w$]*)*/");
+
   private static final int CONSTANT_CLASS = 7;
   private static final int CONSTANT_NAME_AND_TYPE = 12;
   private static final int CONSTANT_METHOD_TYPE = 16;
@@ -122,8 +128,11 @@ class BootstrapClosureTest {
 
   @Test
   void rootClassesReferenceOnlyBootstrapVisibleTypes() throws IOException {
-    Set<String> nonBootPackages = new HashSet<>(readEntries(NON_BOOT_PACKAGES, false));
-    assertFalse(nonBootPackages.isEmpty(), NON_BOOT_PACKAGES + " lists nothing");
+    List<String> nonBootLines = readEntries(NON_BOOT_PACKAGES, false);
+    assertFalse(nonBootLines.isEmpty(), NON_BOOT_PACKAGES + " lists nothing");
+    List<String> shapeErrors = nonBootPackageErrors(nonBootLines);
+    assertTrue(shapeErrors.isEmpty(), String.join("\n", shapeErrors));
+    Set<String> nonBootPackages = new HashSet<>(nonBootLines);
     Map<String, Set<String>> references = new TreeMap<>();
     for (Map.Entry<String, byte[]> root : readRootClasses().entrySet()) {
       references.put(internalName(root.getKey()), referencedTypes(root.getKey(), root.getValue()));
@@ -271,6 +280,22 @@ class BootstrapClosureTest {
   }
 
   @Test
+  void fixtureDenyListLineThatIsNotAPackageFails() {
+    List<String> lines =
+        Arrays.asList(
+            "java/sql/", "javax/lang/model", "java.sql/", "jdk/net/ /", "/java/", "java//sql/");
+    assertEquals(
+        Arrays.asList(
+            NON_BOOT_PACKAGES
+                + ": 'javax/lang/model' is not a package in internal form ending in /",
+            NON_BOOT_PACKAGES + ": 'java.sql/' is not a package in internal form ending in /",
+            NON_BOOT_PACKAGES + ": 'jdk/net/ /' is not a package in internal form ending in /",
+            NON_BOOT_PACKAGES + ": '/java/' is not a package in internal form ending in /",
+            NON_BOOT_PACKAGES + ": 'java//sql/' is not a package in internal form ending in /"),
+        nonBootPackageErrors(lines));
+  }
+
+  @Test
   void fixtureAllowlistReportsUnlistedClassesAndUnusedLines() {
     List<String> allowlist =
         Arrays.asList("fixture/pkg/", "fixture/Single.class", "fixture/unused/", "bad-line");
@@ -334,6 +359,22 @@ class BootstrapClosureTest {
     }
     for (String line : unused) {
       errors.add(ALLOWLIST + " line matches no root class (remove it): " + line);
+    }
+    return errors;
+  }
+
+  /**
+   * Returns an error for each deny-list line that is not a package in internal form ending in
+   * {@code /}. {@link #isBootstrapVisible} compares a type's package, with its trailing {@code /},
+   * to these lines, so a line of any other shape would silently deny nothing.
+   */
+  static List<String> nonBootPackageErrors(List<String> lines) {
+    List<String> errors = new ArrayList<>();
+    for (String line : lines) {
+      if (!PACKAGE_LINE.matcher(line).matches()) {
+        errors.add(
+            NON_BOOT_PACKAGES + ": '" + line + "' is not a package in internal form ending in /");
+      }
     }
     return errors;
   }
