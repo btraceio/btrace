@@ -18,4 +18,4 @@ given:
 steps: [launch, awaitReady, attach, awaitOutput, detach, shutdown, awaitExit]
 expect:
   outputMustMatch:
-    - "^slow chargeCard: \\d+ ms$"
+    - "^slow chargeCard: ([2-9]\\d{2}|[1-9]\\d{3,}) ms$"

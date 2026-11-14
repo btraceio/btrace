@@ -24,4 +24,4 @@ steps:
   - awaitExit
 expect:
   outputMustMatch:
-    - "^execution time: \\d+ ms$"
+    - "^execution time: [1-9]\\d* ms$"
