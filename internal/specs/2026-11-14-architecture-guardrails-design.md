@@ -308,7 +308,10 @@ read from the named files when this section was written, and the files are autho
   `btrace-core`, `handler-annotation-baseline.txt` in `btrace-agent`. Every Python baseline entry
   must carry a `# reason` since 9797bc31, as the Java baselines did from the start.
 - **Baseline sizes**, entries per file: `launchers.txt` 3 (24da36d3; the spec named two launchers,
-  the third entry is `btracex`'s missing `--add-exports`); `layering.txt` 20 (0459ee82, 868e3412);
+  the third entry is `btracex`'s missing `--add-exports`); `layering.txt` 20 (0459ee82, 868e3412), then 17: the `Preprocessor` literal was removed by
+  calling `ExtensionLoader.instance()` directly, and the `ExtensionBridgeImpl` and
+  `BTraceRuntimeImplBase` literals, both deliberate late binding, became per-file exceptions in
+  `layering_rules.json`;
   `main-test-hooks.txt` 10 entries in 9 files, not 8 files, after the rule was widened to
   `...ForTests` and overloads (d7079ef0); `growth_allow.txt` none; the API snapshot 151 types
   (6fd59435); `bootstrap-root-allowlist.txt` 21 lines; `bootstrap-closure-baseline.txt` 24 (the

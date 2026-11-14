@@ -307,6 +307,11 @@
         "io.btrace.client",
         "io.btrace.runtime"
       ],
+      "exceptions": {
+        "btrace-core/src/main/java/io/btrace/extension/impl/ExtensionBridgeImpl.java": [
+          "io.btrace.runtime.ExtensionIndy"
+        ]
+      },
       "source_sets": [
         "main"
       ]
@@ -319,6 +324,11 @@
         "io.btrace.compiler",
         "io.btrace.client"
       ],
+      "exceptions": {
+        "btrace-runtime/src/main/java/io/btrace/runtime/BTraceRuntimeImplBase.java": [
+          "io.btrace.agent.PerfReaderImpl"
+        ]
+      },
       "source_sets": [
         "main"
       ]

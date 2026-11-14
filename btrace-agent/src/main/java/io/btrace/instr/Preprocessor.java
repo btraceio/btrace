@@ -22,10 +22,11 @@ import io.btrace.core.DebugSupport;
 import io.btrace.core.annotations.Event;
 import io.btrace.core.annotations.Return;
 import io.btrace.core.extensions.Extension;
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionLoader;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1496,51 +1497,28 @@ final class Preprocessor {
   }
 
   /**
-   * Ensures that the extension providing the given service class is loaded. Uses reflection to
-   * access Main.getExtensionLoader() to avoid compile-time dependency on btrace-agent module.
+   * Ensures that the extension providing the given service class is loaded. The agent registers its
+   * loader as {@link ExtensionLoader#instance()}; where no loader was initialized (probe-pack
+   * generation in the compiler, unit tests) this does nothing.
    *
    * @param serviceClassName fully qualified service class name
    */
   private void ensureExtensionLoaded(String serviceClassName) {
     try {
-      // Use reflection to obtain the agent's ExtensionLoader instance
-      Class<?> mainClass = Class.forName("io.btrace.agent.Main");
-      Method getLoaderMethod = mainClass.getMethod("getExtensionLoader");
-      Object extensionLoader = getLoaderMethod.invoke(null);
-
+      ExtensionLoader extensionLoader = ExtensionLoader.instance();
       if (extensionLoader == null) {
         return; // Extension system not initialized; let later resolution fail clearly
       }
 
-      // Find an extension that provides this service API
-      Class<?> loaderClass = extensionLoader.getClass();
-      Method findMethod = loaderClass.getMethod("findExtensionForService", String.class);
-      Object descriptor = findMethod.invoke(extensionLoader, serviceClassName);
-
+      ExtensionDescriptorDTO descriptor = extensionLoader.findExtensionForService(serviceClassName);
       if (descriptor != null) {
         // Ensure API JAR is appended to bootstrap, then load implementation if needed
-        try {
-          Method ensureApi = loaderClass.getMethod("ensureApiOnBootstrap", descriptor.getClass());
-          ensureApi.invoke(extensionLoader, descriptor);
-        } catch (NoSuchMethodException ignored) {
-          // Older loaders may not expose this method; continue to load()
-        }
-
-        // Invoke a compatible load(...) method
-        try {
-          Method loadMethod = loaderClass.getMethod("load", descriptor.getClass());
-          loadMethod.invoke(extensionLoader, descriptor);
-        } catch (NoSuchMethodException nsme) {
-          for (Method m : loaderClass.getMethods()) {
-            if (m.getName().equals("load")
-                && m.getParameterCount() == 1
-                && m.getParameterTypes()[0].isAssignableFrom(descriptor.getClass())) {
-              m.invoke(extensionLoader, descriptor);
-              break;
-            }
-          }
-        }
+        extensionLoader.ensureApiOnBootstrap(descriptor);
+        extensionLoader.load(descriptor);
       }
+    } catch (LinkageError e) {
+      // Best-effort, as below: an extension that cannot be linked fails later with details
+      log.debug("Unable to load the extension providing {}", serviceClassName, e);
     } catch (Exception ignored) {
       // Best-effort only; if extension/system not ready, resolution can fail later with details
     }
