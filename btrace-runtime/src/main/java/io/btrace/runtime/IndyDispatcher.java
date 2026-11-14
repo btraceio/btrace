@@ -186,9 +186,9 @@ public final class IndyDispatcher {
     }
     try {
       return repo.resolveHandler(probeClassName, name, type);
-    } catch (Throwable t) {
-      // Logged on the agent side (HandlerRepositoryImpl); this class does not log, see the
-      // class comment. The trampoline will retry on next call.
+    } catch (Throwable t) { // swallow: resolveHandler logs its failures; the trampoline retries
+      // HandlerRepositoryImpl.resolveHandler catches and logs its failures at warn, so little
+      // reaches here; this class does not log, see the class comment.
       return null;
     }
   }
