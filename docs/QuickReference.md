@@ -598,6 +598,12 @@ endpoint on port 2020. The command server starts unless `noServer=true` is given
 - `config=<name>` - Configuration section to apply from an embedded `agent.properties`
   (fat agents; see [Fat Agent Plugin](architecture/fat-agent-plugin.md))
 - `probeDescPath=<dirs>` - Search path for `@OnProbe` descriptor XML files
+- `probes=<name>[,<name>...]` - Bundled probes (fat agent) to load at startup, by Java binary name;
+  replaces the probe selection made by embedded extensions
+- `output=stdout` - With `probes=`, send the output of the bundled probes to stdout; any other value
+  keeps the default output file
+- `help=true` - Print the agent usage text and exit the JVM; the value is not checked, so a bare `help`
+  does the same
 - `bootClassPath=<path>`, `systemClassPath=<path>` - Additional boot / system classpath
 
 **Examples:**
