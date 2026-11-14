@@ -15,7 +15,8 @@
 #         if (!e.isQualified()) print(e.source().replace('.', '/') + "/  # " + m.getName());
 #
 # Regenerate it when the build JDK changes. On JDK 8 these packages are either in rt.jar or not on
-# the bootstrap class path at all; the JDK 9+ rule is the stricter one.
+# the bootstrap class path at all; the JDK 9+ rule is the stricter one. On JDK 9+ BootstrapClosureTest
+# fails if a package of the JDK running it is missing here, and names the lines to add.
 
 com/sun/java/accessibility/util/  # jdk.accessibility
 com/sun/jdi/  # jdk.jdi
