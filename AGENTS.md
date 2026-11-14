@@ -28,7 +28,7 @@ For the developer command reference and code-navigation pointers, see [CLAUDE.md
 Run Gradle with a workspace-local cache in restricted environments:
 
 ```bash
-GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :module:test
+GRADLE_USER_HOME=$(pwd)/.gradle-user ./gradlew :<module>:test
 ```
 
 Do not consume Gradle output directly. Redirect it to a file, filter it to relevant lines, then read that file. Use `spotlessCheck` for validation and `spotlessApply` only when formatting changes are intended. Integration tests run only with `-Pintegration` (`./gradlew -Pintegration :integration-tests:test`); without it the task is skipped and the build still succeeds. Read the test counts in the results, not the exit status.
