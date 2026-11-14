@@ -275,6 +275,8 @@ jobs:
         run: python3 -m unittest discover -s scripts/guardrails/tests -p 'test_*.py' -v
       - name: Agent configuration and doc placement (G1)
         run: python3 -I scripts/guardrails/check_agent_config.py .
+      - name: Documented Gradle commands do real work (G4)
+        run: python3 -I scripts/guardrails/check_doc_commands.py .
       - name: No new fully-qualified type names (G2)
         env:
           EVENT: ${{ github.event_name }}
