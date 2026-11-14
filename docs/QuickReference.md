@@ -583,7 +583,8 @@ endpoint on port 2020. The command server starts unless `noServer=true` is given
   extensions may link their implementation (see [Permission Policy](PermissionPolicy.md)).
   `grant=`, `deny=` and `grantAll=` are accepted but have no effect
 - `trusted=true` - Trusted mode (no script verification); also required by the
-  `-Dbtrace.system.appendJar` escape hatch
+  `-Dbtrace.system.appendJar` escape hatch. The `-Dbtrace.trusted` system property does not enable
+  it: the agent logs a warning that names this argument
 - `debug=true` - Verbose agent logging
 - `dumpClasses=true`, `dumpDir=<dir>` - Dump instrumented classes
 - `stdout=true` - Write script output to stdout instead of a file

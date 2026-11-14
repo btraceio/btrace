@@ -647,7 +647,7 @@ docker exec -it <container-id> btrace <PID> script.java
 **Example Dockerfile with official BTrace images:**
 ```dockerfile
 # Option 1: Copy BTrace into your application image (recommended)
-FROM ghcr.io/btraceio/btrace:latest AS btrace
+FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
 FROM bellsoft/liberica-openjdk-debian:21-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
@@ -669,7 +669,10 @@ ENV BTRACE_HOME=/opt/btrace
 ENV PATH=$PATH:$BTRACE_HOME/bin
 ```
 
-See [docker/README.md](../docker/README.md) for more Docker usage patterns.
+Pin the image to a release tag as shown (and to a digest where builds must be reproducible); the
+`latest` tags move with every release, including the next major one, and are meant for local
+experiments only. See [docker/README.md](../docker/README.md#tags) for the tag scheme and more
+Docker usage patterns.
 
 ### Kubernetes Pods
 
@@ -719,7 +722,7 @@ spec:
         image: myapp:latest
 
       - name: btrace
-        image: ghcr.io/btraceio/btrace:latest-alpine  # Official BTrace Alpine image
+        image: ghcr.io/btraceio/btrace:3.0.0-alpine  # Official BTrace Alpine image, pinned
         command: ["/bin/sh", "-c", "while true; do sleep 30; done"]
         volumeMounts:
         - name: btrace-scripts

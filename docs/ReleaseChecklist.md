@@ -28,6 +28,7 @@ shell-escaped command, exit code, filtered result lines, and complete command ou
 | Plugin Portal validation | `./gradlew -p btrace-gradle-plugin -PbtraceVersion=<release> publishPlugins --validate-only` | Both plugin IDs and marker publications validate at the exact release version |
 | Maven fat-agent removal | `test ! -e btrace-maven-plugin/build.gradle` | The unpublished module remains absent |
 | Formatting | `./gradlew spotlessCheck` | Pass |
+| Documented version | Set `BTRACE_VERSION=<release>` in `README.md`, then `python3 scripts/guardrails/check_doc_versions.py` | Pass; until every listed reference is updated, the check names each image tag, Maven coordinate, download URL and archive name still on the previous release |
 | Clean masked JAR | `./gradlew clean :btrace-dist:btraceJar` | Pass; `libs/btrace.jar` exists |
 | Full distribution | `./gradlew :btrace-dist:build` | ZIP, TGZ, SDKMAN, DEB, and RPM tasks pass |
 | Integration matrix | `./gradlew -Pintegration :integration-tests:test` | Pass after the distribution build on every target JDK |
