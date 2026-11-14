@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -94,6 +95,18 @@ import org.objectweb.asm.Type;
  * internal form ending in {@code /}, or the test fails. Relocated SLF4J types ({@code
  * io/btrace/libs/org/slf4j/}) get no exemption: they are bootstrap-visible only as root classes.
  *
+ * <p><em>Tool-only</em> root classes are the exception to that rule. They sit at the root so that
+ * javac or a build tool can load them from {@code btrace.jar} as an ordinary class path or
+ * processor path entry, and the bootstrap loader never links them; the annotation processor for
+ * extension builds is one. An allowlist line {@code tool-only <entry> uses <package>... # reason}
+ * marks the root classes that {@code <entry>} matches as tool-only. A tool-only class may reference
+ * any root class, any bootstrap-visible JDK type, and types in the listed tool API packages and
+ * their subpackages. No other root class may reference a tool-only class: that is what makes the
+ * exemption safe, because the bootstrap loader would then link the tool-only class and fail on its
+ * tool API types, so such a reference fails and the baseline cannot excuse it. A tool-only line
+ * that matches no root class, and a tool API package that none of its classes references, fail as
+ * stale.
+ *
  * <p>Any other reference must be listed in {@code bootstrap-closure-baseline.txt} as {@code <root
  * class> -> <referenced class> # reason}, in internal names. An unlisted reference fails as new and
  * a listed one that no longer occurs fails as stale, so the baseline only shrinks.
@@ -105,6 +118,7 @@ class BootstrapClosureTest {
   private static final String ALLOWLIST = "bootstrap-root-allowlist.txt";
   private static final String BASELINE = "bootstrap-closure-baseline.txt";
   private static final String NON_BOOT_PACKAGES = "bootstrap-jdk-nonboot-packages.txt";
+  private static final String TOOL_ONLY = "tool-only ";
 
   private static final List<String> JDK_PREFIXES =
       Collections.unmodifiableList(
@@ -120,9 +134,9 @@ class BootstrapClosureTest {
 
   @Test
   void rootClassesMatchTheAllowlist() throws IOException {
-    List<String> allowlist = readEntries(ALLOWLIST, false);
-    assertFalse(allowlist.isEmpty(), ALLOWLIST + " lists nothing");
-    List<String> errors = allowlistErrors(allowlist, readRootClasses().keySet());
+    Allowlist allowlist = readAllowlist();
+    assertFalse(allowlist.lines.isEmpty(), ALLOWLIST + " lists nothing");
+    List<String> errors = allowlistErrors(allowlist.lines, readRootClasses().keySet());
     assertTrue(errors.isEmpty(), String.join("\n", errors));
   }
 
@@ -138,7 +152,8 @@ class BootstrapClosureTest {
       references.put(internalName(root.getKey()), referencedTypes(root.getKey(), root.getValue()));
     }
     Set<String> baseline = new TreeSet<>(readEntries(BASELINE, true));
-    List<String> errors = closureErrors(references, baseline, nonBootPackages);
+    List<String> errors =
+        closureErrors(references, baseline, nonBootPackages, readAllowlist().toolOnly);
     assertTrue(errors.isEmpty(), String.join("\n", errors));
   }
 
@@ -259,7 +274,8 @@ class BootstrapClosureTest {
             Arrays.asList("fixture/Root -> fixture/Masked", "fixture/Root -> fixture/Gone"));
     Set<String> nonBoot = new HashSet<>(Arrays.asList("java/sql/"));
 
-    List<String> errors = closureErrors(references, baseline, nonBoot);
+    List<String> errors =
+        closureErrors(references, baseline, nonBoot, Collections.<String, List<String>>emptyMap());
 
     assertEquals(
         Arrays.asList(
@@ -267,6 +283,134 @@ class BootstrapClosureTest {
             "new violation: fixture/Root -> java/sql/Connection",
             "stale " + BASELINE + " entry (remove it): fixture/Root -> fixture/Gone"),
         errors);
+  }
+
+  @Test
+  void fixtureToolOnlyClassMayReferenceItsToolApi() {
+    Map<String, Set<String>> references = new TreeMap<>();
+    references.put(
+        "fixture/tool/Processor",
+        new TreeSet<>(
+            Arrays.asList(
+                "javax/tools/Diagnostic$Kind",
+                "javax/lang/model/element/Element",
+                "fixture/tool/Helper",
+                "fixture/Api",
+                "java/lang/String")));
+    references.put("fixture/tool/Helper", new TreeSet<>(Arrays.asList("java/lang/Object")));
+    references.put("fixture/Api", new TreeSet<>(Arrays.asList("java/lang/Object")));
+
+    List<String> errors =
+        closureErrors(references, Collections.<String>emptySet(), FIXTURE_NON_BOOT, toolOnly());
+
+    assertEquals(Collections.emptyList(), errors);
+  }
+
+  @Test
+  void fixtureToolOnlyClassReferencingAnotherNonBootPackageFails() {
+    Map<String, Set<String>> references = new TreeMap<>();
+    references.put(
+        "fixture/tool/Processor",
+        new TreeSet<>(
+            Arrays.asList(
+                "javax/tools/Diagnostic",
+                "javax/lang/model/SourceVersion",
+                "java/sql/Connection")));
+
+    List<String> errors =
+        closureErrors(references, Collections.<String>emptySet(), FIXTURE_NON_BOOT, toolOnly());
+
+    assertEquals(
+        Arrays.asList("new violation: fixture/tool/Processor -> java/sql/Connection"), errors);
+  }
+
+  @Test
+  void fixtureBootstrapRootClassReferencingAToolOnlyClassFails() {
+    Map<String, Set<String>> references = new TreeMap<>();
+    references.put(
+        "fixture/tool/Processor",
+        new TreeSet<>(Arrays.asList("javax/tools/Diagnostic", "javax/lang/model/SourceVersion")));
+    references.put("fixture/Api", new TreeSet<>(Arrays.asList("fixture/tool/Processor")));
+    // A baseline entry does not excuse it: the exemption is only safe while no bootstrap-loaded
+    // class can link a tool-only one.
+    Set<String> baseline = new TreeSet<>(Arrays.asList("fixture/Api -> fixture/tool/Processor"));
+
+    List<String> errors = closureErrors(references, baseline, FIXTURE_NON_BOOT, toolOnly());
+
+    assertEquals(
+        Arrays.asList(
+            "bootstrap-loaded root class references a tool-only class: fixture/Api ->"
+                + " fixture/tool/Processor",
+            "stale " + BASELINE + " entry (remove it): fixture/Api -> fixture/tool/Processor"),
+        errors);
+  }
+
+  @Test
+  void fixtureStaleToolOnlyLineAndUnusedToolApiFail() {
+    Map<String, Set<String>> references = new TreeMap<>();
+    references.put(
+        "fixture/tool/Processor", new TreeSet<>(Arrays.asList("javax/tools/Diagnostic")));
+    Map<String, List<String>> toolOnly = new TreeMap<>(toolOnly());
+    toolOnly.put("fixture/gone/", Arrays.asList("javax/tools/"));
+
+    List<String> errors =
+        closureErrors(references, Collections.<String>emptySet(), FIXTURE_NON_BOOT, toolOnly);
+
+    assertEquals(
+        Arrays.asList(
+            "stale tool-only line in " + ALLOWLIST + " (matches no root class): fixture/gone/",
+            "tool-only line fixture/tool/ in "
+                + ALLOWLIST
+                + " allows javax/lang/model/, which none of its classes references (remove it)"),
+        errors);
+  }
+
+  @Test
+  void fixtureToolOnlyLinesAreParsed() {
+    Allowlist allowlist =
+        parseAllowlist(
+            Arrays.asList(
+                "# header",
+                "fixture/pkg/",
+                "tool-only fixture/tool/ uses javax/tools/ javax/lang/model/  # javac only",
+                "tool-only fixture/noreason/ uses javax/tools/",
+                "tool-only fixture/nouses/ javax/tools/  # reason",
+                "tool-only fixture/badapi/ uses javax.tools  # reason",
+                "fixture/pkg/"));
+
+    assertEquals(
+        Arrays.asList(
+            "fixture/pkg/",
+            "fixture/tool/",
+            "fixture/noreason/",
+            "fixture/nouses/",
+            "fixture/badapi/"),
+        allowlist.lines);
+    assertEquals(
+        Collections.singletonMap(
+            "fixture/tool/", Arrays.asList("javax/tools/", "javax/lang/model/")),
+        allowlist.toolOnly);
+    assertEquals(
+        Arrays.asList(
+            ALLOWLIST
+                + ":4: tool-only line has no '# reason': tool-only fixture/noreason/ uses"
+                + " javax/tools/",
+            ALLOWLIST
+                + ":5: a tool-only line reads 'tool-only <entry> uses <package>... # reason':"
+                + " tool-only fixture/nouses/ javax/tools/  # reason",
+            ALLOWLIST + ":6: tool API 'javax.tools' is not a package in internal form ending in /",
+            ALLOWLIST + ":7: duplicate entry: fixture/pkg/"),
+        allowlist.errors);
+  }
+
+  private static final Set<String> FIXTURE_NON_BOOT =
+      new HashSet<>(
+          Arrays.asList(
+              "java/sql/", "javax/tools/", "javax/lang/model/", "javax/lang/model/element/"));
+
+  private static Map<String, List<String>> toolOnly() {
+    return Collections.singletonMap(
+        "fixture/tool/", Arrays.asList("javax/tools/", "javax/lang/model/"));
   }
 
   @Test
@@ -380,21 +524,59 @@ class BootstrapClosureTest {
   }
 
   /**
-   * Returns the new and stale violations, given each root class's referenced types by internal
-   * name.
+   * Returns the closure errors, given each root class's referenced types by internal name and the
+   * tool-only lines of the allowlist (line to its tool API packages), in this order: bootstrap root
+   * classes that reference a tool-only class (never excused by the baseline), new violations, stale
+   * baseline entries, and stale tool-only lines or tool API packages.
    */
   static List<String> closureErrors(
-      Map<String, Set<String>> references, Set<String> baseline, Set<String> nonBootPackages) {
-    Set<String> rootNames = references.keySet();
-    Set<String> found = new TreeSet<>();
-    for (Map.Entry<String, Set<String>> root : references.entrySet()) {
-      for (String type : root.getValue()) {
-        if (!isBootstrapVisible(type, rootNames, nonBootPackages)) {
-          found.add(root.getKey() + " -> " + type);
+      Map<String, Set<String>> references,
+      Set<String> baseline,
+      Set<String> nonBootPackages,
+      Map<String, List<String>> toolOnly) {
+    Map<String, String> toolOnlyLineOf = new HashMap<>();
+    for (String root : references.keySet()) {
+      for (String line : toolOnly.keySet()) {
+        if (matches(line, root + ".class")) {
+          toolOnlyLineOf.put(root, line);
+          break;
         }
       }
     }
+    Set<String> bootRoots = new HashSet<>(references.keySet());
+    bootRoots.removeAll(toolOnlyLineOf.keySet());
+
+    Set<String> toolOnlyReferences = new TreeSet<>();
+    Set<String> found = new TreeSet<>();
+    Map<String, Set<String>> usedToolApis = new HashMap<>();
+    for (Map.Entry<String, Set<String>> root : references.entrySet()) {
+      String line = toolOnlyLineOf.get(root.getKey());
+      for (String type : root.getValue()) {
+        String reference = root.getKey() + " -> " + type;
+        if (line == null) {
+          if (toolOnlyLineOf.containsKey(type)) {
+            toolOnlyReferences.add(reference);
+          } else if (!isBootstrapVisible(type, bootRoots, nonBootPackages)) {
+            found.add(reference);
+          }
+          continue;
+        }
+        if (references.containsKey(type) || isBootstrapVisible(type, bootRoots, nonBootPackages)) {
+          continue;
+        }
+        String api = toolApiOf(type, toolOnly.get(line));
+        if (api != null) {
+          usedToolApis.computeIfAbsent(line, k -> new HashSet<>()).add(api);
+        } else {
+          found.add(reference);
+        }
+      }
+    }
+
     List<String> errors = new ArrayList<>();
+    for (String reference : toolOnlyReferences) {
+      errors.add("bootstrap-loaded root class references a tool-only class: " + reference);
+    }
     for (String violation : found) {
       if (!baseline.contains(violation)) {
         errors.add("new violation: " + violation);
@@ -405,7 +587,37 @@ class BootstrapClosureTest {
         errors.add("stale " + BASELINE + " entry (remove it): " + entry);
       }
     }
+    for (Map.Entry<String, List<String>> line : new TreeMap<>(toolOnly).entrySet()) {
+      if (!toolOnlyLineOf.containsValue(line.getKey())) {
+        errors.add(
+            "stale tool-only line in " + ALLOWLIST + " (matches no root class): " + line.getKey());
+        continue;
+      }
+      Set<String> used = usedToolApis.getOrDefault(line.getKey(), Collections.<String>emptySet());
+      for (String api : line.getValue()) {
+        if (!used.contains(api)) {
+          errors.add(
+              "tool-only line "
+                  + line.getKey()
+                  + " in "
+                  + ALLOWLIST
+                  + " allows "
+                  + api
+                  + ", which none of its classes references (remove it)");
+        }
+      }
+    }
     return errors;
+  }
+
+  /** Returns the tool API package that covers the type (its package or a parent), or null. */
+  private static String toolApiOf(String internalName, List<String> toolApis) {
+    for (String api : toolApis) {
+      if (internalName.startsWith(api)) {
+        return api;
+      }
+    }
+    return null;
   }
 
   static boolean isBootstrapVisible(
@@ -556,9 +768,82 @@ class BootstrapClosureTest {
     }
   }
 
+  /** The parsed allowlist. */
+  static final class Allowlist {
+    /** The entry of every line, tool-only or not, in file order. */
+    final List<String> lines = new ArrayList<>();
+
+    /** Each well-formed tool-only line's entry, mapped to its tool API packages. */
+    final Map<String, List<String>> toolOnly = new LinkedHashMap<>();
+
+    final List<String> errors = new ArrayList<>();
+  }
+
+  private static Allowlist readAllowlist() throws IOException {
+    Allowlist allowlist = parseAllowlist(readLines(ALLOWLIST));
+    assertTrue(allowlist.errors.isEmpty(), String.join("\n", allowlist.errors));
+    return allowlist;
+  }
+
+  /**
+   * Parses the allowlist. Blank lines and lines starting with {@code #} are ignored and a trailing
+   * {@code # reason} is stripped. A line {@code tool-only <entry> uses <package>... # reason} marks
+   * the root classes {@code <entry>} matches as tool-only and needs a reason; each tool API package
+   * must be in internal form ending in {@code /}. A duplicate entry is an error.
+   */
+  static Allowlist parseAllowlist(List<String> rawLines) {
+    Allowlist allowlist = new Allowlist();
+    int number = 0;
+    for (String raw : rawLines) {
+      number++;
+      String trimmed = raw.trim();
+      if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+        continue;
+      }
+      String[] parts = trimmed.split("\\s+#", 2);
+      String entry = parts[0];
+      if (entry.startsWith(TOOL_ONLY)) {
+        String[] words = entry.substring(TOOL_ONLY.length()).trim().split("\\s+");
+        entry = words[0];
+        String where = ALLOWLIST + ":" + number + ": ";
+        if (words.length < 3 || !"uses".equals(words[1])) {
+          allowlist.errors.add(
+              where
+                  + "a tool-only line reads 'tool-only <entry> uses <package>... # reason': "
+                  + trimmed);
+        } else if (parts.length < 2 || parts[1].trim().isEmpty()) {
+          allowlist.errors.add(where + "tool-only line has no '# reason': " + trimmed);
+        } else {
+          List<String> apis = Arrays.asList(words).subList(2, words.length);
+          boolean wellFormed = true;
+          for (String api : apis) {
+            if (!PACKAGE_LINE.matcher(api).matches()) {
+              allowlist.errors.add(
+                  where + "tool API '" + api + "' is not a package in internal form ending in /");
+              wellFormed = false;
+            }
+          }
+          if (wellFormed) {
+            allowlist.toolOnly.put(entry, new ArrayList<>(apis));
+          }
+        }
+      }
+      if (allowlist.lines.contains(entry)) {
+        allowlist.errors.add(ALLOWLIST + ":" + number + ": duplicate entry: " + entry);
+        continue;
+      }
+      allowlist.lines.add(entry);
+    }
+    return allowlist;
+  }
+
   /** Reads the entries of a test resource; see {@link #parseEntries}. */
   private static List<String> readEntries(String resource, boolean reasonRequired)
       throws IOException {
+    return parseEntries(resource, readLines(resource), reasonRequired);
+  }
+
+  private static List<String> readLines(String resource) throws IOException {
     InputStream in = BootstrapClosureTest.class.getResourceAsStream("/" + resource);
     assertNotNull(in, "missing test resource " + resource);
     List<String> lines = new ArrayList<>();
@@ -569,7 +854,7 @@ class BootstrapClosureTest {
         lines.add(line);
       }
     }
-    return parseEntries(resource, lines, reasonRequired);
+    return lines;
   }
 
   /**

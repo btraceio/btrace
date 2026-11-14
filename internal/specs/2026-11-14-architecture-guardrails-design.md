@@ -282,6 +282,12 @@ read from the named files when this section was written, and the files are autho
   `btrace-dist/src/test/resources/bootstrap-jdk-nonboot-packages.txt`, so the root annotation
   processor's `java.compiler` references are baselined instead of passing. 4a0ac1fa (gate added in
   af95fdd4). The deny-list lines are shape-checked since 7f86a07b.
+  The annotation processor's 23 baseline entries were not violations awaiting a fix: javac's
+  processor path reads only `.class` entries, so the processor has to sit at the root, and nothing
+  the bootstrap loader links references it. The allowlist now marks it
+  `tool-only ... uses javax/annotation/processing/ javax/lang/model/ javax/tools/`; a tool-only class
+  may reference its tool API packages, and a bootstrap root class that references a tool-only class
+  fails regardless of the baseline. The 23 entries were removed.
 - **G12, handler annotations (P7).** No unguarded-annotation set was added to production code;
   `Preprocessor` changed visibility only. `HandlerAnnotationClassificationTest` keeps the non-handler
   annotations (`Location`, `Sampled`) in a test-side `NOT_HANDLERS` list, and
@@ -315,7 +321,8 @@ read from the named files when this section was written, and the files are autho
   `main-test-hooks.txt` 10 entries in 9 files, not 8 files, after the rule was widened to
   `...ForTests` and overloads (d7079ef0); `growth_allow.txt` none; the API snapshot 151 types
   (6fd59435); `bootstrap-root-allowlist.txt` 21 lines; `bootstrap-closure-baseline.txt` 24 (the
-  `ExtensionContext` reference plus 23 from the annotation processor; af95fdd4, 4a0ac1fa);
+  `ExtensionContext` reference plus 23 from the annotation processor; af95fdd4, 4a0ac1fa), then 1
+  once the processor became a tool-only allowlist line;
   `bootstrap-jdk-nonboot-packages.txt` 54 packages; `args-registry-baseline.txt` 9 at first, against
   the spec's 5, then 4 once `probes`, `output` and `help` were documented, then empty once the two
   remaining entries, `agentJar` (no reader) and `libs` (removed), were deleted along with their
