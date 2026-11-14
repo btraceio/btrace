@@ -7,6 +7,7 @@ requires, so a violation blocks the merge.
 | Check | Rule | Run locally |
 | --- | --- | --- |
 | `check_agent_config.py` (G1) | Skills live in `.agents/skills/<name>/` with a `.claude/skills/<name>` symlink; no plans, specs or session notes below `docs/`; relative links, anchors and Gradle project paths in agent and contributor docs resolve | `python3 scripts/guardrails/check_agent_config.py` |
+| `check_fqn.py` (G2) | No new fully-qualified type names in Java source; imports, comments and literals are ignored, and `// fqn: <reason>` allows a genuine simple-name clash. Only added lines are checked | `python3 scripts/guardrails/check_fqn.py origin/develop HEAD` |
 
 Each check has hermetic tests under `tests/` that build throw-away repositories and assert the
 check fails on bad input with the expected message, and passes on good input:

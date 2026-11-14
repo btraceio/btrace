@@ -268,10 +268,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # G2 diffs against the base commit, so the history must be present
+          fetch-depth: 0
       - name: Test the guardrail checks
         run: python3 -m unittest discover -s scripts/guardrails/tests -p 'test_*.py' -v
       - name: Agent configuration and doc placement (G1)
         run: python3 -I scripts/guardrails/check_agent_config.py .
+      - name: No new fully-qualified type names (G2)
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.base_ref }}
+          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          case "${EVENT}" in
+            pull_request) base="origin/${PR_BASE}" ;;
+            merge_group)  base="${QUEUE_BASE}" ;;
+            push)         base="${PUSH_BEFORE}" ;;
+            *)            base="" ;;
+          esac
+          if [ -z "${base}" ] || [ "${base}" = "0000000000000000000000000000000000000000" ]; then
+            echo "fqn: no base commit for a ${EVENT} event; nothing to compare"
+            exit 0
+          fi
+          python3 -I scripts/guardrails/check_fqn.py "${base}" HEAD
 
   # Single required status check for the test matrix. Matrix jobs report as `test (8)`,
   # `test (11)`, ...; branch protection matches check names exactly, so it cannot require the
