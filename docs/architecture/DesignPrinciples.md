@@ -89,13 +89,13 @@ check fails CI.
 
 ## P8. Classes and public API do not grow by default
 
-**Rule:** A main-source Java file over 1,000 lines does not get longer, and no new file starts over 1,000 lines. The list of public top-level types in `btrace-core` changes only deliberately. No new `...ForTest` method goes into main sources.
+**Rule:** A main-source Java file over 1,000 lines does not get longer, and no new file starts over 1,000 lines. The list of public top-level types in `btrace-core` changes only deliberately. No new `...ForTest` or `...ForTests` method goes into main sources.
 
-**Why:** `btrace-client`'s `Client.java` is 1,838 lines, and `btrace-core`'s public surface keeps growing. Main sources already carry test-only hooks (`Client.setRuntimeForTest`, `BTraceRuntimeImplBase.speculativeQueueCountForTest`). As measured when the check was added: 11 main-source files are over 1,000 lines, `btrace-core` declares 151 public top-level types, and 9 `...ForTest` methods in 8 files are baselined.
+**Why:** Oversized files such as `btrace-client`'s `Client.java` keep getting longer, and `btrace-core`'s public surface keeps growing; the current size exceptions, public type snapshot and hooks are the files named under Exceptions. Main sources already carry test-only hooks (`Client.setRuntimeForTest`, `BTraceRuntimeImplBase.speculativeQueueCountForTest`).
 
 **Enforced by:** `scripts/guardrails/check_growth.py`
 
-**Exceptions:** `scripts/guardrails/growth_allow.txt` (files allowed to grow past 1,000 lines), `scripts/guardrails/api/btrace-core-public-types.txt` (the public type snapshot, edited in the same change as the type), `scripts/guardrails/baselines/test-hooks.txt` (existing `...ForTest` methods).
+**Exceptions:** `scripts/guardrails/growth_allow.txt` (files allowed to grow past 1,000 lines), `scripts/guardrails/api/btrace-core-public-types.txt` (the public type snapshot, edited in the same change as the type), `scripts/guardrails/baselines/main-test-hooks.txt` (existing test hooks).
 
 ## P9. Code that ships is reachable
 

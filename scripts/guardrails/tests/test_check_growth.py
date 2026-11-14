@@ -12,7 +12,7 @@ BIG = "btrace-client/src/main/java/io/btrace/client/Big.java"
 CORE = "btrace-core/src/main/java/io/btrace/core/"
 SNAP = "scripts/guardrails/api/btrace-core-public-types.txt"
 ALLOW = "scripts/guardrails/growth_allow.txt"
-HOOKS = "scripts/guardrails/baselines/test-hooks.txt"
+HOOKS = "scripts/guardrails/baselines/main-test-hooks.txt"
 SEED = CORE + "Seed.java"
 
 
@@ -137,6 +137,13 @@ class GrowthCheckTest(unittest.TestCase):
         self.commit({new: lines(1101)})
         self.assertFails(self.run_script("HEAD~1", "HEAD"), "Renamed.java", "grew from 1100 to 1101")
 
+    def test_rename_below_the_similarity_threshold_counts_as_a_new_file(self):
+        new = "btrace-client/src/main/java/io/btrace/client/Rewritten.java"
+        self.commit({BIG: lines(1100)})
+        self.git("mv", BIG, new)
+        self.commit({new: "package io.btrace.client;\nclass Rewritten {\n" + "  long y;\n" * 1097 + "}\n"})
+        self.assertFails(self.run_script("HEAD~1", "HEAD"), "Rewritten.java", "new file has 1100 lines")
+
     def test_other_source_sets_and_nested_modules_are_in_scope(self):
         for rel in (
             "btrace-agent/src/main/java24/io/btrace/instr/Backend.java",
@@ -157,7 +164,7 @@ class GrowthCheckTest(unittest.TestCase):
             with self.subTest(base=base):
                 code, out = self.run_script(base, "HEAD")
                 self.assertEqual(0, code, out)
-                self.assertIn("growth: size: no base commit given; file sizes not compared", out)
+                self.assertIn("growth: no base commit given; file sizes not compared", out)
                 self.assertNotIn("growth: OK", out)
 
     def test_empty_base_still_runs_the_api_rule(self):
@@ -276,6 +283,25 @@ class GrowthCheckTest(unittest.TestCase):
 
     def test_new_for_test_method_in_main_fails(self):
         self.assertFails(self.hook("  int sizeForTest() { return 0; }"), "test-hook", "Hook.java:sizeForTest")
+
+    def test_for_tests_plural_method_in_main_fails(self):
+        self.assertFails(self.hook("  static void __resetForTests() {}"), "Hook.java:__resetForTests")
+
+    def test_second_overload_of_a_baselined_hook_fails_as_new(self):
+        entry = "test-hook btrace-agent/src/main/java/io/btrace/Hook.java:sizeForTest  # predates the ratchet\n"
+        self.assertFails(
+            self.hook("  int sizeForTest() { return 0; }\n  int sizeForTest(int n) { return n; }", base={HOOKS: entry}),
+            "new violation: test-hook btrace-agent/src/main/java/io/btrace/Hook.java:sizeForTest#2",
+        )
+
+    def test_baselined_overloads_pass_and_removing_one_is_stale(self):
+        rel = "btrace-agent/src/main/java/io/btrace/Hook.java"
+        entries = "test-hook %s:sizeForTest\ntest-hook %s:sizeForTest#2\n" % (rel, rel)
+        self.assertPasses(self.hook("  int sizeForTest() { return 0; }\n  int sizeForTest(int n) { return n; }", base={HOOKS: entries}))
+        self.assertFails(
+            self.hook("  int sizeForTest() { return 0; }", base={HOOKS: entries}),
+            "stale baseline entry (remove it): test-hook %s:sizeForTest#2" % rel,
+        )
 
     def test_for_test_method_in_test_sources_passes(self):
         self.assertPasses(

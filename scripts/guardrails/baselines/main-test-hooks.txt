@@ -9,3 +9,4 @@ test-hook btrace-runtime/src/main/java/io/btrace/runtime/profiling/MethodInvocat
 test-hook btrace-runtime/src/main/java/io/btrace/runtime/profiling/MethodInvocationRecorder.java:delayedRecordCountForTest  # test-only hook that predates the ratchet
 test-hook btrace-runtime/src/main/java11/io/btrace/runtime/BTraceRuntimeImpl_11.java:definitionFailureForTest  # test-only hook that predates the ratchet
 test-hook btrace-runtime/src/main/java9/io/btrace/runtime/BTraceRuntimeImpl_9.java:definitionFailureForTest  # test-only hook that predates the ratchet
+test-hook btrace-runtime/src/main/java/io/btrace/runtime/IndyDispatcher.java:__resetForTests  # test-only hook that predates the ratchet

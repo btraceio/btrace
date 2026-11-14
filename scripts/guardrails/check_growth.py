@@ -11,8 +11,10 @@ Three rules, each reported on its own line:
              stale and fail. Lines are counted the same way at the base and at HEAD.
   api        The sorted public top-level types (class, interface, enum, @interface) declared under
              btrace-core/src/main/java must equal scripts/guardrails/api/btrace-core-public-types.txt.
-  test-hook  A method declaration named `...ForTest` in main sources fails unless it is listed in
-             scripts/guardrails/baselines/test-hooks.txt as `test-hook <path>:<method>  # reason`.
+  test-hook  A method declaration named `...ForTest` or `...ForTests` in main sources fails unless it
+             is listed in scripts/guardrails/baselines/main-test-hooks.txt as
+             `test-hook <path>:<method>  # reason`; a second declaration of the same name in a file
+             (an overload) is `<method>#2`, a third `<method>#3`.
 
 Usage: check_growth.py ROOT BASE [HEAD]
 
@@ -38,13 +40,13 @@ MAIN_RE = re.compile(r"(^|/)src/main/.+\.java$")
 CORE_SRC = "btrace-core/src/main/java"
 ALLOW = "scripts/guardrails/growth_allow.txt"
 SNAPSHOT = "scripts/guardrails/api/btrace-core-public-types.txt"
-HOOKS = "scripts/guardrails/baselines/test-hooks.txt"
+HOOKS = "scripts/guardrails/baselines/main-test-hooks.txt"
 
 PACKAGE_RE = re.compile(r"\bpackage\s+([\w.]+)\s*;")
 TYPE_RE = re.compile(
     r"(?<![\w@])public\s+(?:(?:abstract|final|strictfp|static)\s+)*(?:class|interface|enum|@\s*interface)\s+(\w+)"
 )
-HOOK_RE = re.compile(r"([\w>\]]+)\s+(\w*ForTest)\s*\(")
+HOOK_RE = re.compile(r"([\w>\]]+)\s+(\w*ForTests?)\s*\(")
 NOT_A_TYPE = {"return", "new", "else", "throw", "case", "assert", "yield", "do"}
 
 
@@ -153,7 +155,7 @@ def check_size(root, source, texts, base, head):
             errors.append("stale allowlist entry (file is no longer over %d lines; remove it from %s): %s"
                           % (LIMIT, ALLOW, entry))
     if base in NO_BASE:
-        return errors, "growth: size: no base commit given; file sizes not compared"
+        return errors, "growth: no base commit given; file sizes not compared"
     changed = changes(root, base, head)
     base_ref = run_git(root, "merge-base", base, head).strip() if head else base
     for path in sorted(over - set(allowed)):
@@ -208,14 +210,17 @@ def check_api(root, source):
 
 
 def test_hooks(texts):
-    """Returns sorted `test-hook <path>:<method>` entries for ForTest method declarations."""
+    """Returns sorted `test-hook <path>:<method>[#n]` entries, one per ForTest(s) declaration."""
     found = set()
     for path, text in texts.items():
         if not MAIN_RE.search(path):
             continue
+        seen = {}
         for m in HOOK_RE.finditer(code_of(text)):
             if m.group(1) not in NOT_A_TYPE:
-                found.add("test-hook %s:%s" % (path, m.group(2)))
+                seen[m.group(2)] = seen.get(m.group(2), 0) + 1
+                suffix = "" if seen[m.group(2)] == 1 else "#%d" % seen[m.group(2)]
+                found.add("test-hook %s:%s%s" % (path, m.group(2), suffix))
     return sorted(found)
 
 
