@@ -7,31 +7,3 @@
 # entry that no longer occurs, so remove an entry when its reference is fixed.
 
 io/btrace/core/extensions/ExtensionContext -> io/btrace/core/comm/Command  # ExtensionContext.send(Command) names a wire-protocol type; core/comm lives only in the masked sections, so the bootstrap loader cannot resolve it
-
-# The annotation processor is a root class so that external extension builds can use btrace.jar as
-# their processor path (btraceJar in btrace-dist/build.gradle). javac loads it from that path with
-# -processor (BTraceExtensionPlugin, docs/BTraceExtensionDevelopmentGuide.md), never through
-# Boot-Class-Path, so the platform-loader java.compiler types it names are not needed there.
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/annotation/processing/AbstractProcessor  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/annotation/processing/Filer  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/annotation/processing/Messager  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/annotation/processing/ProcessingEnvironment  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/annotation/processing/RoundEnvironment  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/SourceVersion  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/element/AnnotationMirror  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/element/AnnotationValue  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/element/Element  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/element/ElementKind  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/element/ExecutableElement  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/element/Modifier  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/element/Name  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/element/PackageElement  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/element/TypeElement  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/element/VariableElement  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/type/DeclaredType  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/type/TypeMirror  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/util/Elements  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/lang/model/util/Types  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/tools/Diagnostic  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/tools/Diagnostic$Kind  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+
-io/btrace/extension/processor/ExternalTypeProcessor -> javax/tools/JavaFileObject  # annotation processor, loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+

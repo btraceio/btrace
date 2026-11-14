@@ -34,8 +34,20 @@ io/btrace/runtime/auxiliary/Auxiliary.class
 # bootIncludes: extension bridge interface, referenced by ExtensionIndy
 io/btrace/extension/ExtensionBridge.class
 
-# btraceJar: the annotation processor that provided-style extension builds run with -processor
-io/btrace/extension/processor/
+# Tool-only root classes, read as
+#
+#   tool-only <entry> uses <package>...  # reason
+#
+# javac or a build tool loads these from btrace.jar as an ordinary class path or processor path
+# entry; the bootstrap loader never links them. They may reference root classes, boot-loader JDK
+# types and the listed tool API packages with their subpackages. BootstrapClosureTest fails if any
+# other root class references them, and on a tool API package none of their classes uses.
+
+# btraceJar: the @ExternalType annotation processor. Extension builds name it with -processor and
+# put btrace.jar on the processor path (BTraceExtensionPlugin, BTraceExtensionDevelopmentGuide.md);
+# javac's processor loader reads .class entries only, so it cannot be masked. btrace.jar ships no
+# META-INF/services/javax.annotation.processing.Processor, so no javac discovers it on its own.
+tool-only io/btrace/extension/processor/ uses javax/annotation/processing/ javax/lang/model/ javax/tools/  # loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+, and nothing on the agent or runtime path references this package
 
 # bootIncludes: SLF4J, relocated to io.btrace.libs.org.slf4j, for logging from bootstrap code
 io/btrace/libs/org/slf4j/
