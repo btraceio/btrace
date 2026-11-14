@@ -1,3 +1,11 @@
+// --release 8 omits the com.sun.source API (tools.jar) that the verifier uses; the JDK 8 compiler
+// reads it from tools.jar and, like --release 8, rejects JDK 9+ APIs.
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
+
 dependencies {
     implementation libs.slf4j
     implementation libs.slf4j.simple
@@ -6,6 +14,7 @@ dependencies {
 
     def toolsJar = getToolsJar();
     if (toolsJar.getAsFile().exists()) {
+        compileOnly files("${toolsJar}")
         runtimeOnly files("${toolsJar}")
     }
     implementation project(path: ':btrace-core')

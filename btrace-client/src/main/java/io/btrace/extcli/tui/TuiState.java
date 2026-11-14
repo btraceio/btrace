@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Properties;
 
 final class TuiState {
@@ -32,7 +33,7 @@ final class TuiState {
   static TuiState load() {
     TuiState s = new TuiState();
     try {
-      Path dir = Path.of(System.getProperty("user.home"), ".btrace");
+      Path dir = Paths.get(System.getProperty("user.home"), ".btrace");
       Path f = dir.resolve("tui-state.properties");
       if (Files.exists(f)) {
         Properties p = new Properties();
@@ -55,7 +56,7 @@ final class TuiState {
 
   static void save(TuiState s) {
     try {
-      Path dir = Path.of(System.getProperty("user.home"), ".btrace");
+      Path dir = Paths.get(System.getProperty("user.home"), ".btrace");
       Files.createDirectories(dir);
       Path f = dir.resolve("tui-state.properties");
       Properties p = new Properties();

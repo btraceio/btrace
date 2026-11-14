@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 
@@ -35,13 +36,13 @@ final class PolicyFile {
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "--policy-file":
-          t = Path.of(args[++i]);
+          t = Paths.get(args[++i]);
           break;
         case "--home":
           home = true;
           break;
         case "--classpath":
-          classpathDir = Path.of(args[++i]);
+          classpathDir = Paths.get(args[++i]);
           break;
       }
     }
@@ -50,10 +51,11 @@ final class PolicyFile {
     PolicyFile pf = new PolicyFile();
     if (t != null) pf.target = t;
     else if (home)
-      pf.target = Path.of(System.getProperty("user.home"), ".btrace", "permissions.properties");
+      pf.target = Paths.get(System.getProperty("user.home"), ".btrace", "permissions.properties");
     else if (classpathDir != null)
       pf.target = classpathDir.resolve("META-INF/btrace/permissions.properties");
-    else pf.target = Path.of(System.getProperty("user.home"), ".btrace", "permissions.properties");
+    else
+      pf.target = Paths.get(System.getProperty("user.home"), ".btrace", "permissions.properties");
     pf.loadIfExists();
     return pf;
   }
@@ -110,12 +112,12 @@ final class PolicyFile {
   }
 
   String describe(boolean json) {
-    Map<String, Object> m =
-        Map.of(
-            "target", String.valueOf(target),
-            "allowExtensions", props.getProperty("allowExtensions", ""),
-            "denyExtensions", props.getProperty("denyExtensions", ""),
-            "allowPrivileged", props.getProperty("allowPrivileged", "false"));
+    Map<String, Object> fields = new LinkedHashMap<>();
+    fields.put("target", String.valueOf(target));
+    fields.put("allowExtensions", props.getProperty("allowExtensions", ""));
+    fields.put("denyExtensions", props.getProperty("denyExtensions", ""));
+    fields.put("allowPrivileged", props.getProperty("allowPrivileged", "false"));
+    Map<String, Object> m = Collections.unmodifiableMap(fields);
     if (json) return toJson(m);
     return String.format(
         "Policy: %s\n  allowExtensions=%s\n  denyExtensions=%s\n  allowPrivileged=%s",

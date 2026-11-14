@@ -9,6 +9,14 @@ plugins {
     id 'jacoco'
 }
 
+// --release 8 omits sun.misc.Unsafe and jdk.jfr, which this module uses; the JDK 8 compiler
+// accepts both and, like --release 8, rejects JDK 9+ APIs.
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
+
 dependencies {
     implementation libs.slf4j
     implementation libs.slf4j.simple

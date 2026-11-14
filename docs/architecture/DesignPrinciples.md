@@ -41,11 +41,11 @@ check fails CI.
 
 **Rule:** Main sources of every module on the Java 8 target compile against the Java 8 API, not just at source and target level 8.
 
-**Why:** `btrace-core`, `btrace-compiler` and `btrace-client` compile with a JDK 11 compiler at source and target 8 without `--release`, so JDK 9+ APIs compile and fail only on a Java 8 target JVM: `Map.of` in `ExtensionLister` and `PolicyFile`, `List.of` in `ExtRepoBrowser`. `btracex` ships in the same distribution as a Java 8 agent. See [JDK compatibility](../JDKCompatibility.md).
+**Why:** Source and target level 8 on a JDK 9+ compiler still accept JDK 9+ APIs, which then fail only on a Java 8 JVM. Before this was enforced, `btrace-client` held 24 such calls in `io.btrace.extcli` (`Path.of`, `Map.of`, `List.of`). `btracex` ships in the same distribution as a Java 8 agent. See [JDK compatibility](../JDKCompatibility.md).
 
-**Enforced by:** unenforced (judgment)
+**Enforced by:** `common.gradle`, `btrace-core/build.gradle`, `btrace-compiler/build.gradle`, `btrace-client/build.gradle`, `btrace-agent/build.gradle`, `btrace-runtime/build.gradle`, `btrace-boot/build.gradle`
 
-**Exceptions:** None.
+**Exceptions:** `common.gradle` compiles main code with `--release 8`. `--release 8` omits `sun.misc`, `jdk.jfr` and the tools.jar APIs (`com.sun.source`, `com.sun.tools.attach`, `sun.jvmstat`), so `btrace-core`, `btrace-compiler`, `btrace-client`, `btrace-agent`, `btrace-runtime` and `btrace-boot` compile their main code with the JDK 8 compiler instead, which rejects JDK 9+ APIs too. Their `java9`, `java11` and `java24` source sets target later releases on purpose. `integration-tests` does not ship and opts out because its fixtures use `jdk.jfr`.
 
 ## P4. Sibling implementations stay in step
 
