@@ -60,7 +60,8 @@ public class ProtocolConfig {
   private final boolean forceVersion;
   private final boolean allowV1;
 
-  private ProtocolConfig(ProtocolVersion version, boolean autoNegotiate, boolean forceVersion, boolean allowV1) {
+  private ProtocolConfig(
+      ProtocolVersion version, boolean autoNegotiate, boolean forceVersion, boolean allowV1) {
     this.version = version;
     this.autoNegotiate = autoNegotiate;
     this.forceVersion = forceVersion;

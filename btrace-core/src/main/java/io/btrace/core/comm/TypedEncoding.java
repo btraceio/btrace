@@ -1,14 +1,24 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2015, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.btrace.core.comm;
 
-import io.btrace.core.aggregation.HistogramData;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -17,9 +27,9 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Shared typed encoding for BTRACE-005 hardening.
  *
- * <p>Centralizes TAG constants and read/write helpers that were previously duplicated across
- * {@link SetSettingsCommand}, {@link NumberDataCommand}, {@link GridDataCommand}. All command
- * payloads now use explicit primitive schemas instead of {@code writeObject/readObject}.
+ * <p>Centralizes TAG constants and read/write helpers that were previously duplicated across {@link
+ * SetSettingsCommand}, {@link NumberDataCommand}, {@link GridDataCommand}. All command payloads now
+ * use explicit primitive schemas instead of {@code writeObject/readObject}.
  */
 public final class TypedEncoding {
 
@@ -118,18 +128,30 @@ public final class TypedEncoding {
   public static Object readValue(ObjectInput in) throws IOException {
     byte tag = in.readByte();
     switch (tag) {
-      case TAG_NULL: return null;
-      case TAG_STRING: return in.readUTF();
-      case TAG_BOOLEAN: return in.readBoolean();
-      case TAG_INT: return in.readInt();
-      case TAG_LONG: return in.readLong();
-      case TAG_DOUBLE: return in.readDouble();
-      case TAG_FLOAT: return in.readFloat();
-      case TAG_SHORT: return in.readShort();
-      case TAG_BYTE: return in.readByte();
-      case TAG_BIGINT: return new BigInteger(in.readUTF());
-      case TAG_BIGDEC: return new BigDecimal(in.readUTF());
-      default: throw new IOException("Unknown value tag: " + tag);
+      case TAG_NULL:
+        return null;
+      case TAG_STRING:
+        return in.readUTF();
+      case TAG_BOOLEAN:
+        return in.readBoolean();
+      case TAG_INT:
+        return in.readInt();
+      case TAG_LONG:
+        return in.readLong();
+      case TAG_DOUBLE:
+        return in.readDouble();
+      case TAG_FLOAT:
+        return in.readFloat();
+      case TAG_SHORT:
+        return in.readShort();
+      case TAG_BYTE:
+        return in.readByte();
+      case TAG_BIGINT:
+        return new BigInteger(in.readUTF());
+      case TAG_BIGDEC:
+        return new BigDecimal(in.readUTF());
+      default:
+        throw new IOException("Unknown value tag: " + tag);
     }
   }
 
@@ -137,39 +159,58 @@ public final class TypedEncoding {
     if (n == null) {
       out.writeByte(NUM_NULL);
     } else if (n instanceof Integer) {
-      out.writeByte(NUM_INT); out.writeInt(n.intValue());
+      out.writeByte(NUM_INT);
+      out.writeInt(n.intValue());
     } else if (n instanceof Long) {
-      out.writeByte(NUM_LONG); out.writeLong(n.longValue());
+      out.writeByte(NUM_LONG);
+      out.writeLong(n.longValue());
     } else if (n instanceof Double) {
-      out.writeByte(NUM_DOUBLE); out.writeDouble(n.doubleValue());
+      out.writeByte(NUM_DOUBLE);
+      out.writeDouble(n.doubleValue());
     } else if (n instanceof Float) {
-      out.writeByte(NUM_FLOAT); out.writeFloat(n.floatValue());
+      out.writeByte(NUM_FLOAT);
+      out.writeFloat(n.floatValue());
     } else if (n instanceof Short) {
-      out.writeByte(NUM_SHORT); out.writeShort(n.shortValue());
+      out.writeByte(NUM_SHORT);
+      out.writeShort(n.shortValue());
     } else if (n instanceof Byte) {
-      out.writeByte(NUM_BYTE); out.writeByte(n.byteValue());
+      out.writeByte(NUM_BYTE);
+      out.writeByte(n.byteValue());
     } else if (n instanceof BigInteger) {
-      out.writeByte(NUM_BIGINT); out.writeUTF(n.toString());
+      out.writeByte(NUM_BIGINT);
+      out.writeUTF(n.toString());
     } else if (n instanceof BigDecimal) {
-      out.writeByte(NUM_BIGDEC); out.writeUTF(n.toString());
+      out.writeByte(NUM_BIGDEC);
+      out.writeUTF(n.toString());
     } else {
-      out.writeByte(NUM_DOUBLE); out.writeDouble(n.doubleValue());
+      out.writeByte(NUM_DOUBLE);
+      out.writeDouble(n.doubleValue());
     }
   }
 
   public static Number readNumber(ObjectInput in) throws IOException {
     byte tag = in.readByte();
     switch (tag) {
-      case NUM_NULL: return null;
-      case NUM_INT: return in.readInt();
-      case NUM_LONG: return in.readLong();
-      case NUM_DOUBLE: return in.readDouble();
-      case NUM_FLOAT: return in.readFloat();
-      case NUM_SHORT: return in.readShort();
-      case NUM_BYTE: return in.readByte();
-      case NUM_BIGINT: return new BigInteger(in.readUTF());
-      case NUM_BIGDEC: return new BigDecimal(in.readUTF());
-      default: throw new IOException("Unknown number tag: " + tag);
+      case NUM_NULL:
+        return null;
+      case NUM_INT:
+        return in.readInt();
+      case NUM_LONG:
+        return in.readLong();
+      case NUM_DOUBLE:
+        return in.readDouble();
+      case NUM_FLOAT:
+        return in.readFloat();
+      case NUM_SHORT:
+        return in.readShort();
+      case NUM_BYTE:
+        return in.readByte();
+      case NUM_BIGINT:
+        return new BigInteger(in.readUTF());
+      case NUM_BIGDEC:
+        return new BigDecimal(in.readUTF());
+      default:
+        throw new IOException("Unknown number tag: " + tag);
     }
   }
 
@@ -177,40 +218,55 @@ public final class TypedEncoding {
     if (cell == null) {
       out.writeByte(CELL_NULL);
     } else if (cell instanceof String) {
-      out.writeByte(CELL_STRING); out.writeUTF((String) cell);
+      out.writeByte(CELL_STRING);
+      out.writeUTF((String) cell);
     } else if (cell instanceof Integer) {
-      out.writeByte(CELL_INT); out.writeInt((Integer) cell);
+      out.writeByte(CELL_INT);
+      out.writeInt((Integer) cell);
     } else if (cell instanceof Long) {
-      out.writeByte(CELL_LONG); out.writeLong((Long) cell);
+      out.writeByte(CELL_LONG);
+      out.writeLong((Long) cell);
     } else if (cell instanceof Double) {
-      out.writeByte(CELL_DOUBLE); out.writeDouble((Double) cell);
+      out.writeByte(CELL_DOUBLE);
+      out.writeDouble((Double) cell);
     } else if (cell instanceof Float) {
-      out.writeByte(CELL_FLOAT); out.writeFloat((Float) cell);
+      out.writeByte(CELL_FLOAT);
+      out.writeFloat((Float) cell);
     } else if (cell instanceof Boolean) {
-      out.writeByte(CELL_BOOLEAN); out.writeBoolean((Boolean) cell);
-    } else if (cell instanceof HistogramData) {
-      StringWriter sw = new StringWriter();
-      ((HistogramData) cell).print(new PrintWriter(sw));
-      out.writeByte(CELL_HISTOGRAM); out.writeUTF(sw.toString());
+      out.writeByte(CELL_BOOLEAN);
+      out.writeBoolean((Boolean) cell);
     } else if (cell instanceof Number) {
-      out.writeByte(CELL_DOUBLE); out.writeDouble(((Number) cell).doubleValue());
+      out.writeByte(CELL_DOUBLE);
+      out.writeDouble(((Number) cell).doubleValue());
     } else {
-      out.writeByte(CELL_STRING); out.writeUTF(cell.toString());
+      // Fallback: render via toString (covers HistogramData and other types) - never use
+      // writeObject
+      out.writeByte(CELL_STRING);
+      out.writeUTF(cell.toString());
     }
   }
 
   public static Object readCell(ObjectInput in) throws IOException {
     byte tag = in.readByte();
     switch (tag) {
-      case CELL_NULL: return null;
-      case CELL_STRING: return in.readUTF();
-      case CELL_INT: return in.readInt();
-      case CELL_LONG: return in.readLong();
-      case CELL_DOUBLE: return in.readDouble();
-      case CELL_FLOAT: return in.readFloat();
-      case CELL_BOOLEAN: return in.readBoolean();
-      case CELL_HISTOGRAM: return in.readUTF();
-      default: throw new IOException("Unknown grid cell tag: " + tag);
+      case CELL_NULL:
+        return null;
+      case CELL_STRING:
+        return in.readUTF();
+      case CELL_INT:
+        return in.readInt();
+      case CELL_LONG:
+        return in.readLong();
+      case CELL_DOUBLE:
+        return in.readDouble();
+      case CELL_FLOAT:
+        return in.readFloat();
+      case CELL_BOOLEAN:
+        return in.readBoolean();
+      case CELL_HISTOGRAM:
+        return in.readUTF();
+      default:
+        throw new IOException("Unknown grid cell tag: " + tag);
     }
   }
 }

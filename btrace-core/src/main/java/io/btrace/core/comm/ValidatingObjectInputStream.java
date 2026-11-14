@@ -1,7 +1,19 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2015, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package io.btrace.core.comm;
 
 import java.io.IOException;
@@ -22,20 +34,21 @@ import java.util.Set;
 /**
  * Hardened {@link ObjectInputStream} that enforces an allow-list on deserialized classes.
  *
- * <p>This is the defense-in-depth layer for btrace_005. Even after migrating command payloads
- * to explicit primitive schemas (no {@code readObject()}), the underlying stream could still
- * be abused if a future command re-introduces object deserialization. The filter ensures only
- * expected BTrace command types and primitive wrappers are materialized.
+ * <p>This is the defense-in-depth layer for btrace_005. Even after migrating command payloads to
+ * explicit primitive schemas (no {@code readObject()}), the underlying stream could still be abused
+ * if a future command re-introduces object deserialization. The filter ensures only expected BTrace
+ * command types and primitive wrappers are materialized.
  *
- * <p>On JDK 9+ we also try to install an {@code ObjectInputFilter} via reflection for
- * additional protection, but the {@code resolveClass} override is authoritative and works on
- * Java 8 (BTrace's sourceCompatibility).
+ * <p>On JDK 9+ we also try to install an {@code ObjectInputFilter} via reflection for additional
+ * protection, but the {@code resolveClass} override is authoritative and works on Java 8 (BTrace's
+ * sourceCompatibility).
  */
 public class ValidatingObjectInputStream extends ObjectInputStream {
 
   // Explicit allow-list: BTrace commands + safe JDK types.
   // Any other class triggers InvalidClassException before callbacks run.
   private static final Set<String> ALLOWED_CLASS_NAMES;
+
   static {
     Set<String> s = new HashSet<>();
     // BTrace commands
@@ -73,7 +86,8 @@ public class ValidatingObjectInputStream extends ObjectInputStream {
     s.add(ArrayList.class.getName());
     s.add(LinkedHashMap.class.getName());
     s.add(Collections.EMPTY_MAP.getClass().getName());
-    // Throwable graph is intentionally NOT allowed by default - ErrorCommand now uses safe encoding.
+    // Throwable graph is intentionally NOT allowed by default - ErrorCommand now uses safe
+    // encoding.
     // Keep StackTraceElement for potential filtered error reporting.
     s.add(StackTraceElement.class.getName());
     s.add(StackTraceElement[].class.getName());
@@ -87,6 +101,7 @@ public class ValidatingObjectInputStream extends ObjectInputStream {
 
   // Also allow array variants and primitives
   private static final Set<String> ALLOWED_PREFIXES;
+
   static {
     Set<String> p = new HashSet<>();
     p.add("[Ljava.lang.String;");
@@ -94,7 +109,13 @@ public class ValidatingObjectInputStream extends ObjectInputStream {
     p.add("[[Ljava.lang.Object;");
     p.add("[B"); // byte[]
     // Array component types that are explicitly allowed
-    p.add("[C"); p.add("[I"); p.add("[J"); p.add("[D"); p.add("[F"); p.add("[S"); p.add("[Z");
+    p.add("[C");
+    p.add("[I");
+    p.add("[J");
+    p.add("[D");
+    p.add("[F");
+    p.add("[S");
+    p.add("[Z");
     ALLOWED_PREFIXES = Collections.unmodifiableSet(p);
   }
 
@@ -103,15 +124,14 @@ public class ValidatingObjectInputStream extends ObjectInputStream {
     tryInstallObjectInputFilter();
   }
 
-  /**
-   * Fallback constructor for wrapping - not used directly but required for completeness.
-   */
+  /** Fallback constructor for wrapping - not used directly but required for completeness. */
   ValidatingObjectInputStream() throws IOException {
     super();
   }
 
   @Override
-  protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
+  protected Class<?> resolveClass(ObjectStreamClass desc)
+      throws IOException, ClassNotFoundException {
     String name = desc.getName();
     // Primitives are encoded as single-char or array descriptors - allow them
     if (isAllowed(name)) {
@@ -135,17 +155,23 @@ public class ValidatingObjectInputStream extends ObjectInputStream {
       return false;
     }
     // Primitive wrappers already covered; primitive names like "int" are allowed
-    if (className.equals("int") || className.equals("long") || className.equals("double")
-        || className.equals("float") || className.equals("byte") || className.equals("short")
-        || className.equals("boolean") || className.equals("char") || className.equals("void")) {
+    if (className.equals("int")
+        || className.equals("long")
+        || className.equals("double")
+        || className.equals("float")
+        || className.equals("byte")
+        || className.equals("short")
+        || className.equals("boolean")
+        || className.equals("char")
+        || className.equals("void")) {
       return true;
     }
     return false;
   }
 
   /**
-   * Try to install JDK 9+ ObjectInputFilter via reflection. No-op on Java 8.
-   * We set a filter that mirrors the allow-list to get early rejection with better diagnostics.
+   * Try to install JDK 9+ ObjectInputFilter via reflection. No-op on Java 8. We set a filter that
+   * mirrors the allow-list to get early rejection with better diagnostics.
    */
   private void tryInstallObjectInputFilter() {
     try {
@@ -171,8 +197,8 @@ public class ValidatingObjectInputStream extends ObjectInputStream {
   }
 
   /**
-   * Factory helper to create a validating stream from a socket InputStream.
-   * Handles the ObjectInputStream header handshake correctly.
+   * Factory helper to create a validating stream from a socket InputStream. Handles the
+   * ObjectInputStream header handshake correctly.
    */
   public static ValidatingObjectInputStream create(InputStream rawIn) throws IOException {
     return new ValidatingObjectInputStream(rawIn);

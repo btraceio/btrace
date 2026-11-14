@@ -60,8 +60,9 @@ public class ErrorCommand extends Command implements PrintableCommand {
     if (exceptionClass.isEmpty() && errorMessage.isEmpty() && stackTrace.isEmpty()) {
       cause = null;
     } else {
-      RuntimeException re = new RuntimeException(
-          exceptionClass + (errorMessage.isEmpty() ? "" : ": " + errorMessage));
+      RuntimeException re =
+          new RuntimeException(
+              exceptionClass + (errorMessage.isEmpty() ? "" : ": " + errorMessage));
       if (!stackTrace.isEmpty()) {
         re.addSuppressed(new Exception("Origin stack:\n" + stackTrace));
       }

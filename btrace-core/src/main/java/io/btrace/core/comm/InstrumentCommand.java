@@ -69,7 +69,8 @@ public class InstrumentCommand extends Command {
   @Override
   protected void read(ObjectInput in) throws IOException {
     int len = in.readInt();
-    if (len < 0 || len > TypedEncoding.MAX_CODE_BYTES) throw new IOException("Invalid code length: " + len);
+    if (len < 0 || len > TypedEncoding.MAX_CODE_BYTES)
+      throw new IOException("Invalid code length: " + len);
     code = new byte[len];
     in.readFully(code);
     len = in.readInt();
