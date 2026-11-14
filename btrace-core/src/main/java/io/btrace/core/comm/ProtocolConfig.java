@@ -53,15 +53,18 @@ public class ProtocolConfig {
   private static final String PROP_PROTOCOL = "btrace.comm.protocol";
   private static final String PROP_AUTO_NEGOTIATE = "btrace.comm.autoNegotiate";
   private static final String PROP_FORCE_VERSION = "btrace.comm.forceVersion";
+  private static final String PROP_ALLOW_V1 = "btrace.comm.allowV1";
 
   private final ProtocolVersion version;
   private final boolean autoNegotiate;
   private final boolean forceVersion;
+  private final boolean allowV1;
 
-  private ProtocolConfig(ProtocolVersion version, boolean autoNegotiate, boolean forceVersion) {
+  private ProtocolConfig(ProtocolVersion version, boolean autoNegotiate, boolean forceVersion, boolean allowV1) {
     this.version = version;
     this.autoNegotiate = autoNegotiate;
     this.forceVersion = forceVersion;
+    this.allowV1 = allowV1;
 
     if (forceVersion && autoNegotiate) {
       throw new IllegalArgumentException(
@@ -85,6 +88,14 @@ public class ProtocolConfig {
    */
   public boolean isAutoNegotiate() {
     return autoNegotiate;
+  }
+
+  /**
+   * Returns whether V1 (Java serialization) is allowed. Default false (V2-only) for BTRACE-005.
+   * System property: <b>btrace.comm.allowV1</b>
+   */
+  public boolean isV1Allowed() {
+    return allowV1;
   }
 
   /**
@@ -128,6 +139,11 @@ public class ProtocolConfig {
     String forceVersionProp = System.getProperty(PROP_FORCE_VERSION);
     if (forceVersionProp != null) {
       builder.forceVersion(Boolean.parseBoolean(forceVersionProp));
+    }
+
+    String allowV1Prop = System.getProperty(PROP_ALLOW_V1);
+    if (allowV1Prop != null) {
+      builder.allowV1(Boolean.parseBoolean(allowV1Prop));
     }
 
     return builder.build();
@@ -177,6 +193,8 @@ public class ProtocolConfig {
         + autoNegotiate
         + ", forceVersion="
         + forceVersion
+        + ", allowV1="
+        + allowV1
         + '}';
   }
 
@@ -185,6 +203,7 @@ public class ProtocolConfig {
     private ProtocolVersion version = ProtocolVersion.getDefault();
     private boolean autoNegotiate = true;
     private boolean forceVersion = false;
+    private boolean allowV1 = false; // BTRACE-005: V2-only by default
 
     private Builder() {}
 
@@ -221,6 +240,11 @@ public class ProtocolConfig {
       return this;
     }
 
+    public Builder allowV1(boolean allowV1) {
+      this.allowV1 = allowV1;
+      return this;
+    }
+
     /**
      * Builds the ProtocolConfig.
      *
@@ -228,7 +252,7 @@ public class ProtocolConfig {
      * @throws IllegalArgumentException if configuration is invalid
      */
     public ProtocolConfig build() {
-      return new ProtocolConfig(version, autoNegotiate, forceVersion);
+      return new ProtocolConfig(version, autoNegotiate, forceVersion, allowV1);
     }
   }
 }

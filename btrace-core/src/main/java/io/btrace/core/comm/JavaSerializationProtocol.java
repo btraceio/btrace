@@ -19,6 +19,7 @@ package io.btrace.core.comm;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
+// BTRACE-005: Validating stream is imported via same package
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 
@@ -66,7 +67,7 @@ public class JavaSerializationProtocol implements WireProtocol {
       tempOos = new ObjectOutputStream(outputStream);
       tempOos.flush(); // Write stream header immediately
       this.oos = tempOos;
-      this.ois = new ObjectInputStream(inputStream);
+      this.ois = new ValidatingObjectInputStream(inputStream); // BTRACE-005: allow-list
     } catch (IOException e) {
       if (tempOos != null) {
         try {
