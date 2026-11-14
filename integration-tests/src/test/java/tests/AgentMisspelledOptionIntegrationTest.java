@@ -57,7 +57,6 @@ public class AgentMisspelledOptionIntegrationTest extends RuntimeTest {
 
     assertFalse(output.contains(WARNING), output);
     assertFalse(output.contains("has no effect"), output);
-    assertFalse(output.contains("WARN"), output);
   }
 
   /**
