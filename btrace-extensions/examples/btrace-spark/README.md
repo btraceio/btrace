@@ -47,7 +47,7 @@ Avoid `CLASSLOADER` unless you explicitly create child loaders from configured p
 - MethodHandle cache: repeated reflective calls are cached for speed.
 
 If you absolutely must expose a jar on the system classpath temporarily:
-- Use the escape hatch (discouraged): `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM plus the `trusted=true` agent argument (`-javaagent:btrace.jar=trusted=true,...`). `-Dbtrace.trusted` has no effect.
+- Use the escape hatch (discouraged): `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM plus the `trusted=true` agent argument (`-javaagent:btrace.jar=trusted=true,...`). `-Dbtrace.trusted` has no effect; the agent logs a warning when it sees it.
 - Prefer fixing packaging or using an extension-local child loader instead.
 
 ## Probe Integration (Conceptual)

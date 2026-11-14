@@ -119,7 +119,7 @@ Note: The legacy `libs`/profiles mechanism has been removed. Passing `libs=<prof
 - `docs/architecture/provided-style-extensions.md`
 - `docs/examples/README.md`
 
-As a last resort (discouraged), you may append a single jar to the system classpath: set `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM together with the `trusted=true` **agent argument** (`-javaagent:btrace.jar=trusted=true,...`); the `-Dbtrace.trusted` system property has no effect and the agent ignores the jar without the agent argument.
+As a last resort (discouraged), you may append a single jar to the system classpath: set `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM together with the `trusted=true` **agent argument** (`-javaagent:btrace.jar=trusted=true,...`); the `-Dbtrace.trusted` system property has no effect and the agent ignores the jar without the agent argument. In both cases the agent logs a warning that names the `trusted=true` agent argument.
 
 ### Fat Agent JAR (Single-JAR Deployment)
 
