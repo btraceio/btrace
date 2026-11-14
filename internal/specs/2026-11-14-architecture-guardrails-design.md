@@ -224,9 +224,11 @@ in the `build` job. Python gates run in the `guardrails` job, which feeds `tests
 `tests-passed` and `pr-metadata` are added, every Python gate here, G1–G5 before it, and the
 `Sibling:` line report a failure but cannot stop a merge. The maintainer is adding them (decision 9.6).
 
-## 8. Findings not acted on here
+## 8. Findings recorded while building the gates
 
-- Agent ⇄ compiler dependency cycle: broken. `btrace-agent` no longer has `implementation` on
+Each item says whether it has been resolved since.
+
+- Resolved — agent ⇄ compiler dependency cycle: broken. `btrace-agent` no longer has `implementation` on
   `btrace-compiler`; the compiler is a build tool there (`testProbeCompiler`, for `compileTestProbes`),
   so `check_layering.py` still lists the `btrace-agent -> btrace-compiler` edge. The removed edge had
   been putting the agent's own jar, and with it the `java24` ClassFile API backend, on the agent's
@@ -234,12 +236,16 @@ in the `build` job. Python gates run in the `guardrails` job, which feeds `tests
   agent's `PackGenerator` through `ServiceLoader`, and it brings `btrace-runtime` with it. The
   compiler's own `implementation` on `btrace-runtime` was unused (its one `io.btrace.runtime` import,
   `BTraceRuntimeAccess`, is in `btrace-core`) and is removed; `btrace.jar` is unchanged.
-- About 150 classes present both in the JAR root and in a masked section, measured on a stale local JAR
-  **[S]**; harmless under parent-first loading, and `MaskedClassLoader`'s Javadoc says section-first.
-- `ExtensionIndy` is bootstrap-visible and holds an SLF4J logger, against the comment in
-  `IndyDispatcher.java:57-61` **[S]**.
-- The extension API validator (`validateServiceApis`) has no negative tests, and two of its documented
-  requirements are warnings **[S]**.
+- Open — classes present both in the JAR root and in a masked section. Re-measured on a fresh JAR:
+  159 root/masked duplicates, plus 70 agent/shared and 94 client/shared, all byte-identical and
+  harmless under parent-first loading. Removing them changes which section a class ships in and is
+  left to the maintainer. `MaskedClassLoader`'s Javadoc, which said section-first, is corrected.
+- Resolved — `ExtensionIndy` holds an SLF4J logger while a comment in `IndyDispatcher` said bootstrap
+  classes must not. Relocated SLF4J and its provider are always in the root, so logging there works;
+  the `IndyDispatcher` comment now gives the real reasons that class stays silent.
+- Resolved — the extension API validator (`validateServiceApis`) had no negative tests. It has them
+  now, and `docs/ExtensionInterfaceRules.md` describes what the validator enforces today, including
+  what only warns.
 - The November proposal still lists the `BackendSelector` debug-level fallback as open; it now warns
   and throws **[S]**.
 
