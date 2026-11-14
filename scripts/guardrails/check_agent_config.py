@@ -16,6 +16,7 @@ Usage: check_agent_config.py [REPO_ROOT]   (default: the current directory)
 Only files tracked by git are checked, so build output and local tool state are ignored.
 """
 
+import functools
 import os
 import re
 import subprocess
@@ -61,26 +62,26 @@ def github_slug(text):
     return text.replace(" ", "-")
 
 
-def anchors_of(path, cache={}):
-    if path not in cache:
-        slugs, counts = set(), {}
-        in_fence = False
-        with open(path, encoding="utf-8") as f:
-            for line in f:
-                if FENCE_RE.match(line):
-                    in_fence = not in_fence
-                    continue
-                if in_fence:
-                    continue
-                slugs.update(HTML_ANCHOR_RE.findall(line))
-                m = HEADING_RE.match(line)
-                if m:
-                    base = github_slug(m.group(2))
-                    n = counts.get(base, 0)
-                    slugs.add(base if n == 0 else "%s-%d" % (base, n))
-                    counts[base] = n + 1
-        cache[path] = slugs
-    return cache[path]
+@functools.lru_cache(maxsize=None)
+def anchors_of(path):
+    """Returns the anchors a Markdown file defines (heading slugs and HTML ids)."""
+    slugs, counts = set(), {}
+    in_fence = False
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            if FENCE_RE.match(line):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            slugs.update(HTML_ANCHOR_RE.findall(line))
+            m = HEADING_RE.match(line)
+            if m:
+                base = github_slug(m.group(2))
+                n = counts.get(base, 0)
+                slugs.add(base if n == 0 else "%s-%d" % (base, n))
+                counts[base] = n + 1
+    return frozenset(slugs)
 
 
 def prose_lines(path):
