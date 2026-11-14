@@ -54,13 +54,20 @@ class AgentOptionWarningsTest {
   }
 
   @Test
-  void everyOptionIsKnownIncludingRemovedAndUnreadOnes() {
+  void everyOptionIsKnown() {
     for (String option : AgentOptionWarnings.knownOptions()) {
       assertNull(AgentOptionWarnings.misspelledOptionWarning(option), option);
     }
-    // libs= has its own error and agentJar is read by nothing: neither gets a second message
-    assertNull(AgentOptionWarnings.misspelledOptionWarning(Args.LIBS));
-    assertNull(AgentOptionWarnings.misspelledOptionWarning(Args.AGENT_JAR));
+  }
+
+  @Test
+  void removedOptionsAreOrdinaryUnknownArguments() {
+    // libs is below the minimum length and agentJar is not close to any live option, so neither
+    // is mistaken for a misspelling; both are passed on to scripts like any other argument.
+    assertFalse(AgentOptionWarnings.knownOptions().contains("libs"));
+    assertFalse(AgentOptionWarnings.knownOptions().contains("agentJar"));
+    assertNull(AgentOptionWarnings.misspelledOptionWarning("libs"));
+    assertNull(AgentOptionWarnings.misspelledOptionWarning("agentJar"));
   }
 
   @Test

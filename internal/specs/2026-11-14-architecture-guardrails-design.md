@@ -170,7 +170,7 @@ logged at warn or above and reaches the client (`BTraceTransformer.reportFailure
 
 - Every constant in `core/Args.java` appears in the `btrace.agent.usage` text and in
   `docs/QuickReference.md`. Baseline **[S]**: usage omits `agentJar`, `libs`, `probes`; QuickReference
-  omits `agentJar`, `libs`.
+  omits `agentJar`, `libs` (both constants were later removed).
 - Every method-targeting annotation in `io.btrace.core.annotations` is in `RT_AWARE_ANNOTS`,
   `GUARDED_ANNOTS`, or an explicit unguarded list (`Preprocessor.java:170-180`).
 - Every message key used in code exists in `messages.properties`.
@@ -317,9 +317,9 @@ read from the named files when this section was written, and the files are autho
   (6fd59435); `bootstrap-root-allowlist.txt` 21 lines; `bootstrap-closure-baseline.txt` 24 (the
   `ExtensionContext` reference plus 23 from the annotation processor; af95fdd4, 4a0ac1fa);
   `bootstrap-jdk-nonboot-packages.txt` 54 packages; `args-registry-baseline.txt` 9 at first, against
-  the spec's 5, then 4 once `probes`, `output` and `help` were documented: the remaining entries
-  are `agentJar` (no reader) and `libs` (removed; the agent logs an error), each for the usage text
-  and QuickReference; `handler-annotation-baseline.txt` 1.
+  the spec's 5, then 4 once `probes`, `output` and `help` were documented, then empty once the two
+  remaining entries, `agentJar` (no reader) and `libs` (removed), were deleted along with their
+  `Args` constants and the agent's `libs` error message; `handler-annotation-baseline.txt` 1.
 - **What blocks a merge (section 7).** The maintainer updated the "Merging" ruleset on 2026-11-14:
   it now requires `build`, `tests-passed` and `pr-metadata`, with `require_code_owner_review: false`.
   `scripts/guardrails/README.md` records the reading and which job runs each gate.

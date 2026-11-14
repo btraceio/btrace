@@ -12,7 +12,7 @@ extra command-line arguments. These attributes are read from the agent JAR's
 | `BTrace-Boot-Libs` | Space-separated list of JAR paths appended to the **bootstrap** class loader search. |
 | `BTrace-System-Libs` | Space-separated list of JAR paths appended to the **system** class loader search. |
 | `BTrace-Libs-Root` | Optional base directory for resolving relative entries. Defaults to the agent JAR's parent directory. |
-| `BTrace-Libs-Profile` | Optional named subdirectory to auto-scan for `boot/*.jar` and `system/*.jar`. Mirrors the `libs` agent argument. |
+| `BTrace-Libs-Profile` | Optional named subdirectory to auto-scan for `boot/*.jar` and `system/*.jar`. Selects a profile directory by name; the former `libs` agent argument no longer exists. |
 
 The standard `Boot-Class-Path` manifest attribute continues to be honored as well.
 
