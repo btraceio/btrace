@@ -1,0 +1,8 @@
+# Agent options (io.btrace.core.Args) that the usage text or docs/QuickReference.md does not
+# document. Format: <usage|quickref> <option>  # reason. A new gap fails; a gap fixed in the docs must
+# be removed from here (stale). Checked by ArgsRegistryTest.
+usage agentJar   # Args constant has no reader in Main; only btrace-qe's AgentArgsValuesFamily names it; undocumented since before the check existed
+usage libs       # Main reads it (argMap.get(LIBS)) but the usage text never describes it
+usage probes     # Main reads it (argMap.get(PROBES)) as an embedded-extension argument; not in the usage text
+quickref agentJar # see usage agentJar
+quickref libs    # see usage libs; docs/architecture/agent-manifest-libs.md covers it outside QuickReference

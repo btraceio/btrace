@@ -150,8 +150,8 @@ final class Preprocessor {
   private static final String JFR_EVENT_FACTORY_DESC = "L" + JFR_EVENT_FACTORY_INTERNAL + ";";
 
   private static final Map<String, String> BOX_TYPE_MAP = new HashMap<>();
-  private static final Set<String> GUARDED_ANNOTS = new HashSet<>();
-  private static final Set<String> RT_AWARE_ANNOTS = new HashSet<>();
+  static final Set<String> GUARDED_ANNOTS = new HashSet<>();
+  static final Set<String> RT_AWARE_ANNOTS = new HashSet<>();
   // For each @Export field, we create a perf counter
   // with the name "btrace.<class name>.<field name>"
   private static final String BTRACE_COUNTER_PREFIX = "btrace.";

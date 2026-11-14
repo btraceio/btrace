@@ -83,9 +83,9 @@ check fails CI.
 
 **Why:** Registries drift apart silently. 51ac8280 pins agent options that the agent drops without a word.
 
-**Enforced by:** unenforced (judgment)
+**Enforced by:** `btrace-core/src/test/java/io/btrace/core/ArgsRegistryTest.java`, `btrace-agent/src/test/java/io/btrace/instr/HandlerAnnotationClassificationTest.java`, `scripts/guardrails/check_message_keys.py`
 
-**Exceptions:** None.
+**Exceptions:** `btrace-core/src/test/resources/args-registry-baseline.txt` (options missing from the usage text or QuickReference) and `btrace-agent/src/test/resources/handler-annotation-baseline.txt` (method annotations the preprocessor classifies in neither set).
 
 ## P8. Classes and public API do not grow by default
 
