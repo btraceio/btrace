@@ -26,7 +26,7 @@ import sys
 # CI runs checks as `python3 -I`, which drops the script directory from sys.path.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import check_fqn  # noqa: E402
+from _common import CheckError, read_code  # noqa: E402
 
 KIND_FILE = "btrace-core/src/main/java/io/btrace/core/annotations/Kind.java"
 ASM_FILE = "btrace-agent/src/main/java/io/btrace/instr/Instrumentor.java"
@@ -37,27 +37,6 @@ SWITCH_RE = re.compile(r"\bswitch\s*\(\s*loc\s*\.\s*getValue\s*\(\s*\)\s*\)\s*\{
 CASE_RE = re.compile(r"\bcase\s+([A-Za-z_]\w*)\s*:")
 ASSIGN_RE = re.compile(r"\bKind\s+(\w+)\s*=\s*[\w.()\s]*?\.\s*getLocation\s*\(\s*\)\s*\.\s*getValue\s*\(\s*\)\s*;")
 ENUM_RE = re.compile(r"\benum\s+Kind\s*\{")
-
-
-class CheckError(Exception):
-    pass
-
-
-def read_code(root, rel):
-    """Returns the file's code with comments and string/char literals removed (line structure kept)."""
-    path = os.path.join(root, rel)
-    try:
-        with open(path, encoding="utf-8") as f:
-            text = f.read()
-    except OSError as e:
-        raise CheckError("cannot read %s: %s" % (rel, e.strerror or e))
-    except UnicodeDecodeError:
-        raise CheckError("%s is not valid UTF-8" % rel)
-    state, out = check_fqn.CODE, []
-    for line in text.splitlines():
-        code, state = check_fqn.strip_code(line, state)
-        out.append(code)
-    return "\n".join(out)
 
 
 def matching_brace(code, open_index, rel, what):
@@ -159,9 +138,9 @@ def classfile_kinds(code):
 
 def check(root):
     """Returns (kinds, problems)."""
-    kinds = kind_constants(read_code(root, KIND_FILE))
-    asm = asm_cases(read_code(root, ASM_FILE))
-    classfile = classfile_kinds(read_code(root, CLASSFILE_FILE))
+    kinds = kind_constants(read_code(os.path.join(root, KIND_FILE), KIND_FILE))
+    asm = asm_cases(read_code(os.path.join(root, ASM_FILE), ASM_FILE))
+    classfile = classfile_kinds(read_code(os.path.join(root, CLASSFILE_FILE), CLASSFILE_FILE))
     problems = []
     for name in kinds:
         if name not in asm:

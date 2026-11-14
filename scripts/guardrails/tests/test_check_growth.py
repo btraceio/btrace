@@ -296,7 +296,7 @@ class GrowthCheckTest(unittest.TestCase):
 
     def test_baselined_overloads_pass_and_removing_one_is_stale(self):
         rel = "btrace-agent/src/main/java/io/btrace/Hook.java"
-        entries = "test-hook %s:sizeForTest\ntest-hook %s:sizeForTest#2\n" % (rel, rel)
+        entries = "test-hook %s:sizeForTest  # known\ntest-hook %s:sizeForTest#2  # known\n" % (rel, rel)
         self.assertPasses(self.hook("  int sizeForTest() { return 0; }\n  int sizeForTest(int n) { return n; }", base={HOOKS: entries}))
         self.assertFails(
             self.hook("  int sizeForTest() { return 0; }", base={HOOKS: entries}),
@@ -321,6 +321,13 @@ class GrowthCheckTest(unittest.TestCase):
     def test_baselined_test_hook_passes(self):
         entry = "test-hook btrace-agent/src/main/java/io/btrace/Hook.java:sizeForTest  # predates the ratchet\n"
         self.assertPasses(self.hook("  int sizeForTest() { return 0; }", base={HOOKS: entry}))
+
+    def test_test_hook_baseline_entry_without_reason_fails(self):
+        entry = "test-hook btrace-agent/src/main/java/io/btrace/Hook.java:sizeForTest\n"
+        self.assertFails(
+            self.hook("  int sizeForTest() { return 0; }", base={HOOKS: entry}),
+            "main-test-hooks.txt:1: baseline entry has no '# reason'",
+        )
 
     def test_stale_test_hook_baseline_entry_fails(self):
         entry = "test-hook btrace-agent/src/main/java/io/btrace/Hook.java:sizeForTest  # predates the ratchet\n"

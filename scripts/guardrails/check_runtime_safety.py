@@ -11,6 +11,7 @@ read, comments and string/char literals are removed, and these are reported:
   Thread.interrupted()        any spelling of the call, including `java.lang.Thread . interrupted ( )`
   interrupted()               a bare call, when the same file has `import static java.lang.Thread.interrupted;`
                               or `import static java.lang.Thread.*;`
+  Thread::interrupted         the method reference, with any whitespace or fully qualified
 
 Each of these is an error, never a pass: btrace-runtime/src/main is missing, it holds no Java file,
 or a file cannot be read as UTF-8.
@@ -26,7 +27,7 @@ import sys
 # CI runs checks as `python3 -I`, which drops the script directory from sys.path.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import check_fqn  # noqa: E402
+from _common import CheckError, read_code  # noqa: E402
 
 SOURCE_ROOT = "btrace-runtime/src/main"
 
@@ -35,26 +36,7 @@ STATIC_IMPORT_RE = re.compile(
     r"\bimport\s+static\s+java\s*\.\s*lang\s*\.\s*Thread\s*\.\s*(?:interrupted|\*)\s*;"
 )
 BARE_RE = re.compile(r"(?<![\w$.])interrupted\s*\(\s*\)")
-
-
-class CheckError(Exception):
-    pass
-
-
-def read_code(path, rel):
-    """Returns the file's code with comments and string/char literals removed (line structure kept)."""
-    try:
-        with open(path, encoding="utf-8") as f:
-            text = f.read()
-    except OSError as e:
-        raise CheckError("cannot read %s: %s" % (rel, e.strerror or e))
-    except UnicodeDecodeError:
-        raise CheckError("%s is not valid UTF-8" % rel)
-    state, out = check_fqn.CODE, []
-    for line in text.splitlines():
-        code, state = check_fqn.strip_code(line, state)
-        out.append(code)
-    return "\n".join(out)
+METHOD_REF_RE = re.compile(r"(?<![\w$])Thread\s*::\s*interrupted(?![\w$])")
 
 
 def java_files(root):
@@ -88,6 +70,8 @@ def check(root):
             hits += [m.start() for m in BARE_RE.finditer(code)]
         for index in sorted(hits):
             problems.append("%s:%d calls Thread.interrupted()" % (rel, line_of(code, index)))
+        for m in METHOD_REF_RE.finditer(code):
+            problems.append("%s:%d references Thread::interrupted" % (rel, line_of(code, m.start())))
     return len(files), problems
 
 

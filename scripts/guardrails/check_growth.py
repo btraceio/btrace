@@ -32,10 +32,9 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import _baseline  # noqa: E402
-from check_fqn import CODE, strip_code  # noqa: E402
+from _common import NO_BASE, CheckError, code_of, run_git  # noqa: E402
 
 LIMIT = 1000
-NO_BASE = ("", "0" * 40)
 MAIN_RE = re.compile(r"(^|/)src/main/.+\.java$")
 CORE_SRC = "btrace-core/src/main/java"
 ALLOW = "scripts/guardrails/growth_allow.txt"
@@ -50,21 +49,6 @@ HOOK_RE = re.compile(r"([\w>\]]+)\s+(\w*ForTests?)\s*\(")
 NOT_A_TYPE = {"return", "new", "else", "throw", "case", "assert", "yield", "do"}
 
 
-class CheckError(Exception):
-    """The check could not look at something it must look at; reported, never skipped."""
-
-
-def run_git(root, *args, binary=False):
-    cmd = ["git", "-C", root, "-c", "core.quotepath=off"] + list(args)
-    try:
-        return subprocess.run(cmd, check=True, capture_output=True, text=not binary).stdout
-    except subprocess.CalledProcessError as e:
-        detail = e.stderr if isinstance(e.stderr, str) else e.stderr.decode("utf-8", "replace")
-        raise CheckError("git %s failed: %s" % (" ".join(args[:2]), detail.strip()))
-    except OSError as e:
-        raise CheckError("cannot run git: %s" % e)
-
-
 class Source:
     """Java files of the repository at HEAD (a commit) or in the work tree."""
 
@@ -73,9 +57,9 @@ class Source:
 
     def paths(self):
         if self.head:
-            out = run_git(self.root, "ls-tree", "-r", "-z", "--name-only", self.head, binary=True)
+            out = run_git("ls-tree", "-r", "-z", "--name-only", self.head, root=self.root, binary=True)
         else:
-            out = run_git(self.root, "ls-files", "-z", "--cached", "--others", "--exclude-standard", binary=True)
+            out = run_git("ls-files", "-z", "--cached", "--others", "--exclude-standard", root=self.root, binary=True)
         names = sorted({p.decode("utf-8", "replace") for p in out.split(b"\0") if p})
         return [p for p in names if p.endswith(".java")]
 
@@ -112,20 +96,12 @@ def count_lines(text):
     return text.count("\n") + (1 if text and not text.endswith("\n") else 0)
 
 
-def code_of(text):
-    lines, state = [], CODE
-    for line in text.split("\n"):
-        stripped, state = strip_code(line, state)
-        lines.append(stripped)
-    return "\n".join(lines)
-
-
 def changes(root, base, head):
     """Returns {head path: (status, base path)} for added, modified and renamed Java files."""
     cmd = ["diff", "--name-status", "-z", "-M", "--no-color", "--no-ext-diff", "--no-textconv",
            "--diff-filter=AMR"]
     cmd += [base + "..." + head] if head else [base]
-    fields = [f for f in run_git(root, *cmd, "--", "*.java", binary=True).split(b"\0") if f]
+    fields = [f for f in run_git(*cmd, "--", "*.java", root=root, binary=True).split(b"\0") if f]
     out, i = {}, 0
     while i < len(fields):
         status = fields[i].decode("utf-8", "replace")
@@ -157,7 +133,7 @@ def check_size(root, source, texts, base, head):
     if base in NO_BASE:
         return errors, "growth: no base commit given; file sizes not compared"
     changed = changes(root, base, head)
-    base_ref = run_git(root, "merge-base", base, head).strip() if head else base
+    base_ref = run_git("merge-base", base, head, root=root).strip() if head else base
     for path in sorted(over - set(allowed)):
         if path not in changed:
             continue
@@ -166,7 +142,7 @@ def check_size(root, source, texts, base, head):
             errors.append("%s: new file has %d lines (limit %d)" % (path, lengths[path], LIMIT))
             continue
         try:
-            before = count_lines(run_git(root, "show", "%s:%s" % (base_ref, old)))
+            before = count_lines(run_git("show", "%s:%s" % (base_ref, old), root=root))
         except CheckError as e:
             raise CheckError("cannot read %s at the base commit: %s" % (old, e))
         if lengths[path] > before:

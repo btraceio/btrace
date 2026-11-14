@@ -304,12 +304,12 @@ class LayeringCheckTest(unittest.TestCase):
         rel = self.java(
             "btrace-client", "io.btrace.client", "X", "import io.btrace.agent.Main;\nimport io.btrace.agent.Other;"
         )
-        self.write("baseline.txt", "import %s:io.btrace.agent.Main\n" % rel)
+        self.write("baseline.txt", "import %s:io.btrace.agent.Main  # known\n" % rel)
         self.assertFails("new violation: import %s:io.btrace.agent.Other" % rel)
 
     def test_wildcard_import_detail_is_the_import_as_written(self):
         rel = self.java("btrace-client", "io.btrace.client", "X", "import io.btrace.agent.*;")
-        self.write("baseline.txt", "import %s:io.btrace.agent.*\n" % rel)
+        self.write("baseline.txt", "import %s:io.btrace.agent.*  # known\n" % rel)
         self.assertPasses()
 
     def test_exception_covers_only_the_named_import(self):
@@ -321,13 +321,18 @@ class LayeringCheckTest(unittest.TestCase):
         )
         self.assertFails("ProbePrinter.java:io.btrace.instr.Other")
 
+    def test_baseline_entry_without_reason_fails(self):
+        rel = "btrace-client/src/main/java/io/btrace/client/Gone.java"
+        self.write("baseline.txt", "import %s:io.btrace.agent.Main\n" % rel)
+        self.assertFails("baseline.txt:1: baseline entry has no '# reason'")
+
     def test_fixed_but_still_baselined_fails(self):
         rel = self.java("btrace-client", "io.btrace.client", "X", "import java.util.List;")
-        self.write("baseline.txt", "import %s:io.btrace.agent.Main\n" % rel)
+        self.write("baseline.txt", "import %s:io.btrace.agent.Main  # known\n" % rel)
         self.assertFails("stale baseline entry")
 
     def test_baseline_entry_for_deleted_file_reports_stale(self):
-        self.write("baseline.txt", "import btrace-client/src/main/java/io/btrace/client/Gone.java:io.btrace.agent.Main\n")
+        self.write("baseline.txt", "import btrace-client/src/main/java/io/btrace/client/Gone.java:io.btrace.agent.Main  # known\n")
         self.assertFails("stale baseline entry (remove it): import btrace-client/src/main/java/io/btrace/client/Gone.java")
 
     def test_allowed_exception_file_passes(self):

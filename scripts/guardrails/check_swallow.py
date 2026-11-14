@@ -23,13 +23,12 @@ and says so.
 
 import os
 import re
-import subprocess
 import sys
 
 # CI runs checks as `python3 -I`, which drops the script directory from sys.path.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from check_fqn import CODE, strip_code  # noqa: E402
+from _common import NO_BASE, CheckError, run_git, strip_lines  # noqa: E402
 
 SCOPE_RE = re.compile(r"(^|/)src/main/.+\.java$")
 CATCH_RE = re.compile(r"\bcatch\s*\(([^)]*)\)\s*\{")
@@ -37,7 +36,6 @@ BROAD = {"Throwable", "Exception", "RuntimeException"}
 MARKER_RE = re.compile(r"//\s*swallow:\s*\S")
 LOG_RE = re.compile(r"^(?:\w+\.)*\w*[Ll][Oo][Gg]\w*\.(?:debug|trace)\s*\(.*\)$", re.DOTALL)
 BARE_RE = re.compile(r"^(?:return(?:\s+(?:null|false))?|continue|break)$")
-NO_BASE = ("", "0" * 40)
 
 
 def is_broad(params):
@@ -62,10 +60,7 @@ def swallowed_blocks(text):
     (first line, None) so the caller reports it instead of skipping it.
     """
     raw = text.split("\n")
-    code, state = [], CODE
-    for line in raw:
-        stripped, state = strip_code(line, state)
-        code.append(stripped)
+    code = strip_lines(raw)
     flat = "\n".join(code)
     starts, pos = [], 0
     for line in code:
@@ -123,14 +118,10 @@ def touched(diff):
     return out
 
 
-def run_git(*args):
-    return subprocess.run(["git"] + list(args), check=True, capture_output=True, text=True, errors="replace").stdout
-
-
 def check_diff(base, head):
-    # Pin the diff format so user git config (diff.noprefix, diff.mnemonicPrefix, quotePath,
-    # external diff or textconv drivers) cannot change what the parser sees.
-    cmd = ["-c", "core.quotepath=off", "diff", "-U0", "--no-color", "--no-ext-diff", "--no-textconv",
+    # Pin the diff format so user git config (diff.noprefix, diff.mnemonicPrefix, external diff or
+    # textconv drivers) cannot change what the parser sees; run_git also sets core.quotepath=off.
+    cmd = ["diff", "-U0", "--no-color", "--no-ext-diff", "--no-textconv",
            "--src-prefix=a/", "--dst-prefix=b/", "--diff-filter=AMR"]
     cmd += [base + "..." + head] if head else [base]
     changes = touched(run_git(*cmd, "--", "*.java"))
@@ -173,7 +164,7 @@ def main(argv):
         return 0
     try:
         found = list(check_all() if everything else check_diff(argv[1], argv[2] if len(argv) > 2 else None))
-    except ValueError as e:
+    except (ValueError, CheckError) as e:
         print("swallow: %s; the diff was not checked" % e)
         return 1
     for path, no, parsed in found:

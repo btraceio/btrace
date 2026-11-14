@@ -151,6 +151,15 @@ class LauncherCheckTest(unittest.TestCase):
         self.pair(shell, batch)
         self.assertPasses()
 
+    def test_no_main_class_on_either_side_fails_instead_of_comparing_equal(self):
+        shell = '#!/bin/sh\nJAVA_ARGS="-Xshare:off"\n"${JAVA_HOME}/bin/java" ${JAVA_ARGS} -jar "${J}" "$@"\n'
+        batch = '@echo off\r\nset "JAVA_ARGS=-Xshare:off"\r\n"%JAVA_HOME%\\bin\\java" %JAVA_ARGS% -jar "%J%" %*\r\n'
+        self.pair(shell, batch)
+        self.assertFails(
+            "bin/tool (bat): no main class or -javaagent launch found",
+            "bin/tool (sh): no main class or -javaagent launch found",
+        )
+
     def test_script_with_no_flags_fails_instead_of_passing(self):
         self.pair(
             '#!/bin/sh\n"${JAVA_HOME}/bin/java" -cp x io.btrace.boot.Loader\n',
@@ -185,6 +194,12 @@ class LauncherCheckTest(unittest.TestCase):
         with open(self.baseline, "w") as f:
             f.write("launcher-flag bin/tool:-Xshare:off:missing-in-sh  # reason\n")
         self.assertFails("new violation: launcher-flag bin/tool:-Xmx1g:missing-in-sh")
+
+    def test_baseline_entry_without_reason_fails(self):
+        self.pair(sh(), bat("set JAVA_ARGS=%JAVA_ARGS% -Xshare:off"))
+        with open(self.baseline, "w") as f:
+            f.write("# header\nlauncher-flag bin/tool:-Xshare:off:missing-in-sh\n")
+        self.assertFails("baseline.txt:2: baseline entry has no '# reason': launcher-flag bin/tool:-Xshare:off:missing-in-sh")
 
 
 if __name__ == "__main__":

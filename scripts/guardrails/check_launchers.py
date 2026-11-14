@@ -18,8 +18,9 @@ Differences that predate the rule live in baselines/launchers.txt (see _baseline
 `launcher-flag bin/<name>:<flag>:missing-in-<sh|bat>` and `launcher-main bin/<name>:sh=<classes>:bat=<classes>`.
 
 These are errors on their own and cannot be baselined, because nothing was compared: a script without
-a twin, a file that cannot be read as UTF-8, a script with no java command line, and a script
-from which no JVM flag at all could be read.
+a twin, a file that cannot be read as UTF-8, a script with no java command line, a script
+from which no JVM flag at all could be read, and a script whose java command lines name no main
+class and none of which is a `-javaagent:` launch (the form `btracer` uses, which has no main class).
 
 Usage:
   check_launchers.py [ROOT] [--baseline FILE]
@@ -50,6 +51,7 @@ FLAG_RE = re.compile(
 )
 JAVA_CMD_RE = re.compile(r"[/\\]bin[/\\]java(?:\.exe)?\b|(?:^|\s)java\s")
 CLASS_RE = re.compile(r"^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\.[A-Z][\w$]*$")
+JAVAAGENT_RE = re.compile(r"""(?:^|[\s"'])-javaagent:""")
 OPTIONS_WITH_VALUE = ("-cp", "-classpath", "--class-path", "-p", "--module-path")
 
 
@@ -109,10 +111,10 @@ def main_class(line):
 
 
 def parse(path, is_batch):
-    """Returns (flags, main classes, java line count) of a launcher script."""
+    """Returns (flags, main classes, java line count, -javaagent launch count) of a launcher script."""
     with open(path, encoding="utf-8") as f:
         text = f.read()
-    flags, mains, java_lines = set(), set(), 0
+    flags, mains, java_lines, agent_launches = set(), set(), 0, 0
     for line in logical_lines(text, "^" if is_batch else "\\"):
         if is_ignored(line, is_batch):
             continue
@@ -123,7 +125,9 @@ def parse(path, is_batch):
             cls = main_class(line)
             if cls:
                 mains.add(cls)
-    return flags, mains, java_lines
+            elif JAVAAGENT_RE.search(line):
+                agent_launches += 1
+    return flags, mains, java_lines, agent_launches
 
 
 def check(root, found, errors):
@@ -152,17 +156,23 @@ def check(root, found, errors):
         if len(sides) < 2:
             continue
         unparsed = False
-        for side, (flags, _mains, java_lines) in sorted(sides.items()):
+        for side, (flags, mains, java_lines, agent_launches) in sorted(sides.items()):
             if java_lines == 0:
                 errors.append("%s (%s): no java command line found, cannot compare" % (rel, side))
                 unparsed = True
             elif not flags:
                 errors.append("%s (%s): no JVM flag found, cannot compare" % (rel, side))
                 unparsed = True
+            elif not mains and not agent_launches:
+                errors.append(
+                    "%s (%s): no main class or -javaagent launch found on a java command line, cannot compare"
+                    % (rel, side)
+                )
+                unparsed = True
         if unparsed:
             continue
-        sh_flags, sh_mains, _ = sides["sh"]
-        bat_flags, bat_mains, _ = sides["bat"]
+        sh_flags, sh_mains, _, _ = sides["sh"]
+        bat_flags, bat_mains, _, _ = sides["bat"]
         for flag in sh_flags - bat_flags:
             found.add("launcher-flag %s:%s:missing-in-bat" % (rel, flag))
         for flag in bat_flags - sh_flags:
@@ -180,7 +190,10 @@ def main(argv):
     args = parser.parse_args(argv[1:])
     found, errors = set(), []
     check(args.root, found, errors)
-    errors.extend(_baseline.compare(found, args.baseline))
+    try:
+        errors.extend(_baseline.compare(found, args.baseline))
+    except _baseline.BaselineError as e:
+        errors.append(str(e))
     for e in errors:
         print("launchers: " + e)
     if errors:

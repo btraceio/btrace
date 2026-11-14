@@ -19,6 +19,11 @@ import os
 import re
 import sys
 
+# CI runs checks as `python3 -I`, which drops the script directory from sys.path.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from _common import CheckError  # noqa: E402
+
 PROPS = "btrace-core/src/main/resources/io/btrace/core/messages.properties"
 SKIP_DIRS = {".git", "build", "node_modules", ".claude", ".superpowers", ".idea"}
 
@@ -26,10 +31,6 @@ SKIP_DIRS = {".git", "build", "node_modules", ".claude", ".superpowers", ".idea"
 # string is skipped because the whole literal is consumed as one token.
 TOKEN = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'', re.S)
 CALL = re.compile(r"\b(?:Messages\s*\.\s*(?:get|format)|reportError|reportSafetyError)\s*\(\s*\x00(\d+)\x00\s*[,)]")
-
-
-class CheckError(Exception):
-    pass
 
 
 def read_text(path, rel):

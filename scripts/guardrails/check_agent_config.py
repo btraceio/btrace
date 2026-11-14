@@ -11,9 +11,9 @@ Fails, listing every violation, when:
     resolve;
   - a Gradle project path such as `:btrace-instr:test` in an agent or contributor document names
     a project that does not exist;
-  - the design principles catalog (`docs/architecture/DesignPrinciples.md`) has a `## P<n>.`
-    section without its four fields, an "Enforced by" that is neither `unenforced (judgment)` nor
-    existing backticked paths, or a `scripts/guardrails/check_*.py` that neither the catalog nor
+  - the design principles catalog (`docs/architecture/DesignPrinciples.md`) does not hold exactly
+    the sections P1..P<PRINCIPLE_COUNT> in order, has a `## P<n>.` section without its four
+    fields, an "Enforced by" that is neither `unenforced (judgment)` nor existing backticked paths, or a `scripts/guardrails/check_*.py` that neither the catalog nor
     `scripts/guardrails/README.md` names.
 
 Usage: check_agent_config.py [REPO_ROOT]   (default: the current directory)
@@ -47,6 +47,9 @@ CATALOG = "docs/architecture/DesignPrinciples.md"
 GUARDRAILS_README = "scripts/guardrails/README.md"
 UNENFORCED = "unenforced (judgment)"
 PRINCIPLE_RE = re.compile(r"^##\s+(P\d+)\.\s")
+# The catalog holds exactly P1..P<PRINCIPLE_COUNT>, in order; deleting or renumbering a principle
+# fails the check, so a change to this number is a reviewed change to the catalog's scope.
+PRINCIPLE_COUNT = 9
 CATALOG_FIELDS = ("Rule", "Why", "Enforced by", "Exceptions")
 BACKTICKED_RE = re.compile(r"`([^`]+)`")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
@@ -251,6 +254,13 @@ def check_enforced_by(root, errors):
     sections, malformed = catalog_sections(catalog)
     for no, heading in malformed:
         errors.append("%s:%d: heading '%s' must read '## P<n>. <title>'" % (CATALOG, no, heading))
+    ids = [pid for pid, _no, _fields in sections]
+    expected = ["P%d" % n for n in range(1, PRINCIPLE_COUNT + 1)]
+    if ids != expected:
+        errors.append(
+            "%s: principles must be exactly %s in order, found %s"
+            % (CATALOG, ", ".join(expected), ", ".join(ids) or "none")
+        )
     for pid, no, fields in sections:
         for field in CATALOG_FIELDS:
             if field not in fields:

@@ -100,6 +100,25 @@ class RuntimeSafetyTest(unittest.TestCase):
         code, out = self.run_check()
         self.assertEqual(0, code, out)
 
+    def test_method_reference_fails(self):
+        self.write(MAIN, java("return check(Thread::interrupted);"))
+        self.assertFails("Queue.java:5 references Thread::interrupted")
+
+    def test_qualified_method_reference_with_whitespace_fails(self):
+        self.write(MAIN, java("return check(java.lang.Thread\n      :: interrupted);"))
+        self.assertFails("Queue.java:5 references Thread::interrupted")
+
+    def test_method_reference_in_comment_or_string_or_on_other_class_passes(self):
+        self.write(
+            MAIN,
+            java(
+                '// Thread::interrupted\n    String s = "Thread::interrupted";\n'
+                "    return check(MyThread::interrupted) || check(Thread::interruptedLater);"
+            ),
+        )
+        code, out = self.run_check()
+        self.assertEqual(0, code, out)
+
     def test_missing_runtime_source_root_is_an_error(self):
         shutil.rmtree(os.path.join(self.root, "btrace-runtime", "src"))
         self.assertTrue(os.path.isdir(os.path.join(self.root, "btrace-runtime")))

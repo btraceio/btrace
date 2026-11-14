@@ -1,12 +1,17 @@
 """Hermetic tests for check_agent_config.py: each builds a throw-away git repository."""
 
 import os
+import re
 import subprocess
 import sys
 import tempfile
 import unittest
 
 SCRIPT = os.path.join(os.path.dirname(__file__), "..", "check_agent_config.py")
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from check_agent_config import PRINCIPLE_COUNT  # noqa: E402
 
 CATALOG = "docs/architecture/DesignPrinciples.md"
 
@@ -121,8 +126,36 @@ class AgentConfigCheckTest(unittest.TestCase):
             ".github/copilot-instructions.md:1: Gradle project :btrace-instr does not exist"
         )
 
-    def catalog(self, *sections):
+    def catalog(self, *sections, fill=True):
+        """Writes the catalog; with fill, ids the given sections do not use get a valid filler section."""
+        given = {int(re.match(r"## P(\d+)\.", s).group(1)): s for s in sections}
+        if fill:
+            sections = [given.get(n) or principle(n, "unenforced (judgment)") for n in range(1, PRINCIPLE_COUNT + 1)]
         self.write(CATALOG, "# Design principles\n\n" + "\n".join(sections))
+
+    def test_full_catalog_passes(self):
+        self.catalog()
+        code, out = self.run_check()
+        self.assertEqual(0, code, out)
+
+    def test_catalog_with_a_principle_deleted_fails(self):
+        self.catalog(*[principle(n, "unenforced (judgment)") for n in range(1, PRINCIPLE_COUNT)], fill=False)
+        self.assertFails("principles must be exactly P1, P2", "found P1, P2, P3, P4, P5, P6, P7, P8\n")
+
+    def test_catalog_with_a_gap_in_the_ids_fails(self):
+        numbers = [n for n in range(1, PRINCIPLE_COUNT + 2) if n != 4]
+        self.catalog(*[principle(n, "unenforced (judgment)") for n in numbers], fill=False)
+        self.assertFails("principles must be exactly", "found P1, P2, P3, P5")
+
+    def test_catalog_out_of_order_fails(self):
+        numbers = [2, 1] + list(range(3, PRINCIPLE_COUNT + 1))
+        self.catalog(*[principle(n, "unenforced (judgment)") for n in numbers], fill=False)
+        self.assertFails("principles must be exactly", "found P2, P1")
+
+    def test_catalog_with_an_extra_principle_fails(self):
+        numbers = range(1, PRINCIPLE_COUNT + 2)
+        self.catalog(*[principle(n, "unenforced (judgment)") for n in numbers], fill=False)
+        self.assertFails("principles must be exactly", "P%d" % (PRINCIPLE_COUNT + 1))
 
     def test_catalog_pointing_at_missing_check_fails(self):
         self.catalog(principle(1, "`scripts/guardrails/check_nope.py`"))

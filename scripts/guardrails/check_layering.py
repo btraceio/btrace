@@ -44,7 +44,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import _baseline  # noqa: E402
-import check_fqn  # noqa: E402
+from _common import strip_lines  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_RULES = os.path.join(HERE, "layering_rules.json")
@@ -209,10 +209,8 @@ def scan_java(root, rules, found, errors):
             continue
         with open(os.path.join(root, path), encoding="utf-8", errors="replace") as f:
             lines = f.read().splitlines()
-        state = check_fqn.CODE
-        for line in lines:
-            literals = []
-            code, state = check_fqn.strip_code(line, state, literals)
+        per_line = []
+        for code, literals in zip(strip_lines(lines, per_line), per_line):
             imported = IMPORT_RE.match(code)
             if imported:
                 for rule in imports_rules:
@@ -286,7 +284,10 @@ def main(argv):
     found, errors = set(), []
     check_edges(args.root, rules, found, errors)
     scan_java(args.root, rules, found, errors)
-    errors.extend(_baseline.compare(found, args.baseline))
+    try:
+        errors.extend(_baseline.compare(found, args.baseline))
+    except _baseline.BaselineError as e:
+        errors.append(str(e))
     for e in errors:
         print("layering: " + e)
     if errors:
