@@ -1,8 +1,12 @@
 # Agent options (io.btrace.core.Args) that the usage text or docs/QuickReference.md does not
 # document. Format: <usage|quickref> <option>  # reason. A new gap fails; a gap fixed in the docs must
-# be removed from here (stale). Checked by ArgsRegistryTest.
-usage agentJar   # Args constant has no reader in Main; only btrace-qe's AgentArgsValuesFamily names it; undocumented since before the check existed
-usage libs       # Main reads it (argMap.get(LIBS)) but the usage text never describes it
-usage probes     # Main reads it (argMap.get(PROBES)) as an embedded-extension argument; not in the usage text
+# be removed from here (stale). Checked by ArgsRegistryTest, which defines what "documented" means.
+usage agentJar    # Args constant has no reader in Main; only btrace-qe's AgentArgsValuesFamily names it; no alias in the usage text
+usage libs        # Main reads it (argMap.get(LIBS)) but the usage text never describes it
+usage probes      # Main reads it (argMap.get(PROBES)) as an embedded-extension argument; not in the usage text
+usage output      # Main reads it (argMap.get(OUTPUT)) next to probes= (stdout, jfr or file); the word occurs only in descriptions of other options
 quickref agentJar # see usage agentJar
-quickref libs    # see usage libs; docs/architecture/agent-manifest-libs.md covers it outside QuickReference
+quickref help     # Main reads help= and prints usage; QuickReference mentions only the client command `-r help`, not the agent option
+quickref libs     # see usage libs; docs/architecture/agent-manifest-libs.md covers it outside QuickReference
+quickref probes   # no `probes=` anywhere in QuickReference (its other uses of the word are prose)
+quickref output   # no `output=` in QuickReference; docs/BTraceExtensionDevelopmentGuide.md mentions an explicit output= agent argument in a code comment only

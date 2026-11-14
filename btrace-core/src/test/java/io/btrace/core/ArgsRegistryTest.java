@@ -36,6 +36,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.BiPredicate;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
@@ -46,8 +48,20 @@ import org.junit.jupiter.api.Test;
  * <p>The baseline follows the project's ratchet rule: an option that is undocumented and not listed
  * fails as new, and a listed entry that is documented now (or whose option is gone) fails as stale.
  * Entries read {@code usage <option>} or {@code quickref <option>}, optionally followed by {@code #
- * reason}. An option counts as documented when its name appears as a whole word: the usage text
- * writes it as {@code name description} and QuickReference as {@code name=} or {@code `name=`}.
+ * reason}. An option counts as documented by exactly these rules:
+ *
+ * <ul>
+ *   <li>usage text (the loaded {@code btrace.agent.usage} value: the properties loader has already
+ *       resolved {@code \n} and dropped the indentation of continuation lines, so every option line
+ *       reads {@code "\n name description"}): the name is a list head, that is, one of the
+ *       comma-separated names that start a line indented by exactly two spaces and are followed by
+ *       whitespace, as in {@code port command server port} or {@code grant, deny, grantAll accepted
+ *       ...}. The usage sentence and header (no indentation) and the same word inside a description
+ *       do not count;
+ *   <li>QuickReference: the name is followed directly by {@code =} and is not the tail of a longer
+ *       identifier, as in {@code `port=<port>`}. The bare word in prose, or {@code
+ *       scriptOutputFile=} for {@code output}, does not count.
+ * </ul>
  *
  * <p>Gradle runs tests with the module directory as working directory, so QuickReference is found
  * at {@code ../docs/QuickReference.md}.
@@ -60,7 +74,7 @@ class ArgsRegistryTest {
 
   @Test
   void everyOptionIsInTheUsageText() throws Exception {
-    assertDocumented("usage", usageText());
+    assertDocumented("usage", usageText(), ArgsRegistryTest::inUsage);
   }
 
   @Test
@@ -70,7 +84,7 @@ class ArgsRegistryTest {
         "QuickReference not found at " + QUICK_REFERENCE.toAbsolutePath().normalize());
     String text = new String(Files.readAllBytes(QUICK_REFERENCE), StandardCharsets.UTF_8);
     assertFalse(text.trim().isEmpty(), "QuickReference is empty");
-    assertDocumented("quickref", text);
+    assertDocumented("quickref", text, ArgsRegistryTest::inQuickReference);
   }
 
   @Test
@@ -91,14 +105,70 @@ class ArgsRegistryTest {
     assertTrue(problems.isEmpty(), "malformed baseline entries: " + problems);
   }
 
-  private static void assertDocumented(String surface, String text) throws Exception {
+  private static final Pattern USAGE_HEAD =
+      Pattern.compile("^ {2}([A-Za-z]\\w*(?:, *[A-Za-z]\\w*)*)(?=\\s)", Pattern.MULTILINE);
+
+  /** Whether {@code option} is a list head in the usage text; see the class comment. */
+  static boolean inUsage(String usage, String option) {
+    Matcher m = USAGE_HEAD.matcher(usage);
+    while (m.find()) {
+      for (String name : m.group(1).split(",")) {
+        if (name.trim().equals(option)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Whether {@code option=} appears in the text as a whole identifier; see the class comment. */
+  static boolean inQuickReference(String text, String option) {
+    return Pattern.compile("(?<![A-Za-z0-9_])" + Pattern.quote(option) + "=").matcher(text).find();
+  }
+
+  @Test
+  void usageMatcherAcceptsListHeadsOnly() {
+    String usage =
+        "Usage: java -javaagent:btrace.jar=<arguments>\n"
+            + "where arguments is name=value pairs. output is mentioned here\n"
+            + "output at the start of an unindented line\n"
+            + "  port             command server port; the output goes to stdout\n"
+            + "  grant, deny, grantAll  accepted for compatibility only\n"
+            + "  (use allowExtensions or the output file)\n"
+            + "  scriptOutputFile the path to a file\n";
+    assertTrue(inUsage(usage, "port"), "list head");
+    assertTrue(inUsage(usage, "scriptOutputFile"), "list head");
+    assertTrue(inUsage(usage, "grant"), "first of a comma head");
+    assertTrue(inUsage(usage, "deny"), "middle of a comma head");
+    assertTrue(inUsage(usage, "grantAll"), "last of a comma head");
+    assertFalse(inUsage(usage, "output"), "word in descriptions and prose lines only");
+    assertFalse(inUsage(usage, "allowExtensions"), "word in a description line only");
+    assertFalse(inUsage(usage, "por"), "prefix of a head");
+    assertFalse(inUsage(usage, "Usage"), "first line is not an option list");
+  }
+
+  @Test
+  void quickReferenceMatcherNeedsNameEquals() {
+    String text =
+        "- `port=<port>` - the output goes to stdout\n"
+            + "- `scriptOutputFile=<file>`, `dumpDir=<dir>`\n"
+            + "java -javaagent:btrace.jar=script=MyTrace.class,noServer=true MyApp\n";
+    assertTrue(inQuickReference(text, "port"));
+    assertTrue(inQuickReference(text, "dumpDir"));
+    assertTrue(inQuickReference(text, "noServer"));
+    assertTrue(inQuickReference(text, "script"));
+    assertFalse(inQuickReference(text, "output"), "bare word in prose");
+    assertFalse(inQuickReference(text, "Output"), "suffix of scriptOutputFile=");
+    assertFalse(inQuickReference(text, "File"), "suffix of scriptOutputFile=");
+  }
+
+  private static void assertDocumented(
+      String surface, String text, BiPredicate<String, String> documentedIn) throws Exception {
     Map<String, String> options = options();
     assertFalse(options.isEmpty(), "no public static final String constants found in Args");
     TreeSet<String> missing = new TreeSet<>();
     for (String option : options.values()) {
-      if (!Pattern.compile("(?<![A-Za-z0-9_])" + Pattern.quote(option) + "(?![A-Za-z0-9_])")
-          .matcher(text)
-          .find()) {
+      if (!documentedIn.test(text, option)) {
         missing.add(surface + " " + option);
       }
     }
@@ -155,8 +225,8 @@ class ArgsRegistryTest {
   private static List<String> baselineLines() throws IOException {
     try (InputStream in = ArgsRegistryTest.class.getResourceAsStream(BASELINE)) {
       assertNotNull(in, BASELINE + " is not on the test classpath");
-      byte[] buf = new byte[in.available() > 0 ? in.available() : 1024];
       ByteArrayOutputStream out = new ByteArrayOutputStream();
+      byte[] buf = new byte[1024];
       int n;
       while ((n = in.read(buf)) > 0) {
         out.write(buf, 0, n);
