@@ -247,8 +247,13 @@ jobs:
 
       - name: Full distribution build
         run: |
+          # compileTestProbes: the clean masked-JAR gate above deleted the compiled test traces
+          # the unit tests produced, and the integration jobs download them as test-trace
           scripts/run-release-gate.sh full-distribution release-gate-logs -- \
-            ./gradlew --no-daemon --parallel --build-cache :btrace-dist:build
+            ./gradlew --no-daemon --parallel --build-cache :btrace-dist:build :btrace-agent:compileTestProbes
+          # -print -quit, not `| grep -q .`: under pipefail, grep exiting at the first match can
+          # SIGPIPE find and fail the step even though the traces are there
+          test -n "$(find btrace-agent/build/classes/traces -name '*.class' -type f -print -quit)"
 
       - name: Add filtered release-gate logs to summary
         if: always()
@@ -272,9 +277,10 @@ jobs:
         with:
           name: dist-build
           retention-days: 1
-          path: |
-            btrace-dist/build
-            btrace-agent/build/classes/traces
+          # btrace-dist/build only: with a second path the artifact root becomes their common
+          # parent (the repository root), and the integration jobs, which download it into
+          # btrace-dist/build, would find it nested. The traces travel as test-trace.
+          path: btrace-dist/build
 
       - name: Upload test trace data
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
