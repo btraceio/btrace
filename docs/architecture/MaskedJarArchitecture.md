@@ -113,13 +113,15 @@ Bootstrap CL (core API, runtime, Loader)
 
 #### MaskedClassLoader (`io.btrace.boot.MaskedClassLoader`)
 
-A `URLClassLoader` subclass that loads classes from `.classdata` files. The lookup order for `findClass(name)`:
+A `URLClassLoader` subclass that loads classes from `.classdata` files. It does not override `loadClass`, so class loading is parent-first: the parent (the bootstrap loader for the agent) is asked first, and `findClass(name)` runs only when the parent fails:
 
 1. Check section-specific path: `META-INF/btrace/{section}/{class-path}.classdata`
 2. Check shared path: `META-INF/btrace/shared/{class-path}.classdata`
-3. Throw `ClassNotFoundException` (delegates to parent via standard classloader contract)
+3. Throw `ClassNotFoundException`
 
-Resource loading (`findResource`, `getResourceAsStream`) follows the same pattern: section-specific first, then shared, then the JAR root.
+A class that is both a root `.class` entry and a masked `.classdata` entry is therefore loaded from the root in both modes, because both parents see the root.
+
+Resource loading (`findResource`, `getResourceAsStream`) checks the section-specific path, then the JAR root; it does not consult the shared section, and `getResourceAsStream` does not ask the parent first.
 
 #### MaskedJarUtils (`io.btrace.boot.MaskedJarUtils`)
 
