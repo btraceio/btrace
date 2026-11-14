@@ -23,9 +23,9 @@ check fails CI.
 
 **Why:** Nothing in the build checks it, so the exceptions accumulate quietly: three extensions import BTrace types outside `io.btrace.core.extensions` (`OTelImpl`, `StatsdImpl`, `ExternalTypeTestServiceImpl`), `BTraceRuntimeImplBase` names `io.btrace.agent.PerfReaderImpl` in a string literal, and the package `io.btrace.runtime` exists in both `btrace-core` and `btrace-runtime`.
 
-**Enforced by:** unenforced (judgment)
+**Enforced by:** `scripts/guardrails/check_layering.py`
 
-**Exceptions:** None.
+**Exceptions:** `scripts/guardrails/layering_rules.json` holds the allowed project edges and the per-file exceptions (`ProbePrinter.java` imports `io.btrace.instr`; `Loader.java` names the agent's main class). `scripts/guardrails/baselines/layering.txt` lists the violations that predate the check; it only shrinks.
 
 ## P2. Masked-JAR placement is deliberate
 

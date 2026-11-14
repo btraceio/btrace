@@ -1,0 +1,318 @@
+{
+  "separate_builds": [
+    "btrace-gradle-plugin",
+    "buildSrc"
+  ],
+  "edges": [
+    [
+      "benchmarks:agent-benchmark",
+      "btrace-compiler"
+    ],
+    [
+      "benchmarks:agent-benchmark",
+      "btrace-dist"
+    ],
+    [
+      "benchmarks:runtime-benchmarks",
+      "btrace-agent"
+    ],
+    [
+      "benchmarks:runtime-benchmarks",
+      "btrace-compiler"
+    ],
+    [
+      "benchmarks:runtime-benchmarks",
+      "btrace-dist"
+    ],
+    [
+      "benchmarks:runtime-benchmarks",
+      "btrace-extensions:btrace-statsd"
+    ],
+    [
+      "benchmarks:runtime-benchmarks",
+      "btrace-runtime"
+    ],
+    [
+      "btrace-agent",
+      "btrace-compiler"
+    ],
+    [
+      "btrace-agent",
+      "btrace-core"
+    ],
+    [
+      "btrace-agent",
+      "btrace-extensions:btrace-statsd"
+    ],
+    [
+      "btrace-agent",
+      "btrace-extensions:btrace-utils"
+    ],
+    [
+      "btrace-agent",
+      "btrace-runtime"
+    ],
+    [
+      "btrace-client",
+      "btrace-agent"
+    ],
+    [
+      "btrace-client",
+      "btrace-boot"
+    ],
+    [
+      "btrace-client",
+      "btrace-compiler"
+    ],
+    [
+      "btrace-client",
+      "btrace-core"
+    ],
+    [
+      "btrace-compiler",
+      "btrace-agent"
+    ],
+    [
+      "btrace-compiler",
+      "btrace-boot"
+    ],
+    [
+      "btrace-compiler",
+      "btrace-core"
+    ],
+    [
+      "btrace-compiler",
+      "btrace-extensions:btrace-metrics"
+    ],
+    [
+      "btrace-compiler",
+      "btrace-runtime"
+    ],
+    [
+      "btrace-dist",
+      "btrace-agent"
+    ],
+    [
+      "btrace-dist",
+      "btrace-client"
+    ],
+    [
+      "btrace-dist",
+      "btrace-compiler"
+    ],
+    [
+      "btrace-dtrace",
+      "btrace-core"
+    ],
+    [
+      "btrace-extensions:btrace-contracts",
+      "btrace-core"
+    ],
+    [
+      "btrace-extensions:btrace-ext-test",
+      "btrace-core"
+    ],
+    [
+      "btrace-extensions:btrace-gpu-bridge",
+      "btrace-core"
+    ],
+    [
+      "btrace-extensions:btrace-llm-trace",
+      "btrace-core"
+    ],
+    [
+      "btrace-extensions:btrace-metrics",
+      "btrace-core"
+    ],
+    [
+      "btrace-extensions:btrace-otel",
+      "btrace-core"
+    ],
+    [
+      "btrace-extensions:btrace-rag-quality",
+      "btrace-core"
+    ],
+    [
+      "btrace-extensions:btrace-statsd",
+      "btrace-core"
+    ],
+    [
+      "btrace-extensions:btrace-utils",
+      "btrace-core"
+    ],
+    [
+      "btrace-extensions:examples:btrace-hadoop",
+      "btrace-core"
+    ],
+    [
+      "btrace-extensions:examples:btrace-spark",
+      "btrace-core"
+    ],
+    [
+      "btrace-qe",
+      "btrace-client"
+    ],
+    [
+      "btrace-qe",
+      "btrace-core"
+    ],
+    [
+      "btrace-runtime",
+      "btrace-core"
+    ],
+    [
+      "integration-tests",
+      "btrace-client"
+    ],
+    [
+      "integration-tests",
+      "btrace-compiler"
+    ],
+    [
+      "integration-tests",
+      "btrace-core"
+    ],
+    [
+      "integration-tests",
+      "btrace-extensions:btrace-ext-test"
+    ],
+    [
+      "integration-tests",
+      "btrace-extensions:btrace-metrics"
+    ]
+  ],
+  "imports": [
+    {
+      "module": "btrace-boot",
+      "forbidden": [
+        "io.btrace.core",
+        "io.btrace.extension",
+        "io.btrace.runtime",
+        "io.btrace.dtrace",
+        "io.btrace.agent",
+        "io.btrace.instr",
+        "io.btrace.compiler",
+        "io.btrace.client"
+      ]
+    },
+    {
+      "module": "btrace-core",
+      "forbidden": [
+        "io.btrace.boot",
+        "io.btrace.dtrace",
+        "io.btrace.agent",
+        "io.btrace.instr",
+        "io.btrace.compiler",
+        "io.btrace.client"
+      ]
+    },
+    {
+      "module": "btrace-agent",
+      "package": "io.btrace.instr",
+      "forbidden": [
+        "io.btrace.agent"
+      ]
+    },
+    {
+      "module": "btrace-client",
+      "forbidden": [
+        "io.btrace.agent"
+      ]
+    },
+    {
+      "module": "btrace-client",
+      "forbidden": [
+        "io.btrace.instr"
+      ],
+      "exceptions": {
+        "btrace-client/src/main/java/io/btrace/client/ProbePrinter.java": [
+          "io.btrace.instr"
+        ]
+      }
+    },
+    {
+      "module": "btrace-extensions",
+      "forbidden": [
+        "io.btrace.core",
+        "io.btrace.extension",
+        "io.btrace.runtime",
+        "io.btrace.boot",
+        "io.btrace.dtrace",
+        "io.btrace.agent",
+        "io.btrace.instr",
+        "io.btrace.compiler",
+        "io.btrace.client"
+      ],
+      "allow": [
+        "io.btrace.core.extensions"
+      ]
+    },
+    {
+      "module": "btrace-qe",
+      "forbidden": [
+        "io.btrace.agent",
+        "io.btrace.instr",
+        "io.btrace.runtime"
+      ]
+    },
+    {
+      "module": "integration-tests",
+      "forbidden": [
+        "io.btrace.agent",
+        "io.btrace.instr",
+        "io.btrace.runtime"
+      ]
+    }
+  ],
+  "upper_layer_literals": [
+    {
+      "module": "btrace-boot",
+      "forbidden": [
+        "io.btrace.agent"
+      ],
+      "exceptions": {
+        "btrace-boot/src/main/java/io/btrace/boot/Loader.java": [
+          "io.btrace.agent"
+        ]
+      },
+      "source_sets": [
+        "main"
+      ]
+    },
+    {
+      "module": "btrace-core",
+      "forbidden": [
+        "io.btrace.agent",
+        "io.btrace.instr",
+        "io.btrace.compiler",
+        "io.btrace.client",
+        "io.btrace.runtime"
+      ],
+      "source_sets": [
+        "main"
+      ]
+    },
+    {
+      "module": "btrace-runtime",
+      "forbidden": [
+        "io.btrace.agent",
+        "io.btrace.instr",
+        "io.btrace.compiler",
+        "io.btrace.client"
+      ],
+      "source_sets": [
+        "main"
+      ]
+    },
+    {
+      "module": "btrace-agent",
+      "package": "io.btrace.instr",
+      "forbidden": [
+        "io.btrace.agent"
+      ],
+      "source_sets": [
+        "main"
+      ]
+    }
+  ]
+}

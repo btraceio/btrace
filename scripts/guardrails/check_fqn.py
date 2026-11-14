@@ -26,10 +26,12 @@ MARKER_RE = re.compile(r"//\s*fqn:\s*\S")
 CODE, BLOCK, TEXT = "code", "block", "text"
 
 
-def strip_code(line, state):
+def strip_code(line, state, literals=None):
     """Returns (the line's code without comments and literals, state after the line).
 
     state is CODE, BLOCK (inside /* */) or TEXT (inside a \"\"\" text block); both may span lines.
+    When literals is a list, the raw contents of each single-line string or char literal are
+    appended to it; text blocks are not collected.
     """
     out, i, n = [], 0, len(line)
     while i < n:
@@ -51,8 +53,11 @@ def strip_code(line, state):
             break
         elif line[i] in "\"'":
             quote, i = line[i], i + 1
+            start = i
             while i < n and line[i] != quote:
                 i += 2 if line[i] == "\\" else 1
+            if literals is not None:
+                literals.append(line[start:i])
             i += 1
             out.append('""')
         else:
