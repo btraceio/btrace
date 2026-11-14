@@ -32,7 +32,7 @@ def derive(root=ROOT):
     for path in files:
         if path and "/src/test/" not in path:
             with open(os.path.join(root, path), encoding="utf-8", errors="replace") as f:
-                sources[path] = strip_comments(f.read())
+                sources[path] = set(re.findall(r"\w+", strip_comments(f.read())))
     names = sorted(
         os.path.basename(p)[:-5]
         for p in sources
@@ -45,10 +45,9 @@ def derive(root=ROOT):
         for name in names:
             if name in members:
                 continue
-            word = re.compile(r"\b%s\b" % name)
             referrers = [
-                p for p, text in sources.items()
-                if os.path.basename(p)[:-5] != name and word.search(text)
+                p for p, words in sources.items()
+                if os.path.basename(p)[:-5] != name and name in words
             ]
             if referrers and all(
                 p.startswith(INSTR_DIR) and os.path.basename(p)[:-5] in members for p in referrers

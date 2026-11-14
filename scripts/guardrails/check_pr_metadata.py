@@ -65,7 +65,8 @@ ASM_BACKEND = tuple(
         "VariableMapper",
     )
 )
-SIBLING_RE = re.compile(r"^Sibling:\s*(\S.*)$", re.M)
+# Same line only: `[ \t]*`, not `\s*`, so an empty `Sibling:` cannot borrow the next line as its reason.
+SIBLING_RE = re.compile(r"^Sibling:[ \t]*(\S.*)$", re.M)
 # The template's unfilled prompt, `Sibling: <...>`, carries no reason.
 SIBLING_PLACEHOLDER_RE = re.compile(r"^<[^<>]*>$")
 GOLDEN_PREFIX = "btrace-agent/src/test/resources/instrumentorTestData/"

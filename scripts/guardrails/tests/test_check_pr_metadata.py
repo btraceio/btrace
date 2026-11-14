@@ -185,10 +185,31 @@ class PrMetadataCheckTest(unittest.TestCase):
             with self.subTest(changed=changed):
                 self.assertPasses("fix(instr): x", FILLED, changed=changed)
 
+    def test_old_or_new_path_of_a_renamed_asm_file_triggers_the_rule(self):
+        # The workflow lists both paths of a rename (--no-renames). The old path is an ASM path
+        # until ASM_BACKEND is updated; the new one is once it is. Either alone must count.
+        old, new = INSTR + "VariableMapper.java", INSTR + "MethodInstrumentor.java"
+        for changed in ([old, INSTR + "Elsewhere.java"], [new, INSTR + "Elsewhere.java"]):
+            with self.subTest(changed=changed):
+                self.assertFailsWith("ASM instrumentation backend", "fix(instr): x", FILLED, changed=changed)
+
     def test_workflow_lists_both_sides_of_a_rename(self):
-        # A moved or deleted backend file must count as touching that side.
         with open(os.path.join(REPO, ".github", "workflows", "pr-metadata.yml"), encoding="utf-8") as f:
             self.assertIn("git diff --name-only --no-renames", f.read())
+
+    def test_empty_sibling_line_does_not_borrow_the_next_line(self):
+        for eol in ("\n", "\r\n"):
+            for tail in ("Sibling:", "Sibling:  ", "Sibling:\t"):
+                with self.subTest(eol=repr(eol), tail=repr(tail)):
+                    body = (FILLED + "\n" + tail + "\n\n## Notes\nsome text\n").replace("\n", eol)
+                    self.assertFailsWith("Sibling: <reason>", "fix(instr): x", body, changed=[ASM_FILE])
+        self.assertIsNone(check_pr_metadata.sibling_reason("Sibling:\r\n\r\nfoo"))
+        self.assertIsNone(check_pr_metadata.sibling_reason("Sibling:  \nnext line text"))
+
+    def test_crlf_body_with_a_real_reason_passes(self):
+        body = (FILLED + "\nSibling: ClassFile backend already filters\n").replace("\n", "\r\n")
+        self.assertPasses("fix(instr): x", body, changed=[ASM_FILE])
+        self.assertEqual("ok", check_pr_metadata.sibling_reason("Sibling: ok\r\n"))
 
     def test_bots_are_exempt_from_the_sibling_rule(self):
         self.assertPasses("fix(deps): bump asm", "Renovate body", user_type="Bot", changed=[ASM_FILE])
