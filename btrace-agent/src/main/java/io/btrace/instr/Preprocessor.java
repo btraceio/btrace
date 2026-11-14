@@ -177,8 +177,8 @@ final class Preprocessor {
 
     GUARDED_ANNOTS.addAll(RT_AWARE_ANNOTS);
 
-    // @OnExit is rtAware but not guarded
-    RT_AWARE_ANNOTS.add(Constants.ONEXIT_DESC);
+    // rtAware, not guarded: the runtime enters before calling them, so a guard would never run them
+    RT_AWARE_ANNOTS.addAll(Arrays.asList(Constants.ONEXIT_DESC, Constants.ONLOWMEMORY_DESC));
   }
 
   private final Set<String> tlsFldNames = new HashSet<>();

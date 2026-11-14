@@ -295,8 +295,10 @@ read from the named files when this section was written, and the files are autho
 - **G12, handler annotations (P7).** No unguarded-annotation set was added to production code;
   `Preprocessor` changed visibility only. `HandlerAnnotationClassificationTest` keeps the non-handler
   annotations (`Location`, `Sampled`) in a test-side `NOT_HANDLERS` list, and
-  `btrace-agent/src/test/resources/handler-annotation-baseline.txt` holds `OnLowMemory`, a handler
-  in neither preprocessor set with no recorded reason. fd1db7b4.
+  `btrace-agent/src/test/resources/handler-annotation-baseline.txt` held `OnLowMemory`, a handler
+  in neither preprocessor set with no recorded reason. fd1db7b4. `OnLowMemory` is now in
+  `RT_AWARE_ANNOTS` next to `OnExit` (the runtime enters before calling both, so a guard would
+  refuse to run them), and the baseline is empty.
 - **G9, wire commands (P4).** `CommandAdapter` converts `HEARTBEAT` both ways; the V2-only exception
   is that the V1 stream (`WireIO`) refuses it. `CommandTableParityTest` converts every type and
   asserts the V1 stream refuses exactly `HEARTBEAT`. 0a75ec8b.
@@ -330,7 +332,8 @@ read from the named files when this section was written, and the files are autho
   `bootstrap-jdk-nonboot-packages.txt` 54 packages; `args-registry-baseline.txt` 9 at first, against
   the spec's 5, then 4 once `probes`, `output` and `help` were documented, then empty once the two
   remaining entries, `agentJar` (no reader) and `libs` (removed), were deleted along with their
-  `Args` constants and the agent's `libs` error message; `handler-annotation-baseline.txt` 1.
+  `Args` constants and the agent's `libs` error message; `handler-annotation-baseline.txt` 1, then empty once `OnLowMemory`
+  was classified.
 - **What blocks a merge (section 7).** The maintainer updated the "Merging" ruleset on 2026-11-14:
   it now requires `build`, `tests-passed` and `pr-metadata`, with `require_code_owner_review: false`.
   `scripts/guardrails/README.md` records the reading and which job runs each gate.
