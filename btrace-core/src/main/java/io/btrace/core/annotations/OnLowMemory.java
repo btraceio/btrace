@@ -36,7 +36,9 @@ import java.lang.annotation.Target;
  *
  * <p>Several handlers may watch the same pool. The pool has one usage threshold, so it is armed
  * with the lowest of theirs, and a notification runs each handler whose own threshold the reported
- * usage has reached. The JVM notifies once each time usage crosses the armed threshold.
+ * usage has reached. The JVM notifies once each time usage crosses the armed threshold. The
+ * threshold is JVM-wide state: when the last probe watching the pool exits, the pool gets back the
+ * threshold it had before, unless the application changed it in the meantime.
  *
  * @author A. Sundararajan
  */
