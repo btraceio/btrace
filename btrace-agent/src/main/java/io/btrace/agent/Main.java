@@ -447,11 +447,14 @@ public final class Main {
         // The holder failed to initialize and gave the JVM back in between: claim it again.
         continue;
       }
+      String answer;
       try {
-        return loaded.apply(args);
+        answer = loaded.apply(args);
       } catch (Throwable t) {
         return SERVER_NOT_STARTED + t;
       }
+      // The holder may be another version of the agent. No answer must not read as a claim.
+      return answer != null ? answer : SERVER_NOT_STARTED + "the loaded agent gave no answer";
     }
     return null;
   }
@@ -2015,6 +2018,11 @@ public final class Main {
 
   static boolean isTrustRequestedAndRefused() {
     return trustRequestedAndRefused;
+  }
+
+  /** Whether this agent has a command server. Tests only. */
+  static boolean hasCommandServerForTesting() {
+    return controlServer != null;
   }
 
   /** Sets how far this agent's initialization got, as a failed one would leave it. Tests only. */

@@ -18,6 +18,7 @@ package io.btrace.agent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -451,9 +452,22 @@ class MainTest {
   }
 
   @Test
+  void holderThatGivesNoAnswerDoesNotLetTheLoadInitialize() {
+    UnaryOperator<String> holder = args -> null;
+    assertTrue(BTraceRuntimeAccess.claimAgent(holder));
+    try {
+      String outcome =
+          Main.claimOrHandOver("port=0", args -> "own", BTraceRuntimeAccess::agentControl);
+      assertNotNull(outcome, "the load was told to initialize a second agent");
+      assertTrue(outcome.contains("its command server was not started"), outcome);
+      assertSame(holder, BTraceRuntimeAccess.agentControl());
+    } finally {
+      BTraceRuntimeAccess.releaseAgent(holder);
+    }
+  }
+
+  @Test
   void endpointIsClosedAndUnpublishedWhenItsServerThreadCannotStart() throws Exception {
-    ControlServer endpoint = ControlServer.open(Main.parseAgentArgs("port=0"), true);
-    Path tokenFile = Paths.get(System.getProperty(ControlServer.TOKEN_FILE_PROPERTY));
     Thread unstartable =
         new Thread() {
           @Override
@@ -461,7 +475,10 @@ class MainTest {
             throw new OutOfMemoryError("unable to create native thread");
           }
         };
+    String wireBefore = System.getProperty("btrace.wireio");
+    ControlServer endpoint = ControlServer.open(Main.parseAgentArgs("port=0"), true);
     try {
+      Path tokenFile = Paths.get(System.getProperty(ControlServer.TOKEN_FILE_PROPERTY));
       assertTrue(Files.exists(tokenFile), "no token file was generated");
 
       String outcome = Main.serveOnAttach(endpoint, unstartable);
@@ -473,9 +490,16 @@ class MainTest {
       assertNull(System.getProperty(ControlServer.AUTH_REQUIRED_PROPERTY));
       assertNull(System.getProperty(ControlServer.TOKEN_FILE_PROPERTY));
       assertFalse(Files.exists(tokenFile), "the generated token file was left behind");
+      // Otherwise every later load would be told the agent has a server already.
+      assertFalse(Main.hasCommandServerForTesting(), "the agent still holds the closed endpoint");
     } finally {
       Main.shutdownServer();
       endpoint.close();
+      if (wireBefore == null) {
+        System.clearProperty("btrace.wireio");
+      } else {
+        System.setProperty("btrace.wireio", wireBefore);
+      }
     }
   }
 
