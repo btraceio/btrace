@@ -192,7 +192,7 @@ task prepareAgentClassdata(type: Copy) {
         include 'io/btrace/instr/jaxb.index'  // Required for JAXB probe descriptor loading
         include 'io/btrace/runtime/**/*.class'
         include 'io/btrace/extension/**/*.class'
-        include 'io/btrace/core/comm/**/*.class'
+        // core/comm is in the shared section, where the agent loader's findClass looks next
         include 'io/btrace/core/Messages.class'
         include 'io/btrace/core/messages.properties'
         // Exclude classes that go in shared section
