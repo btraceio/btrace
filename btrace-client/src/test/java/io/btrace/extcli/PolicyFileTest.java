@@ -114,6 +114,16 @@ class PolicyFileTest {
   }
 
   @Test
+  void targetOptionWithoutValueIsRejectedByName() {
+    for (String option : new String[] {"--policy-file", "--classpath"}) {
+      IllegalArgumentException e =
+          assertThrows(
+              IllegalArgumentException.class, () -> PolicyFile.fromArgs(new String[] {option}));
+      assertEquals("Missing value for " + option, e.getMessage());
+    }
+  }
+
+  @Test
   void rejectsMultipleTargets() {
     assertThrows(
         IllegalArgumentException.class,
