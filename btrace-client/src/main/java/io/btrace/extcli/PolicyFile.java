@@ -36,13 +36,13 @@ final class PolicyFile {
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "--policy-file":
-          t = Paths.get(args[++i]);
+          t = Paths.get(optionValue(args, ++i));
           break;
         case "--home":
           home = true;
           break;
         case "--classpath":
-          classpathDir = Paths.get(args[++i]);
+          classpathDir = Paths.get(optionValue(args, ++i));
           break;
       }
     }
