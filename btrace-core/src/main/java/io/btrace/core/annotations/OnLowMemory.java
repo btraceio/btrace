@@ -25,6 +25,13 @@ import java.lang.annotation.Target;
  * BTrace methods annotated by this annotation are called when the traced JVM's specified memory
  * pool exceeds specified threshold size.
  *
+ * <p>The handler takes no parameter, or one {@code MemoryUsage} that receives the pool's usage when
+ * the threshold was crossed. It runs on the probe's "BTrace Worker" thread, not on the JVM's
+ * notification thread, and an exception it throws goes to the probe's {@link OnError} handlers, or
+ * to the client when there are none. Pool names depend on the garbage collector: for example {@code
+ * Tenured Gen} with Serial GC, {@code G1 Old Gen} with G1; {@code Metaspace} exists with every
+ * collector.
+ *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)
@@ -33,6 +40,6 @@ public @interface OnLowMemory {
   /** The memory pool name. */
   String pool();
 
-  /** The threashold size to watch for. */
+  /** The usage threshold, in bytes, to watch for. */
   long threshold();
 }

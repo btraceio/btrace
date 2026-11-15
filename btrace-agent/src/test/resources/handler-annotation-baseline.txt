@@ -2,4 +2,3 @@
 # RT_AWARE_ANNOTS nor GUARDED_ANNOTS and that are not listed in NOT_HANDLERS of
 # HandlerAnnotationClassificationTest. Format: <annotation simple name>  # reason. A new
 # unclassified annotation fails; an entry that is classified now (or gone) fails as stale.
-OnLowMemory # handler loaded by Preprocessor.loadLowMemoryHandlers but in neither set; no recorded reason - may be an oversight, needs a maintainer decision

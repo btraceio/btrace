@@ -51,6 +51,14 @@ public class AgentMisspelledOptionIntegrationTest extends RuntimeTest {
     assertFalse(output.contains(WARNING), output);
   }
 
+  @Test
+  void removedLibsAndAgentJarOptionsAreIgnoredLikeAnyUnknownArgument() throws Exception {
+    String output = startupOutput("port=0,telemetry=false,libs=foo,agentJar=/x.jar");
+
+    assertFalse(output.contains(WARNING), output);
+    assertFalse(output.contains("has no effect"), output);
+  }
+
   /**
    * Launches the target; {@code getPid()} returns only once the target has printed its ready line.
    */

@@ -40,6 +40,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import jdk.jfr.EventType;
 import jdk.jfr.consumer.RecordedEvent;
@@ -223,6 +224,51 @@ public class BTraceFunctionalTests extends RuntimeTest {
           assertFalse(stdout.contains("FAILED"), "Script should not have failed");
           assertTrue(stderr.isEmpty(), "Non-empty stderr");
           assertTrue(stdout.contains("onexit"));
+        });
+  }
+
+  @Test
+  public void testOnLowMemory() throws Exception {
+    // The probe arms a 1 MiB usage threshold on Metaspace; with the agent loaded the target is
+    // already past it, and MetaspaceTarget keeps allocating Metaspace so the JVM checks the
+    // threshold and sends the notification.
+    testDynamic(
+        "resources.MetaspaceTarget",
+        "btrace/OnLowMemoryTest.java",
+        Completion.untilContains("lowmem used="),
+        (stdout, stderr, retcode, jfrFile) -> {
+          assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+          assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+          Matcher m = Pattern.compile("lowmem used=(\\d+)").matcher(stdout);
+          assertTrue(m.find(), "the @OnLowMemory handler did not run; stdout: " + stdout);
+          long used = Long.parseLong(m.group(1));
+          assertTrue(
+              used >= 1048576,
+              "the handler got a usage below the 1 MiB threshold it was armed with: " + used);
+        });
+  }
+
+  @Test
+  public void testOnLowMemoryHandlerExceptionIsReported() throws Exception {
+    // An exception thrown by an @OnLowMemory handler must be routed to @OnError like any other
+    // handler failure, and must not end the probe.
+    testDynamic(
+        "resources.MetaspaceTarget",
+        "btrace/OnLowMemoryErrorTest.java",
+        Completion.untilContains(
+            "lowmem-error-handler:java.lang.StringIndexOutOfBoundsException",
+            "lowmem-probe-alive-after-failure"),
+        (stdout, stderr, retcode, jfrFile) -> {
+          assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+          assertTrue(
+              stdout.contains("lowmem-handler-entered"),
+              "the @OnLowMemory handler did not run; stdout: " + stdout);
+          assertTrue(
+              stdout.contains("lowmem-error-handler:java.lang.StringIndexOutOfBoundsException"),
+              "the handler's exception did not reach @OnError; stdout: " + stdout);
+          assertTrue(
+              stdout.contains("lowmem-probe-alive-after-failure"),
+              "the probe stopped after the handler failed; stdout: " + stdout);
         });
   }
 

@@ -32,7 +32,7 @@ btrace.jar (~4.4 MB)
 ├── io/btrace/core/jfr/*.class                  # Bootstrap: JFR integration
 ├── io/btrace/runtime/*.class                   # Bootstrap: selected runtime support classes
 ├── io/btrace/extension/ExtensionBridge.class   # Bootstrap: extension bridge interface
-├── io/btrace/extension/processor/*.class       # Root: annotation processor for extension builds
+├── io/btrace/extension/processor/*.class       # Root, tool-only: annotation processor for extension builds
 ├── io/btrace/libs/org/slf4j/**                 # Bootstrap: relocated SLF4J
 ├── META-INF/btrace/agent/*.classdata           # Masked: agent classes
 ├── META-INF/btrace/client/*.classdata          # Masked: client classes
@@ -41,7 +41,7 @@ btrace.jar (~4.4 MB)
 └── META-INF/MANIFEST.MF
 ```
 
-**Bootstrap classes** (~200 total): Only the core API, the extension API, runtime support, the extension annotation processor, and SLF4J logging are stored as regular `.class` files. These are visible to the bootstrap classloader because the manifest declares `Boot-Class-Path: btrace.jar`, which the JVM resolves relative to the agent JAR's own directory. `btrace-dist/src/test/java/io/btrace/dist/BootstrapClosureTest.java` checks the root classes against a fixed list and checks that they reference only other root classes and JDK types the boot loader defines.
+**Bootstrap classes** (~200 total): Only the core API, the extension API, runtime support, the extension annotation processor, and SLF4J logging are stored as regular `.class` files. These are visible to the bootstrap classloader because the manifest declares `Boot-Class-Path: btrace.jar`, which the JVM resolves relative to the agent JAR's own directory. `btrace-dist/src/test/java/io/btrace/dist/BootstrapClosureTest.java` checks the root classes against a fixed list and checks that they reference only other root classes and JDK types the boot loader defines. The annotation processor is the exception: it is a tool-only root class, which javac loads from the processor path and the bootstrap loader never links, so it may reference `java.compiler` types, and no other root class may reference it.
 
 **Masked classes** (~2200+): Agent, client, and shared classes are stored as `.classdata` files under `META-INF/btrace/`. The JVM's class loading ignores these files entirely. They are loaded on demand by `MaskedClassLoader`.
 
@@ -113,13 +113,15 @@ Bootstrap CL (core API, runtime, Loader)
 
 #### MaskedClassLoader (`io.btrace.boot.MaskedClassLoader`)
 
-A `URLClassLoader` subclass that loads classes from `.classdata` files. The lookup order for `findClass(name)`:
+A `URLClassLoader` subclass that loads classes from `.classdata` files. It does not override `loadClass`, so class loading is parent-first: the parent (the bootstrap loader for the agent) is asked first, and `findClass(name)` runs only when the parent fails:
 
 1. Check section-specific path: `META-INF/btrace/{section}/{class-path}.classdata`
 2. Check shared path: `META-INF/btrace/shared/{class-path}.classdata`
-3. Throw `ClassNotFoundException` (delegates to parent via standard classloader contract)
+3. Throw `ClassNotFoundException`
 
-Resource loading (`findResource`, `getResourceAsStream`) follows the same pattern: section-specific first, then shared, then the JAR root.
+A class that is both a root `.class` entry and a masked `.classdata` entry is therefore loaded from the root in both modes, because both parents see the root.
+
+Resource loading (`findResource`, `getResourceAsStream`) checks the section-specific path, then the JAR root; it does not consult the shared section, and `getResourceAsStream` does not ask the parent first.
 
 #### MaskedJarUtils (`io.btrace.boot.MaskedJarUtils`)
 
@@ -141,7 +143,7 @@ The `bootIncludes` filter closure defined in `btrace-dist/build.gradle` determin
 `bootIncludes` itself leaves out `io/btrace/core/extensions/`, but the `btraceJar` task adds those
 classes to the root from the `btrace-core` output, because bootstrap code needs them; they are also
 in the shared section. The `btraceJar` task also adds `io/btrace/extension/processor/` to the root,
-so that external extension builds can use `btrace.jar` as their annotation processor path.
+so that external extension builds can use `btrace.jar` as their annotation processor path: javac's processor path loader reads only `.class` entries. The jar ships no `META-INF/services/javax.annotation.processing.Processor` entry, because a javac running in an instrumented JVM would discover the processor through the boot class path and fail on its `java.compiler` types; extension builds name it with `-processor`.
 
 **Explicitly excluded from bootstrap:**
 - ASM classes (loaded via shared section)

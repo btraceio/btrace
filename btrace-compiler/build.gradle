@@ -18,8 +18,10 @@ dependencies {
         runtimeOnly files("${toolsJar}")
     }
     implementation project(path: ':btrace-core')
-    implementation project(path: ':btrace-runtime')
     implementation project(path: ':btrace-boot')
+    // Needed at runtime: CompilerHelper finds the probe-pack generator through ServiceLoader
+    // (io.btrace.core.PackGenerator, implemented and registered in btrace-agent). It also brings
+    // btrace-runtime, which that generator uses; the compiler's own code needs only btrace-core.
     runtimeOnly project(path: ':btrace-agent')
 
     testImplementation project(path: ':btrace-agent')

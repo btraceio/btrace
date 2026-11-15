@@ -25,7 +25,7 @@ import com.google.protobuf.util.JsonFormat;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import io.btrace.core.ArgsMap;
-import io.btrace.core.comm.Command;
+import io.btrace.core.extensions.ClientMessage;
 import io.btrace.core.extensions.ExtensionContext;
 import io.btrace.core.extensions.Permission;
 import io.btrace.core.extensions.PermissionSet;
@@ -292,7 +292,7 @@ class OTelOtlpConformanceTest {
     public void send(String message) {}
 
     @Override
-    public void send(Command command) {}
+    public void send(ClientMessage message) {}
 
     @Override
     public ArgsMap getArgs() {

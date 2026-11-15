@@ -170,7 +170,7 @@ logged at warn or above and reaches the client (`BTraceTransformer.reportFailure
 
 - Every constant in `core/Args.java` appears in the `btrace.agent.usage` text and in
   `docs/QuickReference.md`. Baseline **[S]**: usage omits `agentJar`, `libs`, `probes`; QuickReference
-  omits `agentJar`, `libs`.
+  omits `agentJar`, `libs` (both constants were later removed).
 - Every method-targeting annotation in `io.btrace.core.annotations` is in `RT_AWARE_ANNOTS`,
   `GUARDED_ANNOTS`, or an explicit unguarded list (`Preprocessor.java:170-180`).
 - Every message key used in code exists in `messages.properties`.
@@ -224,16 +224,28 @@ in the `build` job. Python gates run in the `guardrails` job, which feeds `tests
 `tests-passed` and `pr-metadata` are added, every Python gate here, G1–G5 before it, and the
 `Sibling:` line report a failure but cannot stop a merge. The maintainer is adding them (decision 9.6).
 
-## 8. Findings not acted on here
+## 8. Findings recorded while building the gates
 
-- Agent ⇄ compiler dependency cycle; two Gradle edges unused at source level (`btrace-agent/build.gradle:63`,
-  `btrace-compiler/build.gradle:12`) **[S]**.
-- About 150 classes present both in the JAR root and in a masked section, measured on a stale local JAR
-  **[S]**; harmless under parent-first loading, and `MaskedClassLoader`'s Javadoc says section-first.
-- `ExtensionIndy` is bootstrap-visible and holds an SLF4J logger, against the comment in
-  `IndyDispatcher.java:57-61` **[S]**.
-- The extension API validator (`validateServiceApis`) has no negative tests, and two of its documented
-  requirements are warnings **[S]**.
+Each item says whether it has been resolved since.
+
+- Resolved — agent ⇄ compiler dependency cycle: broken. `btrace-agent` no longer has `implementation` on
+  `btrace-compiler`; the compiler is a build tool there (`testProbeCompiler`, for `compileTestProbes`),
+  so `check_layering.py` still lists the `btrace-agent -> btrace-compiler` edge. The removed edge had
+  been putting the agent's own jar, and with it the `java24` ClassFile API backend, on the agent's
+  test classpath. `btrace-compiler`'s `runtimeOnly` on `btrace-agent` stays: the compiler finds the
+  agent's `PackGenerator` through `ServiceLoader`, and it brings `btrace-runtime` with it. The
+  compiler's own `implementation` on `btrace-runtime` was unused (its one `io.btrace.runtime` import,
+  `BTraceRuntimeAccess`, is in `btrace-core`) and is removed; `btrace.jar` is unchanged.
+- Open — classes present both in the JAR root and in a masked section. Re-measured on a fresh JAR:
+  159 root/masked duplicates, plus 70 agent/shared and 94 client/shared, all byte-identical and
+  harmless under parent-first loading. Removing them changes which section a class ships in and is
+  left to the maintainer. `MaskedClassLoader`'s Javadoc, which said section-first, is corrected.
+- Resolved — `ExtensionIndy` holds an SLF4J logger while a comment in `IndyDispatcher` said bootstrap
+  classes must not. Relocated SLF4J and its provider are always in the root, so logging there works;
+  the `IndyDispatcher` comment now gives the real reasons that class stays silent.
+- Resolved — the extension API validator (`validateServiceApis`) had no negative tests. It has them
+  now, and `docs/ExtensionInterfaceRules.md` describes what the validator enforces today, including
+  what only warns.
 - The November proposal still lists the `BackendSelector` debug-level fallback as open; it now warns
   and throws **[S]**.
 
@@ -276,11 +288,23 @@ read from the named files when this section was written, and the files are autho
   `btrace-dist/src/test/resources/bootstrap-jdk-nonboot-packages.txt`, so the root annotation
   processor's `java.compiler` references are baselined instead of passing. 4a0ac1fa (gate added in
   af95fdd4). The deny-list lines are shape-checked since 7f86a07b.
+  The annotation processor's 23 baseline entries were not violations awaiting a fix: javac's
+  processor path reads only `.class` entries, so the processor has to sit at the root, and nothing
+  the bootstrap loader links references it. The allowlist now marks it
+  `tool-only ... uses javax/annotation/processing/ javax/lang/model/ javax/tools/`; a tool-only class
+  may reference its tool API packages, and a bootstrap root class that references a tool-only class
+  fails regardless of the baseline. The 23 entries were removed.
+  The deny-list, generated once on Temurin 21, is now checked against the JDK running the test: on
+  JDK 9+ `jdkDenyListCoversTheRunningJdk` reads the boot module layer and fails on a non-boot
+  package under the JDK prefixes that the list misses (34 such packages on JDK 21 and 26, all
+  listed); on JDK 8 it is reported as skipped. `:btrace-dist:test` runs on the Gradle JDK, 21 in CI.
 - **G12, handler annotations (P7).** No unguarded-annotation set was added to production code;
   `Preprocessor` changed visibility only. `HandlerAnnotationClassificationTest` keeps the non-handler
   annotations (`Location`, `Sampled`) in a test-side `NOT_HANDLERS` list, and
-  `btrace-agent/src/test/resources/handler-annotation-baseline.txt` holds `OnLowMemory`, a handler
-  in neither preprocessor set with no recorded reason. fd1db7b4.
+  `btrace-agent/src/test/resources/handler-annotation-baseline.txt` held `OnLowMemory`, a handler
+  in neither preprocessor set with no recorded reason. fd1db7b4. `OnLowMemory` is now in
+  `RT_AWARE_ANNOTS` next to `OnExit` (the runtime enters before calling both, so a guard would
+  refuse to run them), and the baseline is empty.
 - **G9, wire commands (P4).** `CommandAdapter` converts `HEARTBEAT` both ways; the V2-only exception
   is that the V1 stream (`WireIO`) refuses it. `CommandTableParityTest` converts every type and
   asserts the V1 stream refuses exactly `HEARTBEAT`. 0a75ec8b.
@@ -302,15 +326,20 @@ read from the named files when this section was written, and the files are autho
   `btrace-core`, `handler-annotation-baseline.txt` in `btrace-agent`. Every Python baseline entry
   must carry a `# reason` since 9797bc31, as the Java baselines did from the start.
 - **Baseline sizes**, entries per file: `launchers.txt` 3 (24da36d3; the spec named two launchers,
-  the third entry is `btracex`'s missing `--add-exports`); `layering.txt` 20 (0459ee82, 868e3412);
+  the third entry is `btracex`'s missing `--add-exports`); `layering.txt` 20 (0459ee82, 868e3412), then 17: the `Preprocessor` literal was removed by
+  calling `ExtensionLoader.instance()` directly, and the `ExtensionBridgeImpl` and
+  `BTraceRuntimeImplBase` literals, both deliberate late binding, became per-file exceptions in
+  `layering_rules.json`;
   `main-test-hooks.txt` 10 entries in 9 files, not 8 files, after the rule was widened to
   `...ForTests` and overloads (d7079ef0); `growth_allow.txt` none; the API snapshot 151 types
   (6fd59435); `bootstrap-root-allowlist.txt` 21 lines; `bootstrap-closure-baseline.txt` 24 (the
-  `ExtensionContext` reference plus 23 from the annotation processor; af95fdd4, 4a0ac1fa);
+  `ExtensionContext` reference plus 23 from the annotation processor; af95fdd4, 4a0ac1fa), then 1
+  once the processor became a tool-only allowlist line;
   `bootstrap-jdk-nonboot-packages.txt` 54 packages; `args-registry-baseline.txt` 9 at first, against
-  the spec's 5, then 4 once `probes`, `output` and `help` were documented: the remaining entries
-  are `agentJar` (no reader) and `libs` (removed; the agent logs an error), each for the usage text
-  and QuickReference; `handler-annotation-baseline.txt` 1.
+  the spec's 5, then 4 once `probes`, `output` and `help` were documented, then empty once the two
+  remaining entries, `agentJar` (no reader) and `libs` (removed), were deleted along with their
+  `Args` constants and the agent's `libs` error message; `handler-annotation-baseline.txt` 1, then empty once `OnLowMemory`
+  was classified.
 - **What blocks a merge (section 7).** The maintainer updated the "Merging" ruleset on 2026-11-14:
   it now requires `build`, `tests-passed` and `pr-metadata`, with `require_code_owner_review: false`.
   `scripts/guardrails/README.md` records the reading and which job runs each gate.

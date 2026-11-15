@@ -10,12 +10,14 @@ This guide helps you move from `btrace-libs/<profile>` to extension-based integr
 
 ## Status
 
-`libs`/profiles are **removed**. Passing `libs=<profile>` logs an error naming the profile and
-loads nothing; the jars under `btrace-libs/<profile>/` are ignored. Migrate to an extension, or
+`libs`/profiles are **removed**, and so is the `libs` agent argument. The agent no longer
+recognizes it: `libs=<profile>` is ignored like any other unknown argument (passed on to scripts
+and extensions, with no log message), and the jars under `btrace-libs/<profile>/` are never loaded. Migrate to an extension, or
 use the escape hatch below as a stopgap.
 
 If you are arriving here because custom classes stopped resolving after upgrading, that is the
-expected symptom: the agent starts normally and probes fail later on the missing types.
+expected symptom: the agent starts normally, logs nothing about `libs`, and probes fail later on
+the missing types.
 
 ## Migration Steps
 
