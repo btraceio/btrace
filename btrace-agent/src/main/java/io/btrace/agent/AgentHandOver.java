@@ -46,13 +46,43 @@ final class AgentHandOver {
   static final String SERVER_NOT_STARTED =
       "BTrace agent is already loaded in this JVM; its command server was not started: ";
 
-  // How far this agent's initialization got. Written by Main under its INIT_LOCK.
-  static boolean initialized;
-  static boolean runtimeHooksInstalled;
-  static boolean budgetValidAtInit;
+  // How far this agent's initialization got. Guarded by Main.INIT_LOCK.
+  private static boolean initialized;
+  private static boolean runtimeHooksInstalled;
+  private static boolean budgetValid;
+
+  /** Records whether the probe budget set at launch is valid. The caller holds the init lock. */
+  static void markBudgetValid(boolean valid) {
+    assert Thread.holdsLock(Main.INIT_LOCK);
+    budgetValid = valid;
+  }
+
+  /**
+   * Records that this agent installed itself into the runtime classes all agent loads share, after
+   * which no other load can take its place. The caller holds the init lock.
+   */
+  static void markRuntimeHooksInstalled(boolean installed) {
+    assert Thread.holdsLock(Main.INIT_LOCK);
+    runtimeHooksInstalled = installed;
+  }
+
+  /**
+   * Whether {@link #markRuntimeHooksInstalled(boolean)} recorded it. The caller holds the init
+   * lock.
+   */
+  static boolean runtimeHooksInstalled() {
+    assert Thread.holdsLock(Main.INIT_LOCK);
+    return runtimeHooksInstalled;
+  }
+
+  /** Records that this agent finished initializing. The caller holds the init lock. */
+  static void markInitialized() {
+    assert Thread.holdsLock(Main.INIT_LOCK);
+    initialized = true;
+  }
 
   // What a later agent load in this JVM calls instead of initializing an agent of its own. An
-  // anonymous class, not a lambda: Main's static initializer runs on the premain path.
+  // anonymous class, not a lambda: this class's static initializer runs on the premain path.
   static final UnaryOperator<String> AGENT_CONTROL =
       new UnaryOperator<String>() {
         @Override
@@ -86,7 +116,7 @@ final class AgentHandOver {
       if (Main.controlServer != null) {
         return ALREADY_LOADED;
       }
-      if (!budgetValidAtInit) {
+      if (!budgetValid) {
         return SERVER_NOT_STARTED + "the probe budget set at launch is invalid";
       }
       ControlServer endpoint;
@@ -183,17 +213,5 @@ final class AgentHandOver {
       return answer != null ? answer : SERVER_NOT_STARTED + "the loaded agent gave no answer";
     }
     return null;
-  }
-
-  /** Whether this agent has a command server. Tests only. */
-  static boolean hasCommandServerForTesting() {
-    return Main.controlServer != null;
-  }
-
-  /** Sets how far this agent's initialization got, as a failed one would leave it. Tests only. */
-  static void setRuntimeHooksInstalledForTesting(boolean installed) {
-    synchronized (Main.INIT_LOCK) {
-      runtimeHooksInstalled = installed;
-    }
   }
 }

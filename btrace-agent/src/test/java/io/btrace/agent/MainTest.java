@@ -172,16 +172,16 @@ class MainTest {
     CountDownLatch releaseInit = new CountDownLatch(1);
     Thread init =
         new Thread(
-            () ->
-                Main.runUnderInitLockForTesting(
-                    () -> {
-                      initLockHeld.countDown();
-                      try {
-                        releaseInit.await();
-                      } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                      }
-                    }),
+            () -> {
+              synchronized (Main.INIT_LOCK) {
+                initLockHeld.countDown();
+                try {
+                  releaseInit.await();
+                } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                }
+              }
+            },
             "simulated-agent-init");
     init.setDaemon(true);
     init.start();
@@ -296,7 +296,7 @@ class MainTest {
           "a client inherited trusted mode from attach arguments under a budget");
       assertTrue(AgentTrust.isTrustRequestedAndRefused(), "the trusted request was not recorded");
     } finally {
-      AgentTrust.resetTrustRefusalForTesting();
+      resetTrustRefusal();
     }
   }
 
@@ -310,7 +310,7 @@ class MainTest {
           "trusted mode was on while the remaining agent arguments were processed");
       assertTrue(AgentTrust.isTrustRequestedAndRefused(), "the refused request was not recorded");
     } finally {
-      AgentTrust.resetTrustRefusalForTesting();
+      resetTrustRefusal();
     }
   }
 
@@ -329,7 +329,7 @@ class MainTest {
       AgentTrust.applyTrustedArgument(agentSettings, false, false);
       assertFalse(agentSettings.isTrusted());
     } finally {
-      AgentTrust.resetTrustRefusalForTesting();
+      resetTrustRefusal();
     }
   }
 
@@ -374,14 +374,18 @@ class MainTest {
   @Test
   void laterLoadIsToldToRestartTheJvmAfterAnAgentThatFailedWithItsHooksInstalled() {
     // This test JVM never finished agent initialization; say it got as far as its runtime hooks.
-    AgentHandOver.setRuntimeHooksInstalledForTesting(true);
+    synchronized (Main.INIT_LOCK) {
+      AgentHandOver.markRuntimeHooksInstalled(true);
+    }
     try {
       String outcome = AgentHandOver.startServerOnAttach("port=0");
       assertTrue(outcome.contains("its command server was not started"), outcome);
       assertTrue(
           outcome.contains("failed to initialize; restart the JVM to use BTrace in it"), outcome);
     } finally {
-      AgentHandOver.setRuntimeHooksInstalledForTesting(false);
+      synchronized (Main.INIT_LOCK) {
+        AgentHandOver.markRuntimeHooksInstalled(false);
+      }
     }
   }
 
@@ -492,8 +496,7 @@ class MainTest {
       assertNull(System.getProperty(ControlServer.TOKEN_FILE_PROPERTY));
       assertFalse(Files.exists(tokenFile), "the generated token file was left behind");
       // Otherwise every later load would be told the agent has a server already.
-      assertFalse(
-          AgentHandOver.hasCommandServerForTesting(), "the agent still holds the closed endpoint");
+      assertNull(Main.controlServer, "the agent still holds the closed endpoint");
     } finally {
       Main.shutdownServer();
       endpoint.close();
@@ -529,5 +532,11 @@ class MainTest {
 
     assertNull(endpoint.get(Args.AUTH_TOKEN_FILE));
     assertEquals("0", endpoint.get(Args.PORT));
+  }
+
+  private static void resetTrustRefusal() {
+    AgentTrust.trustRequestedAndRefused = false;
+    AgentTrust.loadStarted(false, false);
+    Client.refuseTrustedMode(false);
   }
 }

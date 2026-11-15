@@ -64,7 +64,7 @@ final class AgentTrust {
   }
 
   // Whether the operator set a budget property, valid or not; read before arguments are parsed.
-  static volatile boolean budgetPropertySet;
+  private static volatile boolean budgetPropertySet;
 
   /** Whether a probe budget is requested, by property or by a launch-time agent argument. */
   static boolean budgetRequested() {
@@ -75,11 +75,12 @@ final class AgentTrust {
         && (Main.argMap.get(PROBE_TTL) != null || Main.argMap.get(PROBE_MAX_RATE) != null);
   }
 
-  // Whether trusted=true in the agent arguments was refused because of a probe budget.
+  // Whether trusted=true in the agent arguments was refused because of a probe budget. Not
+  // private: the tests of this package clear it between cases.
   static volatile boolean trustRequestedAndRefused;
 
   // Whether attach-time agent arguments cannot turn trusted mode on: set before they are parsed.
-  static volatile boolean attachTrustBarred;
+  private static volatile boolean attachTrustBarred;
 
   /**
    * Applies the {@code trusted} agent argument. Under dynamic attach with an operator budget it is
@@ -103,9 +104,14 @@ final class AgentTrust {
     return trustRequestedAndRefused;
   }
 
-  static void resetTrustRefusalForTesting() {
-    trustRequestedAndRefused = false;
-    attachTrustBarred = false;
-    Client.refuseTrustedMode(false);
+  /**
+   * Called when an agent load starts, before its arguments are parsed.
+   *
+   * @param trustBarred whether the arguments of this load cannot turn trusted mode on
+   * @param budgetProperty whether the operator set a budget property, valid or not
+   */
+  static void loadStarted(boolean trustBarred, boolean budgetProperty) {
+    attachTrustBarred = trustBarred;
+    budgetPropertySet = budgetProperty;
   }
 }

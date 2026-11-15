@@ -281,13 +281,6 @@ public final class Main {
     }
   }
 
-  /** Runs {@code action} holding the same lock agent initialization holds. Tests only. */
-  static void runUnderInitLockForTesting(Runnable action) {
-    synchronized (INIT_LOCK) {
-      action.run();
-    }
-  }
-
   static Thread serverThread(final ControlServer endpoint) {
     return new Thread(
         new Runnable() {
@@ -325,8 +318,8 @@ public final class Main {
       BudgetLimits.Snapshot budgetSnapshot = BudgetLimits.snapshot(System.getProperties());
       // Under dynamic attach an operator budget property, valid or not, always ends in trusted mode
       // being refused. Known before the arguments are parsed, so that nothing they do is trusted.
-      AgentTrust.attachTrustBarred = !"premain".equals(agentMode) && budgetSnapshot.present();
-      AgentTrust.budgetPropertySet = budgetSnapshot.present();
+      AgentTrust.loadStarted(
+          !"premain".equals(agentMode) && budgetSnapshot.present(), budgetSnapshot.present());
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Loading arguments");
       loadArgs(args);
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Arguments loaded");
@@ -381,7 +374,7 @@ public final class Main {
         System.err.println("[BTrace Agent] " + message);
         log.error(message);
       }
-      AgentHandOver.budgetValidAtInit = budgetValid;
+      AgentHandOver.markBudgetValid(budgetValid);
       boolean loadProbes = loadsStartupProbes(budgetValid, agentMode);
 
       Thread agentThread = null;
@@ -412,7 +405,7 @@ public final class Main {
       }
       // From here on this instance installs itself into the runtime classes all agent loads
       // share, so a failure no longer leaves the JVM free for another load.
-      AgentHandOver.runtimeHooksInstalled = true;
+      AgentHandOver.markRuntimeHooksInstalled(true);
       // set the fall-back instrumentation object to BTraceRuntime
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Setting up runtime");
       BTraceRuntime.instrumentation = inst;
@@ -495,13 +488,13 @@ public final class Main {
           BTraceRuntime.leave();
         }
       }
-      AgentHandOver.initialized = true;
+      AgentHandOver.markInitialized();
       if (AGENT_DEBUG)
         System.err.println(
             "[BTrace Agent] Initialization complete, " + startedScripts + " scripts started");
     } catch (Throwable t) {
       shutdownServer();
-      if (!AgentHandOver.runtimeHooksInstalled) {
+      if (!AgentHandOver.runtimeHooksInstalled()) {
         // This instance has not installed itself into the shared runtime classes: take back the
         // settings its arguments wrote, a trusted=true included, and let a retry load an agent.
         // The system properties it set, the jars it appended to the class paths and a budget
