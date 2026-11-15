@@ -234,7 +234,11 @@ task prepareClientClassdata(type: Copy) {
         include 'io/btrace/instr/**/*.class'
         include 'io/btrace/runtime/**/*.class'
         include 'io/btrace/extension/**/*.class'
-        include 'io/btrace/libs/org/objectweb/asm/**/*.class'
+        // The rest of relocated ASM is in the shared section (see prepareSharedClassdata), where
+        // the client loader's findClass looks next; only the packages it leaves out go here.
+        include 'io/btrace/libs/org/objectweb/asm/commons/**/*.class'
+        include 'io/btrace/libs/org/objectweb/asm/util/**/*.class'
+        include 'io/btrace/libs/org/objectweb/asm/xml/**/*.class'
         include 'io/btrace/libs/org/jctools/**/*.class'
         include 'com/googlecode/lanterna/**/*.class'
         // Core classes are supplied by the bootstrap/shared sections. Runtime and extension
