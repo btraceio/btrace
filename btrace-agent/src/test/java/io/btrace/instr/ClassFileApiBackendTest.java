@@ -3335,7 +3335,7 @@ class ClassFileApiBackendTest {
     }
     MethodInsnNode method = (MethodInsnNode) instruction;
     return method.getOpcode() == Opcodes.INVOKESTATIC
-        && "io/btrace/runtime/LinkingFlag".equals(method.owner)
+        && "io/btrace/core/LinkingFlag".equals(method.owner)
         && "get".equals(method.name);
   }
 

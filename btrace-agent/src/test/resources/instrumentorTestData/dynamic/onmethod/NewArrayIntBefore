@@ -1,4 +1,4 @@
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "int"
@@ -13,7 +13,7 @@ L1
 FRAME SAME1 I
 L2
 LINENUMBER 101 L2
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "int"

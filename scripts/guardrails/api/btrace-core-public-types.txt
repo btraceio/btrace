@@ -2,6 +2,7 @@ io.btrace.BTrace
 io.btrace.core.Args
 io.btrace.core.ArgsMap
 io.btrace.core.BTraceRuntime
+io.btrace.core.BTraceRuntimeAccess
 io.btrace.core.BTraceRuntimeBridge
 io.btrace.core.BTraceUtils
 io.btrace.core.CircularBuffer
@@ -9,6 +10,7 @@ io.btrace.core.DebugSupport
 io.btrace.core.Function
 io.btrace.core.HandlerRepository
 io.btrace.core.JavaVersionCheck
+io.btrace.core.LinkingFlag
 io.btrace.core.Messages
 io.btrace.core.MethodID
 io.btrace.core.PackGenerator
@@ -150,5 +152,3 @@ io.btrace.extension.impl.NestedJarExtensionClassLoader
 io.btrace.extension.processor.ExternalTypeProcessor
 io.btrace.extension.util.ClassLoadingUtil
 io.btrace.extension.util.MethodHandleCache
-io.btrace.runtime.BTraceRuntimeAccess
-io.btrace.runtime.LinkingFlag

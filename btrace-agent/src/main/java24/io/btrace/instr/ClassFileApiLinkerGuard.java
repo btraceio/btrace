@@ -38,7 +38,7 @@ import java.lang.constant.MethodTypeDesc;
 public final class ClassFileApiLinkerGuard {
 
   private static final ClassDesc CD_LINKING_FLAG =
-      ClassDesc.ofInternalName("io/btrace/runtime/LinkingFlag");
+      ClassDesc.ofInternalName("io/btrace/core/LinkingFlag");
   private static final MethodTypeDesc GUARD_MTD = MethodTypeDesc.ofDescriptor("()I");
   private static final MethodTypeDesc RESET_MTD = MethodTypeDesc.ofDescriptor("()V");
 

@@ -47,6 +47,19 @@ public class Verifier extends ClassVisitor {
     reportError(err, null);
   }
 
+  /**
+   * Rejects a handler whose parameters the runtime cannot supply. Called by both bytecode verifiers
+   * (this one, through {@link MethodVerifier}, and the persisted-probe one).
+   */
+  static void verifyHandlerSignature(String annotationDesc, String methodName, String methodDesc) {
+    if (Constants.ONLOWMEMORY_DESC.equals(annotationDesc)) {
+      String params = methodDesc.substring(0, methodDesc.indexOf(')') + 1);
+      if (!params.equals("()") && !params.equals("(Ljava/lang/management/MemoryUsage;)")) {
+        reportError("onlowmemory.invalid", methodName + methodDesc);
+      }
+    }
+  }
+
   public static void reportError(String err, String msg) {
     String str = Messages.get(err);
     if (msg != null) {

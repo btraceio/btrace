@@ -263,7 +263,8 @@
         "io.btrace.client"
       ],
       "allow": [
-        "io.btrace.core.extensions"
+        "io.btrace.core.extensions",
+        "io.btrace.extension.util"
       ]
     },
     {

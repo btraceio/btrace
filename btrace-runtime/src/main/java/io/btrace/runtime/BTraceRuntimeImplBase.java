@@ -51,10 +51,12 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryNotificationInfo;
 import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryUsage;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URL;
@@ -284,7 +286,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
 
   // map of client event handling methods
   private volatile Map<String, Method> eventHandlerMap;
-  private Map<String, LowMemoryHandler> lowMemoryHandlerMap;
+  private volatile LowMemoryHandlers lowMemory;
 
   // timer to run profile provider actions
   private volatile Timer timer;
@@ -634,22 +636,13 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     }
 
     if (lowMemoryHandlers != null) {
-      lowMemoryHandlerMap = new HashMap<>();
-      for (LowMemoryHandler lmh : lowMemoryHandlers) {
-        String poolName = args.template(lmh.pool);
-        lowMemoryHandlerMap.put(poolName, lmh);
+      lowMemory = new LowMemoryHandlers(lowMemoryHandlers, args::template);
+      // listen before arming: a pool already over its threshold notifies once, right after arming
+      ((NotificationEmitter) memoryMBean).addNotificationListener(memoryListener, null, null);
+      for (String warning : lowMemory.arm(getMemoryPoolMXBeans())) {
+        log.warn(warning);
+        enqueue(MessageCommand.line("[BTRACE WARN] " + warning));
       }
-      for (MemoryPoolMXBean mpoolBean : getMemoryPoolMXBeans()) {
-        String name = mpoolBean.getName();
-        LowMemoryHandler lmh = lowMemoryHandlerMap.get(name);
-        if (lmh != null) {
-          if (mpoolBean.isUsageThresholdSupported()) {
-            mpoolBean.setUsageThreshold(lmh.threshold);
-          }
-        }
-      }
-      NotificationEmitter emitter = (NotificationEmitter) memoryMBean;
-      emitter.addNotificationListener(memoryListener, null, null);
     }
 
     leave();
@@ -1206,24 +1199,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
               CompositeData cd = (CompositeData) notif.getUserData();
               MemoryNotificationInfo info = MemoryNotificationInfo.from(cd);
               String name = info.getPoolName();
-              LowMemoryHandler handler = lowMemoryHandlerMap.get(name);
-              if (handler != null) {
-                threadPool.submit(
-                    new Runnable() {
-                      @Override
-                      public void run() {
-                        boolean entered = enter();
-                        try {
-                          handler.invoke(clazz, info.getUsage());
-                        } catch (Throwable th) {
-                          log.debug("Low-memory handler {} failed", handler.method, th);
-                        } finally {
-                          if (entered) {
-                            BTraceRuntime.leave();
-                          }
-                        }
-                      }
-                    });
+              for (LowMemoryHandler handler : lowMemory.handlersFor(name, info.getUsage())) {
+                threadPool.submit(() -> runLowMemoryHandler(handler, info.getUsage()));
               }
             }
           } finally {
@@ -1232,6 +1209,24 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
             }
           }
         };
+  }
+
+  /** Runs one {@code @OnLowMemory} handler; called on the "BTrace Worker" thread. */
+  void runLowMemoryHandler(LowMemoryHandler handler, MemoryUsage usage) {
+    if (!enter()) {
+      return; // disabled runtime: skip, as the guarded handlers' woven prologue does
+    }
+    try {
+      handler.invoke(clazz, usage);
+    } catch (Throwable th) {
+      // The handler's own exceptions reach @OnError through its woven catch-all; what gets here
+      // is a failure to call it at all. Not send(Command): errors stay out of speculative buffers.
+      Throwable failure = th instanceof InvocationTargetException ? th.getCause() : th;
+      log.warn("@OnLowMemory handler {} failed", handler.method, failure);
+      enqueue(new ErrorCommand(failure));
+    } finally {
+      leave();
+    }
   }
 
   @Override
@@ -1339,6 +1334,9 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
             emitter.removeNotificationListener(memoryListener);
           } catch (ListenerNotFoundException ignored) {
           }
+        }
+        if (lowMemory != null) {
+          lowMemory.disarm();
         }
 
         if (threadPool != null) {

@@ -7,7 +7,7 @@ ILOAD 6
 IFEQ L1
 L2
 FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I I] [J]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L1
 DUP2
 LSTORE 7

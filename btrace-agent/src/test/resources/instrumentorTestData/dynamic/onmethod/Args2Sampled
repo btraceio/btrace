@@ -7,7 +7,7 @@ ILOAD 6
 IFEQ L0
 L1
 FRAME APPEND [I]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 ALOAD 0
 ALOAD 1
@@ -25,7 +25,7 @@ ILOAD 6
 IFEQ L2
 L3
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L2
 ALOAD 0
 ALOAD 1

@@ -13,7 +13,7 @@ LSUB
 LSTORE 1
 L3
 FRAME FULL [resources/issues/BTRACE22 J J D] [D]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L4
 ALOAD 0
 LLOAD 1

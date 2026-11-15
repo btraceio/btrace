@@ -18,6 +18,7 @@ package io.btrace.agent;
 
 import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntimeAccess;
 import io.btrace.core.BTraceRuntimeBridge;
 import io.btrace.core.SharedSettings;
 import io.btrace.core.VerifierException;
@@ -46,7 +47,6 @@ import io.btrace.instr.InstrumentUtils;
 import io.btrace.instr.Instrumentor;
 import io.btrace.instr.MethodTrackingContext;
 import io.btrace.instr.ProbeBudgets;
-import io.btrace.runtime.BTraceRuntimeAccess;
 import io.btrace.runtime.BTraceRuntimes;
 import io.btrace.runtime.ExtensionIndy;
 import java.io.BufferedWriter;

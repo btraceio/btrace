@@ -186,26 +186,27 @@ task prepareAgentClassdata(type: Copy) {
     into "${maskedJarTmpDir}/agent"
 
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
-        include 'io/btrace/BTrace.class'
         include 'io/btrace/libs/org/jctools/**/*.class'
         include 'io/btrace/agent/**/*.class'
         include 'io/btrace/instr/**/*.class'
         include 'io/btrace/instr/jaxb.index'  // Required for JAXB probe descriptor loading
         include 'io/btrace/runtime/**/*.class'
         include 'io/btrace/extension/**/*.class'
-        include 'io/btrace/core/comm/**/*.class'
-        include 'io/btrace/core/handlers/**/*.class'
+        // core/comm is in the shared section, where the agent loader's findClass looks next
         include 'io/btrace/core/Messages.class'
         include 'io/btrace/core/messages.properties'
         // Exclude classes that go in shared section
         exclude 'io/btrace/core/extensions/**'
         exclude 'io/btrace/core/annotations/**'
-        // Exclude bootstrap runtime classes (now in btrace-core)
-        exclude 'io/btrace/runtime/BTraceRuntimeAccess.class'
-        exclude 'io/btrace/runtime/BTraceRuntimeAccess$*.class'
-        exclude 'io/btrace/runtime/LinkingFlag.class'
-        // BTraceBootstrap is the BSM for flat DSL indy calls; lives in bootstrap CL only
-        exclude 'io/btrace/runtime/BTraceBootstrap.class'
+        // Root classes (see bootIncludes and the extra root blocks of btraceJar). The agent
+        // loader's parent is the bootstrap loader with btrace.jar appended, so it always loads
+        // the root copy; a masked copy here would never be used.
+        exclude 'io/btrace/runtime/BTraceBootstrap*.class'
+        exclude 'io/btrace/runtime/Indy*.class'
+        exclude 'io/btrace/runtime/ExtensionIndy*.class'
+        exclude 'io/btrace/runtime/auxiliary/Auxiliary*.class'
+        exclude 'io/btrace/extension/ExtensionBridge.class'
+        exclude 'io/btrace/extension/processor/**'
         exclude 'META-INF/**'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
@@ -233,13 +234,25 @@ task prepareClientClassdata(type: Copy) {
         include 'io/btrace/instr/**/*.class'
         include 'io/btrace/runtime/**/*.class'
         include 'io/btrace/extension/**/*.class'
-        include 'io/btrace/libs/org/objectweb/asm/**/*.class'
+        // The rest of relocated ASM is in the shared section (see prepareSharedClassdata), where
+        // the client loader's findClass looks next; only the packages it leaves out go here.
+        include 'io/btrace/libs/org/objectweb/asm/commons/**/*.class'
+        include 'io/btrace/libs/org/objectweb/asm/util/**/*.class'
+        include 'io/btrace/libs/org/objectweb/asm/xml/**/*.class'
         include 'io/btrace/libs/org/jctools/**/*.class'
-        include 'io/btrace/libs/org/slf4j/**/*.class'
         include 'com/googlecode/lanterna/**/*.class'
         // Core classes are supplied by the bootstrap/shared sections. Runtime and extension
         // classes are intentionally retained here for the compiler-side probe-pack generator.
         exclude 'io/btrace/core/**'
+        // Root classes (see bootIncludes and the extra root blocks of btraceJar), relocated SLF4J
+        // among them. The client loader's parent loaded Loader from the jar root, so it always
+        // loads the root copy; a masked copy here would never be used.
+        exclude 'io/btrace/runtime/BTraceBootstrap*.class'
+        exclude 'io/btrace/runtime/Indy*.class'
+        exclude 'io/btrace/runtime/ExtensionIndy*.class'
+        exclude 'io/btrace/runtime/auxiliary/Auxiliary*.class'
+        exclude 'io/btrace/extension/ExtensionBridge.class'
+        exclude 'io/btrace/extension/processor/**'
         exclude 'META-INF/**'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
@@ -268,10 +281,10 @@ task prepareSharedClassdata(type: Copy) {
     into "${maskedJarTmpDir}/shared"
 
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
-        // Only include classes used by both client and agent
+        // Only include classes used by both client and agent. core/annotations and
+        // core/extensions are root classes, which both loaders' parents see, so they get no
+        // masked copy here.
         include 'io/btrace/core/comm/**/*.class'
-        include 'io/btrace/core/extensions/**/*.class'
-        include 'io/btrace/core/annotations/**/*.class'
         include 'io/btrace/libs/org/objectweb/asm/**/*.class'
         // Exclude ASM packages not needed
         exclude 'io/btrace/libs/org/objectweb/asm/commons/**'
@@ -319,14 +332,7 @@ def bootIncludes = {
     if (it.path.startsWith('META-INF/services')) {
         return !it.path.contains('com.sun.') && !it.path.contains('javax.annotation.')
     }
-    // Include BTraceRuntimeAccess and LinkingFlag from btrace-core (bootstrap classes)
     if (it.path.startsWith('io/btrace/runtime/')) {
-        // Match BTraceRuntimeAccess but NOT BTraceRuntimeAccessImpl
-        if (it.path.startsWith('io/btrace/runtime/BTraceRuntimeAccess.class')
-                || it.path.startsWith('io/btrace/runtime/BTraceRuntimeAccess$')
-                || it.path.startsWith('io/btrace/runtime/LinkingFlag')) {
-            return true
-        }
         // Include invokedynamic bootstrap classes (they use volatile fields to reach agent implementations)
         if (it.path.startsWith('io/btrace/runtime/Indy')
                 || it.path.startsWith('io/btrace/runtime/ExtensionIndy')) {

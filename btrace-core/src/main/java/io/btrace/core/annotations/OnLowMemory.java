@@ -26,11 +26,19 @@ import java.lang.annotation.Target;
  * pool exceeds specified threshold size.
  *
  * <p>The handler takes no parameter, or one {@code MemoryUsage} that receives the pool's usage when
- * the threshold was crossed. It runs on the probe's "BTrace Worker" thread, not on the JVM's
- * notification thread, and an exception it throws goes to the probe's {@link OnError} handlers, or
- * to the client when there are none. Pool names depend on the garbage collector: for example {@code
- * Tenured Gen} with Serial GC, {@code G1 Old Gen} with G1; {@code Metaspace} exists with every
- * collector.
+ * the threshold was crossed; any other signature fails probe verification. It runs on the probe's
+ * "BTrace Worker" thread, not on the JVM's notification thread, and an exception it throws goes to
+ * the probe's {@link OnError} handlers, or to the client when there are none. Pool names depend on
+ * the garbage collector: for example {@code Tenured Gen} with Serial GC, {@code G1 Old Gen} with
+ * G1; {@code Metaspace} exists with every collector. When no pool has the name, or the pool does
+ * not support usage thresholds, the agent logs a warning and tells the client, listing the pools it
+ * can watch.
+ *
+ * <p>Several handlers may watch the same pool. The pool has one usage threshold, so it is armed
+ * with the lowest of theirs, and a notification runs each handler whose own threshold the reported
+ * usage has reached. The JVM notifies once each time usage crosses the armed threshold. The
+ * threshold is JVM-wide state: when the last probe watching the pool exits, the pool gets back the
+ * threshold it had before, unless the application changed it in the meantime.
  *
  * @author A. Sundararajan
  */

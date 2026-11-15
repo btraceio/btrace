@@ -16,8 +16,8 @@
  */
 package io.btrace.compiler;
 
+import io.btrace.core.BTraceRuntimeAccess;
 import io.btrace.core.Messages;
-import io.btrace.runtime.BTraceRuntimeAccess;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;

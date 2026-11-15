@@ -12,7 +12,7 @@ LSUB
 LSTORE 2
 L5
 FRAME APPEND [J J resources/CallInBranchTarget]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L1
 ALOAD 6
 LDC "work"
@@ -42,7 +42,7 @@ LSUB
 LSTORE 8
 L7
 FRAME FULL [resources/CallInBranchTarget I T T T T T T J J resources/CallInBranchTarget] []
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L8
 ALOAD 12
 LDC "done"
@@ -76,7 +76,7 @@ LSUB
 LSTORE 2
 L3
 FRAME APPEND [J J resources/CallInBranchTarget]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L4
 ALOAD 6
 LDC "work"
@@ -105,7 +105,7 @@ LSUB
 LSTORE 7
 L6
 FRAME FULL [resources/CallInBranchTarget I T T T T T J J resources/CallInBranchTarget] []
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L5
 ALOAD 11
 LDC "done"
@@ -138,7 +138,7 @@ LSUB
 LSTORE 2
 L2
 FRAME FULL [resources/CallInBranchTarget I J J resources/CallInBranchTarget] [I]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L3
 ALOAD 6
 LDC "value"
@@ -167,7 +167,7 @@ LSUB
 LSTORE 7
 L5
 FRAME FULL [resources/CallInBranchTarget I T T T T T J J resources/CallInBranchTarget] [I]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L6
 ALOAD 11
 LDC "value"
@@ -200,7 +200,7 @@ LLOAD 4
 LSUB
 LSTORE 2
 FRAME APPEND [J J resources/CallInBranchTarget]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L5
 ALOAD 6
 LDC "work"
@@ -229,7 +229,7 @@ LSUB
 LSTORE 7
 L6
 FRAME FULL [resources/CallInBranchTarget I T T T T T J J resources/CallInBranchTarget] []
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L7
 ALOAD 11
 LDC "done"
@@ -258,7 +258,7 @@ LSUB
 LSTORE 12
 L8
 FRAME FULL [resources/CallInBranchTarget I T T T T T T T T T T J J resources/CallInBranchTarget] []
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L9
 ALOAD 16
 LDC "done"
@@ -291,7 +291,7 @@ LSUB
 LSTORE 3
 L6
 FRAME APPEND [J J resources/CallInBranchTarget]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L4
 ALOAD 7
 LDC "work"

@@ -7,7 +7,7 @@ L2
 FRAME SAME1 java/lang/Throwable
 DUP
 ASTORE 2
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
 LDC "caught"

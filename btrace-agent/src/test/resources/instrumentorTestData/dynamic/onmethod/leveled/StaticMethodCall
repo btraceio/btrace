@@ -1,7 +1,7 @@
 LSTORE 4
 ASTORE 6
 ASTORE 7
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L2
 ALOAD 6
 LLOAD 4

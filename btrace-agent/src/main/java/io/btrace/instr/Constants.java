@@ -18,6 +18,7 @@ package io.btrace.instr;
 
 import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceUtils;
+import io.btrace.core.LinkingFlag;
 import io.btrace.core.annotations.BTrace;
 import io.btrace.core.annotations.Duration;
 import io.btrace.core.annotations.Injected;
@@ -42,7 +43,6 @@ import io.btrace.core.annotations.TargetMethodOrField;
 import io.btrace.core.annotations.Where;
 import io.btrace.core.extensions.Extension;
 import io.btrace.core.jfr.JfrEvent;
-import io.btrace.runtime.LinkingFlag;
 import java.util.regex.Pattern;
 import org.objectweb.asm.Type;
 
@@ -89,7 +89,7 @@ public abstract class Constants {
   public static final String THROWABLE_DESC = "L" + THROWABLE_INTERNAL + ";";
   public static final Type THROWABLE_TYPE = Type.getType(THROWABLE_DESC);
 
-  public static final String BTRACERTACCESS_INTERNAL = "io/btrace/runtime/BTraceRuntimeAccess";
+  public static final String BTRACERTACCESS_INTERNAL = "io/btrace/core/BTraceRuntimeAccess";
   public static final String BTRACERTACCESS_DESC = "L" + BTRACERTACCESS_INTERNAL + ";";
   public static final String BTRACERT_INTERNAL = "io/btrace/core/BTraceRuntime";
   public static final String BTRACERT_DESC = "L" + BTRACERT_INTERNAL + ";";

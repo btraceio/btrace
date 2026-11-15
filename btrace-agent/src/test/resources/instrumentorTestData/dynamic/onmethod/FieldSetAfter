@@ -2,7 +2,7 @@ ISTORE 1
 DUP
 ASTORE 2
 ILOAD 1
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 ALOAD 2

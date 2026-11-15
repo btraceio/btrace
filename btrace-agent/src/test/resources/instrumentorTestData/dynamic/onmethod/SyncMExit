@@ -3,7 +3,7 @@ L6
 LINENUMBER 158 L6
 DUP
 ASTORE 2
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L7
 ALOAD 0
 LDC "resources.OnMethodTest"
@@ -20,7 +20,7 @@ GOTO L8
 ASTORE 3
 DUP
 ASTORE 4
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L9
 ALOAD 0
 LDC "resources.OnMethodTest"

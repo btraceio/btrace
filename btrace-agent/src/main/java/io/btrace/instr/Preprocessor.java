@@ -1038,7 +1038,6 @@ final class Preprocessor {
         if (an.desc.equals(Constants.ONLOWMEMORY_DESC)) {
           String pool = "";
           long threshold = Long.MAX_VALUE;
-          String thresholdProp = null;
 
           for (int i = 0; i < an.values.size(); i += 2) {
             String key = (String) an.values.get(i);
@@ -1054,11 +1053,6 @@ final class Preprocessor {
                   threshold = (long) val;
                   break;
                 }
-              case "thresholdFrom":
-                {
-                  thresholdProp = (String) val;
-                  break;
-                }
             }
           }
           // trackUsage is true when the handler declares a MemoryUsage parameter; it drives both
@@ -1072,19 +1066,13 @@ final class Preprocessor {
           il.add(new LdcInsnNode(mn.name));
           il.add(new LdcInsnNode(pool));
           il.add(new LdcInsnNode(threshold));
-          // thresholdProp is null unless a threshold property was declared; LDC of null is illegal.
-          if (thresholdProp != null) {
-            il.add(new LdcInsnNode(thresholdProp));
-          } else {
-            il.add(new InsnNode(Opcodes.ACONST_NULL));
-          }
           il.add(new InsnNode(trackUsage ? Opcodes.ICONST_1 : Opcodes.ICONST_0));
           il.add(
               new MethodInsnNode(
                   Opcodes.INVOKESPECIAL,
                   LOWMEMORYHANDLER_INTERNAL,
                   "<init>",
-                  "(Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Z)V",
+                  "(Ljava/lang/String;Ljava/lang/String;JZ)V",
                   false));
           il.add(new InsnNode(Opcodes.AASTORE));
         }

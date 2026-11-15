@@ -156,6 +156,74 @@ public class MethodVerifierDslTest {
     }
   }
 
+  @Test
+  void lowMemoryHandlerSignatures() {
+    assertDoesNotThrow(() -> verifyProbeBytes(probeWithLowMemoryHandler("()V")));
+    assertDoesNotThrow(
+        () -> verifyProbeBytes(probeWithLowMemoryHandler("(Ljava/lang/management/MemoryUsage;)V")));
+    assertLowMemorySignatureRejected(() -> verifyProbeBytes(probeWithLowMemoryHandler(STRING_ARG)));
+    assertLowMemorySignatureRejected(
+        () ->
+            verifyProbeBytes(probeWithLowMemoryHandler("(Ljava/lang/management/MemoryUsage;I)V")));
+  }
+
+  @Test
+  void persistedLowMemoryHandlerWithWrongSignatureFailsVerification() throws Exception {
+    boolean trusted = SharedSettings.GLOBAL.isTrusted();
+    try {
+      // A trusted probe skips MethodVerifier, so the bad handler survives into the persisted form.
+      SharedSettings.GLOBAL.setTrusted(true);
+      BTraceProbeNode probe =
+          (BTraceProbeNode)
+              new BTraceProbeFactory(SharedSettings.GLOBAL)
+                  .createProbe(probeWithLowMemoryHandler(STRING_ARG, true));
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      BTraceProbePersisted.from(probe).write(new DataOutputStream(bytes));
+
+      SharedSettings.GLOBAL.setTrusted(false);
+      BTraceProbe restored =
+          new BTraceProbeFactory(SharedSettings.GLOBAL).createProbe(bytes.toByteArray());
+      assertLowMemorySignatureRejected(restored::checkVerified);
+    } finally {
+      SharedSettings.GLOBAL.setTrusted(trusted);
+    }
+  }
+
+  private static final String STRING_ARG = "(Ljava/lang/String;)V";
+
+  private static void assertLowMemorySignatureRejected(Runnable verification) {
+    VerifierException exception = assertThrows(VerifierException.class, verification::run);
+    assertTrue(
+        exception.getMessage().contains("@OnLowMemory"),
+        "unexpected verifier message: " + exception.getMessage());
+  }
+
+  private static byte[] probeWithLowMemoryHandler(String desc) {
+    return probeWithLowMemoryHandler(desc, false);
+  }
+
+  private static byte[] probeWithLowMemoryHandler(String desc, boolean trusted) {
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, Opcodes.ACC_PUBLIC, "TestProbe", null, "java/lang/Object", null);
+    AnnotationVisitor btrace = cw.visitAnnotation("Lio/btrace/core/annotations/BTrace;", true);
+    if (trusted) {
+      btrace.visit("trusted", Boolean.TRUE);
+    }
+    btrace.visitEnd();
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "onLowMemory", desc, null, null);
+    AnnotationVisitor av = mv.visitAnnotation("Lio/btrace/core/annotations/OnLowMemory;", true);
+    av.visit("pool", "Metaspace");
+    av.visit("threshold", 1048576L);
+    av.visitEnd();
+    mv.visitCode();
+    mv.visitInsn(Opcodes.RETURN);
+    mv.visitMaxs(0, 0);
+    mv.visitEnd();
+    cw.visitEnd();
+    return cw.toByteArray();
+  }
+
   private void assertRecursionFails(byte[] bytes) {
     assertRecursionFails(() -> verifyProbeBytes(bytes));
   }

@@ -793,7 +793,7 @@ class BootstrapClosureTest {
   }
 
   /** Locates the assembled jar the same way {@link BTraceJarPackagingTest} does. */
-  private static File locateBTraceJar() {
+  static File locateBTraceJar() {
     File resourcesDir = new File("build/resources/main");
     File[] versionDirs = resourcesDir.listFiles(File::isDirectory);
     assertNotNull(versionDirs, "Expected versioned dist directory under build/resources/main");

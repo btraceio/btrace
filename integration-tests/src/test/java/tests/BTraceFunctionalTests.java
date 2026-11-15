@@ -249,6 +249,45 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   @Test
+  public void testOnLowMemoryRunsEveryHandlerOfAPool() throws Exception {
+    // Two handlers on one pool used to share a map slot, so only the last one ever ran.
+    testDynamic(
+        "resources.MetaspaceTarget",
+        "btrace/OnLowMemoryTwoHandlersTest.java",
+        Completion.untilContains("lowmem-first-handler", "lowmem-second-handler"),
+        (stdout, stderr, retcode, jfrFile) -> {
+          assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+          assertTrue(
+              stdout.contains("lowmem-first-handler"),
+              "the first handler did not run; stdout: " + stdout);
+          assertTrue(
+              stdout.contains("lowmem-second-handler"),
+              "the second handler did not run; stdout: " + stdout);
+        });
+  }
+
+  @Test
+  public void testOnLowMemoryUnknownPoolIsReported() throws Exception {
+    // A pool name that matches no pool must not be silent: the client is told, with the pools
+    // the probe could have watched.
+    testDynamic(
+        "resources.MetaspaceTarget",
+        "btrace/OnLowMemoryUnknownPoolTest.java",
+        Completion.untilContains("[BTRACE WARN] @OnLowMemory pool 'No Such Pool' does not exist"),
+        (stdout, stderr, retcode, jfrFile) -> {
+          assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+          assertTrue(
+              stdout.contains("[BTRACE WARN] @OnLowMemory pool 'No Such Pool' does not exist"),
+              "the client was not told the pool does not exist; stdout: " + stdout);
+          assertTrue(
+              Pattern.compile("Pools with usage thresholds: \\[[^\\]]*Metaspace")
+                  .matcher(stdout)
+                  .find(),
+              "the warning did not list the available pools; stdout: " + stdout);
+        });
+  }
+
+  @Test
   public void testOnLowMemoryHandlerExceptionIsReported() throws Exception {
     // An exception thrown by an @OnLowMemory handler must be routed to @OnError like any other
     // handler failure, and must not end the probe.
