@@ -844,7 +844,7 @@ class BudgetGovernorTest {
             });
   }
 
-  private final class FakeClient extends Client {
+  private static final class FakeClient extends Client {
     final String className;
     final String internalName;
     final List<String> exits = new ArrayList<>();
