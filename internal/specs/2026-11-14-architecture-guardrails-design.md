@@ -235,7 +235,8 @@ Each item says whether it has been resolved since.
   test classpath. `btrace-compiler`'s `runtimeOnly` on `btrace-agent` stays: the compiler finds the
   agent's `PackGenerator` through `ServiceLoader`, and it brings `btrace-runtime` with it. The
   compiler's own `implementation` on `btrace-runtime` was unused (its one `io.btrace.runtime` import,
-  `BTraceRuntimeAccess`, is in `btrace-core`) and is removed; `btrace.jar` is unchanged.
+  `BTraceRuntimeAccess`, was in `btrace-core`; the class is now `io.btrace.core.BTraceRuntimeAccess`)
+  and is removed; `btrace.jar` is unchanged.
 - Open — classes present both in the JAR root and in a masked section. Re-measured on a fresh JAR:
   159 root/masked duplicates, plus 70 agent/shared and 94 client/shared, all byte-identical and
   harmless under parent-first loading. Removing them changes which section a class ships in and is
@@ -329,10 +330,12 @@ read from the named files when this section was written, and the files are autho
   the third entry is `btracex`'s missing `--add-exports`); `layering.txt` 20 (0459ee82, 868e3412), then 17: the `Preprocessor` literal was removed by
   calling `ExtensionLoader.instance()` directly, and the `ExtensionBridgeImpl` and
   `BTraceRuntimeImplBase` literals, both deliberate late binding, became per-file exceptions in
-  `layering_rules.json`;
+  `layering_rules.json`; later 6, then 5 once `BTraceRuntimeAccess` and `LinkingFlag` moved from
+  `io.btrace.runtime` to `io.btrace.core` and the split package was gone;
   `main-test-hooks.txt` 10 entries in 9 files, not 8 files, after the rule was widened to
   `...ForTests` and overloads (d7079ef0); `growth_allow.txt` none; the API snapshot 151 types
-  (6fd59435); `bootstrap-root-allowlist.txt` 21 lines; `bootstrap-closure-baseline.txt` 24 (the
+  (6fd59435); `bootstrap-root-allowlist.txt` 21 lines, then 19 when those two
+  classes left `io/btrace/runtime/` for the already listed `io/btrace/core/`; `bootstrap-closure-baseline.txt` 24 (the
   `ExtensionContext` reference plus 23 from the annotation processor; af95fdd4, 4a0ac1fa), then 1
   once the processor became a tool-only allowlist line;
   `bootstrap-jdk-nonboot-packages.txt` 54 packages; `args-registry-baseline.txt` 9 at first, against

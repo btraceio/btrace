@@ -134,8 +134,8 @@ Utility class for detecting masked JARs. A JAR is identified as masked by the pr
 The `bootIncludes` filter closure defined in `btrace-dist/build.gradle` determines which classes belong in the bootstrap section. It is used by the `bootstrapJar` and `btraceJar` tasks to separate classes into `.class` (bootstrap) vs `.classdata` (masked) during JAR assembly.
 
 **Bootstrap inclusion criteria:**
-- `io/btrace/core/` — core API, including annotations and handlers (excluding `Messages`, `messages.properties`, `comm/`, and `extensions/`)
-- `io/btrace/runtime/` — selected runtime support classes only (`BTraceRuntimeAccess`, `LinkingFlag`, `Indy*`, `ExtensionIndy`, `BTraceBootstrap`, `auxiliary/Auxiliary`)
+- `io/btrace/core/` — core API, including annotations and handlers (excluding `Messages`, `messages.properties`, `comm/`, and `extensions/`), and the runtime access classes `BTraceRuntimeAccess` and `LinkingFlag` that probes and instrumented classes link against
+- `io/btrace/runtime/` — selected runtime support classes only (`Indy*`, `ExtensionIndy`, `BTraceBootstrap`, `auxiliary/Auxiliary`)
 - `io/btrace/BTrace.class` — flat DSL entry class (needed by javac when compiling scripts)
 - `io/btrace/extension/ExtensionBridge.class` — extension bridge interface (referenced by `ExtensionIndy`)
 - `io/btrace/libs/org/slf4j/` — relocated SLF4J (logging from bootstrap code)

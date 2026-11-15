@@ -25,7 +25,7 @@ LSUB
 LSTORE 4
 L2
 FRAME FULL [resources/OnMethodTest java/lang/String J J J I J java/lang/String resources/OnMethodTest] [J]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L1
 DUP2
 LSTORE 13

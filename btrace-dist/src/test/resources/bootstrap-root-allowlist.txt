@@ -25,10 +25,8 @@ io/btrace/BTrace.class
 
 # bootIncludes: selected runtime support classes
 io/btrace/runtime/BTraceBootstrap.class
-io/btrace/runtime/BTraceRuntimeAccess.class
 io/btrace/runtime/ExtensionIndy.class
 io/btrace/runtime/IndyDispatcher.class
-io/btrace/runtime/LinkingFlag.class
 io/btrace/runtime/auxiliary/Auxiliary.class
 
 # bootIncludes: extension bridge interface, referenced by ExtensionIndy

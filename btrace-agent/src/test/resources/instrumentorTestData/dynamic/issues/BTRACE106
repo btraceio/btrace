@@ -1,4 +1,4 @@
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 ALOAD 0
 LDC "aMethod"
@@ -21,7 +21,7 @@ LSUB
 LSTORE 1
 L2
 FRAME APPEND [J J]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "bMethod"
@@ -40,7 +40,7 @@ LSUB
 LSTORE 1
 L4
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
 LDC "bMethod"

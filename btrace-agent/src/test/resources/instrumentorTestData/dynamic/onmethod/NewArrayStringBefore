@@ -1,4 +1,4 @@
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "java.lang.String"
@@ -13,7 +13,7 @@ L3
 FRAME FULL [resources/OnMethodTest [I [[I] [I]
 L4
 LINENUMBER 103 L4
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
 LDC "java.lang.String"

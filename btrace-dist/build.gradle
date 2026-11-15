@@ -200,10 +200,6 @@ task prepareAgentClassdata(type: Copy) {
         // Exclude classes that go in shared section
         exclude 'io/btrace/core/extensions/**'
         exclude 'io/btrace/core/annotations/**'
-        // Exclude bootstrap runtime classes (now in btrace-core)
-        exclude 'io/btrace/runtime/BTraceRuntimeAccess.class'
-        exclude 'io/btrace/runtime/BTraceRuntimeAccess$*.class'
-        exclude 'io/btrace/runtime/LinkingFlag.class'
         // BTraceBootstrap is the BSM for flat DSL indy calls; lives in bootstrap CL only
         exclude 'io/btrace/runtime/BTraceBootstrap.class'
         exclude 'META-INF/**'
@@ -241,6 +237,17 @@ task prepareClientClassdata(type: Copy) {
         // classes are intentionally retained here for the compiler-side probe-pack generator.
         exclude 'io/btrace/core/**'
         exclude 'META-INF/**'
+        rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
+    }
+
+    // The bootstrap classes BTraceRuntimeAccess and LinkingFlag are root entries, and the client
+    // section also carries a masked copy of each. They moved from io/btrace/runtime/, which the
+    // block above includes, to io/btrace/core/, which it excludes; this keeps the copies where
+    // they were. Whether root classes need masked copies at all is a separate question.
+    from(provider { zipTree(allClassesShadow.archiveFile) }) {
+        include 'io/btrace/core/BTraceRuntimeAccess.class'
+        include 'io/btrace/core/BTraceRuntimeAccess$*.class'
+        include 'io/btrace/core/LinkingFlag.class'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
 
@@ -319,14 +326,7 @@ def bootIncludes = {
     if (it.path.startsWith('META-INF/services')) {
         return !it.path.contains('com.sun.') && !it.path.contains('javax.annotation.')
     }
-    // Include BTraceRuntimeAccess and LinkingFlag from btrace-core (bootstrap classes)
     if (it.path.startsWith('io/btrace/runtime/')) {
-        // Match BTraceRuntimeAccess but NOT BTraceRuntimeAccessImpl
-        if (it.path.startsWith('io/btrace/runtime/BTraceRuntimeAccess.class')
-                || it.path.startsWith('io/btrace/runtime/BTraceRuntimeAccess$')
-                || it.path.startsWith('io/btrace/runtime/LinkingFlag')) {
-            return true
-        }
         // Include invokedynamic bootstrap classes (they use volatile fields to reach agent implementations)
         if (it.path.startsWith('io/btrace/runtime/Indy')
                 || it.path.startsWith('io/btrace/runtime/ExtensionIndy')) {

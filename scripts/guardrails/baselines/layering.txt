@@ -9,4 +9,3 @@ import btrace-extensions/btrace-otel/src/test/java/io/btrace/otel/OTelImplTest.j
 import btrace-extensions/btrace-otel/src/test/java/io/btrace/otel/OTelOtlpConformanceTest.java:io.btrace.core.ArgsMap  # test of an impl class that itself imports BTrace internals
 import btrace-extensions/btrace-statsd/src/main/java/io/btrace/statsd/StatsdImpl.java:io.btrace.core.SharedSettings  # extension impl imports core internals outside io.btrace.core.extensions
 import btrace-extensions/btrace-statsd/src/test/java/io/btrace/statsd/StatsdImplTest.java:io.btrace.core.SharedSettings  # test of an impl class that itself imports BTrace internals
-split-package btrace-core/src/main/java/io/btrace/runtime:btrace-runtime  # package io.btrace.runtime exists in btrace-core and btrace-runtime

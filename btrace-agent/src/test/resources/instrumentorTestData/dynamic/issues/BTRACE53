@@ -10,7 +10,7 @@ LSUB
 LSTORE 1
 L2
 FRAME FULL [resources/DerivedClass J J] []
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L3
 LLOAD 1
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$BTRACE53$onInit(J)V [

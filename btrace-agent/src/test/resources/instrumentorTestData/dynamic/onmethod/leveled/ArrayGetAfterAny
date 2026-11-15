@@ -3,7 +3,7 @@ ISTORE 3
 ASTORE 4
 DUP
 ISTORE 5
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L2
 ALOAD 0
 ILOAD 5

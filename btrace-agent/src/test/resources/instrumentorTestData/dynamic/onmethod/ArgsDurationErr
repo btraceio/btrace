@@ -12,7 +12,7 @@ LSUB
 LSTORE 6
 DUP
 ASTORE 10
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L2
 ALOAD 0
 LLOAD 6

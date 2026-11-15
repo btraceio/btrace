@@ -1,7 +1,7 @@
 TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable
 DUP
 ASTORE 2
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L6
 ALOAD 0
 LDC "sync"

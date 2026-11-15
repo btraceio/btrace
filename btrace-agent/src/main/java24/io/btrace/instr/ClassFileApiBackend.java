@@ -124,7 +124,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   // class that is reachable from MethodHandleNatives.linkCallSite() can re-enter linkCallSite()
   // for its own not-yet-linked bootstrap, forming an infinite recursion → StackOverflowError.
   private static final ClassDesc CD_LINKING_FLAG =
-      ClassDesc.ofInternalName("io/btrace/runtime/LinkingFlag");
+      ClassDesc.ofInternalName("io/btrace/core/LinkingFlag");
   private static final MethodTypeDesc LINKING_GET_MTD = MethodTypeDesc.ofDescriptor("()I");
 
   @Override

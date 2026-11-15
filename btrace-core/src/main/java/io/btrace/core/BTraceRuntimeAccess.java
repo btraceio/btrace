@@ -14,9 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.btrace.runtime;
+package io.btrace.core;
 
-import io.btrace.core.BTraceRuntimeBridge;
 import io.btrace.core.extensions.ExtensionContext;
 import io.btrace.core.handlers.ErrorHandler;
 import io.btrace.core.handlers.EventHandler;

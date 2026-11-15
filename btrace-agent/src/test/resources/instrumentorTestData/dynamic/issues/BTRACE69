@@ -2,7 +2,7 @@ TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable
 TRYCATCHBLOCK L4 L6 L6 java/lang/Throwable
 DUP
 ASTORE 2
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 ALOAD 2
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$BTRACE69$onSyncEntry(Ljava/lang/Object;)V [
@@ -16,7 +16,7 @@ L7
 LINENUMBER 118 L7
 DUP
 ASTORE 3
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L8
 ALOAD 3
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$BTRACE69$onSyncExit(Ljava/lang/Object;)V [
@@ -32,7 +32,7 @@ FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest] [jav
 ASTORE 4
 DUP
 ASTORE 5
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L10
 ALOAD 5
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$BTRACE69$onSyncExit(Ljava/lang/Object;)V [
