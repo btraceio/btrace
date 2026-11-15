@@ -18,8 +18,6 @@ package io.btrace.agent;
 
 import static io.btrace.core.Args.ALLOW_EXTENSIONS;
 import static io.btrace.core.Args.ALLOW_PRIVILEGED;
-import static io.btrace.core.Args.AUTH_TOKEN_FILE;
-import static io.btrace.core.Args.BIND_ADDRESS;
 import static io.btrace.core.Args.BOOT_CLASS_PATH;
 import static io.btrace.core.Args.CMD_QUEUE_LIMIT;
 import static io.btrace.core.Args.CONFIG;
@@ -36,11 +34,8 @@ import static io.btrace.core.Args.HELP;
 import static io.btrace.core.Args.LIBS;
 import static io.btrace.core.Args.NO_SERVER;
 import static io.btrace.core.Args.OUTPUT;
-import static io.btrace.core.Args.PORT;
 import static io.btrace.core.Args.PROBES;
 import static io.btrace.core.Args.PROBE_DESC_PATH;
-import static io.btrace.core.Args.PROBE_MAX_RATE;
-import static io.btrace.core.Args.PROBE_TTL;
 import static io.btrace.core.Args.SCRIPT;
 import static io.btrace.core.Args.SCRIPT_DIR;
 import static io.btrace.core.Args.SCRIPT_OUTPUT_DIR;
@@ -106,8 +101,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
@@ -192,7 +185,6 @@ public final class Main {
                   "volatile",
                   "while")));
   private static final String BUNDLED_PROBE_ROOT = "META-INF/btrace-probes/";
-  private static final String TRUSTED_PROPERTY = "btrace.trusted";
   private static final SharedSettings settings = SharedSettings.GLOBAL;
   private static final BTraceTransformer transformer =
       new BTraceTransformer(new DebugSupport(settings));
@@ -234,23 +226,23 @@ public final class Main {
   private static final ExecutorService serializedExecutor =
       Executors.newSingleThreadExecutor(qProcessorThreadFactory);
   private static final long ts = System.nanoTime();
-  private static volatile ArgsMap argMap;
+  static volatile ArgsMap argMap;
   private static volatile Instrumentation inst;
   private static volatile Long fileRollMilliseconds;
   private static volatile ExtensionLoader extensionLoader;
-  private static volatile boolean serverRunning = true;
-  private static volatile ControlServer controlServer;
+  static volatile boolean serverRunning = true;
+  static volatile ControlServer controlServer;
 
   /**
    * Serializes this agent's initialization against a later agent load handed over to it (see {@link
-   * #startServerOnAttach}); which load gets to initialize at all is decided by {@code
+   * AgentHandOver#startServerOnAttach}); which load gets to initialize at all is decided by {@code
    * BTraceRuntimeAccess.claimAgent}. Deliberately an object lock and not the {@code Main} class
    * monitor: holding {@code Main.class} for the whole of initialization made the "BTrace Server
    * Shutdown" hook block on {@code Main.class} when a target exits while the agent is still
    * initializing -- the hook could never run, never close the control server, and the JVM hung in
    * exit with nothing to report (issue #932).
    */
-  private static final Object INIT_LOCK = new Object();
+  static final Object INIT_LOCK = new Object();
 
   // Track appended jars to avoid duplicate classpath entries
   private static final Set<Path> BOOT_ADDED = Collections.synchronizedSet(new LinkedHashSet<>());
@@ -262,7 +254,7 @@ public final class Main {
 
   private static final Logger log = LoggerFactory.getLogger(Main.class);
 
-  private static volatile String agentMode = "unknown";
+  static volatile String agentMode = "unknown";
 
   public static void premain(String args, Instrumentation inst) {
     agentMode = "premain";
@@ -296,116 +288,7 @@ public final class Main {
     }
   }
 
-  static final String ALREADY_LOADED =
-      "BTrace agent is already loaded in this JVM; this load and its arguments are ignored";
-
-  static final String SERVER_STARTED_ON_ATTACH =
-      "BTrace agent is already loaded in this JVM; its command server was started for this"
-          + " attach, every other argument of this load is ignored";
-
-  private static final String SERVER_NOT_STARTED =
-      "BTrace agent is already loaded in this JVM; its command server was not started: ";
-
-  // Written under INIT_LOCK.
-  private static boolean initialized;
-  private static boolean runtimeHooksInstalled;
-  private static boolean budgetValidAtInit;
-
-  // What a later agent load in this JVM calls instead of initializing an agent of its own. An
-  // anonymous class, not a lambda: Main's static initializer runs on the premain path.
-  private static final UnaryOperator<String> AGENT_CONTROL =
-      new UnaryOperator<String>() {
-        @Override
-        public String apply(String args) {
-          return startServerOnAttach(args);
-        }
-      };
-
-  /**
-   * Handles a later agent load on behalf of this, already loaded, agent. If this agent has no
-   * command server, because it was launched without one, the server is started on the port and bind
-   * address of the later load. Nothing else of that load is used: this agent's settings, startup
-   * scripts and probe budget stay what they are. The clients of that server get those settings, a
-   * launch-time {@code trusted=true} included, so the server of an agent loaded at JVM launch
-   * requires the authentication token, as it would had it been started at launch.
-   *
-   * @return the line to print in the target
-   */
-  static String startServerOnAttach(String args) {
-    // Also waits for an initialization that is still running.
-    synchronized (INIT_LOCK) {
-      if (!initialized) {
-        // The lock is held, so initialization is not still running: it failed. Once this agent
-        // has installed itself into the shared runtime classes no other load can replace it;
-        // before that it gave the JVM back, and this load only asked a moment too early.
-        return SERVER_NOT_STARTED
-            + (runtimeHooksInstalled
-                ? "the agent failed to initialize; restart the JVM to use BTrace in it"
-                : "the agent failed to initialize; load the agent again");
-      }
-      if (controlServer != null) {
-        return ALREADY_LOADED;
-      }
-      if (!budgetValidAtInit) {
-        return SERVER_NOT_STARTED + "the probe budget set at launch is invalid";
-      }
-      ControlServer endpoint;
-      try {
-        endpoint =
-            ControlServer.open(
-                attachEndpointArgs(parseAgentArgs(args), argMap), "premain".equals(agentMode));
-      } catch (IOException | RuntimeException e) {
-        return SERVER_NOT_STARTED + (e.getMessage() != null ? e.getMessage() : e.toString());
-      }
-      return serveOnAttach(endpoint, serverThread(endpoint));
-    }
-  }
-
-  /**
-   * Makes {@code endpoint} this agent's command server and starts {@code agentThread} to serve it.
-   * The caller holds {@code INIT_LOCK}.
-   *
-   * @return the line to print in the target
-   */
-  static String serveOnAttach(ControlServer endpoint, Thread agentThread) {
-    System.setProperty("btrace.wireio", String.valueOf(WireIO.VERSION));
-    controlServer = endpoint;
-    serverRunning = true;
-    agentThread.setDaemon(true);
-    BTraceRuntime.enter();
-    try {
-      installServerShutdownHook();
-      agentThread.start();
-    } catch (Throwable t) {
-      // Nothing accepts on the endpoint: close it and take back what it published.
-      shutdownServer();
-      return SERVER_NOT_STARTED + t;
-    } finally {
-      BTraceRuntime.leave();
-    }
-    return SERVER_STARTED_ON_ATTACH;
-  }
-
-  /**
-   * The arguments of a command server started for a later agent load: where it listens comes from
-   * that load, the token file from the arguments this agent was loaded with.
-   */
-  static ArgsMap attachEndpointArgs(ArgsMap laterLoad, ArgsMap ownLoad) {
-    ArgsMap endpoint = new ArgsMap();
-    copyArgument(laterLoad, endpoint, PORT);
-    copyArgument(laterLoad, endpoint, BIND_ADDRESS);
-    copyArgument(ownLoad, endpoint, AUTH_TOKEN_FILE);
-    return endpoint;
-  }
-
-  private static void copyArgument(ArgsMap from, ArgsMap to, String key) {
-    String value = from != null ? from.get(key) : null;
-    if (value != null) {
-      to.put(key, value);
-    }
-  }
-
-  private static Thread serverThread(final ControlServer endpoint) {
+  static Thread serverThread(final ControlServer endpoint) {
     return new Thread(
         new Runnable() {
           @Override
@@ -420,48 +303,11 @@ public final class Main {
         });
   }
 
-  // Anonymous class, not a lambda: used on the premain path.
-  private static final Supplier<UnaryOperator<String>> AGENT_HOLDER =
-      new Supplier<UnaryOperator<String>>() {
-        @Override
-        public UnaryOperator<String> get() {
-          return BTraceRuntimeAccess.agentControl();
-        }
-      };
-
-  /**
-   * Claims the JVM for the agent load that {@code own} stands for, or hands the load over to the
-   * agent that holds the JVM already.
-   *
-   * @param holder looks up the control of the agent holding the JVM
-   * @return {@code null} when this load holds the JVM now and must initialize; otherwise the line
-   *     to print in the target, and this load must do nothing more
-   */
-  static String claimOrHandOver(
-      String args, UnaryOperator<String> own, Supplier<UnaryOperator<String>> holder) {
-    while (!BTraceRuntimeAccess.claimAgent(own)) {
-      // Every agent load gets its own class loader, so this is a different Main than the one
-      // that loaded first. That one decides what this load may still do.
-      UnaryOperator<String> loaded = holder.get();
-      if (loaded == null) {
-        // The holder failed to initialize and gave the JVM back in between: claim it again.
-        continue;
-      }
-      String answer;
-      try {
-        answer = loaded.apply(args);
-      } catch (Throwable t) {
-        return SERVER_NOT_STARTED + t;
-      }
-      // The holder may be another version of the agent. No answer must not read as a claim.
-      return answer != null ? answer : SERVER_NOT_STARTED + "the loaded agent gave no answer";
-    }
-    return null;
-  }
-
   private static void mainLocked(String args, Instrumentation inst) {
     if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization started");
-    String handedOver = claimOrHandOver(args, AGENT_CONTROL, AGENT_HOLDER);
+    String handedOver =
+        AgentHandOver.claimOrHandOver(
+            args, AgentHandOver.AGENT_CONTROL, AgentHandOver.AGENT_HOLDER);
     if (handedOver != null) {
       System.err.println("[BTrace Agent] " + handedOver);
       return;
@@ -479,8 +325,8 @@ public final class Main {
       BudgetLimits.Snapshot budgetSnapshot = BudgetLimits.snapshot(System.getProperties());
       // Under dynamic attach an operator budget property, valid or not, always ends in trusted mode
       // being refused. Known before the arguments are parsed, so that nothing they do is trusted.
-      attachTrustBarred = !"premain".equals(agentMode) && budgetSnapshot.present();
-      budgetPropertySet = budgetSnapshot.present();
+      AgentTrust.attachTrustBarred = !"premain".equals(agentMode) && budgetSnapshot.present();
+      AgentTrust.budgetPropertySet = budgetSnapshot.present();
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Loading arguments");
       loadArgs(args);
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Arguments loaded");
@@ -516,7 +362,7 @@ public final class Main {
         // a budget property the trusted argument is not applied at all.
         if (BudgetLimits.refusesClientTrust(limits, settings.isTrusted())) {
           Client.refuseTrustedMode(true);
-          if (trustRequestedAndRefused) {
+          if (AgentTrust.isTrustRequestedAndRefused()) {
             BUDGET_REPORTER.accept(
                 "ignoring agent argument trusted=true, every probe is verified: "
                     + BudgetLimits.TRUSTED_REFUSED);
@@ -535,7 +381,7 @@ public final class Main {
         System.err.println("[BTrace Agent] " + message);
         log.error(message);
       }
-      budgetValidAtInit = budgetValid;
+      AgentHandOver.budgetValidAtInit = budgetValid;
       boolean loadProbes = loadsStartupProbes(budgetValid, agentMode);
 
       Thread agentThread = null;
@@ -566,7 +412,7 @@ public final class Main {
       }
       // From here on this instance installs itself into the runtime classes all agent loads
       // share, so a failure no longer leaves the JVM free for another load.
-      runtimeHooksInstalled = true;
+      AgentHandOver.runtimeHooksInstalled = true;
       // set the fall-back instrumentation object to BTraceRuntime
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Setting up runtime");
       BTraceRuntime.instrumentation = inst;
@@ -649,19 +495,19 @@ public final class Main {
           BTraceRuntime.leave();
         }
       }
-      initialized = true;
+      AgentHandOver.initialized = true;
       if (AGENT_DEBUG)
         System.err.println(
             "[BTrace Agent] Initialization complete, " + startedScripts + " scripts started");
     } catch (Throwable t) {
       shutdownServer();
-      if (!runtimeHooksInstalled) {
+      if (!AgentHandOver.runtimeHooksInstalled) {
         // This instance has not installed itself into the shared runtime classes: take back the
         // settings its arguments wrote, a trusted=true included, and let a retry load an agent.
         // The system properties it set, the jars it appended to the class paths and a budget
         // governor thread it started stay behind; the governor has no client to act on.
         settings.from(settingsBefore);
-        BTraceRuntimeAccess.releaseAgent(AGENT_CONTROL);
+        BTraceRuntimeAccess.releaseAgent(AgentHandOver.AGENT_CONTROL);
       }
       // FATAL errors should always be printed
       System.err.println(
@@ -1243,7 +1089,7 @@ public final class Main {
     // unreachable.
     String trusted = argMap.get(TRUSTED);
     if (trusted != null && !trusted.isEmpty()) {
-      applyTrustedArgument(Boolean.parseBoolean(trusted));
+      AgentTrust.applyTrustedArgument(Boolean.parseBoolean(trusted));
     }
     String config = argMap.get(CONFIG);
     processClasspaths();
@@ -1358,7 +1204,7 @@ public final class Main {
         case TRUSTED:
           {
             if (!p.isEmpty()) {
-              applyTrustedArgument(Boolean.parseBoolean(p));
+              AgentTrust.applyTrustedArgument(Boolean.parseBoolean(p));
               log.debug("trustedMode is {}", settings.isTrusted());
             }
             break;
@@ -1452,56 +1298,13 @@ public final class Main {
       }
     }
     String ineffective =
-        ineffectiveTrustedPropertyWarning(
-            System.getProperty(TRUSTED_PROPERTY), settings.isTrusted(), budgetRequested());
+        AgentTrust.ineffectiveTrustedPropertyWarning(
+            System.getProperty(AgentTrust.TRUSTED_PROPERTY),
+            settings.isTrusted(),
+            AgentTrust.budgetRequested());
     if (ineffective != null) {
       log.warn(ineffective);
     }
-  }
-
-  /**
-   * Trusted mode is enabled only by the {@code trusted=true} agent argument. A {@code
-   * -Dbtrace.trusted} system property looks like the same switch and is read by nothing, so name
-   * the argument that works instead of leaving a security-relevant setting silently ignored. One
-   * agent load at a time initializes an agent in a target JVM, and a later load is handed over to
-   * the agent already there, so this is reported once unless a failed first load is retried.
-   *
-   * @param budget whether a probe budget is requested for this JVM; the client's {@code -u} flag is
-   *     then refused, so the warning does not recommend it
-   * @return the warning, or {@code null} when the property is unset or trusted mode is on anyway
-   */
-  static String ineffectiveTrustedPropertyWarning(
-      String propertyValue, boolean trusted, boolean budget) {
-    if (propertyValue == null || trusted) {
-      return null;
-    }
-    return "Ignoring system property "
-        + TRUSTED_PROPERTY
-        + "="
-        + propertyValue
-        + ": it has no effect. Trusted mode is enabled only by the trusted=true agent argument "
-        + trustedHowTo(budget)
-        + ".";
-  }
-
-  /** Where the {@code trusted=true} agent argument can come from, with or without a budget. */
-  static String trustedHowTo(boolean budget) {
-    return budget
-        ? "(-javaagent:btrace.jar=trusted=true,... at JVM launch; this JVM has a probe budget, so"
-            + " the client's -u flag is refused)"
-        : "(-javaagent:btrace.jar=trusted=true,... or the client's -u flag)";
-  }
-
-  // Whether the operator set a budget property, valid or not; read before arguments are parsed.
-  private static volatile boolean budgetPropertySet;
-
-  /** Whether a probe budget is requested, by property or by a launch-time agent argument. */
-  private static boolean budgetRequested() {
-    if (budgetPropertySet) {
-      return true;
-    }
-    return "premain".equals(agentMode)
-        && (argMap.get(PROBE_TTL) != null || argMap.get(PROBE_MAX_RATE) != null);
   }
 
   /**
@@ -1626,7 +1429,7 @@ public final class Main {
             "Ignoring btrace.system.appendJar: it requires the trusted=true agent argument {}; a"
                 + " system property does not enable trusted mode."
                 + " Use extensions or migration patterns instead.",
-            trustedHowTo(budgetRequested()));
+            AgentTrust.trustedHowTo(AgentTrust.budgetRequested()));
       } else {
         try {
           Path p = Paths.get(sysAppend).toAbsolutePath().normalize();
@@ -1851,7 +1654,7 @@ public final class Main {
   private static void bundledProbeNotLoaded(
       String probeName, ScriptLoad result, BundledProbeException failure) {
     if (!skipsUnverifiedBundledProbe(
-        result, Client.isTrustedModeRefused(), trustRequestedAndRefused)) {
+        result, Client.isTrustedModeRefused(), AgentTrust.isTrustRequestedAndRefused())) {
       throw failure;
     }
     BUDGET_REPORTER.accept(
@@ -1923,7 +1726,7 @@ public final class Main {
     }
   }
 
-  private static void installServerShutdownHook() {
+  static void installServerShutdownHook() {
     Runtime.getRuntime()
         .addShutdownHook(
             new Thread(
@@ -1990,52 +1793,6 @@ public final class Main {
    */
   static ClientContext newRemoteClientContext() {
     return new ClientContext(inst, transformer, argMap, newClientSettings(settings));
-  }
-
-  // Whether trusted=true in the agent arguments was refused because of a probe budget.
-  private static volatile boolean trustRequestedAndRefused;
-
-  // Whether attach-time agent arguments cannot turn trusted mode on: set before they are parsed.
-  private static volatile boolean attachTrustBarred;
-
-  /**
-   * Applies the {@code trusted} agent argument. Under dynamic attach with an operator budget it is
-   * not applied, whatever its value. A request to turn it on is recorded so it can be reported.
-   */
-  private static void applyTrustedArgument(boolean trusted) {
-    applyTrustedArgument(settings, trusted, attachTrustBarred);
-  }
-
-  static void applyTrustedArgument(SharedSettings agentSettings, boolean trusted, boolean barred) {
-    if (barred) {
-      if (trusted) {
-        trustRequestedAndRefused = true;
-      }
-      return;
-    }
-    agentSettings.setTrusted(trusted);
-  }
-
-  static boolean isTrustRequestedAndRefused() {
-    return trustRequestedAndRefused;
-  }
-
-  /** Whether this agent has a command server. Tests only. */
-  static boolean hasCommandServerForTesting() {
-    return controlServer != null;
-  }
-
-  /** Sets how far this agent's initialization got, as a failed one would leave it. Tests only. */
-  static void setRuntimeHooksInstalledForTesting(boolean installed) {
-    synchronized (INIT_LOCK) {
-      runtimeHooksInstalled = installed;
-    }
-  }
-
-  static void resetTrustRefusalForTesting() {
-    trustRequestedAndRefused = false;
-    attachTrustBarred = false;
-    Client.refuseTrustedMode(false);
   }
 
   private static Future<?> handleNewClient(Client client) {

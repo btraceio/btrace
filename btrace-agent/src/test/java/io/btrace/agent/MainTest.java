@@ -86,7 +86,7 @@ class MainTest {
 
   @Test
   void trustedSystemPropertyWithoutAgentArgumentIsReported() {
-    String warning = Main.ineffectiveTrustedPropertyWarning("true", false, false);
+    String warning = AgentTrust.ineffectiveTrustedPropertyWarning("true", false, false);
 
     assertTrue(warning.contains("btrace.trusted=true"), warning);
     assertTrue(warning.contains("has no effect"), warning);
@@ -95,8 +95,8 @@ class MainTest {
 
   @Test
   void trustedSystemPropertyIsNotReportedWhenUnsetOrTrustedAnyway() {
-    assertNull(Main.ineffectiveTrustedPropertyWarning(null, false, false));
-    assertNull(Main.ineffectiveTrustedPropertyWarning("true", true, false));
+    assertNull(AgentTrust.ineffectiveTrustedPropertyWarning(null, false, false));
+    assertNull(AgentTrust.ineffectiveTrustedPropertyWarning("true", true, false));
   }
 
   @Test
@@ -283,20 +283,20 @@ class MainTest {
   void noClientInheritsTrustFromAttachArgumentsUnderABudget() {
     SharedSettings agentSettings = new SharedSettings();
     try {
-      Main.applyTrustedArgument(agentSettings, true, false);
+      AgentTrust.applyTrustedArgument(agentSettings, true, false);
       assertTrue(
           Main.newClientSettings(agentSettings).isTrusted(),
           "without a budget a client must inherit trusted mode as before");
 
       SharedSettings budgeted = new SharedSettings();
-      Main.applyTrustedArgument(budgeted, true, true);
+      AgentTrust.applyTrustedArgument(budgeted, true, true);
       assertFalse(budgeted.isTrusted(), "the agent-wide settings say trusted");
       assertFalse(
           Main.newClientSettings(budgeted).isTrusted(),
           "a client inherited trusted mode from attach arguments under a budget");
-      assertTrue(Main.isTrustRequestedAndRefused(), "the trusted request was not recorded");
+      assertTrue(AgentTrust.isTrustRequestedAndRefused(), "the trusted request was not recorded");
     } finally {
-      Main.resetTrustRefusalForTesting();
+      AgentTrust.resetTrustRefusalForTesting();
     }
   }
 
@@ -304,13 +304,13 @@ class MainTest {
   void attachTimeTrustedArgumentIsNotAppliedUnderAnOperatorBudget() {
     SharedSettings agentSettings = new SharedSettings();
     try {
-      Main.applyTrustedArgument(agentSettings, true, true);
+      AgentTrust.applyTrustedArgument(agentSettings, true, true);
       assertFalse(
           agentSettings.isTrusted(),
           "trusted mode was on while the remaining agent arguments were processed");
-      assertTrue(Main.isTrustRequestedAndRefused(), "the refused request was not recorded");
+      assertTrue(AgentTrust.isTrustRequestedAndRefused(), "the refused request was not recorded");
     } finally {
-      Main.resetTrustRefusalForTesting();
+      AgentTrust.resetTrustRefusalForTesting();
     }
   }
 
@@ -318,28 +318,29 @@ class MainTest {
   void trustedArgumentIsAppliedWhenNotBarred() {
     SharedSettings agentSettings = new SharedSettings();
     try {
-      Main.applyTrustedArgument(agentSettings, true, false);
+      AgentTrust.applyTrustedArgument(agentSettings, true, false);
       assertTrue(agentSettings.isTrusted());
-      assertFalse(Main.isTrustRequestedAndRefused());
+      assertFalse(AgentTrust.isTrustRequestedAndRefused());
       // The operator's launch-time grant: an attacher under a budget cannot take it away.
-      Main.applyTrustedArgument(agentSettings, false, true);
+      AgentTrust.applyTrustedArgument(agentSettings, false, true);
       assertTrue(agentSettings.isTrusted(), "an attach-time trusted=false revoked the grant");
-      assertFalse(Main.isTrustRequestedAndRefused(), "trusted=false is not a refused request");
-      Main.applyTrustedArgument(agentSettings, false, false);
+      assertFalse(
+          AgentTrust.isTrustRequestedAndRefused(), "trusted=false is not a refused request");
+      AgentTrust.applyTrustedArgument(agentSettings, false, false);
       assertFalse(agentSettings.isTrusted());
     } finally {
-      Main.resetTrustRefusalForTesting();
+      AgentTrust.resetTrustRefusalForTesting();
     }
   }
 
   @Test
   void trustedHintDoesNotRecommendTheClientFlagUnderABudget() {
-    String plain = Main.ineffectiveTrustedPropertyWarning("true", false, false);
+    String plain = AgentTrust.ineffectiveTrustedPropertyWarning("true", false, false);
     assertTrue(plain.contains("or the client's -u flag"), plain);
-    String budgeted = Main.ineffectiveTrustedPropertyWarning("true", false, true);
+    String budgeted = AgentTrust.ineffectiveTrustedPropertyWarning("true", false, true);
     assertTrue(budgeted.contains("at JVM launch"), budgeted);
     assertTrue(budgeted.contains("the client's -u flag is refused"), budgeted);
-    assertNull(Main.ineffectiveTrustedPropertyWarning("true", true, true));
+    assertNull(AgentTrust.ineffectiveTrustedPropertyWarning("true", true, true));
   }
 
   @Test
@@ -364,7 +365,7 @@ class MainTest {
   @Test
   void laterLoadGetsNoServerFromAnAgentThatDidNotInitialize() {
     // This test JVM never ran agent initialization.
-    String outcome = Main.startServerOnAttach("port=0");
+    String outcome = AgentHandOver.startServerOnAttach("port=0");
     assertTrue(outcome.contains("its command server was not started"), outcome);
     // It installed nothing either, so the JVM is free for another load.
     assertTrue(outcome.contains("failed to initialize; load the agent again"), outcome);
@@ -373,14 +374,14 @@ class MainTest {
   @Test
   void laterLoadIsToldToRestartTheJvmAfterAnAgentThatFailedWithItsHooksInstalled() {
     // This test JVM never finished agent initialization; say it got as far as its runtime hooks.
-    Main.setRuntimeHooksInstalledForTesting(true);
+    AgentHandOver.setRuntimeHooksInstalledForTesting(true);
     try {
-      String outcome = Main.startServerOnAttach("port=0");
+      String outcome = AgentHandOver.startServerOnAttach("port=0");
       assertTrue(outcome.contains("its command server was not started"), outcome);
       assertTrue(
           outcome.contains("failed to initialize; restart the JVM to use BTrace in it"), outcome);
     } finally {
-      Main.setRuntimeHooksInstalledForTesting(false);
+      AgentHandOver.setRuntimeHooksInstalledForTesting(false);
     }
   }
 
@@ -393,7 +394,7 @@ class MainTest {
     try {
       // The claim is refused, and by the time the holder is looked up it has given the JVM back.
       String outcome =
-          Main.claimOrHandOver(
+          AgentHandOver.claimOrHandOver(
               "port=0",
               own,
               () -> {
@@ -424,7 +425,7 @@ class MainTest {
     try {
       assertEquals(
           "handled by the holder",
-          Main.claimOrHandOver("port=4242", own, BTraceRuntimeAccess::agentControl));
+          AgentHandOver.claimOrHandOver("port=4242", own, BTraceRuntimeAccess::agentControl));
       assertEquals(1, seen.size());
       assertEquals("port=4242", seen.get(0));
       assertSame(holder, BTraceRuntimeAccess.agentControl());
@@ -442,7 +443,7 @@ class MainTest {
     assertTrue(BTraceRuntimeAccess.claimAgent(holder));
     try {
       String outcome =
-          Main.claimOrHandOver("port=0", args -> "own", BTraceRuntimeAccess::agentControl);
+          AgentHandOver.claimOrHandOver("port=0", args -> "own", BTraceRuntimeAccess::agentControl);
       assertTrue(outcome.contains("its command server was not started"), outcome);
       assertTrue(outcome.contains("holder broke"), outcome);
       assertSame(holder, BTraceRuntimeAccess.agentControl());
@@ -457,7 +458,7 @@ class MainTest {
     assertTrue(BTraceRuntimeAccess.claimAgent(holder));
     try {
       String outcome =
-          Main.claimOrHandOver("port=0", args -> "own", BTraceRuntimeAccess::agentControl);
+          AgentHandOver.claimOrHandOver("port=0", args -> "own", BTraceRuntimeAccess::agentControl);
       assertNotNull(outcome, "the load was told to initialize a second agent");
       assertTrue(outcome.contains("its command server was not started"), outcome);
       assertSame(holder, BTraceRuntimeAccess.agentControl());
@@ -481,7 +482,7 @@ class MainTest {
       Path tokenFile = Paths.get(System.getProperty(ControlServer.TOKEN_FILE_PROPERTY));
       assertTrue(Files.exists(tokenFile), "no token file was generated");
 
-      String outcome = Main.serveOnAttach(endpoint, unstartable);
+      String outcome = AgentHandOver.serveOnAttach(endpoint, unstartable);
 
       assertTrue(outcome.contains("its command server was not started"), outcome);
       assertTrue(outcome.contains("unable to create native thread"), outcome);
@@ -491,7 +492,8 @@ class MainTest {
       assertNull(System.getProperty(ControlServer.TOKEN_FILE_PROPERTY));
       assertFalse(Files.exists(tokenFile), "the generated token file was left behind");
       // Otherwise every later load would be told the agent has a server already.
-      assertFalse(Main.hasCommandServerForTesting(), "the agent still holds the closed endpoint");
+      assertFalse(
+          AgentHandOver.hasCommandServerForTesting(), "the agent still holds the closed endpoint");
     } finally {
       Main.shutdownServer();
       endpoint.close();
@@ -510,7 +512,7 @@ class MainTest {
             "port=4242,bindAddress=::1,authTokenFile=/attacher/token,trusted=true,noServer=true");
     ArgsMap ownLoad = Main.parseAgentArgs("noServer=true,authTokenFile=/operator/token,port=1");
 
-    ArgsMap endpoint = Main.attachEndpointArgs(laterLoad, ownLoad);
+    ArgsMap endpoint = AgentHandOver.attachEndpointArgs(laterLoad, ownLoad);
 
     assertEquals("4242", endpoint.get(Args.PORT));
     assertEquals("::1", endpoint.get(Args.BIND_ADDRESS));
@@ -521,7 +523,7 @@ class MainTest {
   @Test
   void serverStartedForALaterLoadGetsNoTokenFileFromThatLoad() {
     ArgsMap endpoint =
-        Main.attachEndpointArgs(
+        AgentHandOver.attachEndpointArgs(
             Main.parseAgentArgs("port=0,authTokenFile=/attacher/token"),
             Main.parseAgentArgs("noServer=true"));
 
