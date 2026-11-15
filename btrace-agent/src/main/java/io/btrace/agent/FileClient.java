@@ -50,11 +50,22 @@ class FileClient extends Client {
 
   private boolean canLoadPack = true;
 
-  FileClient(ClientContext ctx, File scriptFile) throws IOException {
-    super(ctx);
+  private final boolean budgetExempt;
+
+  /**
+   * @param budgetExempt whether the probe budget governor skips this probe
+   */
+  FileClient(ClientContext ctx, File scriptFile, boolean budgetExempt) throws IOException {
+    this(ctx, budgetExempt);
     if (!init(readScript(scriptFile))) {
       log.warn("Unable to load BTrace script {}", scriptFile);
     }
+  }
+
+  /** A client with no script loaded. Package-private for tests. */
+  FileClient(ClientContext ctx, boolean budgetExempt) {
+    super(ctx);
+    this.budgetExempt = budgetExempt;
   }
 
   private static byte[] readAll(InputStream is, long size) throws IOException {
@@ -81,6 +92,15 @@ class FileClient extends Client {
       initialize();
     }
     return ret;
+  }
+
+  /**
+   * Exempt only when the agent was loaded at JVM launch: those startup scripts are the operator's.
+   * Under dynamic attach they come from the attacher and are budgeted like any other probe.
+   */
+  @Override
+  boolean budgetExempt() {
+    return budgetExempt;
   }
 
   @SuppressWarnings("RedundantThrows")

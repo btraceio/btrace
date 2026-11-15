@@ -451,7 +451,7 @@ form (`"status": "preparation_required"`).
 - `-r <probe-id>` - Reconnect to an active disconnected probe. If the probe id is unknown, or the JVM has no BTrace control endpoint, `-r` prints the reason and exits with code 1
 - `-r help` - Show help on remote commands
 - `-o <file>` - Output to file (disables console output)
-- `-u` - Run in trusted/unsafe mode
+- `-u` - Run in trusted/unsafe mode; refused when the target JVM has a [probe budget](GettingStarted.md#probe-budgets)
 - `-d <path>` - Dump instrumented classes to specified path
 - `-pd <path>` - Search path for probe XML descriptors
 - `-cp <path>` / `-classpath <path>` - User class files and annotation processors path
