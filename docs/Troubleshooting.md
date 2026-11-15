@@ -526,6 +526,56 @@ No methods matched for probe: ...
    `MetricsService` from the bundled `btrace-metrics` extension and report histogram snapshots on
    a timer (see [Getting Started](GettingStarted.md#quick-start-histogram-metrics-extension)).
 
+### Probe removed: a budget was exceeded
+
+**Error message:** the client prints one line and exits with code `5`:
+```
+BTrace: probe HotPathProbe removed: 23478274 hits/s exceeded probeMaxRate=10000
+BTrace: probe HotPathProbe removed: lifetime exceeded probeTtl=600s
+```
+`HotPathProbe` is the probe class as you declared it, with its package if it has one. Read exit
+code `5` together with this line: a probe can also end itself with `exit(5)`. A client that has
+stopped reading, or whose exit takes too long, is disconnected instead, possibly without this line
+or exit code; the line logged in the target JVM is then the record.
+
+**Cause:** the operator started the target JVM with `probeMaxRate` or `probeTtl` (launch-time agent
+argument or `io.btrace.*` system property, see [Probe budgets](GettingStarted.md#probe-budgets)) and the
+probe went over it. The agent stopped the probe's handlers and removed its instrumentation. The
+check runs once per second, so a rate breach is acted on about two seconds after deploy.
+
+**Solutions:**
+- Narrow the probe: a more specific `clazz`/`method`, `@Sampled`, or a handler that runs less often.
+- Ask the operator to raise the limit; it is fixed at JVM launch and a client cannot change it.
+- A **detached** probe has no client to tell, so its removal is recorded only in the target JVM's
+  log, as a WARN line from the `BTrace Budget Exit` thread:
+  ```
+  [BTrace Budget Exit] WARN io.btrace.agent.Client - BTrace: probe HotPathProbe removed: 23478274 hits/s exceeded probeMaxRate=10000
+  ```
+  Afterwards the probe no longer appears in the probe list.
+- A probe loaded from `script=` or `scriptdir=`, or bundled into the agent, is limited only when
+  the agent was loaded by dynamic attach. It has no client either: its removal is logged in the
+  target JVM the same way and written to the probe's output.
+
+### Trusted mode is not available under a probe budget
+
+**Error message:** a deploy with `-u` prints one line and exits with code `1`:
+```
+BTrace: trusted mode is not available: this JVM has a probe budget set by its operator
+```
+
+**Cause:** the target JVM has a probe budget (`probeMaxRate` or `probeTtl`, see
+[Probe budgets](GettingStarted.md#probe-budgets)). A trusted probe is not verified and could
+defeat the budget, so the agent refuses it. Nothing was instrumented and the target keeps running.
+
+**Solutions:**
+- Deploy without `-u`. Most probes do not need trusted mode.
+- If the probe really needs trusted mode, ask the operator. Only `trusted=true` in the target's
+  launch-time `-javaagent` arguments enables it while a budget is set. An attach-time
+  `trusted=true` is ignored, so a `script=` probe that needs trusted mode fails verification.
+- A bundled probe that needs trusted mode is then skipped, and agent startup continues, with one
+  line in the target JVM: `bundled probe '<name>' did not pass verification and was not loaded:
+  trusted mode is not available: this JVM has a probe budget set by its operator`.
+
 ## Agent Loading Problems
 
 ### Agent JAR not found
@@ -576,7 +626,9 @@ java -javaagent:btrace.jar=script=MyTrace.class \
 **Cause:** the `port=` or `bindAddress=` agent argument has a value the agent cannot use. The agent
 names the option and value on one line, skips the command server, and lets the application and any
 `script=` startup probes run; `btrace <pid>` later reports no endpoint (`btrace doctor <pid>` exits
-`2`).
+`2`). An invalid `io.btrace.probeTtl`/`io.btrace.probeMaxRate` system property is handled the same
+way, except that when the agent is loaded by dynamic attach it loads no probe itself (`script=`,
+`scriptdir=`, bundled probes) and the line ends with `attach-time probes were not loaded`.
 
 **Solutions:**
 - `bindAddress` must be a loopback address (`127.0.0.1` or `::1`); remote prepared mode is not

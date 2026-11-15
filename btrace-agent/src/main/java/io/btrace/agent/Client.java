@@ -21,6 +21,7 @@ import io.btrace.core.BTraceRuntime;
 import io.btrace.core.BTraceRuntimeAccess;
 import io.btrace.core.BTraceRuntimeBridge;
 import io.btrace.core.SharedSettings;
+import io.btrace.core.VerifierException;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.CommandListener;
 import io.btrace.core.comm.ErrorCommand;
@@ -45,6 +46,7 @@ import io.btrace.instr.ClassInfo;
 import io.btrace.instr.InstrumentUtils;
 import io.btrace.instr.Instrumentor;
 import io.btrace.instr.MethodTrackingContext;
+import io.btrace.instr.ProbeBudgets;
 import io.btrace.runtime.BTraceRuntimes;
 import io.btrace.runtime.ExtensionIndy;
 import java.io.BufferedWriter;
@@ -85,6 +87,13 @@ import org.slf4j.LoggerFactory;
 abstract class Client implements CommandListener {
   private static final Logger log = LoggerFactory.getLogger(Client.class);
 
+  /** Exit code of a probe removed because it exceeded a probe budget. */
+  static final int BUDGET_EXIT_CODE = 5;
+
+  // Set once at agent start: a probe budget is in effect and the operator did not grant trusted
+  // mode, so no client may deploy a probe in trusted mode.
+  private static volatile boolean trustedModeRefused;
+
   private static final int RETRANSFORM_BATCH_SIZE =
       Math.max(1, Integer.getInteger("btrace.retransform.batchSize", 1));
   private static final Map<UUID, Client> CLIENTS = new ConcurrentHashMap<>();
@@ -114,6 +123,12 @@ abstract class Client implements CommandListener {
   private Timer flusher;
   private volatile boolean initialized = false;
   private volatile boolean shuttingDown = false;
+  // Written once the probe is registered: deployedAtNanos first, then the volatile name that
+  // publishes it to the budget governor.
+  private volatile long deployedAtNanos;
+  private volatile String probeInternalName;
+  // Set when loading the probe failed because it did not pass verification.
+  private volatile boolean failedVerification;
   final UUID id = UUID.randomUUID();
 
   Client(ClientContext ctx) {
@@ -290,6 +305,70 @@ abstract class Client implements CommandListener {
     return probes;
   }
 
+  /** Called once at agent start, and by tests. */
+  static void refuseTrustedMode(boolean refuse) {
+    trustedModeRefused = refuse;
+  }
+
+  static boolean isTrustedModeRefused() {
+    return trustedModeRefused;
+  }
+
+  /** A snapshot of the live clients. */
+  static Collection<Client> liveClients() {
+    return new ArrayList<>(CLIENTS.values());
+  }
+
+  /** {@link System#nanoTime()} when the probe was registered; 0 before. */
+  final long deployedAtNanos() {
+    return deployedAtNanos;
+  }
+
+  /** Internal class name of the loaded probe; {@code null} before it is registered. */
+  final String probeInternalName() {
+    return probeInternalName;
+  }
+
+  /** Whether the budget governor skips this client. */
+  boolean budgetExempt() {
+    return false;
+  }
+
+  /**
+   * Sends the reason line, logs it at WARN, then exits the probe with {@link #BUDGET_EXIT_CODE} the
+   * way the shutdown hook does. Called on a budget exit thread started by the budget governor.
+   */
+  void budgetExit(String reason) {
+    String line = "BTrace: " + reason;
+    log.warn(line);
+    sendCommand(MessageCommand.line(line));
+    BTraceRuntime.Impl rt = runtime;
+    if (rt != null) {
+      rt.handleExit(BUDGET_EXIT_CODE);
+    }
+  }
+
+  /**
+   * Whether this probe's client transport is gone, so a runtime-generated exit can no longer reach
+   * {@link #onExit(int)}. Clients without a transport never lose one.
+   */
+  boolean transportLost() {
+    return false;
+  }
+
+  /**
+   * Removes the probe without the runtime's terminal handshake. The budget governor uses this when
+   * a tripped probe's normal exit did not remove it. Idempotent, like {@link #onExit(int)}.
+   */
+  void forceBudgetRemoval() {
+    onExit(BUDGET_EXIT_CODE);
+  }
+
+  /** Whether loading this client's probe failed because the probe did not pass verification. */
+  final boolean failedVerification() {
+    return failedVerification;
+  }
+
   /** Returns {@code true} once {@link #onExit(int)} has started removing this probe. */
   final boolean isShuttingDown() {
     return shuttingDown;
@@ -329,6 +408,17 @@ abstract class Client implements CommandListener {
   }
 
   final synchronized Class<?> loadClass(InstrumentCommand instr) throws IOException {
+    if (trustedModeRefused && settings.isTrusted()) {
+      // Refused before the probe is even parsed: nothing is defined or instrumented.
+      String line = "BTrace: " + BudgetLimits.TRUSTED_REFUSED;
+      log.warn(line);
+      sendCommand(MessageCommand.line(line));
+      sendCommand(new ExitCommand(1));
+      closeAll();
+      // Not a probe: keep it out of the probe listing.
+      CLIENTS.remove(id);
+      return null;
+    }
     ArgsMap args = instr.getArguments();
     byte[] btraceCode = instr.getCode();
     try {
@@ -359,6 +449,9 @@ abstract class Client implements CommandListener {
       validateRequiredServices(probe);
     } catch (Throwable th) {
       log.debug("Failed to load BTrace probe code", th);
+      if (th instanceof VerifierException) {
+        failedVerification = true;
+      }
       errorExit(th);
       return null;
     }
@@ -431,7 +524,11 @@ abstract class Client implements CommandListener {
     boolean entered = false;
     try {
       entered = BTraceRuntimeAccess.enter((BTraceRuntimeBridge) runtime);
-      return probe.register(runtime, transformer);
+      Class<?> probeClass = probe.register(runtime, transformer);
+      if (probeClass != null) {
+        markDeployed(System.nanoTime());
+      }
+      return probeClass;
     } catch (Throwable th) {
       log.debug("Failed to load BTrace probe", th);
       errorExit(th);
@@ -572,7 +669,13 @@ abstract class Client implements CommandListener {
       flusher.cancel();
     }
     if (out != null) {
-      out.close();
+      if ("::stdout".equals(outputName)) {
+        // For any client, startup script or remote, whose output is ::stdout this writer wraps
+        // System.out, which belongs to the application: flush it, never close it.
+        out.flush();
+      } else {
+        out.close();
+      }
     }
     synchronized (WRITER_MAP) {
       WRITER_MAP.remove(outputName);
@@ -615,8 +718,30 @@ abstract class Client implements CommandListener {
     this.runtime = runtime;
   }
 
+  // Package-private test seam. Budget tests need a deployed probe without compiling and
+  // registering a real one.
+  final synchronized void setProbeForTest(BTraceProbe probe, long deployedAtNanos) {
+    this.probe = probe;
+    markDeployed(deployedAtNanos);
+  }
+
+  private void markDeployed(long nanos) {
+    deployedAtNanos = nanos;
+    String name = probe.getClassName(true);
+    if (budgetExempt()) {
+      // Registration cleared the probe's budget state, so this is marked afterwards.
+      ProbeBudgets.markExempt(name);
+    }
+    probeInternalName = name;
+  }
+
   final String getClassName() {
     return probe != null ? probe.getClassName() : "<unknown>";
+  }
+
+  /** The probe's name as its author declared it, for messages shown to the user. */
+  final String declaredClassName() {
+    return probe != null ? probe.getDeclaredClassName() : "<unknown>";
   }
 
   private final boolean isCandidate(Class<?> c) {
@@ -658,6 +783,7 @@ abstract class Client implements CommandListener {
         if (log.isDebugEnabled()) {
           log.debug("{} failed verification", cn.getClassName());
         }
+        failedVerification = true;
         return null;
       }
     }

@@ -150,6 +150,14 @@ class RemoteClient extends Client {
         negotiated = ProtocolVersion.V1;
       }
 
+      // V1 is disabled by default for safe deserialization; legacy clients may opt-in via
+      // -Dbtrace.comm.allowV1=true
+      if (negotiated == ProtocolVersion.V1
+          && !ProtocolConfig.fromSystemProperties().isV1Allowed()) {
+        throw new IOException(
+            "V1 protocol disabled by security policy. "
+                + "Set -Dbtrace.comm.allowV1=true to re-enable for legacy clients.");
+      }
       WireProtocol wireProtocol =
           negotiated == ProtocolVersion.V2
               ? new BinaryWireProtocol(input, output)
@@ -530,6 +538,35 @@ class RemoteClient extends Client {
 
   public boolean isDisconnected() {
     return disconnected;
+  }
+
+  /**
+   * A detached probe has no transport, so {@link #onCommand} drops the urgent ExitCommand the
+   * runtime generates and {@link #completeTerminalExit} never runs. The budget governor sees the
+   * lost transport here and finishes the removal with {@link #forceBudgetRemoval()}.
+   */
+  @Override
+  boolean transportLost() {
+    return isDisconnected();
+  }
+
+  /**
+   * Closes the socket before finalizing. A forced removal typically follows a client that stopped
+   * reading: the runtime's command thread is then blocked writing to the full socket, and closing
+   * the protocol in {@link #closeAll()} can block behind it (a V1 stream flushes into that socket).
+   * Closing the socket first fails the blocked write and lets the close finish.
+   */
+  @Override
+  void forceBudgetRemoval() {
+    Socket socket = sock;
+    if (socket != null) {
+      try {
+        socket.close();
+      } catch (IOException e) {
+        log.debug("Unable to close the transport of probe {}", getClassName(), e);
+      }
+    }
+    super.forceBudgetRemoval();
   }
 
   private TerminalHandshake beginTerminalHandshake() {
