@@ -21,7 +21,7 @@ The previous multi-JAR approach (`btrace-agent.jar`, `btrace-boot.jar`, `btrace-
 ### JAR Structure
 
 ```
-btrace.jar (~4.4 MB)
+btrace.jar (~3.8 MB)
 ├── io/btrace/boot/*.class                      # Entry point (Loader, MaskedClassLoader, MaskedJarUtils)
 ├── io/btrace/BTrace.class                      # Bootstrap: flat DSL entry class
 ├── io/btrace/core/*.class                      # Bootstrap: core API (excl. Messages and comm)
@@ -43,7 +43,9 @@ btrace.jar (~4.4 MB)
 
 **Bootstrap classes** (~200 total): Only the core API, the extension API, runtime support, the extension annotation processor, and SLF4J logging are stored as regular `.class` files. These are visible to the bootstrap classloader because the manifest declares `Boot-Class-Path: btrace.jar`, which the JVM resolves relative to the agent JAR's own directory. `btrace-dist/src/test/java/io/btrace/dist/BootstrapClosureTest.java` checks the root classes against a fixed list and checks that they reference only other root classes and JDK types the boot loader defines. The annotation processor is the exception: it is a tool-only root class, which javac loads from the processor path and the bootstrap loader never links, so it may reference `java.compiler` types, and no other root class may reference it.
 
-**Masked classes** (~2200+): Agent, client, and shared classes are stored as `.classdata` files under `META-INF/btrace/`. The JVM's class loading ignores these files entirely. They are loaded on demand by `MaskedClassLoader`.
+**Masked classes** (~1900): Agent, client, and shared classes are stored as `.classdata` files under `META-INF/btrace/`. The JVM's class loading ignores these files entirely. They are loaded on demand by `MaskedClassLoader`.
+
+Each class ships once per loader that can load it. A root class has no masked copy, because every section loader's parent sees the root; a shared class has no copy in the agent or client section, because `findClass` falls back to the shared section. A class may sit in both the agent and the client section, which are separate loaders. `btrace-dist/src/test/java/io/btrace/dist/MaskedSectionOverlapTest.java` fails the build on any other duplicate.
 
 The client section also contains the instrumentation/runtime implementation used by `btracec` to
 turn compiled scripts into persisted probe packs. The `io.btrace.core.PackGenerator` service
@@ -119,7 +121,7 @@ A `URLClassLoader` subclass that loads classes from `.classdata` files. It does 
 2. Check shared path: `META-INF/btrace/shared/{class-path}.classdata`
 3. Throw `ClassNotFoundException`
 
-A class that is both a root `.class` entry and a masked `.classdata` entry is therefore loaded from the root in both modes, because both parents see the root.
+A masked copy of a root class would therefore never be loaded in either mode, because both parents see the root, and the build ships none. Because `findClass` defines a shared-section class in the loader that asked for it, the agent and client loaders each get their own instance of a shared class, just as they would from a copy in their own section.
 
 Resource loading (`findResource`, `getResourceAsStream`) checks the section-specific path, then the JAR root; it does not consult the shared section, and `getResourceAsStream` does not ask the parent first.
 
@@ -145,7 +147,7 @@ classes to the root from the `btrace-core` output, because bootstrap code needs 
 so that external extension builds can use `btrace.jar` as their annotation processor path: javac's processor path loader reads only `.class` entries. The jar ships no `META-INF/services/javax.annotation.processing.Processor` entry, because a javac running in an instrumented JVM would discover the processor through the boot class path and fail on its `java.compiler` types; extension builds name it with `-processor`.
 
 **Explicitly excluded from bootstrap:**
-- ASM classes (loaded via shared section)
+- ASM classes (loaded via the shared section, apart from `commons`, `util` and `xml` in the client section)
 - JCTools queues (loaded via the agent and client sections)
 - Communication protocol classes (`io/btrace/core/comm/`)
 
@@ -157,7 +159,7 @@ The `btrace-dist/build.gradle` `btraceJar` task assembles the masked JAR:
 2. **`prepareClientClassdata`**: Same for the client shadow JAR, placed under `META-INF/btrace/client/`
 3. **`btraceJar`**: Combines bootstrap `.class` files (filtered by `btrace-bootstrap`) with the `.classdata` sections and shared classes into the final JAR
 
-Shared classes (ASM, protocol, etc.) are automatically placed in `META-INF/btrace/shared/` and are accessible to both agent and client classloaders.
+Shared classes (relocated ASM apart from its `commons`, `util` and `xml` packages, which only the client section carries, and the protocol classes in `io/btrace/core/comm/`) are placed in `META-INF/btrace/shared/` by `prepareSharedClassdata` and are accessible to both agent and client classloaders; the agent and client tasks leave them out.
 
 ## Debugging
 

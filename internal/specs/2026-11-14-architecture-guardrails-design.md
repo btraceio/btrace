@@ -237,10 +237,14 @@ Each item says whether it has been resolved since.
   compiler's own `implementation` on `btrace-runtime` was unused (its one `io.btrace.runtime` import,
   `BTraceRuntimeAccess`, was in `btrace-core`; the class is now `io.btrace.core.BTraceRuntimeAccess`)
   and is removed; `btrace.jar` is unchanged.
-- Open — classes present both in the JAR root and in a masked section. Re-measured on a fresh JAR:
-  159 root/masked duplicates, plus 70 agent/shared and 94 client/shared, all byte-identical and
-  harmless under parent-first loading. Removing them changes which section a class ships in and is
-  left to the maintainer. `MaskedClassLoader`'s Javadoc, which said section-first, is corrected.
+- Resolved — classes present both in the JAR root and in a masked section. Re-measured on a fresh
+  JAR before the fix: 160 root/masked duplicates (57 root/shared, 22 root/agent, 81 root/client),
+  plus 70 agent/shared and 94 client/shared, all byte-identical and never loaded under parent-first
+  loading. The maintainer decided to remove them; agent/client overlap (634 then, 618 after) stays
+  by design. `btrace-dist/build.gradle` now leaves them out of the sections, one commit per group,
+  and `MaskedSectionOverlapTest` fails on any of them; `btrace.jar` went from 4,379,500 to 3,836,335
+  bytes with the same 1,510 class names. `MaskedClassLoader`'s Javadoc, which said section-first,
+  is corrected.
 - Resolved — `ExtensionIndy` holds an SLF4J logger while a comment in `IndyDispatcher` said bootstrap
   classes must not. Relocated SLF4J and its provider are always in the root, so logging there works;
   the `IndyDispatcher` comment now gives the real reasons that class stays silent.
@@ -253,7 +257,9 @@ Each item says whether it has been resolved since.
 ## 9. Decisions made here as the designer's call
 
 1. `btracex` and the `extcli` package stay on the Java 8 API.
-2. Duplicated root/masked classes are not gated; only the root allowlist and the reference closure are.
+2. Duplicated root/masked classes were not gated at first; only the root allowlist and the reference
+   closure were. Superseded: the maintainer had the duplicates removed, and `MaskedSectionOverlapTest`
+   now gates root/masked and shared/agent-or-client duplicates (agent/client overlap stays allowed).
 3. The file-size threshold is 1,000 lines.
 4. `BTraceRuntimeImpl_9` gets no new gate; whether to delete it or add a JDK 9 lane is left open.
 5. The catalog lives in `docs/architecture/`, not `internal/`, because contributors and agents read it.
@@ -299,6 +305,12 @@ read from the named files when this section was written, and the files are autho
   JDK 9+ `jdkDenyListCoversTheRunningJdk` reads the boot module layer and fails on a non-boot
   package under the JDK prefixes that the list misses (34 such packages on JDK 21 and 26, all
   listed); on JDK 8 it is reported as skipped. `:btrace-dist:test` runs on the Gradle JDK, 21 in CI.
+- **G7, masked-section duplicates (P2).** Added after the maintainer decided to remove the
+  duplicates of section 8: `MaskedSectionOverlapTest`, beside `BootstrapClosureTest`, fails when a
+  class is a root class and also in a masked section, or in the shared section and also in the
+  agent or client section; agent/client overlap is allowed. It has no baseline because nothing
+  remains (it reported 324 duplicates on the jar before 45656f52, d7375c94, d9eef8bc, 77c78c1d and
+  43baf625 removed them).
 - **G12, handler annotations (P7).** No unguarded-annotation set was added to production code;
   `Preprocessor` changed visibility only. `HandlerAnnotationClassificationTest` keeps the non-handler
   annotations (`Location`, `Sampled`) in a test-side `NOT_HANDLERS` list, and
