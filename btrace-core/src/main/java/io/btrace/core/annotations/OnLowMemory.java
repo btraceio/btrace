@@ -34,6 +34,10 @@ import java.lang.annotation.Target;
  * not support usage thresholds, the agent logs a warning and tells the client, listing the pools it
  * can watch.
  *
+ * <p>Several handlers may watch the same pool. The pool has one usage threshold, so it is armed
+ * with the lowest of theirs, and a notification runs each handler whose own threshold the reported
+ * usage has reached. The JVM notifies once each time usage crosses the armed threshold.
+ *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)

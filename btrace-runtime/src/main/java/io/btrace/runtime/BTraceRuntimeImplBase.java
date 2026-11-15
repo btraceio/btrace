@@ -1199,8 +1199,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
               CompositeData cd = (CompositeData) notif.getUserData();
               MemoryNotificationInfo info = MemoryNotificationInfo.from(cd);
               String name = info.getPoolName();
-              LowMemoryHandler handler = lowMemory.handlerFor(name);
-              if (handler != null) {
+              for (LowMemoryHandler handler : lowMemory.handlersFor(name, info.getUsage())) {
                 threadPool.submit(() -> runLowMemoryHandler(handler, info.getUsage()));
               }
             }

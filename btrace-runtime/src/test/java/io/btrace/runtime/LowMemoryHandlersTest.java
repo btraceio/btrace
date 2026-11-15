@@ -21,8 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.btrace.core.handlers.LowMemoryHandler;
 import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryUsage;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
@@ -76,6 +78,25 @@ class LowMemoryHandlersTest {
 
   private static LowMemoryHandler handler(String method, String pool, long threshold) {
     return new LowMemoryHandler(method, pool, threshold, null, true);
+  }
+
+  private static MemoryUsage used(long bytes) {
+    return new MemoryUsage(0, bytes, bytes, -1);
+  }
+
+  @Test
+  void everyHandlerOfAPoolRunsOnceUsageReachesItsOwnThreshold() {
+    FakePool pool = new FakePool("multi-test-pool", true, -1, 0);
+    LowMemoryHandler low = handler("low", "multi-test-pool", 100);
+    LowMemoryHandler high = handler("high", "multi-test-pool", 1000);
+    LowMemoryHandlers handlers = new LowMemoryHandlers(new LowMemoryHandler[] {low, high}, AS_IS);
+
+    assertEquals(Collections.emptyList(), handlers.arm(Collections.singletonList(pool.bean)));
+    assertEquals(100, pool.threshold, "the pool must be armed with the lowest threshold");
+    assertEquals(
+        Collections.singletonList(low), handlers.handlersFor("multi-test-pool", used(500)));
+    assertEquals(Arrays.asList(low, high), handlers.handlersFor("multi-test-pool", used(1000)));
+    assertEquals(Collections.emptyList(), handlers.handlersFor("other-pool", used(5000)));
   }
 
   @Test

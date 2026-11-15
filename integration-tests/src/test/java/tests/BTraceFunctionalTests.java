@@ -249,6 +249,24 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   @Test
+  public void testOnLowMemoryRunsEveryHandlerOfAPool() throws Exception {
+    // Two handlers on one pool used to share a map slot, so only the last one ever ran.
+    testDynamic(
+        "resources.MetaspaceTarget",
+        "btrace/OnLowMemoryTwoHandlersTest.java",
+        Completion.untilContains("lowmem-first-handler", "lowmem-second-handler"),
+        (stdout, stderr, retcode, jfrFile) -> {
+          assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+          assertTrue(
+              stdout.contains("lowmem-first-handler"),
+              "the first handler did not run; stdout: " + stdout);
+          assertTrue(
+              stdout.contains("lowmem-second-handler"),
+              "the second handler did not run; stdout: " + stdout);
+        });
+  }
+
+  @Test
   public void testOnLowMemoryUnknownPoolIsReported() throws Exception {
     // A pool name that matches no pool must not be silent: the client is told, with the pools
     // the probe could have watched.

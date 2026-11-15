@@ -18,7 +18,9 @@ package io.btrace.runtime;
 
 import io.btrace.core.handlers.LowMemoryHandler;
 import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,9 +30,14 @@ import java.util.function.Function;
 /**
  * The {@code @OnLowMemory} handlers of one probe: which memory pool each handler watches, and the
  * usage thresholds armed on those pools.
+ *
+ * <p>A pool has one usage threshold, so a pool watched by several handlers is armed with the lowest
+ * of their thresholds, and a notification runs only the handlers whose own threshold the reported
+ * usage has reached. The JVM notifies once per crossing of the armed threshold, so a handler with a
+ * higher threshold runs only if usage is already at its threshold when that crossing is reported.
  */
 final class LowMemoryHandlers {
-  private final Map<String, LowMemoryHandler> byPool = new HashMap<>();
+  private final Map<String, List<LowMemoryHandler>> byPool = new HashMap<>();
 
   /**
    * @param handlers the probe's handlers
@@ -39,7 +46,7 @@ final class LowMemoryHandlers {
    */
   LowMemoryHandlers(LowMemoryHandler[] handlers, Function<String, String> poolName) {
     for (LowMemoryHandler handler : handlers) {
-      byPool.put(poolName.apply(handler.pool), handler);
+      byPool.computeIfAbsent(poolName.apply(handler.pool), k -> new ArrayList<>()).add(handler);
     }
   }
 
@@ -58,21 +65,21 @@ final class LowMemoryHandlers {
     List<String> armable = new ArrayList<>();
     for (MemoryPoolMXBean pool : pools) {
       String name = pool.getName();
-      LowMemoryHandler handler = byPool.get(name);
+      List<LowMemoryHandler> handlers = byPool.get(name);
       if (!pool.isUsageThresholdSupported()) {
-        if (handler != null) {
+        if (handlers != null) {
           problems.put(name, "does not support usage thresholds");
         }
         continue;
       }
       armable.add(name);
-      if (handler != null) {
+      if (handlers != null) {
+        long threshold = lowestThreshold(handlers);
         try {
-          pool.setUsageThreshold(handler.threshold);
+          pool.setUsageThreshold(threshold);
           problems.remove(name);
         } catch (IllegalArgumentException e) {
-          problems.put(
-              name, "rejects the threshold " + handler.threshold + " (" + e.getMessage() + ")");
+          problems.put(name, "rejects the threshold " + threshold + " (" + e.getMessage() + ")");
         }
       }
     }
@@ -89,8 +96,29 @@ final class LowMemoryHandlers {
     return warnings;
   }
 
-  /** The handler watching the named pool, or {@code null}. */
-  LowMemoryHandler handlerFor(String pool) {
-    return byPool.get(pool);
+  /**
+   * The handlers to run for a threshold notification from the named pool: those whose threshold the
+   * reported usage has reached.
+   */
+  List<LowMemoryHandler> handlersFor(String pool, MemoryUsage usage) {
+    List<LowMemoryHandler> handlers = byPool.get(pool);
+    if (handlers == null) {
+      return Collections.emptyList();
+    }
+    List<LowMemoryHandler> due = new ArrayList<>(handlers.size());
+    for (LowMemoryHandler handler : handlers) {
+      if (usage.getUsed() >= handler.threshold) {
+        due.add(handler);
+      }
+    }
+    return due;
+  }
+
+  private static long lowestThreshold(List<LowMemoryHandler> handlers) {
+    long lowest = Long.MAX_VALUE;
+    for (LowMemoryHandler handler : handlers) {
+      lowest = Math.min(lowest, handler.threshold);
+    }
+    return lowest;
   }
 }
