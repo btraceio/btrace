@@ -23,18 +23,26 @@ import java.lang.reflect.Method;
 public final class LowMemoryHandler {
   public final String method;
   public final String pool;
-  public final String thresholdProperty;
   public final long threshold;
   public final boolean trackUsage;
   private Method executable;
 
-  public LowMemoryHandler(
-      String method, String pool, long threshold, String thresholdProperty, boolean trackUsage) {
+  public LowMemoryHandler(String method, String pool, long threshold, boolean trackUsage) {
     this.method = method;
     this.pool = pool;
     this.threshold = threshold;
-    this.thresholdProperty = thresholdProperty;
     this.trackUsage = trackUsage;
+  }
+
+  /**
+   * Kept for persisted probe packs (2.x ones included): their class bytes were preprocessed when
+   * the pack was written, and their static initializer calls this constructor. The threshold
+   * property was never set by any {@code @OnLowMemory} member and is ignored.
+   */
+  @Deprecated
+  public LowMemoryHandler(
+      String method, String pool, long threshold, String thresholdProperty, boolean trackUsage) {
+    this(method, pool, threshold, trackUsage);
   }
 
   public synchronized Method getMethod(Class<?> clz) throws NoSuchMethodException {

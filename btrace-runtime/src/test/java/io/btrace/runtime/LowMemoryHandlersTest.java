@@ -77,7 +77,7 @@ class LowMemoryHandlersTest {
   private static final Function<String, String> AS_IS = Function.identity();
 
   private static LowMemoryHandler handler(String method, String pool, long threshold) {
-    return new LowMemoryHandler(method, pool, threshold, null, true);
+    return new LowMemoryHandler(method, pool, threshold, true);
   }
 
   private static MemoryUsage used(long bytes) {

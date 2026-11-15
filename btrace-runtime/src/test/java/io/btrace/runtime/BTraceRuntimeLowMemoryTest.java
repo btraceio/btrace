@@ -60,7 +60,7 @@ class BTraceRuntimeLowMemoryTest {
     CountingProbe.calls.set(0);
     BTraceRuntimeImpl_8 runtime =
         new BTraceRuntimeImpl_8("low-memory-disabled-test", new ArgsMap(), command -> {}, null);
-    LowMemoryHandler handler = new LowMemoryHandler("onLowMemory", "Metaspace", 1, null, true);
+    LowMemoryHandler handler = new LowMemoryHandler("onLowMemory", "Metaspace", 1, true);
     runtime.init(CountingProbe.class, null, null, null, null, new LowMemoryHandler[] {handler});
 
     onWorkerThread(() -> runtime.runLowMemoryHandler(handler, USAGE));
@@ -116,7 +116,7 @@ class BTraceRuntimeLowMemoryTest {
       BTraceRuntimeImpl_8 runtime =
           new BTraceRuntimeImpl_8("low-memory-restore-test", new ArgsMap(), command -> {}, null);
       LowMemoryHandler handler =
-          new LowMemoryHandler("onLowMemory", "Metaspace", probeThreshold, null, true);
+          new LowMemoryHandler("onLowMemory", "Metaspace", probeThreshold, true);
       runtime.init(CountingProbe.class, null, null, null, null, new LowMemoryHandler[] {handler});
       onWorkerThread(runtime::start);
       assertEquals(probeThreshold, metaspace.getUsageThreshold(), "the probe did not arm the pool");
@@ -136,7 +136,7 @@ class BTraceRuntimeLowMemoryTest {
     List<Command> commands = Collections.synchronizedList(new ArrayList<Command>());
     BTraceRuntimeImpl_8 runtime =
         new BTraceRuntimeImpl_8("low-memory-pool-test", new ArgsMap(), commands::add, null);
-    LowMemoryHandler handler = new LowMemoryHandler("onLowMemory", pool, 1, null, true);
+    LowMemoryHandler handler = new LowMemoryHandler("onLowMemory", pool, 1, true);
     runtime.init(CountingProbe.class, null, null, null, null, new LowMemoryHandler[] {handler});
     try {
       onWorkerThread(runtime::start);
@@ -158,7 +158,7 @@ class BTraceRuntimeLowMemoryTest {
     List<Command> commands = Collections.synchronizedList(new ArrayList<Command>());
     BTraceRuntimeImpl_8 runtime =
         new BTraceRuntimeImpl_8("low-memory-failure-test", new ArgsMap(), commands::add, null);
-    LowMemoryHandler handler = new LowMemoryHandler("onLowMemory", "Metaspace", 1, null, true);
+    LowMemoryHandler handler = new LowMemoryHandler("onLowMemory", "Metaspace", 1, true);
     runtime.init(
         WrongSignatureProbe.class, null, null, null, null, new LowMemoryHandler[] {handler});
     try {
