@@ -30,7 +30,9 @@ import java.lang.annotation.Target;
  * "BTrace Worker" thread, not on the JVM's notification thread, and an exception it throws goes to
  * the probe's {@link OnError} handlers, or to the client when there are none. Pool names depend on
  * the garbage collector: for example {@code Tenured Gen} with Serial GC, {@code G1 Old Gen} with
- * G1; {@code Metaspace} exists with every collector.
+ * G1; {@code Metaspace} exists with every collector. When no pool has the name, or the pool does
+ * not support usage thresholds, the agent logs a warning and tells the client, listing the pools it
+ * can watch.
  *
  * @author A. Sundararajan
  */

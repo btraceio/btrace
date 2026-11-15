@@ -19,11 +19,15 @@ package io.btrace.runtime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.btrace.core.ArgsMap;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.ErrorCommand;
+import io.btrace.core.comm.MessageCommand;
 import io.btrace.core.handlers.LowMemoryHandler;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -70,6 +74,51 @@ class BTraceRuntimeLowMemoryTest {
     assertTrue(runtime.isDisabled(), "the runtime was not disabled after exit");
     onWorkerThread(() -> runtime.runLowMemoryHandler(handler, USAGE));
     assertEquals(1, CountingProbe.calls.get(), "the handler ran although enter() refused");
+  }
+
+  @Test
+  void unknownPoolIsReportedWithTheAvailablePools() throws Exception {
+    String warning = startAndAwaitWarning("No Such Pool");
+    assertTrue(warning.contains("'No Such Pool'"), warning);
+    assertTrue(warning.contains("Metaspace"), "available pools not listed: " + warning);
+  }
+
+  @Test
+  void poolWithoutUsageThresholdIsReported() throws Exception {
+    String pool = null;
+    for (MemoryPoolMXBean bean : ManagementFactory.getMemoryPoolMXBeans()) {
+      if (!bean.isUsageThresholdSupported()) {
+        pool = bean.getName();
+        break;
+      }
+    }
+    assumeTrue(pool != null, "every memory pool of this JVM supports usage thresholds");
+    String warning = startAndAwaitWarning(pool);
+    assertTrue(warning.contains("'" + pool + "'"), warning);
+    assertTrue(warning.contains("does not support usage thresholds"), warning);
+    assertTrue(warning.contains("Metaspace"), "pools with thresholds not listed: " + warning);
+  }
+
+  /** Starts a runtime whose one handler watches {@code pool}; returns the warning it sends. */
+  private static String startAndAwaitWarning(String pool) throws Exception {
+    List<Command> commands = Collections.synchronizedList(new ArrayList<Command>());
+    BTraceRuntimeImpl_8 runtime =
+        new BTraceRuntimeImpl_8("low-memory-pool-test", new ArgsMap(), commands::add, null);
+    LowMemoryHandler handler = new LowMemoryHandler("onLowMemory", pool, 1, null, true);
+    runtime.init(CountingProbe.class, null, null, null, null, new LowMemoryHandler[] {handler});
+    try {
+      onWorkerThread(runtime::start);
+      MessageCommand warning =
+          (MessageCommand)
+              awaitCommand(
+                  commands,
+                  command ->
+                      command instanceof MessageCommand
+                          && ((MessageCommand) command).getMessage().contains("@OnLowMemory"));
+      return warning.getMessage();
+    } finally {
+      runtime.handleExit(0);
+    }
   }
 
   @Test
