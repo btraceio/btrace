@@ -78,6 +78,8 @@ io.btrace.core.comm.SetSettingsCommand
 io.btrace.core.comm.SocketKeepAlive
 io.btrace.core.comm.StatusCommand
 io.btrace.core.comm.StringMapDataCommand
+io.btrace.core.comm.TypedEncoding
+io.btrace.core.comm.ValidatingObjectInputStream
 io.btrace.core.comm.WireIO
 io.btrace.core.comm.WireProtocol
 io.btrace.core.comm.v2.BinaryClient
