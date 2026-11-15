@@ -106,6 +106,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -356,24 +357,33 @@ public final class Main {
       } catch (IOException | RuntimeException e) {
         return SERVER_NOT_STARTED + (e.getMessage() != null ? e.getMessage() : e.toString());
       }
-      System.setProperty("btrace.wireio", String.valueOf(WireIO.VERSION));
-      controlServer = endpoint;
-      serverRunning = true;
-      Thread agentThread = serverThread(endpoint);
-      agentThread.setDaemon(true);
-      BTraceRuntime.enter();
-      try {
-        installServerShutdownHook();
-        agentThread.start();
-      } catch (Throwable t) {
-        // Nothing accepts on the endpoint: close it and take back what it published.
-        shutdownServer();
-        return SERVER_NOT_STARTED + t;
-      } finally {
-        BTraceRuntime.leave();
-      }
-      return SERVER_STARTED_ON_ATTACH;
+      return serveOnAttach(endpoint, serverThread(endpoint));
     }
+  }
+
+  /**
+   * Makes {@code endpoint} this agent's command server and starts {@code agentThread} to serve it.
+   * The caller holds {@code INIT_LOCK}.
+   *
+   * @return the line to print in the target
+   */
+  static String serveOnAttach(ControlServer endpoint, Thread agentThread) {
+    System.setProperty("btrace.wireio", String.valueOf(WireIO.VERSION));
+    controlServer = endpoint;
+    serverRunning = true;
+    agentThread.setDaemon(true);
+    BTraceRuntime.enter();
+    try {
+      installServerShutdownHook();
+      agentThread.start();
+    } catch (Throwable t) {
+      // Nothing accepts on the endpoint: close it and take back what it published.
+      shutdownServer();
+      return SERVER_NOT_STARTED + t;
+    } finally {
+      BTraceRuntime.leave();
+    }
+    return SERVER_STARTED_ON_ATTACH;
   }
 
   /**
@@ -410,23 +420,47 @@ public final class Main {
         });
   }
 
-  private static void mainLocked(String args, Instrumentation inst) {
-    if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization started");
-    while (!BTraceRuntimeAccess.claimAgent(AGENT_CONTROL)) {
+  // Anonymous class, not a lambda: used on the premain path.
+  private static final Supplier<UnaryOperator<String>> AGENT_HOLDER =
+      new Supplier<UnaryOperator<String>>() {
+        @Override
+        public UnaryOperator<String> get() {
+          return BTraceRuntimeAccess.agentControl();
+        }
+      };
+
+  /**
+   * Claims the JVM for the agent load that {@code own} stands for, or hands the load over to the
+   * agent that holds the JVM already.
+   *
+   * @param holder looks up the control of the agent holding the JVM
+   * @return {@code null} when this load holds the JVM now and must initialize; otherwise the line
+   *     to print in the target, and this load must do nothing more
+   */
+  static String claimOrHandOver(
+      String args, UnaryOperator<String> own, Supplier<UnaryOperator<String>> holder) {
+    while (!BTraceRuntimeAccess.claimAgent(own)) {
       // Every agent load gets its own class loader, so this is a different Main than the one
       // that loaded first. That one decides what this load may still do.
-      UnaryOperator<String> loaded = BTraceRuntimeAccess.agentControl();
+      UnaryOperator<String> loaded = holder.get();
       if (loaded == null) {
         // The holder failed to initialize and gave the JVM back in between: claim it again.
         continue;
       }
-      String outcome;
       try {
-        outcome = loaded.apply(args);
+        return loaded.apply(args);
       } catch (Throwable t) {
-        outcome = SERVER_NOT_STARTED + t;
+        return SERVER_NOT_STARTED + t;
       }
-      System.err.println("[BTrace Agent] " + outcome);
+    }
+    return null;
+  }
+
+  private static void mainLocked(String args, Instrumentation inst) {
+    if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization started");
+    String handedOver = claimOrHandOver(args, AGENT_CONTROL, AGENT_HOLDER);
+    if (handedOver != null) {
+      System.err.println("[BTrace Agent] " + handedOver);
       return;
     }
     // The settings object is shared by every agent load in this JVM.
@@ -1981,6 +2015,13 @@ public final class Main {
 
   static boolean isTrustRequestedAndRefused() {
     return trustRequestedAndRefused;
+  }
+
+  /** Sets how far this agent's initialization got, as a failed one would leave it. Tests only. */
+  static void setRuntimeHooksInstalledForTesting(boolean installed) {
+    synchronized (INIT_LOCK) {
+      runtimeHooksInstalled = installed;
+    }
   }
 
   static void resetTrustRefusalForTesting() {

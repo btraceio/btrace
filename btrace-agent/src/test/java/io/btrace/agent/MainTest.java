@@ -28,10 +28,12 @@ import io.btrace.core.SharedSettings;
 import io.btrace.runtime.BTraceRuntimeAccess;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.Test;
 
@@ -365,6 +367,116 @@ class MainTest {
     assertTrue(outcome.contains("its command server was not started"), outcome);
     // It installed nothing either, so the JVM is free for another load.
     assertTrue(outcome.contains("failed to initialize; load the agent again"), outcome);
+  }
+
+  @Test
+  void laterLoadIsToldToRestartTheJvmAfterAnAgentThatFailedWithItsHooksInstalled() {
+    // This test JVM never finished agent initialization; say it got as far as its runtime hooks.
+    Main.setRuntimeHooksInstalledForTesting(true);
+    try {
+      String outcome = Main.startServerOnAttach("port=0");
+      assertTrue(outcome.contains("its command server was not started"), outcome);
+      assertTrue(
+          outcome.contains("failed to initialize; restart the JVM to use BTrace in it"), outcome);
+    } finally {
+      Main.setRuntimeHooksInstalledForTesting(false);
+    }
+  }
+
+  @Test
+  void loadClaimsTheJvmAgainWhenTheHolderGaveItBackInBetween() {
+    UnaryOperator<String> failedHolder = args -> "failed holder";
+    UnaryOperator<String> own = args -> "own";
+    AtomicInteger lookups = new AtomicInteger();
+    assertTrue(BTraceRuntimeAccess.claimAgent(failedHolder));
+    try {
+      // The claim is refused, and by the time the holder is looked up it has given the JVM back.
+      String outcome =
+          Main.claimOrHandOver(
+              "port=0",
+              own,
+              () -> {
+                lookups.incrementAndGet();
+                BTraceRuntimeAccess.releaseAgent(failedHolder);
+                return BTraceRuntimeAccess.agentControl();
+              });
+
+      assertNull(outcome, "the load was handed over instead of claiming the JVM");
+      assertEquals(1, lookups.get());
+      assertSame(own, BTraceRuntimeAccess.agentControl());
+    } finally {
+      BTraceRuntimeAccess.releaseAgent(failedHolder);
+      BTraceRuntimeAccess.releaseAgent(own);
+    }
+  }
+
+  @Test
+  void loadIsHandedOverToTheAgentHoldingTheJvm() {
+    List<String> seen = new ArrayList<>();
+    UnaryOperator<String> holder =
+        args -> {
+          seen.add(args);
+          return "handled by the holder";
+        };
+    UnaryOperator<String> own = args -> "own";
+    assertTrue(BTraceRuntimeAccess.claimAgent(holder));
+    try {
+      assertEquals(
+          "handled by the holder",
+          Main.claimOrHandOver("port=4242", own, BTraceRuntimeAccess::agentControl));
+      assertEquals(1, seen.size());
+      assertEquals("port=4242", seen.get(0));
+      assertSame(holder, BTraceRuntimeAccess.agentControl());
+    } finally {
+      BTraceRuntimeAccess.releaseAgent(holder);
+    }
+  }
+
+  @Test
+  void holderThatThrowsIsReportedAndKeepsTheJvm() {
+    UnaryOperator<String> holder =
+        args -> {
+          throw new IllegalStateException("holder broke");
+        };
+    assertTrue(BTraceRuntimeAccess.claimAgent(holder));
+    try {
+      String outcome =
+          Main.claimOrHandOver("port=0", args -> "own", BTraceRuntimeAccess::agentControl);
+      assertTrue(outcome.contains("its command server was not started"), outcome);
+      assertTrue(outcome.contains("holder broke"), outcome);
+      assertSame(holder, BTraceRuntimeAccess.agentControl());
+    } finally {
+      BTraceRuntimeAccess.releaseAgent(holder);
+    }
+  }
+
+  @Test
+  void endpointIsClosedAndUnpublishedWhenItsServerThreadCannotStart() throws Exception {
+    ControlServer endpoint = ControlServer.open(Main.parseAgentArgs("port=0"), true);
+    Path tokenFile = Paths.get(System.getProperty(ControlServer.TOKEN_FILE_PROPERTY));
+    Thread unstartable =
+        new Thread() {
+          @Override
+          public synchronized void start() {
+            throw new OutOfMemoryError("unable to create native thread");
+          }
+        };
+    try {
+      assertTrue(Files.exists(tokenFile), "no token file was generated");
+
+      String outcome = Main.serveOnAttach(endpoint, unstartable);
+
+      assertTrue(outcome.contains("its command server was not started"), outcome);
+      assertTrue(outcome.contains("unable to create native thread"), outcome);
+      assertTrue(endpoint.isClosed(), "the endpoint was left open");
+      assertNull(System.getProperty(ControlServer.PORT_PROPERTY));
+      assertNull(System.getProperty(ControlServer.AUTH_REQUIRED_PROPERTY));
+      assertNull(System.getProperty(ControlServer.TOKEN_FILE_PROPERTY));
+      assertFalse(Files.exists(tokenFile), "the generated token file was left behind");
+    } finally {
+      Main.shutdownServer();
+      endpoint.close();
+    }
   }
 
   @Test
