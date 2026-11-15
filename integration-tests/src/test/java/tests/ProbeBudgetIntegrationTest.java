@@ -19,6 +19,7 @@ package tests;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.sun.tools.attach.AgentLoadException;
@@ -39,6 +40,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -82,7 +84,8 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       "ignoring agent argument trusted=true, every probe is verified";
 
   /** The line the agent prints when it is loaded into a JVM that already has it. */
-  private static final String AGENT_ALREADY_LOADED = "BTrace agent is already loaded in this JVM";
+  private static final String AGENT_ALREADY_LOADED =
+      "BTrace agent is already loaded in this JVM; this load and its arguments are ignored";
 
   /** Exit code of {@code btrace doctor} when the target publishes no control endpoint. */
   private static final int DOCTOR_PREPARATION_REQUIRED = 2;
@@ -512,6 +515,9 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
           awaitOutput(app, "its command server was started for this attach", 10_000L),
           "the loaded agent did not start its server on attach:" + app(app));
 
+      // The agent was loaded at launch, so its server requires the token whenever it starts.
+      assertEquals("true", targetProperties(pid).getProperty("btrace.auth.required"), app(app));
+
       hot = deploy(pid, HOT_PROBE, false);
       assertNotNull(
           hot.awaitLine(removalPattern("BudgetHotProbe", "100"), REMOVAL_DEADLINE_MS),
@@ -528,13 +534,55 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
 
   @Test
   @Timeout(value = 120, unit = TimeUnit.SECONDS)
+  void serverStartedOnAttachRequiresTheLaunchTimeToken() throws Exception {
+    // The operator launches a trusted agent without a server and names the token file. The
+    // server a later attach starts takes its token from there, not from the attach.
+    Path tokens = Files.createTempDirectory("btrace-budget-token");
+    Path operatorToken = tokens.resolve("operator.token").toAbsolutePath().normalize();
+    Path attacherToken = tokens.resolve("attacher.token").toAbsolutePath().normalize();
+    TestApp app =
+        launchTarget(
+            "noServer=true,trusted=true,authTokenFile=" + operatorToken,
+            "-XX:+EnableDynamicAgentLoading");
+    try {
+      int pid = app.getPid();
+      loadAgentByAttach(
+          pid, "telemetry=false,port=" + freePort() + ",authTokenFile=" + attacherToken);
+      assertTrue(
+          awaitOutput(app, "its command server was started for this attach", 10_000L),
+          "the loaded agent did not start its server on attach:" + app(app));
+
+      Properties published = targetProperties(pid);
+      assertEquals("true", published.getProperty("btrace.auth.required"), app(app));
+      assertEquals(operatorToken.toString(), published.getProperty("btrace.auth.tokenFile"));
+      assertFalse(Files.exists(attacherToken), "the token file of the later load was used");
+
+      // A client that presents another token is turned away; the right one gets in.
+      byte[] token = Files.readAllBytes(operatorToken);
+      Files.write(operatorToken, "not-the-token".getBytes(StandardCharsets.UTF_8));
+      IOException rejected = assertThrows(IOException.class, () -> listDetachedProbes(pid));
+      assertTrue(
+          String.valueOf(rejected.getMessage()).contains("authentication rejected"),
+          "unexpected failure: " + rejected);
+      Files.write(operatorToken, token);
+      listDetachedProbes(pid);
+      assertTargetStillRunning(app);
+    } finally {
+      app.stop();
+      Files.deleteIfExists(operatorToken);
+      Files.deleteIfExists(tokens);
+    }
+  }
+
+  @Test
+  @Timeout(value = 120, unit = TimeUnit.SECONDS)
   void stockClientAttachesToAgentLaunchedWithoutServer() throws Exception {
     TestApp app = launchTarget("noServer=true", "-XX:+EnableDynamicAgentLoading");
     CliRun quiet = null;
     try {
       // The client finds no endpoint, loads the agent, and the agent already in the JVM starts
-      // its server for it.
-      quiet = deploy(app.getPid(), QUIET_PROBE, false);
+      // its server for it. The client picks up the token that server requires on its own.
+      quiet = deploy(app.getPid(), QUIET_PROBE, false, "-p", String.valueOf(freePort()));
       assertNotNull(
           quiet.awaitLine(Pattern.compile("^budget-quiet-hit$"), REMOVAL_DEADLINE_MS),
           "the client could not deploy to an agent launched without a server:\n"
@@ -561,23 +609,39 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
             "-Dbtrace.comm.autoNegotiate=false",
             "-Dbtrace.comm.forceVersion=true");
     CliRun quiet = null;
+    CliRun trusted = null;
     try (ServerSocket taken = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
       int pid = app.getPid();
-      // The first load asks for a port that is in use, so its initialization fails.
+      // The first load asks for trusted mode and a port that is in use, so its initialization
+      // fails.
       try {
-        loadAgentByAttach(pid, "telemetry=false,port=" + taken.getLocalPort());
+        loadAgentByAttach(pid, "telemetry=false,trusted=true,port=" + taken.getLocalPort());
       } catch (Exception expected) {
         // the attach API reports the failed initialization
       }
       assertTrue(
-          awaitOutput(app, "FATAL: Initialization failed", 10_000L),
+          awaitOutput(app, "FATAL: Initialization failed: java.net.BindException", 10_000L),
           "the first load did not fail on the taken port:" + app(app));
 
-      quiet = deploy(pid, QUIET_PROBE, false);
+      String port = String.valueOf(freePort());
+      quiet = deploy(pid, QUIET_PROBE, false, "-p", port);
       assertNotNull(
           quiet.awaitLine(Pattern.compile("^budget-quiet-hit$"), REMOVAL_DEADLINE_MS),
           "a failed first load left the JVM untraceable:\n" + quiet.output() + app(app));
+
+      // The failed load's trusted=true is gone with it: a probe that needs trusted mode, deployed
+      // without -u, does not pass verification.
+      trusted = deploy(pid, "btrace/BudgetTrustedProbe.class", false);
+      int refused = trusted.awaitExit(30);
+      assertTrue(
+          refused > 0,
+          "the probe was not turned away (exit " + refused + "):\n" + trusted.output() + app(app));
+      assertEquals(
+          0,
+          count(app.capturedOutput(), "budget-trusted-ran"),
+          "the failed load left trusted mode on:\n" + trusted.output() + app(app));
     } finally {
+      destroy(trusted);
       destroy(quiet);
       app.stop();
     }
@@ -887,6 +951,15 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       client.close();
     }
     return probes;
+  }
+
+  private static Properties targetProperties(int pid) throws Exception {
+    VirtualMachine vm = VirtualMachine.attach(String.valueOf(pid));
+    try {
+      return vm.getSystemProperties();
+    } finally {
+      vm.detach();
+    }
   }
 
   /** Loads the agent into {@code pid} by dynamic attach with {@code agentArguments}. */

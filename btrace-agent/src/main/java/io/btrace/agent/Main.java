@@ -18,6 +18,8 @@ package io.btrace.agent;
 
 import static io.btrace.core.Args.ALLOW_EXTENSIONS;
 import static io.btrace.core.Args.ALLOW_PRIVILEGED;
+import static io.btrace.core.Args.AUTH_TOKEN_FILE;
+import static io.btrace.core.Args.BIND_ADDRESS;
 import static io.btrace.core.Args.BOOT_CLASS_PATH;
 import static io.btrace.core.Args.CMD_QUEUE_LIMIT;
 import static io.btrace.core.Args.CONFIG;
@@ -34,6 +36,7 @@ import static io.btrace.core.Args.HELP;
 import static io.btrace.core.Args.LIBS;
 import static io.btrace.core.Args.NO_SERVER;
 import static io.btrace.core.Args.OUTPUT;
+import static io.btrace.core.Args.PORT;
 import static io.btrace.core.Args.PROBES;
 import static io.btrace.core.Args.PROBE_DESC_PATH;
 import static io.btrace.core.Args.PROBE_MAX_RATE;
@@ -54,6 +57,7 @@ import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceRuntime;
 import io.btrace.core.DebugSupport;
 import io.btrace.core.Function;
+import io.btrace.core.JavaVersionCheck;
 import io.btrace.core.Messages;
 import io.btrace.core.SharedSettings;
 import io.btrace.core.comm.ErrorCommand;
@@ -318,9 +322,11 @@ public final class Main {
 
   /**
    * Handles a later agent load on behalf of this, already loaded, agent. If this agent has no
-   * command server, because it was launched without one, the server is started from the port and
-   * bind address of the later load, as for a dynamic attach. Nothing else of that load is used:
-   * this agent's settings, startup scripts and probe budget stay what they are.
+   * command server, because it was launched without one, the server is started on the port and bind
+   * address of the later load. Nothing else of that load is used: this agent's settings, startup
+   * scripts and probe budget stay what they are. The clients of that server get those settings, a
+   * launch-time {@code trusted=true} included, so the server of an agent loaded at JVM launch
+   * requires the authentication token, as it would had it been started at launch.
    *
    * @return the line to print in the target
    */
@@ -328,7 +334,13 @@ public final class Main {
     // Also waits for an initialization that is still running.
     synchronized (INIT_LOCK) {
       if (!initialized) {
-        return SERVER_NOT_STARTED + "the agent did not finish initializing";
+        // The lock is held, so initialization is not still running: it failed. Once this agent
+        // has installed itself into the shared runtime classes no other load can replace it;
+        // before that it gave the JVM back, and this load only asked a moment too early.
+        return SERVER_NOT_STARTED
+            + (runtimeHooksInstalled
+                ? "the agent failed to initialize; restart the JVM to use BTrace in it"
+                : "the agent failed to initialize; load the agent again");
       }
       if (controlServer != null) {
         return ALREADY_LOADED;
@@ -338,23 +350,48 @@ public final class Main {
       }
       ControlServer endpoint;
       try {
-        endpoint = ControlServer.open(parseAgentArgs(args), false);
+        endpoint =
+            ControlServer.open(
+                attachEndpointArgs(parseAgentArgs(args), argMap), "premain".equals(agentMode));
       } catch (IOException | RuntimeException e) {
-        return SERVER_NOT_STARTED + e.getMessage();
+        return SERVER_NOT_STARTED + (e.getMessage() != null ? e.getMessage() : e.toString());
       }
       System.setProperty("btrace.wireio", String.valueOf(WireIO.VERSION));
       controlServer = endpoint;
       serverRunning = true;
-      installServerShutdownHook();
       Thread agentThread = serverThread(endpoint);
       agentThread.setDaemon(true);
       BTraceRuntime.enter();
       try {
+        installServerShutdownHook();
         agentThread.start();
+      } catch (Throwable t) {
+        // Nothing accepts on the endpoint: close it and take back what it published.
+        shutdownServer();
+        return SERVER_NOT_STARTED + t;
       } finally {
         BTraceRuntime.leave();
       }
       return SERVER_STARTED_ON_ATTACH;
+    }
+  }
+
+  /**
+   * The arguments of a command server started for a later agent load: where it listens comes from
+   * that load, the token file from the arguments this agent was loaded with.
+   */
+  static ArgsMap attachEndpointArgs(ArgsMap laterLoad, ArgsMap ownLoad) {
+    ArgsMap endpoint = new ArgsMap();
+    copyArgument(laterLoad, endpoint, PORT);
+    copyArgument(laterLoad, endpoint, BIND_ADDRESS);
+    copyArgument(ownLoad, endpoint, AUTH_TOKEN_FILE);
+    return endpoint;
+  }
+
+  private static void copyArgument(ArgsMap from, ArgsMap to, String key) {
+    String value = from != null ? from.get(key) : null;
+    if (value != null) {
+      to.put(key, value);
     }
   }
 
@@ -375,33 +412,38 @@ public final class Main {
 
   private static void mainLocked(String args, Instrumentation inst) {
     if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization started");
-    if (!BTraceRuntimeAccess.claimAgent(AGENT_CONTROL)) {
+    while (!BTraceRuntimeAccess.claimAgent(AGENT_CONTROL)) {
       // Every agent load gets its own class loader, so this is a different Main than the one
       // that loaded first. That one decides what this load may still do.
-      String outcome = ALREADY_LOADED;
       UnaryOperator<String> loaded = BTraceRuntimeAccess.agentControl();
-      if (loaded != null) {
-        try {
-          outcome = loaded.apply(args);
-        } catch (Throwable t) {
-          outcome = SERVER_NOT_STARTED + t;
-        }
+      if (loaded == null) {
+        // The holder failed to initialize and gave the JVM back in between: claim it again.
+        continue;
+      }
+      String outcome;
+      try {
+        outcome = loaded.apply(args);
+      } catch (Throwable t) {
+        outcome = SERVER_NOT_STARTED + t;
       }
       System.err.println("[BTrace Agent] " + outcome);
       return;
     }
-    Main.inst = inst;
-
-    // Running BTrace on Java < 17 is deprecated as of 3.0; warn exactly once per target JVM
-    io.btrace.core.JavaVersionCheck.warnIfDeprecatedJvm();
-
-    // Read the operator's budget properties before any agent argument can write system properties.
-    BudgetLimits.Snapshot budgetSnapshot = BudgetLimits.snapshot(System.getProperties());
-    // Under dynamic attach an operator budget property, valid or not, always ends in trusted mode
-    // being refused. Known before the arguments are parsed, so that nothing they do is trusted.
-    attachTrustBarred = !"premain".equals(agentMode) && budgetSnapshot.present();
-    budgetPropertySet = budgetSnapshot.present();
+    // The settings object is shared by every agent load in this JVM.
+    SharedSettings settingsBefore = newClientSettings(settings);
     try {
+      Main.inst = inst;
+
+      // Running BTrace on Java < 17 is deprecated as of 3.0; warn exactly once per target JVM
+      JavaVersionCheck.warnIfDeprecatedJvm();
+
+      // Read the operator's budget properties before any agent argument can write system
+      // properties.
+      BudgetLimits.Snapshot budgetSnapshot = BudgetLimits.snapshot(System.getProperties());
+      // Under dynamic attach an operator budget property, valid or not, always ends in trusted mode
+      // being refused. Known before the arguments are parsed, so that nothing they do is trusted.
+      attachTrustBarred = !"premain".equals(agentMode) && budgetSnapshot.present();
+      budgetPropertySet = budgetSnapshot.present();
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Loading arguments");
       loadArgs(args);
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Arguments loaded");
@@ -577,7 +619,11 @@ public final class Main {
     } catch (Throwable t) {
       shutdownServer();
       if (!runtimeHooksInstalled) {
-        // Nothing shared was touched yet: let a retry, with other arguments, load an agent.
+        // This instance has not installed itself into the shared runtime classes: take back the
+        // settings its arguments wrote, a trusted=true included, and let a retry load an agent.
+        // The system properties it set, the jars it appended to the class paths and a budget
+        // governor thread it started stay behind; the governor has no client to act on.
+        settings.from(settingsBefore);
         BTraceRuntimeAccess.releaseAgent(AGENT_CONTROL);
       }
       // FATAL errors should always be printed
@@ -1379,8 +1425,9 @@ public final class Main {
   /**
    * Trusted mode is enabled only by the {@code trusted=true} agent argument. A {@code
    * -Dbtrace.trusted} system property looks like the same switch and is read by nothing, so name
-   * the argument that works instead of leaving a security-relevant setting silently ignored. Agent
-   * initialization runs once per target JVM, so this is reported at most once.
+   * the argument that works instead of leaving a security-relevant setting silently ignored. One
+   * agent load at a time initializes an agent in a target JVM, and a later load is handed over to
+   * the agent already there, so this is reported once unless a failed first load is retried.
    *
    * @param budget whether a probe budget is requested for this JVM; the client's {@code -u} flag is
    *     then refused, so the warning does not recommend it

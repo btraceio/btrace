@@ -115,8 +115,8 @@ and re-run it with `-Pqe.case=<new id>`.
   `${probeClassesDir}/io/btrace/qe/probe/QeStartupProbe.class`.
 
 A target case that loads a script (`script=`) must also pass `noServer=false`. With a script the
-agent starts no command server by default, so the canary would otherwise have to load a second,
-dynamic agent instead of exercising the instance under test.
+agent starts no command server by default, so the canary's attach would otherwise first have to
+make the agent start its server, and the case would not exercise the server it configured.
 
 ## Harness self-tests
 

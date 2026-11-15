@@ -472,6 +472,18 @@ its server on the requested port, and a client can then attach. Every other argu
 load is ignored, with one line in the target JVM, so it cannot change the limits. An agent whose
 launch-time budget is invalid starts no server this way.
 
+A server started this way belongs to the agent loaded at launch, and its clients get that agent's
+settings, a launch-time `trusted=true` included. It therefore requires the same token as a server
+started at launch: the token file is the launch-time `authTokenFile=` if one was given, otherwise
+the agent generates one when the server starts, and a 3.0 client run as the same user picks it up
+without any option. What is ignored includes the options the client turns into agent arguments,
+such as `-cp` and `-statsd`: a probe that needs extra classes on the target's class path gets
+them only from the launch-time `bootClassPath=` and `systemClassPath=` arguments. The client's
+`-u` is not among them. It is requested per connection and is honoured unless a probe budget is
+in effect, as on any command server. An agent first loaded by dynamic attach that fails late in
+its initialization cannot be replaced: a later load is answered with
+`the agent failed to initialize; restart the JVM to use BTrace in it`.
+
 `probeMaxRate` counts the handlers BTrace attaches to application code (`@OnMethod` and the other
 instrumentation sites). Handlers the runtime calls itself, such as `@OnTimer`, `@OnEvent` and
 `@OnLowMemory`, are not counted; only `probeTtl` bounds a probe that does its work there.

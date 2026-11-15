@@ -119,7 +119,24 @@ and bind address: if it has no command server (launched with `noServer=true`, on
 `script=`, or with a rejected `port=`), it starts its own server for the attach, bound by its own
 settings and budget; otherwise it does nothing. An invalid launch-time budget still means no
 server. A first load that fails before it installs its runtime hooks gives the claim back, so a
-retry with other arguments can load.
+retry with other arguments can load; the shared settings are put back to what they were before
+that load, so its `trusted=true` does not carry over (system properties it set, class-path
+appends and its governor thread stay). A load that fails after installing its hooks keeps the
+claim: nothing can replace it, and later loads are told to restart the JVM.
+
+Token on the late server (decided by the maintainer 2026-11-15): the server a launch-time agent
+starts for a later load requires authentication exactly as one started at launch does. Its
+clients inherit the launch-time settings, `trusted=true` included, so leaving it open would give
+every local user who can reach the loopback port a trusted endpoint. The token file comes from
+the launch-time `authTokenFile=`, or is generated; the later load's `authTokenFile=` is ignored
+like its other arguments. The 3.0 client reads the published token file after loading the agent,
+so `btrace <pid>` needs no new option. An agent first loaded by dynamic attach keeps the
+unauthenticated server dynamic attach has always had. Client options that travel as agent
+arguments (`-cp`, `-statsd`) do not reach an agent that is already loaded; this is documented,
+and the target prints one line. `-u` also travels per connection and keeps working unless a
+budget refuses it. The restart answer is reachable only for an agent first loaded by dynamic
+attach: a failed launch-time agent stops the JVM. Telling the client would need a new discovery
+property and is not done.
 
 Trusted argument ordering (added 2026-11-15): under dynamic attach with an operator property set,
 `trusted=true` is not applied at all while the agent arguments are parsed, instead of being set

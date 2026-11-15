@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.btrace.core.Args;
 import io.btrace.core.ArgsMap;
 import io.btrace.core.SharedSettings;
 import io.btrace.runtime.BTraceRuntimeAccess;
@@ -362,6 +363,33 @@ class MainTest {
     // This test JVM never ran agent initialization.
     String outcome = Main.startServerOnAttach("port=0");
     assertTrue(outcome.contains("its command server was not started"), outcome);
-    assertTrue(outcome.contains("did not finish initializing"), outcome);
+    // It installed nothing either, so the JVM is free for another load.
+    assertTrue(outcome.contains("failed to initialize; load the agent again"), outcome);
+  }
+
+  @Test
+  void serverStartedForALaterLoadTakesOnlyItsEndpointFromThatLoad() {
+    ArgsMap laterLoad =
+        Main.parseAgentArgs(
+            "port=4242,bindAddress=::1,authTokenFile=/attacher/token,trusted=true,noServer=true");
+    ArgsMap ownLoad = Main.parseAgentArgs("noServer=true,authTokenFile=/operator/token,port=1");
+
+    ArgsMap endpoint = Main.attachEndpointArgs(laterLoad, ownLoad);
+
+    assertEquals("4242", endpoint.get(Args.PORT));
+    assertEquals("::1", endpoint.get(Args.BIND_ADDRESS));
+    assertEquals("/operator/token", endpoint.get(Args.AUTH_TOKEN_FILE));
+    assertEquals(3, endpoint.size());
+  }
+
+  @Test
+  void serverStartedForALaterLoadGetsNoTokenFileFromThatLoad() {
+    ArgsMap endpoint =
+        Main.attachEndpointArgs(
+            Main.parseAgentArgs("port=0,authTokenFile=/attacher/token"),
+            Main.parseAgentArgs("noServer=true"));
+
+    assertNull(endpoint.get(Args.AUTH_TOKEN_FILE));
+    assertEquals("0", endpoint.get(Args.PORT));
   }
 }
