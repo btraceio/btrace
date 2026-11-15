@@ -595,6 +595,9 @@ endpoint on port 2020. The command server starts unless `noServer=true` is given
 - `cmdQueueLimit=<n>` - Pending output commands per client before output is dropped (default 100)
 - `trackRetransforms=true` - Notify the client about every class a probe retransforms
 - `startupRetransform=false` - Skip retransforming already loaded classes on probe deployment (default `true`)
+- `probeTtl=<seconds>`, `probeMaxRate=<hits/s>` - Probe budgets: maximum lifetime of a probe, and
+  maximum executions per second of its handlers attached to application code; a probe over budget
+  is removed. Launch-time only (see [probe budgets](GettingStarted.md#probe-budgets))
 - `statsd=<host[:port]>` - StatsD server for the StatsD extension
 - `config=<name>` - Configuration section to apply from an embedded `agent.properties`
   (fat agents; see [Fat Agent Plugin](architecture/fat-agent-plugin.md))
