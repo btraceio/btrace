@@ -637,12 +637,12 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
 
     if (lowMemoryHandlers != null) {
       lowMemory = new LowMemoryHandlers(lowMemoryHandlers, args::template);
+      // listen before arming: a pool already over its threshold notifies once, right after arming
+      ((NotificationEmitter) memoryMBean).addNotificationListener(memoryListener, null, null);
       for (String warning : lowMemory.arm(getMemoryPoolMXBeans())) {
         log.warn(warning);
         enqueue(MessageCommand.line("[BTRACE WARN] " + warning));
       }
-      NotificationEmitter emitter = (NotificationEmitter) memoryMBean;
-      emitter.addNotificationListener(memoryListener, null, null);
     }
 
     leave();
