@@ -236,23 +236,20 @@ task prepareClientClassdata(type: Copy) {
         include 'io/btrace/extension/**/*.class'
         include 'io/btrace/libs/org/objectweb/asm/**/*.class'
         include 'io/btrace/libs/org/jctools/**/*.class'
-        include 'io/btrace/libs/org/slf4j/**/*.class'
         include 'com/googlecode/lanterna/**/*.class'
         // Core classes are supplied by the bootstrap/shared sections. Runtime and extension
         // classes are intentionally retained here for the compiler-side probe-pack generator.
         exclude 'io/btrace/core/**'
+        // Root classes (see bootIncludes and the extra root blocks of btraceJar), relocated SLF4J
+        // among them. The client loader's parent loaded Loader from the jar root, so it always
+        // loads the root copy; a masked copy here would never be used.
+        exclude 'io/btrace/runtime/BTraceBootstrap*.class'
+        exclude 'io/btrace/runtime/Indy*.class'
+        exclude 'io/btrace/runtime/ExtensionIndy*.class'
+        exclude 'io/btrace/runtime/auxiliary/Auxiliary*.class'
+        exclude 'io/btrace/extension/ExtensionBridge.class'
+        exclude 'io/btrace/extension/processor/**'
         exclude 'META-INF/**'
-        rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
-    }
-
-    // The bootstrap classes BTraceRuntimeAccess and LinkingFlag are root entries, and the client
-    // section also carries a masked copy of each. They moved from io/btrace/runtime/, which the
-    // block above includes, to io/btrace/core/, which it excludes; this keeps the copies where
-    // they were. Whether root classes need masked copies at all is a separate question.
-    from(provider { zipTree(allClassesShadow.archiveFile) }) {
-        include 'io/btrace/core/BTraceRuntimeAccess.class'
-        include 'io/btrace/core/BTraceRuntimeAccess$*.class'
-        include 'io/btrace/core/LinkingFlag.class'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
 
