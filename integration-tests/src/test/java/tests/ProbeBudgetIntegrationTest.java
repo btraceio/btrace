@@ -510,7 +510,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
     CliRun hot = null;
     try {
       int pid = app.getPid();
-      loadAgentByAttach(pid, "telemetry=false,probeMaxRate=100000000,port=" + freePort());
+      loadAgentByAttach(pid, "telemetry=false,probeMaxRate=100000000,port=0");
       assertTrue(
           awaitOutput(app, "its command server was started for this attach", 10_000L),
           "the loaded agent did not start its server on attach:" + app(app));
@@ -546,8 +546,9 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
             "-XX:+EnableDynamicAgentLoading");
     try {
       int pid = app.getPid();
-      loadAgentByAttach(
-          pid, "telemetry=false,port=" + freePort() + ",authTokenFile=" + attacherToken);
+      // port=0: the agent picks a free port and publishes it, so no other process can take it
+      // between the test choosing one and the agent binding it.
+      loadAgentByAttach(pid, "telemetry=false,port=0,authTokenFile=" + attacherToken);
       assertTrue(
           awaitOutput(app, "its command server was started for this attach", 10_000L),
           "the loaded agent did not start its server on attach:" + app(app));
