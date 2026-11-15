@@ -22,6 +22,7 @@ import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -35,9 +36,37 @@ import java.util.function.Function;
  * of their thresholds, and a notification runs only the handlers whose own threshold the reported
  * usage has reached. The JVM notifies once per crossing of the armed threshold, so a handler with a
  * higher threshold runs only if usage is already at its threshold when that crossing is reported.
+ *
+ * <p>Usage thresholds are JVM-wide state. Arming remembers the threshold a pool had before the
+ * first probe armed it, and {@link #disarm} puts it back when the last probe watching that pool
+ * goes. While several probes watch one pool it stays armed with the lowest threshold any of them
+ * asked for. If someone else (the application) changes the threshold meanwhile, disarming leaves
+ * the pool alone.
  */
 final class LowMemoryHandlers {
+  /** Per pool name, JVM-wide: the probes that armed it. Guarded by itself. */
+  private static final Map<String, Arming> ARMINGS = new HashMap<>();
+
+  private static final class Arming {
+    final long previous;
+    final Map<LowMemoryHandlers, Long> requests = new IdentityHashMap<>();
+    long armed;
+
+    Arming(long previous) {
+      this.previous = previous;
+    }
+
+    long lowest(long other) {
+      long lowest = other;
+      for (long requested : requests.values()) {
+        lowest = Math.min(lowest, requested);
+      }
+      return lowest;
+    }
+  }
+
   private final Map<String, List<LowMemoryHandler>> byPool = new HashMap<>();
+  private final List<MemoryPoolMXBean> armedPools = new ArrayList<>();
 
   /**
    * @param handlers the probe's handlers
@@ -76,7 +105,7 @@ final class LowMemoryHandlers {
       if (handlers != null) {
         long threshold = lowestThreshold(handlers);
         try {
-          pool.setUsageThreshold(threshold);
+          arm(pool, threshold);
           problems.remove(name);
         } catch (IllegalArgumentException e) {
           problems.put(name, "rejects the threshold " + threshold + " (" + e.getMessage() + ")");
@@ -112,6 +141,47 @@ final class LowMemoryHandlers {
       }
     }
     return due;
+  }
+
+  private void arm(MemoryPoolMXBean pool, long threshold) {
+    synchronized (ARMINGS) {
+      Arming arming = ARMINGS.get(pool.getName());
+      if (arming == null) {
+        arming = new Arming(pool.getUsageThreshold());
+      }
+      long armed = arming.lowest(threshold);
+      pool.setUsageThreshold(armed); // throws before anything is recorded
+      arming.requests.put(this, threshold);
+      arming.armed = armed;
+      ARMINGS.put(pool.getName(), arming);
+      armedPools.add(pool);
+    }
+  }
+
+  /**
+   * Withdraws this probe's thresholds: a pool goes back to the threshold it had before any probe
+   * armed it, or to the lowest one still requested by another probe.
+   */
+  void disarm() {
+    synchronized (ARMINGS) {
+      for (MemoryPoolMXBean pool : armedPools) {
+        Arming arming = ARMINGS.get(pool.getName());
+        if (arming == null || arming.requests.remove(this) == null) {
+          continue;
+        }
+        boolean untouched = pool.getUsageThreshold() == arming.armed;
+        if (arming.requests.isEmpty()) {
+          ARMINGS.remove(pool.getName());
+          arming.armed = arming.previous;
+        } else {
+          arming.armed = arming.lowest(Long.MAX_VALUE);
+        }
+        if (untouched) {
+          pool.setUsageThreshold(arming.armed);
+        }
+      }
+      armedPools.clear();
+    }
   }
 
   private static long lowestThreshold(List<LowMemoryHandler> handlers) {

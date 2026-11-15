@@ -99,6 +99,56 @@ class LowMemoryHandlersTest {
     assertEquals(Collections.emptyList(), handlers.handlersFor("other-pool", used(5000)));
   }
 
+  private static LowMemoryHandlers probe(String pool, long threshold) {
+    return new LowMemoryHandlers(new LowMemoryHandler[] {handler("h", pool, threshold)}, AS_IS);
+  }
+
+  @Test
+  void disarmRestoresThePreviousThreshold() {
+    FakePool pool = new FakePool("restore-test-pool", true, -1, 42);
+    LowMemoryHandlers probe = probe("restore-test-pool", 1000);
+    probe.arm(Collections.singletonList(pool.bean));
+    assertEquals(1000, pool.threshold);
+    probe.disarm();
+    assertEquals(42, pool.threshold);
+  }
+
+  @Test
+  void twoProbesOnOnePoolKeepTheLowestThresholdUntilTheLastExits() {
+    FakePool pool = new FakePool("two-probe-test-pool", true, -1, 42);
+    List<MemoryPoolMXBean> pools = Collections.singletonList(pool.bean);
+    LowMemoryHandlers first = probe("two-probe-test-pool", 500);
+    LowMemoryHandlers second = probe("two-probe-test-pool", 1000);
+
+    first.arm(pools);
+    second.arm(pools);
+    assertEquals(500, pool.threshold, "the second probe raised the first probe's threshold");
+    first.disarm();
+    assertEquals(1000, pool.threshold, "the remaining probe's threshold was not armed");
+    second.disarm();
+    assertEquals(42, pool.threshold, "the threshold before both probes was not restored");
+
+    first = probe("two-probe-test-pool", 1000);
+    second = probe("two-probe-test-pool", 500);
+    first.arm(pools);
+    second.arm(pools);
+    assertEquals(500, pool.threshold);
+    second.disarm();
+    assertEquals(1000, pool.threshold);
+    first.disarm();
+    assertEquals(42, pool.threshold);
+  }
+
+  @Test
+  void disarmLeavesAThresholdSomeoneElseSetMeanwhile() {
+    FakePool pool = new FakePool("changed-test-pool", true, -1, 42);
+    LowMemoryHandlers probe = probe("changed-test-pool", 1000);
+    probe.arm(Collections.singletonList(pool.bean));
+    pool.threshold = 7; // the application re-arms the pool while the probe runs
+    probe.disarm();
+    assertEquals(7, pool.threshold);
+  }
+
   @Test
   void armsWatchedPoolsAndReportsTheOnesItCannotArm() {
     FakePool armed = new FakePool("arm-test-armed", true, -1, 0);

@@ -1335,6 +1335,9 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
           } catch (ListenerNotFoundException ignored) {
           }
         }
+        if (lowMemory != null) {
+          lowMemory.disarm();
+        }
 
         if (threadPool != null) {
           threadPool.shutdownNow();

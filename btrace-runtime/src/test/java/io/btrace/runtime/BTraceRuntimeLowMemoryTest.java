@@ -99,6 +99,38 @@ class BTraceRuntimeLowMemoryTest {
     assertTrue(warning.contains("Metaspace"), "pools with thresholds not listed: " + warning);
   }
 
+  @Test
+  void exitRestoresThePoolThresholdTheApplicationHadSet() throws Exception {
+    MemoryPoolMXBean metaspace = null;
+    for (MemoryPoolMXBean bean : ManagementFactory.getMemoryPoolMXBeans()) {
+      if (bean.getName().equals("Metaspace")) {
+        metaspace = bean;
+      }
+    }
+    assumeTrue(metaspace != null && metaspace.isUsageThresholdSupported(), "no Metaspace pool");
+    long original = metaspace.getUsageThreshold();
+    long applicationThreshold = 123_456_789L;
+    long probeThreshold = 1L << 40; // far above any real Metaspace usage: no notification
+    metaspace.setUsageThreshold(applicationThreshold);
+    try {
+      BTraceRuntimeImpl_8 runtime =
+          new BTraceRuntimeImpl_8("low-memory-restore-test", new ArgsMap(), command -> {}, null);
+      LowMemoryHandler handler =
+          new LowMemoryHandler("onLowMemory", "Metaspace", probeThreshold, null, true);
+      runtime.init(CountingProbe.class, null, null, null, null, new LowMemoryHandler[] {handler});
+      onWorkerThread(runtime::start);
+      assertEquals(probeThreshold, metaspace.getUsageThreshold(), "the probe did not arm the pool");
+
+      onWorkerThread(() -> runtime.handleExit(0));
+      assertEquals(
+          applicationThreshold,
+          metaspace.getUsageThreshold(),
+          "the probe's exit did not restore the application's threshold");
+    } finally {
+      metaspace.setUsageThreshold(original);
+    }
+  }
+
   /** Starts a runtime whose one handler watches {@code pool}; returns the warning it sends. */
   private static String startAndAwaitWarning(String pool) throws Exception {
     List<Command> commands = Collections.synchronizedList(new ArrayList<Command>());
