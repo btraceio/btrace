@@ -51,10 +51,12 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryNotificationInfo;
 import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryUsage;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URL;
@@ -1196,22 +1198,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
               String name = info.getPoolName();
               LowMemoryHandler handler = lowMemory.handlerFor(name);
               if (handler != null) {
-                threadPool.submit(
-                    new Runnable() {
-                      @Override
-                      public void run() {
-                        boolean entered = enter();
-                        try {
-                          handler.invoke(clazz, info.getUsage());
-                        } catch (Throwable th) {
-                          log.debug("Low-memory handler {} failed", handler.method, th);
-                        } finally {
-                          if (entered) {
-                            BTraceRuntime.leave();
-                          }
-                        }
-                      }
-                    });
+                threadPool.submit(() -> runLowMemoryHandler(handler, info.getUsage()));
               }
             }
           } finally {
@@ -1220,6 +1207,24 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
             }
           }
         };
+  }
+
+  /** Runs one {@code @OnLowMemory} handler; called on the "BTrace Worker" thread. */
+  void runLowMemoryHandler(LowMemoryHandler handler, MemoryUsage usage) {
+    boolean entered = enter();
+    try {
+      handler.invoke(clazz, usage);
+    } catch (Throwable th) {
+      // The handler's own exceptions reach @OnError through its woven catch-all; what gets here
+      // is a failure to call it at all. Not send(Command): errors stay out of speculative buffers.
+      Throwable failure = th instanceof InvocationTargetException ? th.getCause() : th;
+      log.warn("@OnLowMemory handler {} failed", handler.method, failure);
+      enqueue(new ErrorCommand(failure));
+    } finally {
+      if (entered) {
+        BTraceRuntime.leave();
+      }
+    }
   }
 
   @Override
