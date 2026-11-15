@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.sun.tools.attach.AgentLoadException;
 import com.sun.tools.attach.VirtualMachine;
 import io.btrace.client.Client;
 import io.btrace.core.comm.ListProbesCommand;
@@ -684,6 +685,12 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
     VirtualMachine vm = VirtualMachine.attach(String.valueOf(pid));
     try {
       vm.loadAgent(agent.toString(), agentArguments);
+    } catch (AgentLoadException e) {
+      // HotSpot on JDK 8 reports a successful load as AgentLoadException("...: 0"), as the BTrace
+      // client also allows for. The callers' assertions on the target prove the agent ran.
+      if (e.getMessage() == null || !e.getMessage().endsWith("0")) {
+        throw e;
+      }
     } finally {
       vm.detach();
     }
