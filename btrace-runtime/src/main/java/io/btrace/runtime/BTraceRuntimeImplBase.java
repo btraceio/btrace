@@ -1211,7 +1211,9 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
 
   /** Runs one {@code @OnLowMemory} handler; called on the "BTrace Worker" thread. */
   void runLowMemoryHandler(LowMemoryHandler handler, MemoryUsage usage) {
-    boolean entered = enter();
+    if (!enter()) {
+      return; // disabled runtime: skip, as the guarded handlers' woven prologue does
+    }
     try {
       handler.invoke(clazz, usage);
     } catch (Throwable th) {
@@ -1221,9 +1223,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
       log.warn("@OnLowMemory handler {} failed", handler.method, failure);
       enqueue(new ErrorCommand(failure));
     } finally {
-      if (entered) {
-        BTraceRuntime.leave();
-      }
+      leave();
     }
   }
 
