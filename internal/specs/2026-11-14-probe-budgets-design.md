@@ -106,13 +106,15 @@ of trusted mode, on every later deploy until the JVM restarts.
 Limits are fixed when the agent loads. A later attach to a JVM that already has the agent cannot
 change them.
 
-Second agent load (added 2026-11-15 after an independent review): every `premain`/`agentmain`
-call gets a fresh agent class loader (`Loader.startAgent`), so an agent loaded a second time is a
-separate instance that knows nothing of the first one's limits. A budget set only by launch-time
-agent arguments was therefore invisible to it, and an attacher loading the agent directly got an
-unbudgeted, trustable agent. The agent loaded at launch now writes its resolved limits (or the
-invalid launch argument) to the two system properties, which every instance reads; the later
-instance is in attach mode, so it can neither raise nor remove them.
+Second agent load (added 2026-11-15 after an independent review; decided by the maintainer):
+every `premain`/`agentmain` call gets a fresh agent class loader (`Loader.startAgent`), so an
+agent loaded a second time was a separate instance. It knew nothing of a budget set by launch-time
+agent arguments, so an attacher loading the agent directly got an unbudgeted, trustable agent. It
+also took over the runtime hooks of the first instance: every later deploy through the first agent
+failed with a `ClassCastException` in `BTraceRuntimeAccessImpl.enterInternal`. A second load is
+now refused: the first load sets the `btrace.agent.loaded` system property atomically, and a load
+that finds it set prints one line and does nothing. Consequence: a JVM launched with a
+`noServer=true` agent cannot get a command server later by attaching.
 
 Trusted argument ordering (added 2026-11-15): under dynamic attach with an operator property set,
 `trusted=true` is not applied at all while the agent arguments are parsed, instead of being set
@@ -122,11 +124,6 @@ client's `-u` flag when a budget is requested, because it is refused then.
 
 Reconnect (added 2026-11-15): a client cannot reconnect to a detached probe once its budget has
 tripped; it gets a refused reconnect instead of a connection that drops when the probe is removed.
-
-Shared trusted flag: `SharedSettings.GLOBAL` is shared by all agent instances in a JVM. Under
-dynamic attach with a budget property the attach-time `trusted=true` is never applied, so a
-trusted flag a later instance finds there is the operator's launch-time grant. It is honoured and
-not cleared; a second agent load does not revoke it.
 
 Protecting the ceiling — *my call*: `Main.parseArgs` turns any `$key=value` agent argument into
 `System.setProperty` (`Main.java:1213-1215`), so an attaching client could overwrite the operator's

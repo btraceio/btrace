@@ -134,71 +134,26 @@ class BudgetLimitsTest {
   @Test
   void budgetRefusesTrustRequestedByAClient() throws Exception {
     BudgetLimits limits = resolve(props(null, "100"), new ArgsMap(), true, new ArrayList<>());
-    assertTrue(BudgetLimits.refusesClientTrust(limits, true, false));
+    assertTrue(BudgetLimits.refusesClientTrust(limits, false));
   }
 
   @Test
   void budgetAllowsTrustGrantedByTheOperatorAtLaunch() throws Exception {
     BudgetLimits limits = resolve(props(null, "100"), new ArgsMap(), true, new ArrayList<>());
-    assertFalse(BudgetLimits.refusesClientTrust(limits, true, true));
+    assertFalse(BudgetLimits.refusesClientTrust(limits, true));
   }
 
   @Test
-  void budgetRefusesTrustFromAttachArguments() throws Exception {
+  void budgetResolvedUnderAttachRefusesTrustWithoutAGrant() throws Exception {
     BudgetLimits limits = resolve(props("60", null), new ArgsMap(), false, new ArrayList<>());
-    assertTrue(BudgetLimits.refusesClientTrust(limits, false, true));
-    assertTrue(BudgetLimits.refusesClientTrust(limits, false, false));
+    assertTrue(BudgetLimits.refusesClientTrust(limits, false));
+    assertFalse(BudgetLimits.refusesClientTrust(limits, true));
   }
 
   @Test
   void noBudgetNeverRefusesTrust() {
-    for (boolean premain : new boolean[] {true, false}) {
-      for (boolean trusted : new boolean[] {true, false}) {
-        assertFalse(BudgetLimits.refusesClientTrust(BudgetLimits.NONE, premain, trusted));
-      }
+    for (boolean operatorGrant : new boolean[] {true, false}) {
+      assertFalse(BudgetLimits.refusesClientTrust(BudgetLimits.NONE, operatorGrant));
     }
-  }
-
-  @Test
-  void launchLimitsArePublishedForLaterAgentLoads() throws Exception {
-    Properties system = new Properties();
-    Map<String, String> launch = new HashMap<>();
-    launch.put("probeTtl", "30");
-    launch.put("probeMaxRate", "500");
-    ArgsMap args = new ArgsMap(launch);
-    BudgetLimits limits =
-        BudgetLimits.resolve(BudgetLimits.snapshot(system), args, true, line -> {});
-    BudgetLimits.publish(limits, system);
-
-    // A later agent load is in attach mode and sees only the properties.
-    BudgetLimits.Snapshot later = BudgetLimits.snapshot(system);
-    assertTrue(later.present());
-    BudgetLimits inherited = BudgetLimits.resolve(later, new ArgsMap(), false, line -> {});
-    assertEquals(30, inherited.ttlSeconds());
-    assertEquals(500, inherited.maxRatePerSecond());
-  }
-
-  @Test
-  void publishingNoLimitsSetsNoProperty() {
-    Properties system = new Properties();
-    BudgetLimits.publish(BudgetLimits.NONE, system);
-    assertTrue(system.isEmpty());
-    assertFalse(BudgetLimits.snapshot(system).present());
-  }
-
-  @Test
-  void invalidLaunchArgumentIsPublishedSoALaterLoadFailsToo() {
-    Properties system = new Properties();
-    ArgsMap args = args("probeMaxRate", "lots");
-    InvalidAgentOptionException invalid =
-        assertThrows(
-            InvalidAgentOptionException.class,
-            () -> BudgetLimits.resolve(BudgetLimits.snapshot(system), args, true, line -> {}));
-    BudgetLimits.publishInvalid(invalid, system);
-
-    assertThrows(
-        InvalidAgentOptionException.class,
-        () ->
-            BudgetLimits.resolve(BudgetLimits.snapshot(system), new ArgsMap(), false, line -> {}));
   }
 }

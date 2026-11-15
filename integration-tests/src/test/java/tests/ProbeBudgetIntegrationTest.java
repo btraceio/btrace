@@ -80,6 +80,9 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
   private static final String TRUSTED_ARGUMENT_IGNORED =
       "ignoring agent argument trusted=true, every probe is verified";
 
+  /** The line the agent prints when it is loaded into a JVM that already has it. */
+  private static final String AGENT_ALREADY_LOADED = "BTrace agent is already loaded in this JVM";
+
   /** Exit code of {@code btrace doctor} when the target publishes no control endpoint. */
   private static final int DOCTOR_PREPARATION_REQUIRED = 2;
 
@@ -426,11 +429,13 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
   }
 
   @Test
-  @Timeout(value = 90, unit = TimeUnit.SECONDS)
-  void secondAgentLoadInheritsLaunchArgumentBudget() throws Exception {
-    // The budget is set only by a launch-time agent argument. Loading the agent again by dynamic
-    // attach starts a second, separate agent instance; it must be bound by the same budget.
+  @Timeout(value = 120, unit = TimeUnit.SECONDS)
+  void secondAgentLoadIsRefusedAndTheBudgetStillHolds() throws Exception {
+    // The budget is set only by a launch-time agent argument. An attacher loads the agent again
+    // with a startup script of its own: the load is refused, the script does not run, and the
+    // agent loaded at launch keeps working and keeps enforcing its budget.
     TestApp app = launchTarget("probeMaxRate=100", "-XX:+EnableDynamicAgentLoading");
+    CliRun hot = null;
     try {
       int pid = app.getPid();
       File hotScript = locateTrace("btrace/BudgetHotProbe.class");
@@ -441,44 +446,50 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
               + freePort()
               + ",scriptOutputFile=::stdout,script="
               + hotScript.getAbsolutePath());
+      assertTrue(
+          awaitOutput(app, AGENT_ALREADY_LOADED, 10_000L),
+          "the second agent load was not refused:" + app(app));
 
-      assertTrue(
-          awaitOutput(app, "budget-hot-alive", 15_000L),
-          "the second agent load did not run its startup script:" + app(app));
-      assertTrue(
-          awaitOutput(app, "BTrace: probe btrace.BudgetHotProbe removed: ", REMOVAL_DEADLINE_MS),
-          "a second agent load escaped the launch-argument budget:" + app(app));
-      assertTrue(
-          app.capturedOutput().contains("exceeded probeMaxRate=100"),
-          "the removal does not name the rate ceiling:" + app(app));
+      hot = deploy(pid, HOT_PROBE, false);
+      assertNotNull(
+          hot.awaitLine(removalPattern("BudgetHotProbe", "100"), REMOVAL_DEADLINE_MS),
+          "the launch-time agent no longer enforces its budget:\n" + hot.output() + app(app));
+      assertEquals(BUDGET_EXIT_CODE, hot.awaitExit(15), hot.output());
+      // The refused load's startup script would print to the target's own output.
+      assertEquals(
+          0,
+          count(app.capturedOutput(), "budget-hot-alive"),
+          "the refused load ran its startup script:" + app(app));
       assertTargetStillRunning(app);
     } finally {
+      destroy(hot);
       app.stop();
     }
   }
 
   @Test
   @Timeout(value = 90, unit = TimeUnit.SECONDS)
-  void secondAgentLoadKeepsLaunchTimeTrustedGrant() throws Exception {
-    // The operator grants trusted mode at launch, next to a budget. A second agent load by
-    // dynamic attach must not take that grant away.
+  void secondAgentLoadCannotRevokeLaunchTimeTrustedGrant() throws Exception {
+    // The operator grants trusted mode at launch, next to a budget. A later agent load by
+    // dynamic attach that passes trusted=false is refused and changes nothing.
     TestApp app =
         launchTarget("probeMaxRate=100000000,trusted=true", "-XX:+EnableDynamicAgentLoading");
     CliRun trusted = null;
     try {
       int pid = app.getPid();
-      loadAgentByAttach(pid, "telemetry=false,port=" + freePort());
+      loadAgentByAttach(pid, "telemetry=false,trusted=false,port=" + freePort());
+      assertTrue(
+          awaitOutput(app, AGENT_ALREADY_LOADED, 10_000L),
+          "the second agent load was not refused:" + app(app));
 
-      trusted = deploy(pid, QUIET_PROBE, false, "-u");
-      assertNotNull(
-          trusted.awaitLine(Pattern.compile("^budget-quiet-hit$"), REMOVAL_DEADLINE_MS),
-          "trusted deploy produced no output:\n" + trusted.output() + app(app));
+      // No -u: the probe needs trusted mode, which only the launch-time grant can give it.
+      trusted = deploy(pid, "btrace/BudgetTrustedProbe.class", false);
+      assertTrue(
+          awaitOutput(app, "budget-trusted-ran", REMOVAL_DEADLINE_MS),
+          "the launch-time trusted grant was revoked:\n" + trusted.output() + app(app));
       assertFalse(
           trusted.output().contains("trusted mode is not available"),
-          "the operator's trusted grant was revoked:\n" + trusted.output());
-      assertFalse(
-          app.capturedOutput().contains(TRUSTED_ARGUMENT_IGNORED),
-          "agent reported a trusted argument nobody passed:" + app(app));
+          "the operator's trusted grant was refused:\n" + trusted.output());
     } finally {
       destroy(trusted);
       app.stop();

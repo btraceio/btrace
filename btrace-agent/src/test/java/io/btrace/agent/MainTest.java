@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
@@ -273,20 +274,21 @@ class MainTest {
   }
 
   @Test
-  void refusedTrustIsClearedAtTheSourceSoNoClientInheritsIt() {
+  void noClientInheritsTrustFromAttachArgumentsUnderABudget() {
     SharedSettings agentSettings = new SharedSettings();
-    agentSettings.setTrusted(true);
-    assertTrue(
-        Main.newClientSettings(agentSettings).isTrusted(),
-        "without a budget a client must inherit trusted mode as before");
     try {
-      assertTrue(Main.refuseTrustedMode(agentSettings), "the trusted request was not reported");
-      assertTrue(Client.isTrustedModeRefused());
-      assertFalse(agentSettings.isTrusted(), "the agent-wide settings still say trusted");
-      assertFalse(
+      Main.applyTrustedArgument(agentSettings, true, false);
+      assertTrue(
           Main.newClientSettings(agentSettings).isTrusted(),
+          "without a budget a client must inherit trusted mode as before");
+
+      SharedSettings budgeted = new SharedSettings();
+      Main.applyTrustedArgument(budgeted, true, true);
+      assertFalse(budgeted.isTrusted(), "the agent-wide settings say trusted");
+      assertFalse(
+          Main.newClientSettings(budgeted).isTrusted(),
           "a client inherited trusted mode from attach arguments under a budget");
-      assertFalse(Main.refuseTrustedMode(new SharedSettings()), "no trusted request to report");
+      assertTrue(Main.isTrustRequestedAndRefused(), "the trusted request was not recorded");
     } finally {
       Main.resetTrustRefusalForTesting();
     }
@@ -313,9 +315,12 @@ class MainTest {
       Main.applyTrustedArgument(agentSettings, true, false);
       assertTrue(agentSettings.isTrusted());
       assertFalse(Main.isTrustRequestedAndRefused());
+      // The operator's launch-time grant: an attacher under a budget cannot take it away.
       Main.applyTrustedArgument(agentSettings, false, true);
-      assertFalse(agentSettings.isTrusted());
+      assertTrue(agentSettings.isTrusted(), "an attach-time trusted=false revoked the grant");
       assertFalse(Main.isTrustRequestedAndRefused(), "trusted=false is not a refused request");
+      Main.applyTrustedArgument(agentSettings, false, false);
+      assertFalse(agentSettings.isTrusted());
     } finally {
       Main.resetTrustRefusalForTesting();
     }
@@ -329,5 +334,14 @@ class MainTest {
     assertTrue(budgeted.contains("at JVM launch"), budgeted);
     assertTrue(budgeted.contains("the client's -u flag is refused"), budgeted);
     assertNull(Main.ineffectiveTrustedPropertyWarning("true", true, true));
+  }
+
+  @Test
+  void onlyTheFirstAgentLoadClaimsTheJvm() {
+    Properties system = new Properties();
+    assertTrue(Main.claimJvm(system), "the first load was refused");
+    assertFalse(Main.claimJvm(system), "a second load was accepted");
+    assertFalse(Main.claimJvm(system));
+    assertEquals("true", system.getProperty(Main.LOADED_PROPERTY));
   }
 }

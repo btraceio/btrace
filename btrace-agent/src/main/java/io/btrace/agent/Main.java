@@ -288,14 +288,32 @@ public final class Main {
     }
   }
 
+  /** Set once the agent has been loaded into this JVM; see {@link #claimJvm}. */
+  static final String LOADED_PROPERTY = "btrace.agent.loaded";
+
+  static final String ALREADY_LOADED =
+      "BTrace agent is already loaded in this JVM; this load and its arguments are ignored";
+
+  /**
+   * Claims the JVM for this agent load. Only the first load gets it: a second agent instance would
+   * take over the runtime hooks the first one depends on and break its probes, and it would not be
+   * bound by what the first one was told at launch, such as a probe budget.
+   *
+   * @return whether this is the first agent load in the JVM
+   */
+  static boolean claimJvm(Properties systemProperties) {
+    return systemProperties.putIfAbsent(LOADED_PROPERTY, "true") == null;
+  }
+
   private static void mainLocked(String args, Instrumentation inst) {
     if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization started");
-    if (Main.inst != null) {
-      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Agent already initialized, skipping");
+    if (!claimJvm(System.getProperties())) {
+      // Every agent load gets its own class loader, so this is a different Main than the one
+      // that loaded first, and its own statics say nothing about that one.
+      System.err.println("[BTrace Agent] " + ALREADY_LOADED);
       return;
-    } else {
-      Main.inst = inst;
     }
+    Main.inst = inst;
 
     // Running BTrace on Java < 17 is deprecated as of 3.0; warn exactly once per target JVM
     io.btrace.core.JavaVersionCheck.warnIfDeprecatedJvm();
@@ -338,17 +356,12 @@ public final class Main {
         if (limits.any()) {
           ProbeBudgets.setRateLimited(limits.maxRatePerSecond() > 0);
           BudgetGovernor.start(limits);
-          if (premain) {
-            BudgetLimits.publish(limits, System.getProperties());
-          }
         }
-        // Under dynamic attach with a budget property the attach-time trusted argument is never
-        // applied, so a trusted flag seen here is the operator's own launch-time grant, held in
-        // the settings all agent instances of this JVM share. It is honoured, not cleared.
-        boolean operatorGrant = premain || attachTrustBarred;
-        if (BudgetLimits.refusesClientTrust(limits, operatorGrant, settings.isTrusted())) {
-          // Not short-circuited: the refusal is recorded whether or not the flag was still set.
-          if (refuseTrustedMode(settings) | trustRequestedAndRefused) {
+        // A trusted flag seen here is the operator's launch-time grant: under dynamic attach with
+        // a budget property the trusted argument is not applied at all.
+        if (BudgetLimits.refusesClientTrust(limits, settings.isTrusted())) {
+          Client.refuseTrustedMode(true);
+          if (trustRequestedAndRefused) {
             BUDGET_REPORTER.accept(
                 "ignoring agent argument trusted=true, every probe is verified: "
                     + BudgetLimits.TRUSTED_REFUSED);
@@ -359,13 +372,8 @@ public final class Main {
         // without a command socket. The operator's startup scripts still run at launch; under
         // dynamic attach nothing is loaded and nothing may run unverified.
         budgetValid = false;
-        if ("premain".equals(agentMode)) {
-          BudgetLimits.publishInvalid(e, System.getProperties());
-        }
         String message = e.getMessage() + "; the command server was not started";
         if (!loadsStartupProbes(false, agentMode)) {
-          // Not refuseTrustedMode(settings): that would clear a launch-time grant in the settings
-          // shared with an agent instance loaded earlier.
           Client.refuseTrustedMode(true);
           message += "; attach-time probes were not loaded";
         }
@@ -1835,16 +1843,18 @@ public final class Main {
   private static volatile boolean attachTrustBarred;
 
   /**
-   * Applies the {@code trusted} agent argument. Under dynamic attach with an operator budget the
-   * request is recorded and not applied, so nothing the arguments configure runs trusted.
+   * Applies the {@code trusted} agent argument. Under dynamic attach with an operator budget it is
+   * not applied, whatever its value. A request to turn it on is recorded so it can be reported.
    */
   private static void applyTrustedArgument(boolean trusted) {
     applyTrustedArgument(settings, trusted, attachTrustBarred);
   }
 
   static void applyTrustedArgument(SharedSettings agentSettings, boolean trusted, boolean barred) {
-    if (trusted && barred) {
-      trustRequestedAndRefused = true;
+    if (barred) {
+      if (trusted) {
+        trustRequestedAndRefused = true;
+      }
       return;
     }
     agentSettings.setTrusted(trusted);
@@ -1858,25 +1868,6 @@ public final class Main {
     trustRequestedAndRefused = false;
     attachTrustBarred = false;
     Client.refuseTrustedMode(false);
-  }
-
-  /**
-   * Refuses trusted mode for the life of the agent, decided once at the source. A trusted flag in
-   * {@code agentSettings} can then only have come from attach-time agent arguments, which the
-   * operator did not write: it is cleared there, so no client settings seeded from them inherit it.
-   * A remote client that asks for trusted mode itself is refused with a reason (see {@link
-   * Client#loadClass}).
-   *
-   * @return whether {@code agentSettings} had asked for trusted mode
-   */
-  static boolean refuseTrustedMode(SharedSettings agentSettings) {
-    Client.refuseTrustedMode(true);
-    boolean requested = agentSettings.isTrusted();
-    if (requested) {
-      trustRequestedAndRefused = true;
-      agentSettings.setTrusted(false);
-    }
-    return requested;
   }
 
   private static Future<?> handleNewClient(Client client) {
