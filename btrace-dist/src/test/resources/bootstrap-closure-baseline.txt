@@ -5,5 +5,3 @@
 #
 # Every entry needs a reason. The test fails on a reference not listed here and on a listed
 # entry that no longer occurs, so remove an entry when its reference is fixed.
-
-io/btrace/core/extensions/ExtensionContext -> io/btrace/core/comm/Command  # ExtensionContext.send(Command) names a wire-protocol type; core/comm lives only in the masked sections, so the bootstrap loader cannot resolve it

@@ -18,12 +18,15 @@ package io.btrace.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.btrace.core.ArgsMap;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.ExitCommand;
 import io.btrace.core.comm.MessageCommand;
+import io.btrace.core.extensions.ClientMessage;
 import io.btrace.core.extensions.PermissionSet;
 import io.btrace.core.handlers.ExitHandler;
 import java.util.ArrayList;
@@ -179,6 +182,43 @@ class BTraceRuntimeImplBaseTest {
     assertTrue(delivered.await(5, TimeUnit.SECONDS));
     assertEquals("export failed" + System.lineSeparator(), messages.get(0).getMessage());
     assertEquals("already terminated\n", messages.get(1).getMessage());
+    runtime.handleExit(0);
+  }
+
+  @Test
+  void extensionCommandsReachTheClientUnchanged() throws Exception {
+    List<Command> commands = Collections.synchronizedList(new ArrayList<Command>());
+    CountDownLatch delivered = new CountDownLatch(1);
+    BTraceRuntimeImpl_8 runtime =
+        new BTraceRuntimeImpl_8(
+            "extension-command-test",
+            new ArgsMap(),
+            command -> {
+              if (command instanceof MessageCommand) {
+                commands.add(command);
+                delivered.countDown();
+              }
+            },
+            null);
+    ExtensionContextImpl context =
+        new ExtensionContextImpl(runtime, "extension-command-test", PermissionSet.empty());
+    MessageCommand sent = new MessageCommand("typed");
+    context.send(sent);
+    assertTrue(delivered.await(5, TimeUnit.SECONDS));
+    assertSame(sent, commands.get(0));
+    runtime.handleExit(0);
+  }
+
+  @Test
+  void extensionContextRejectsAMessageThatIsNotAProtocolCommand() {
+    BTraceRuntimeImpl_8 runtime =
+        new BTraceRuntimeImpl_8("extension-reject-test", new ArgsMap(), command -> {}, null);
+    ExtensionContextImpl context =
+        new ExtensionContextImpl(runtime, "extension-reject-test", PermissionSet.empty());
+    IllegalArgumentException thrown =
+        assertThrows(IllegalArgumentException.class, () -> context.send(new ClientMessage() {}));
+    assertTrue(thrown.getMessage().startsWith("Not a protocol command: "));
+    assertThrows(IllegalArgumentException.class, () -> context.send((ClientMessage) null));
     runtime.handleExit(0);
   }
 
