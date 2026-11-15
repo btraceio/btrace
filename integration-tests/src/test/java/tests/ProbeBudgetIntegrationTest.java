@@ -340,7 +340,8 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
     CliRun verified = null;
     try {
       int pid = app.getPid();
-      String port = String.valueOf(freePort());
+      // -p 0: the agent picks a free port and the client reads the one it published.
+      String port = "0";
       trusted = deploy(pid, QUIET_PROBE, false, "-u", "-p", port);
       assertNotNull(
           trusted.awaitLine(TRUSTED_REFUSED, REMOVAL_DEADLINE_MS),
@@ -391,9 +392,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       assertNotNull(hotScript, "compiled probe is missing: BudgetHotProbe.class");
       loadAgentByAttach(
           pid,
-          "telemetry=false,port="
-              + freePort()
-              + ",trusted=true,scriptOutputFile=::stdout,script="
+          "telemetry=false,port=0,trusted=true,scriptOutputFile=::stdout,script="
               + trustedScript.getAbsolutePath()
               + ":"
               + hotScript.getAbsolutePath());
@@ -446,10 +445,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       assertNotNull(hotScript, "compiled probe is missing: BudgetHotProbe.class");
       loadAgentByAttach(
           pid,
-          "telemetry=false,port="
-              + freePort()
-              + ",scriptOutputFile=::stdout,script="
-              + hotScript.getAbsolutePath());
+          "telemetry=false,port=0,scriptOutputFile=::stdout,script=" + hotScript.getAbsolutePath());
       assertTrue(
           awaitOutput(app, AGENT_ALREADY_LOADED, 10_000L),
           "the second agent load was not refused:" + app(app));
@@ -481,7 +477,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
     CliRun trusted = null;
     try {
       int pid = app.getPid();
-      loadAgentByAttach(pid, "telemetry=false,trusted=false,port=" + freePort());
+      loadAgentByAttach(pid, "telemetry=false,trusted=false,port=0");
       assertTrue(
           awaitOutput(app, AGENT_ALREADY_LOADED, 10_000L),
           "the second agent load was not refused:" + app(app));
@@ -583,7 +579,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
     try {
       // The client finds no endpoint, loads the agent, and the agent already in the JVM starts
       // its server for it. The client picks up the token that server requires on its own.
-      quiet = deploy(app.getPid(), QUIET_PROBE, false, "-p", String.valueOf(freePort()));
+      quiet = deploy(app.getPid(), QUIET_PROBE, false, "-p", "0");
       assertNotNull(
           quiet.awaitLine(Pattern.compile("^budget-quiet-hit$"), REMOVAL_DEADLINE_MS),
           "the client could not deploy to an agent launched without a server:\n"
@@ -624,8 +620,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
           awaitOutput(app, "FATAL: Initialization failed: java.net.BindException", 10_000L),
           "the first load did not fail on the taken port:" + app(app));
 
-      String port = String.valueOf(freePort());
-      quiet = deploy(pid, QUIET_PROBE, false, "-p", port);
+      quiet = deploy(pid, QUIET_PROBE, false, "-p", "0");
       assertNotNull(
           quiet.awaitLine(Pattern.compile("^budget-quiet-hit$"), REMOVAL_DEADLINE_MS),
           "a failed first load left the JVM untraceable:\n" + quiet.output() + app(app));
@@ -667,9 +662,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       assertNotNull(hotScript, "compiled probe is missing: BudgetHotProbe.class");
       loadAgentByAttach(
           pid,
-          "telemetry=false,port="
-              + freePort()
-              + ",probeMaxRate=100,scriptOutputFile=::stdout,script="
+          "telemetry=false,port=0,probeMaxRate=100,scriptOutputFile=::stdout,script="
               + hotScript.getAbsolutePath());
 
       assertTrue(
@@ -713,9 +706,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       assertNotNull(trustedScript, "compiled probe is missing: BudgetTrustedProbe.class");
       loadAgentByAttach(
           pid,
-          "telemetry=false,port="
-              + freePort()
-              + ",trusted=true,scriptOutputFile=::stdout,script="
+          "telemetry=false,port=0,trusted=true,scriptOutputFile=::stdout,script="
               + trustedScript.getAbsolutePath());
 
       assertTrue(
@@ -794,7 +785,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
         destroy(doctor);
       }
       // A later attach does not get a server from this agent either.
-      loadAgentByAttach(app.getPid(), "telemetry=false,port=" + freePort());
+      loadAgentByAttach(app.getPid(), "telemetry=false,port=0");
       assertTrue(
           awaitOutput(app, "the probe budget set at launch is invalid", 10_000L),
           "a later attach was not refused a server:" + app(app));
@@ -971,9 +962,10 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
     try {
       vm.loadAgent(agent.toString(), agentArguments);
     } catch (AgentLoadException e) {
-      // HotSpot on JDK 8 reports a successful load as AgentLoadException("...: 0"), as the BTrace
-      // client also allows for. The callers' assertions on the target prove the agent ran.
-      if (e.getMessage() == null || !e.getMessage().endsWith("0")) {
+      // HotSpot on JDK 8 reports a successful load as AgentLoadException with the result code 0,
+      // as the BTrace client also allows for. Only that code: 100, for one, is a real failure.
+      String message = e.getMessage();
+      if (message == null || !(message.equals("0") || message.endsWith(": 0"))) {
         throw e;
       }
     } finally {
@@ -989,12 +981,6 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       }
     }
     return count;
-  }
-
-  private static int freePort() throws IOException {
-    try (ServerSocket socket = new ServerSocket(0)) {
-      return socket.getLocalPort();
-    }
   }
 
   private static boolean containsProbe(List<String> probes, String name) {
