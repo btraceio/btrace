@@ -21,25 +21,29 @@ The previous multi-JAR approach (`btrace-agent.jar`, `btrace-boot.jar`, `btrace-
 ### JAR Structure
 
 ```
-btrace.jar (~2.9 MB)
+btrace.jar (~4.4 MB)
 ├── io/btrace/boot/*.class                      # Entry point (Loader, MaskedClassLoader, MaskedJarUtils)
-├── io/btrace/core/*.class                      # Bootstrap: core API (excl. Messages, comm, extensions)
+├── io/btrace/BTrace.class                      # Bootstrap: flat DSL entry class
+├── io/btrace/core/*.class                      # Bootstrap: core API (excl. Messages and comm)
 ├── io/btrace/core/annotations/*.class          # Bootstrap: annotations
+├── io/btrace/core/extensions/*.class           # Bootstrap: extension API (also in the shared section)
 ├── io/btrace/core/handlers/*.class             # Bootstrap: handler interfaces
 ├── io/btrace/core/types/*.class                # Bootstrap: type definitions
 ├── io/btrace/core/jfr/*.class                  # Bootstrap: JFR integration
 ├── io/btrace/runtime/*.class                   # Bootstrap: selected runtime support classes
 ├── io/btrace/extension/ExtensionBridge.class   # Bootstrap: extension bridge interface
+├── io/btrace/extension/processor/*.class       # Root: annotation processor for extension builds
 ├── io/btrace/libs/org/slf4j/**                 # Bootstrap: relocated SLF4J
 ├── META-INF/btrace/agent/*.classdata           # Masked: agent classes
 ├── META-INF/btrace/client/*.classdata          # Masked: client classes
 ├── META-INF/btrace/shared/*.classdata          # Masked: shared classes (ASM, protocol, etc.)
+├── META-INF/services/*                         # PackGenerator and relocated SLF4J providers
 └── META-INF/MANIFEST.MF
 ```
 
-**Bootstrap classes** (~112 total): Only the core API, runtime support, and SLF4J logging are stored as regular `.class` files. These are visible to the bootstrap classloader because the manifest declares `Boot-Class-Path: .`.
+**Bootstrap classes** (~200 total): Only the core API, the extension API, runtime support, the extension annotation processor, and SLF4J logging are stored as regular `.class` files. These are visible to the bootstrap classloader because the manifest declares `Boot-Class-Path: btrace.jar`, which the JVM resolves relative to the agent JAR's own directory. `btrace-dist/src/test/java/io/btrace/dist/BootstrapClosureTest.java` checks the root classes against a fixed list and checks that they reference only other root classes and JDK types the boot loader defines.
 
-**Masked classes** (~1600+): Agent, client, and shared classes are stored as `.classdata` files under `META-INF/btrace/`. The JVM's class loading ignores these files entirely. They are loaded on demand by `MaskedClassLoader`.
+**Masked classes** (~2200+): Agent, client, and shared classes are stored as `.classdata` files under `META-INF/btrace/`. The JVM's class loading ignores these files entirely. They are loaded on demand by `MaskedClassLoader`.
 
 The client section also contains the instrumentation/runtime implementation used by `btracec` to
 turn compiled scripts into persisted probe packs. The `io.btrace.core.PackGenerator` service
@@ -55,7 +59,8 @@ Agent-Class: io.btrace.boot.Loader
 Main-Class: io.btrace.boot.Loader
 Can-Redefine-Classes: true
 Can-Retransform-Classes: true
-Boot-Class-Path: .
+Boot-Class-Path: btrace.jar
+BTrace-Version: <version>
 BTrace-Agent-Main: io.btrace.agent.Main
 BTrace-Client-Main: io.btrace.client.Main
 Add-Exports: jdk.internal.jvmstat/sun.jvmstat.monitor
@@ -133,11 +138,15 @@ The `bootIncludes` filter closure defined in `btrace-dist/build.gradle` determin
 - `io/btrace/extension/ExtensionBridge.class` — extension bridge interface (referenced by `ExtensionIndy`)
 - `io/btrace/libs/org/slf4j/` — relocated SLF4J (logging from bootstrap code)
 
+`bootIncludes` itself leaves out `io/btrace/core/extensions/`, but the `btraceJar` task adds those
+classes to the root from the `btrace-core` output, because bootstrap code needs them; they are also
+in the shared section. The `btraceJar` task also adds `io/btrace/extension/processor/` to the root,
+so that external extension builds can use `btrace.jar` as their annotation processor path.
+
 **Explicitly excluded from bootstrap:**
 - ASM classes (loaded via shared section)
-- JCTools queues (loaded via shared section)
+- JCTools queues (loaded via the agent and client sections)
 - Communication protocol classes (`io/btrace/core/comm/`)
-- Extension API classes (`io/btrace/core/extensions/`)
 
 ## Build Process
 

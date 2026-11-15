@@ -222,7 +222,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       else if (kind == Kind.NEW) newobjHandlers.add(ph);
       else if (kind == Kind.SYNC_ENTRY) syncEntryHandlers.add(ph);
       else if (kind == Kind.SYNC_EXIT) syncExitHandlers.add(ph);
-      else log.debug("Skipping unsupported probe kind {} for class {}", kind, javaClassName);
+      else UnhandledKindReport.report(ph.probe, ph.om, javaClassName, "ClassFile API");
     }
     if (entryHandlers.isEmpty()
         && returnHandlers.isEmpty()

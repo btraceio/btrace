@@ -27,7 +27,8 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           PR_BASE: ${{ github.base_ref }}
-        run: git diff --name-only "origin/${PR_BASE}...HEAD" > "${RUNNER_TEMP}/changed-files.txt"
+        # --no-renames lists both the old and the new path, so moving a backend file counts as touching it
+        run: git diff --name-only --no-renames "origin/${PR_BASE}...HEAD" > "${RUNNER_TEMP}/changed-files.txt"
       - name: Check title and description
         run: |
           changed="${RUNNER_TEMP}/changed-files.txt"

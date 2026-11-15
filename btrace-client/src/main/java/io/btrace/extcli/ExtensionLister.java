@@ -19,16 +19,17 @@ package io.btrace.extcli;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 final class ExtensionLister {
   static void list(boolean json) throws IOException {
     List<Path> roots = new ArrayList<>();
     String home = System.getenv("BTRACE_HOME");
-    if (home != null) roots.add(Path.of(home, "extensions"));
-    roots.add(Path.of(System.getProperty("user.home"), ".btrace", "extensions"));
+    if (home != null) roots.add(Paths.get(home, "extensions"));
+    roots.add(Paths.get(System.getProperty("user.home"), ".btrace", "extensions"));
     String extra = System.getenv("BTRACE_EXT_PATH");
-    if (extra != null) for (String p : extra.split(File.pathSeparator)) roots.add(Path.of(p));
+    if (extra != null) for (String p : extra.split(File.pathSeparator)) roots.add(Paths.get(p));
 
     List<Object> items = new ArrayList<>();
     for (Path root : roots) {
@@ -39,14 +40,14 @@ final class ExtensionLister {
       for (File d : dirs) {
         try {
           ExtensionReport r = ExtensionInspector.inspect(d.toPath());
-          if (json)
-            items.add(
-                Map.of(
-                    "path", d.getAbsolutePath(),
-                    "ok", r.ok,
-                    "id", r.id,
-                    "privileged", r.privileged));
-          else
+          if (json) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("path", d.getAbsolutePath());
+            item.put("ok", r.ok);
+            item.put("id", r.id);
+            item.put("privileged", r.privileged);
+            items.add(Collections.unmodifiableMap(item));
+          } else
             System.out.println(
                 (r.ok ? r.id : d.getName())
                     + (r.privileged ? " [PRIV]" : "")

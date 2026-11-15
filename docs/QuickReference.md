@@ -595,11 +595,24 @@ endpoint on port 2020. The command server starts unless `noServer=true` is given
 - `cmdQueueLimit=<n>` - Pending output commands per client before output is dropped (default 100)
 - `trackRetransforms=true` - Notify the client about every class a probe retransforms
 - `startupRetransform=false` - Skip retransforming already loaded classes on probe deployment (default `true`)
+- `probeTtl=<seconds>`, `probeMaxRate=<hits/s>` - Probe budgets: maximum lifetime of a probe, and
+  maximum executions per second of its handlers attached to application code; a probe over budget
+  is removed. Launch-time only (see [probe budgets](GettingStarted.md#probe-budgets))
 - `statsd=<host[:port]>` - StatsD server for the StatsD extension
 - `config=<name>` - Configuration section to apply from an embedded `agent.properties`
   (fat agents; see [Fat Agent Plugin](architecture/fat-agent-plugin.md))
 - `probeDescPath=<dirs>` - Search path for `@OnProbe` descriptor XML files
+- `probes=<name>[,<name>...]` - Bundled probes (fat agent) to load at startup, by Java binary name;
+  replaces the probe selection made by embedded extensions
+- `output=stdout` - With `probes=`, send the output of the bundled probes to stdout; any other value
+  keeps the default output file
+- `help=true` - Print the agent usage text and exit the JVM; the value is not checked, so a bare `help`
+  does the same
 - `bootClassPath=<path>`, `systemClassPath=<path>` - Additional boot / system classpath
+
+Any other `name=value` is passed to scripts as a script argument. A name that differs from a
+parameter above only in letter case, or (from five characters) by one typo, is logged as a warning
+such as `Unknown agent option 'debgu': did you mean 'debug'?`; the agent still starts.
 
 **Examples:**
 ```bash

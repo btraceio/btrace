@@ -296,7 +296,17 @@ jobs:
         run: python3 -I scripts/guardrails/check_agent_config.py .
       - name: Documented Gradle commands do real work (G4)
         run: python3 -I scripts/guardrails/check_doc_commands.py .
-      - name: Documented release version, archive names and image tags (G6)
+      - name: Module layering is fixed (G6)
+        run: python3 -I scripts/guardrails/check_layering.py .
+      - name: Shell and batch launchers pass the same JVM flags (G9)
+        run: python3 -I scripts/guardrails/check_launchers.py .
+      - name: Both instrumentation backends dispatch every probe kind (G9)
+        run: python3 -I scripts/guardrails/check_kind_dispatch.py .
+      - name: btrace-runtime never calls Thread.interrupted() (G11)
+        run: python3 -I scripts/guardrails/check_runtime_safety.py .
+      - name: Every message key used in code exists in messages.properties (G12)
+        run: python3 -I scripts/guardrails/check_message_keys.py .
+      - name: Documented release version, archive names and image tags (G14)
         run: python3 -I scripts/guardrails/check_doc_versions.py .
       - name: No new fully-qualified type names (G2)
         env:
@@ -316,6 +326,39 @@ jobs:
             exit 0
           fi
           python3 -I scripts/guardrails/check_fqn.py "${base}" HEAD
+      - name: No new swallowed failures (G10)
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.base_ref }}
+          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          case "${EVENT}" in
+            pull_request) base="origin/${PR_BASE}" ;;
+            merge_group)  base="${QUEUE_BASE}" ;;
+            push)         base="${PUSH_BEFORE}" ;;
+            *)            base="" ;;
+          esac
+          if [ -z "${base}" ] || [ "${base}" = "0000000000000000000000000000000000000000" ]; then
+            echo "swallow: no base commit for a ${EVENT} event; nothing checked"
+            exit 0
+          fi
+          python3 -I scripts/guardrails/check_swallow.py "${base}" HEAD
+      - name: Oversized classes, the core public API and test hooks do not grow (G13)
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.base_ref }}
+          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          case "${EVENT}" in
+            pull_request) base="origin/${PR_BASE}" ;;
+            merge_group)  base="${QUEUE_BASE}" ;;
+            push)         base="${PUSH_BEFORE}" ;;
+            *)            base="" ;;
+          esac
+          # An empty base skips only the size comparison; the api and test-hook rules still run.
+          python3 -I scripts/guardrails/check_growth.py . "${base}" HEAD
 
   # Single required status check for the test matrix. Matrix jobs report as `test (8)`,
   # `test (11)`, ...; branch protection matches check names exactly, so it cannot require the

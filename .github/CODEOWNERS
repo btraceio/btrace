@@ -9,3 +9,15 @@
 /.github/workflows/                @jbachorik
 /.github/CODEOWNERS                @jbachorik
 /scripts/guardrails/               @jbachorik
+/btrace-dist/src/test/resources/bootstrap-root-allowlist.txt   @jbachorik
+/btrace-dist/src/test/resources/bootstrap-closure-baseline.txt @jbachorik
+/btrace-dist/src/test/resources/bootstrap-jdk-nonboot-packages.txt @jbachorik
+/btrace-core/src/test/resources/args-registry-baseline.txt             @jbachorik
+/btrace-agent/src/test/resources/handler-annotation-baseline.txt        @jbachorik
+/docs/architecture/DesignPrinciples.md                                  @jbachorik
+# Tests that hold their own exception lists (NOT_HANDLERS, JDK_PREFIXES, the option-name matchers,
+# the HEARTBEAT exemption): editing the list in the test is the same as editing a baseline.
+/btrace-agent/src/test/java/io/btrace/instr/HandlerAnnotationClassificationTest.java  @jbachorik
+/btrace-dist/src/test/java/io/btrace/dist/BootstrapClosureTest.java                   @jbachorik
+/btrace-core/src/test/java/io/btrace/core/ArgsRegistryTest.java                       @jbachorik
+/btrace-core/src/test/java/io/btrace/core/comm/CommandTableParityTest.java            @jbachorik

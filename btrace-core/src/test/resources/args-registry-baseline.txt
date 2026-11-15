@@ -1,0 +1,7 @@
+# Agent options (io.btrace.core.Args) that the usage text or docs/QuickReference.md does not
+# document. Format: <usage|quickref> <option>  # reason. A new gap fails; a gap fixed in the docs must
+# be removed from here (stale). Checked by ArgsRegistryTest, which defines what "documented" means.
+usage agentJar    # dead: no code reads Args.AGENT_JAR; the client-side agent JAR override it served was removed in bdbda6ff; remove the constant (product decision)
+usage libs        # removed feature: Main.parseArgs logs an error that libs= has no effect (Main.java:995); remove the constant or keep it so the error fires (product decision)
+quickref agentJar # see usage agentJar
+quickref libs     # see usage libs; migration guidance is in docs/architecture/migrating-from-libs-profiles.md

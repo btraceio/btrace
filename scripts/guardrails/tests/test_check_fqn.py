@@ -41,6 +41,17 @@ class FqnCheckTest(unittest.TestCase):
         with open(path, "w", encoding="utf-8") as f:
             f.write(text)
 
+    def run_script(self, *args):
+        r = subprocess.run(
+            [sys.executable, "-I", SCRIPT] + list(args), cwd=self.root, capture_output=True, text=True
+        )
+        return r.returncode, r.stdout
+
+    def commit_change(self, body, rel="src/main/java/io/btrace/demo/Demo.java"):
+        self.write(BASE.replace("\n}\n", "\n" + body + "}\n"), rel)
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "change")
+
     def add_to_class(self, body):
         """Commits BASE with `body` appended inside the class and checks HEAD~1...HEAD."""
         self.write(BASE.replace("\n}\n", "\n" + body + "}\n"))
@@ -115,6 +126,46 @@ class FqnCheckTest(unittest.TestCase):
 
     def test_method_calls_and_lower_case_chains_are_not_types(self):
         self.assertClean("  int n = names.stream().map(x -> x).count();\n")
+
+    def test_empty_or_zero_base_checks_nothing_and_says_so(self):
+        self.commit_change("  java.io.File f;\n")
+        for args in (("",), ("", "HEAD"), ("0" * 40, "HEAD")):
+            with self.subTest(args=args):
+                code, out = self.run_script(*args)
+                self.assertEqual(0, code, out)
+                self.assertIn("fqn: no base commit given; nothing checked", out)
+                self.assertNotIn("fqn: OK", out)
+
+    def test_base_without_head_diffs_the_work_tree(self):
+        self.write(BASE.replace("\n}\n", "\n  java.io.File f;\n}\n"))
+        code, out = self.run_script("HEAD")
+        self.assertEqual(1, code, out)
+        self.assertIn("Demo.java:7: fully-qualified type java.io.File", out)
+        self.assertNotIn("Traceback", out)
+
+    def test_user_diff_config_does_not_hide_a_file(self):
+        for key in ("diff.noprefix", "diff.mnemonicPrefix"):
+            with self.subTest(key=key):
+                self.git("config", key, "true")
+                self.commit_change("  java.io.File f;\n")
+                code, out = self.run_script("HEAD~1", "HEAD")
+                self.assertEqual(1, code, out)
+                self.assertIn("Demo.java:7: fully-qualified type java.io.File", out)
+                self.git("reset", "-q", "--hard", "HEAD~1")
+                self.git("config", "--unset", key)
+
+    def test_path_with_spaces_is_checked(self):
+        self.commit_change("  java.io.File f;\n", "src/main/java/io/btrace/my demo/Demo.java")
+        code, out = self.run_script("HEAD~1", "HEAD")
+        self.assertEqual(1, code, out)
+        self.assertIn("my demo/Demo.java:", out)
+
+    def test_unmappable_diff_header_is_an_error_not_a_skip(self):
+        self.commit_change("  java.io.File f;\n", 'src/main/java/io/btrace/demo/we"ird.java')
+        code, out = self.run_script("HEAD~1", "HEAD")
+        self.assertEqual(1, code, out)
+        self.assertIn("cannot map diff header to a file path", out)
+        self.assertNotIn("fqn: OK", out)
 
 
 if __name__ == "__main__":

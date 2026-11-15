@@ -1,0 +1,13 @@
+# Existing `...ForTest` methods in main sources (gate G13, principle P8). New ones fail; remove an entry when its hook goes.
+# Format: test-hook <path>:<method>  # reason
+test-hook btrace-agent/src/main/java/io/btrace/agent/Client.java:setProbeForTest  # test-only hook added on develop before the ratchet merged
+test-hook btrace-agent/src/main/java/io/btrace/agent/Client.java:setRuntimeForTest  # test-only hook that predates the ratchet
+test-hook btrace-runtime/src/main/java/io/btrace/runtime/BTraceRuntimeImplBase.java:speculativeQueueCountForTest  # test-only hook that predates the ratchet
+test-hook btrace-runtime/src/main/java/io/btrace/runtime/BTraceRuntimeImpl_8.java:definitionFailureForTest  # test-only hook that predates the ratchet
+test-hook btrace-runtime/src/main/java/io/btrace/runtime/CommandQueue.java:sizeForTest  # test-only hook that predates the ratchet
+test-hook btrace-runtime/src/main/java/io/btrace/runtime/profiling/MethodInvocationProfiler.java:addClearedRecorderForTest  # test-only hook that predates the ratchet
+test-hook btrace-runtime/src/main/java/io/btrace/runtime/profiling/MethodInvocationProfiler.java:recorderReferenceCountForTest  # test-only hook that predates the ratchet
+test-hook btrace-runtime/src/main/java/io/btrace/runtime/profiling/MethodInvocationRecorder.java:delayedRecordCountForTest  # test-only hook that predates the ratchet
+test-hook btrace-runtime/src/main/java11/io/btrace/runtime/BTraceRuntimeImpl_11.java:definitionFailureForTest  # test-only hook that predates the ratchet
+test-hook btrace-runtime/src/main/java9/io/btrace/runtime/BTraceRuntimeImpl_9.java:definitionFailureForTest  # test-only hook that predates the ratchet
+test-hook btrace-runtime/src/main/java/io/btrace/runtime/IndyDispatcher.java:__resetForTests  # test-only hook that predates the ratchet

@@ -120,7 +120,14 @@ public final class Main {
       return;
     }
     String sub = args[0];
-    PolicyFile target = PolicyFile.fromArgs(Arrays.copyOfRange(args, 1, args.length));
+    PolicyFile target;
+    try {
+      target = PolicyFile.fromArgs(Arrays.copyOfRange(args, 1, args.length));
+    } catch (IllegalArgumentException e) {
+      err(e.getMessage());
+      System.exit(2);
+      return;
+    }
     switch (sub) {
       case "print":
         System.out.println(target.describe(hasFlag(args, "--json")));

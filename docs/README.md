@@ -21,6 +21,7 @@ Get up and running in 5 minutes with installation, your first script, and common
 | **[MCP Server](MCPServer.md)** | Pointer to the `btrace-observability` MCP plugin, which ships in the external [btraceio/agent-plugins](https://github.com/btraceio/agent-plugins) repository | AI-assisted debugging, LLM integrations |
 | **[Migration Guide 2.x → 3.0](Migration-2.x-to-3.0.md)** | Upgrading from BTrace 2.x: package rename, Java version policy, breaking changes | Existing 2.x users |
 | **[Extension Development Guide](BTraceExtensionDevelopmentGuide.md)** | Writing, packaging, and publishing BTrace extensions | Extension authors, platform maintainers |
+| **[Design Principles](architecture/DesignPrinciples.md)** | The structural rules (layering, sibling implementations, never failing open), the case behind each, and what enforces it | Contributors, maintainers, coding agents |
 | **[Extension Interface Rules](ExtensionInterfaceRules.md)** | Rules for extension API interfaces, the Gradle plugin's build-time checks, shims and stubs | Extension authors |
 | **[3.0 Release Checklist](ReleaseChecklist.md)** | JDK, protocol, security, packaging, and RC go/no-go gates | Release maintainers |
 | **[Releasing](releasing.md)** | The automated release process (`scripts/release.sh`, release workflow, release candidates) | Release maintainers |

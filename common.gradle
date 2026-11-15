@@ -63,6 +63,10 @@ compileJava {
     javaCompiler = javaToolchains.compilerFor {
         languageVersion.set(JavaLanguageVersion.of(11))
     }
+    // Source and target 8 alone let a JDK 9+ compiler accept JDK 9+ APIs; --release 8 compiles
+    // against the Java 8 API. javac 8 has no --release, so a module that switches this task to
+    // the JDK 8 toolchain keeps plain source and target 8. Evaluated lazily, after module overrides.
+    options.release = javaCompiler.map { it.metadata.languageVersion.asInt() >= 9 ? 8 : null }
 }
 
 repositories {

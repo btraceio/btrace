@@ -495,19 +495,6 @@ public final class Main {
     }
   }
 
-  /**
-   * {@code grant=}, {@code deny=} and {@code grantAll=} are parsed for compatibility with earlier
-   * 3.0 builds, but nothing consults them: extension linking is decided by {@code
-   * allowExtensions=}, {@code denyExtensions=}, {@code allowPrivileged=} and the permission policy
-   * file. Say so instead of letting the option silently do nothing.
-   */
-  private static void warnIneffectivePermissionOption(String option) {
-    log.warn(
-        "{}= has no effect in BTrace 3.0; use allowExtensions=, denyExtensions= or"
-            + " allowPrivileged= (or the permission policy file) to control extension linking",
-        option);
-  }
-
   static boolean shouldStartServer(ArgsMap args) {
     String configured = args.get(NO_SERVER);
     return configured != null
@@ -1215,7 +1202,7 @@ public final class Main {
           {
             if (!p.isEmpty()) {
               settings.setGrantedPermissions(SharedSettings.parsePermissions(p));
-              warnIneffectivePermissionOption(GRANT);
+              AgentOptionWarnings.ineffectivePermission(GRANT, log);
             }
             break;
           }
@@ -1223,7 +1210,7 @@ public final class Main {
           {
             if (!p.isEmpty()) {
               settings.setDeniedPermissions(SharedSettings.parsePermissions(p));
-              warnIneffectivePermissionOption(DENY);
+              AgentOptionWarnings.ineffectivePermission(DENY, log);
             }
             break;
           }
@@ -1231,7 +1218,7 @@ public final class Main {
           {
             if (!p.isEmpty()) {
               settings.setGrantAll(Boolean.parseBoolean(p));
-              warnIneffectivePermissionOption(GRANT_ALL);
+              AgentOptionWarnings.ineffectivePermission(GRANT_ALL, log);
             }
             break;
           }
@@ -1269,6 +1256,7 @@ public final class Main {
           }
       }
     }
+    AgentOptionWarnings.misspelledOptions(argMap, log);
     String ineffective =
         ineffectiveTrustedPropertyWarning(
             System.getProperty(TRUSTED_PROPERTY), settings.isTrusted());

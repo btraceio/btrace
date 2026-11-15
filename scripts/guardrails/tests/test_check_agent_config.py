@@ -1,12 +1,29 @@
 """Hermetic tests for check_agent_config.py: each builds a throw-away git repository."""
 
 import os
+import re
 import subprocess
 import sys
 import tempfile
 import unittest
 
 SCRIPT = os.path.join(os.path.dirname(__file__), "..", "check_agent_config.py")
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from check_agent_config import PRINCIPLE_COUNT  # noqa: E402
+
+CATALOG = "docs/architecture/DesignPrinciples.md"
+
+
+def principle(n, enforced, title="Example"):
+    """Returns one catalog section; `enforced=None` leaves the field out."""
+    lines = ["## P%d. %s" % (n, title), "", "**Rule:** Do the thing.", "", "**Why:** Commit abc1234."]
+    if enforced is not None:
+        lines += ["", "**Enforced by:** " + enforced]
+    lines += ["", "**Exceptions:** None.", ""]
+    return "\n".join(lines)
+
 
 SKILL = "---\nname: %s\ndescription: Use when testing.\n---\n\n# Skill\n"
 
@@ -108,6 +125,87 @@ class AgentConfigCheckTest(unittest.TestCase):
         self.assertFails(
             ".github/copilot-instructions.md:1: Gradle project :btrace-instr does not exist"
         )
+
+    def catalog(self, *sections, fill=True):
+        """Writes the catalog; with fill, ids the given sections do not use get a valid filler section."""
+        given = {int(re.match(r"## P(\d+)\.", s).group(1)): s for s in sections}
+        if fill:
+            sections = [given.get(n) or principle(n, "unenforced (judgment)") for n in range(1, PRINCIPLE_COUNT + 1)]
+        self.write(CATALOG, "# Design principles\n\n" + "\n".join(sections))
+
+    def test_full_catalog_passes(self):
+        self.catalog()
+        code, out = self.run_check()
+        self.assertEqual(0, code, out)
+
+    def test_catalog_with_a_principle_deleted_fails(self):
+        self.catalog(*[principle(n, "unenforced (judgment)") for n in range(1, PRINCIPLE_COUNT)], fill=False)
+        self.assertFails("principles must be exactly P1, P2", "found P1, P2, P3, P4, P5, P6, P7, P8\n")
+
+    def test_catalog_with_a_gap_in_the_ids_fails(self):
+        numbers = [n for n in range(1, PRINCIPLE_COUNT + 2) if n != 4]
+        self.catalog(*[principle(n, "unenforced (judgment)") for n in numbers], fill=False)
+        self.assertFails("principles must be exactly", "found P1, P2, P3, P5")
+
+    def test_catalog_out_of_order_fails(self):
+        numbers = [2, 1] + list(range(3, PRINCIPLE_COUNT + 1))
+        self.catalog(*[principle(n, "unenforced (judgment)") for n in numbers], fill=False)
+        self.assertFails("principles must be exactly", "found P2, P1")
+
+    def test_catalog_with_an_extra_principle_fails(self):
+        numbers = range(1, PRINCIPLE_COUNT + 2)
+        self.catalog(*[principle(n, "unenforced (judgment)") for n in numbers], fill=False)
+        self.assertFails("principles must be exactly", "P%d" % (PRINCIPLE_COUNT + 1))
+
+    def test_catalog_pointing_at_missing_check_fails(self):
+        self.catalog(principle(1, "`scripts/guardrails/check_nope.py`"))
+        self.assertFails("check_nope.py")
+
+    def test_catalog_section_without_enforced_by_fails(self):
+        self.catalog(principle(1, None))
+        self.assertFails("P1", "Enforced by")
+
+    def test_catalog_section_without_other_fields_fails(self):
+        self.write(CATALOG, "# Design principles\n\n## P2. Bare\n\n**Enforced by:** unenforced (judgment)\n")
+        self.assertFails("P2", "**Rule:**", "**Why:**", "**Exceptions:**")
+
+    def test_malformed_principle_heading_fails(self):
+        self.write(CATALOG, "# Design principles\n\n## P7 No dot\n\n**Rule:** x\n")
+        self.assertFails("DesignPrinciples.md:3", "must read '## P<n>. <title>'")
+
+    def test_enforced_by_that_is_neither_literal_nor_path_fails(self):
+        self.catalog(principle(1, "a reviewer, probably"))
+        self.assertFails("P1", "unenforced (judgment)")
+
+    def test_unenforced_literal_passes(self):
+        self.catalog(principle(1, "unenforced (judgment)"))
+        code, out = self.run_check()
+        self.assertEqual(0, code, out)
+
+    def test_existing_path_passes(self):
+        self.write("scripts/guardrails/check_real.py", "")
+        self.write("scripts/guardrails/README.md", "| `check_real.py` |\n")
+        self.catalog(principle(1, "`scripts/guardrails/check_real.py`"))
+        code, out = self.run_check()
+        self.assertEqual(0, code, out)
+
+    def test_check_script_named_nowhere_fails(self):
+        self.write("scripts/guardrails/check_x.py", "")
+        self.write("scripts/guardrails/README.md", "# Guardrails\n")
+        self.catalog(principle(1, "unenforced (judgment)"))
+        self.assertFails("scripts/guardrails/check_x.py: named by no principle")
+
+    def test_check_script_named_only_in_readme_passes(self):
+        self.write("scripts/guardrails/check_x.py", "")
+        self.write("scripts/guardrails/README.md", "| `check_x.py` (G9) | rule |\n")
+        self.catalog(principle(1, "unenforced (judgment)"))
+        code, out = self.run_check()
+        self.assertEqual(0, code, out)
+
+    def test_check_scripts_without_catalog_fail(self):
+        self.write("scripts/guardrails/check_x.py", "")
+        self.write("scripts/guardrails/README.md", "`check_x.py`\n")
+        self.assertFails(CATALOG + ": missing")
 
     def test_untracked_files_are_not_checked(self):
         self.write("docs/plans/local.md", "# Local\n")
