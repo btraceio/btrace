@@ -54,4 +54,8 @@ public final class Args {
   // Embedded extension probe arguments
   public static final String PROBES = "probes";
   public static final String OUTPUT = "output";
+
+  // Probe budgets
+  public static final String PROBE_TTL = "probeTtl";
+  public static final String PROBE_MAX_RATE = "probeMaxRate";
 }
