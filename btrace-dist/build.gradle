@@ -186,7 +186,6 @@ task prepareAgentClassdata(type: Copy) {
     into "${maskedJarTmpDir}/agent"
 
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
-        include 'io/btrace/BTrace.class'
         include 'io/btrace/libs/org/jctools/**/*.class'
         include 'io/btrace/agent/**/*.class'
         include 'io/btrace/instr/**/*.class'
@@ -194,14 +193,20 @@ task prepareAgentClassdata(type: Copy) {
         include 'io/btrace/runtime/**/*.class'
         include 'io/btrace/extension/**/*.class'
         include 'io/btrace/core/comm/**/*.class'
-        include 'io/btrace/core/handlers/**/*.class'
         include 'io/btrace/core/Messages.class'
         include 'io/btrace/core/messages.properties'
         // Exclude classes that go in shared section
         exclude 'io/btrace/core/extensions/**'
         exclude 'io/btrace/core/annotations/**'
-        // BTraceBootstrap is the BSM for flat DSL indy calls; lives in bootstrap CL only
-        exclude 'io/btrace/runtime/BTraceBootstrap.class'
+        // Root classes (see bootIncludes and the extra root blocks of btraceJar). The agent
+        // loader's parent is the bootstrap loader with btrace.jar appended, so it always loads
+        // the root copy; a masked copy here would never be used.
+        exclude 'io/btrace/runtime/BTraceBootstrap*.class'
+        exclude 'io/btrace/runtime/Indy*.class'
+        exclude 'io/btrace/runtime/ExtensionIndy*.class'
+        exclude 'io/btrace/runtime/auxiliary/Auxiliary*.class'
+        exclude 'io/btrace/extension/ExtensionBridge.class'
+        exclude 'io/btrace/extension/processor/**'
         exclude 'META-INF/**'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
