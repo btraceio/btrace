@@ -861,9 +861,8 @@ public class BTraceProbePersisted implements BTraceProbe {
 
               @Override
               public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-                if (descriptor.startsWith("Lio/btrace/core/annotations/")) {
-                  handler = true;
-                }
+                handler |= descriptor.startsWith("Lio/btrace/core/annotations/");
+                Verifier.verifyHandlerSignature(descriptor, methodName, desc);
                 return super.visitAnnotation(descriptor, visible);
               }
 

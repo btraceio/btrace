@@ -84,7 +84,7 @@ public static void onExit(int exitCode) { }
 ```
 
 ### @OnLowMemory
-Execute when a memory pool's usage crosses a threshold, in bytes. Pool names depend on the GC (`Tenured Gen` with Serial, `G1 Old Gen` with G1). The optional `MemoryUsage` parameter receives the pool's usage; an exception thrown by the handler goes to `@OnError`.
+Execute when a memory pool's usage crosses a threshold, in bytes. Pool names depend on the GC (`Tenured Gen` with Serial, `G1 Old Gen` with G1). The handler takes no parameter or one `MemoryUsage`, which receives the pool's usage (any other signature is rejected); an exception thrown by the handler goes to `@OnError`.
 ```java
 @OnLowMemory(pool = "G1 Old Gen", threshold = 100000000)
 public static void onLowMemory(MemoryUsage usage) { }

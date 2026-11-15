@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
@@ -93,6 +94,12 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
 
   private BTraceMethodNode getParent() {
     return (BTraceMethodNode) mv;
+  }
+
+  @Override
+  public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+    Verifier.verifyHandlerSignature(desc, methodName, methodDesc);
+    return super.visitAnnotation(desc, visible);
   }
 
   @Override

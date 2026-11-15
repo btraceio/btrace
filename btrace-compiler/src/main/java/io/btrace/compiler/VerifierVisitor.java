@@ -49,6 +49,7 @@ import io.btrace.core.annotations.Injected;
 import io.btrace.core.annotations.Kind;
 import io.btrace.core.annotations.OnError;
 import io.btrace.core.annotations.OnExit;
+import io.btrace.core.annotations.OnLowMemory;
 import io.btrace.core.annotations.OnMethod;
 import io.btrace.core.annotations.Sampled;
 import io.btrace.core.extensions.Permission;
@@ -84,6 +85,8 @@ import javax.tools.Diagnostic;
 public class VerifierVisitor extends TreeScanner<Void, Void> {
   private static final String ON_ERROR_TYPE = OnError.class.getName();
   private static final String ON_EXIT_TYPE = OnExit.class.getName();
+  private static final String ON_LOW_MEMORY_TYPE = OnLowMemory.class.getName();
+  private static final String MEMORY_USAGE_TYPE = "java.lang.management.MemoryUsage";
   private static final String THROWABLE_TYPE = Throwable.class.getName();
 
   private final Verifier verifier;
@@ -380,6 +383,9 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
           if (node.getParameters().size() != 1 || !THROWABLE_TYPE.equals(thrElement.toString())) {
             reportError("onerror.invalid", node);
           }
+        }
+        if (isLowMemoryHandler(node) && !isLowMemorySignature(node)) {
+          reportError("onlowmemory.invalid", node);
         }
 
         for (VariableTree vt : node.getParameters()) {
@@ -749,6 +755,25 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
       }
     }
     return false;
+  }
+
+  private boolean isLowMemoryHandler(MethodTree node) {
+    for (AnnotationTree at : node.getModifiers().getAnnotations()) {
+      if (ON_LOW_MEMORY_TYPE.equals(verifier.resolveAnnotationTypeName(at))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** No parameter, or one {@code MemoryUsage}: what the runtime passes a low-memory handler. */
+  private boolean isLowMemorySignature(MethodTree node) {
+    List<? extends VariableTree> params = node.getParameters();
+    if (params.isEmpty()) {
+      return true;
+    }
+    Element type = params.size() == 1 ? getElement(params.get(0).getType()) : null;
+    return type != null && MEMORY_USAGE_TYPE.equals(type.toString());
   }
 
   private boolean isAnnotated(MethodTree node) {
