@@ -352,7 +352,6 @@ public final class Main {
         BudgetLimits limits =
             BudgetLimits.resolve(
                 budgetSnapshot, argMap, "premain".equals(agentMode), BUDGET_REPORTER);
-        boolean premain = "premain".equals(agentMode);
         if (limits.any()) {
           ProbeBudgets.setRateLimited(limits.maxRatePerSecond() > 0);
           BudgetGovernor.start(limits);
