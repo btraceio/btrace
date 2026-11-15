@@ -26,7 +26,7 @@ btrace.jar (~4.4 MB)
 ├── io/btrace/BTrace.class                      # Bootstrap: flat DSL entry class
 ├── io/btrace/core/*.class                      # Bootstrap: core API (excl. Messages and comm)
 ├── io/btrace/core/annotations/*.class          # Bootstrap: annotations
-├── io/btrace/core/extensions/*.class           # Bootstrap: extension API (also in the shared section)
+├── io/btrace/core/extensions/*.class           # Bootstrap: extension API
 ├── io/btrace/core/handlers/*.class             # Bootstrap: handler interfaces
 ├── io/btrace/core/types/*.class                # Bootstrap: type definitions
 ├── io/btrace/core/jfr/*.class                  # Bootstrap: JFR integration
@@ -141,8 +141,7 @@ The `bootIncludes` filter closure defined in `btrace-dist/build.gradle` determin
 - `io/btrace/libs/org/slf4j/` — relocated SLF4J (logging from bootstrap code)
 
 `bootIncludes` itself leaves out `io/btrace/core/extensions/`, but the `btraceJar` task adds those
-classes to the root from the `btrace-core` output, because bootstrap code needs them; they are also
-in the shared section. The `btraceJar` task also adds `io/btrace/extension/processor/` to the root,
+classes to the root from the `btrace-core` output, because bootstrap code needs them. The `btraceJar` task also adds `io/btrace/extension/processor/` to the root,
 so that external extension builds can use `btrace.jar` as their annotation processor path: javac's processor path loader reads only `.class` entries. The jar ships no `META-INF/services/javax.annotation.processing.Processor` entry, because a javac running in an instrumented JVM would discover the processor through the boot class path and fail on its `java.compiler` types; extension builds name it with `-processor`.
 
 **Explicitly excluded from bootstrap:**

@@ -35,13 +35,13 @@ import org.slf4j.LoggerFactory;
  * A JavaFileManager that can read .classdata files from a masked JAR.
  *
  * <p>This file manager wraps another JavaFileManager and intercepts requests for class files. When
- * javac requests a class file (e.g., to resolve an annotation), this manager first checks if the
- * class exists as a .classdata file in the masked JAR's shared section. If found, it returns a
- * ClassDataJavaFileObject that reads from the .classdata file. Otherwise, it delegates to the
- * wrapped file manager.
+ * javac requests a class file, this manager first checks if the class exists as a .classdata file
+ * in the masked JAR's shared section. If found, it returns a ClassDataJavaFileObject that reads
+ * from the .classdata file. Otherwise, it delegates to the wrapped file manager.
  *
- * <p>This allows javac to find and process annotation classes that are stored as .classdata files
- * instead of .class files.
+ * <p>This allows javac to see the shared-section classes (the protocol and relocated ASM classes),
+ * which are stored as .classdata files instead of .class files. Root classes, such as the BTrace
+ * annotations, are ordinary .class entries that the wrapped file manager finds on the class path.
  *
  * @author Jaroslav Bachorik
  */

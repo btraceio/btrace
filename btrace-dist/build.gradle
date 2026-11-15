@@ -275,10 +275,10 @@ task prepareSharedClassdata(type: Copy) {
     into "${maskedJarTmpDir}/shared"
 
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
-        // Only include classes used by both client and agent
+        // Only include classes used by both client and agent. core/annotations and
+        // core/extensions are root classes, which both loaders' parents see, so they get no
+        // masked copy here.
         include 'io/btrace/core/comm/**/*.class'
-        include 'io/btrace/core/extensions/**/*.class'
-        include 'io/btrace/core/annotations/**/*.class'
         include 'io/btrace/libs/org/objectweb/asm/**/*.class'
         // Exclude ASM packages not needed
         exclude 'io/btrace/libs/org/objectweb/asm/commons/**'
