@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -497,6 +498,92 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
   }
 
   @Test
+  @Timeout(value = 120, unit = TimeUnit.SECONDS)
+  void serverStartedOnAttachIsBoundByTheLaunchBudget() throws Exception {
+    // The agent is loaded at launch with a budget and no command server. A client attaching
+    // later makes that same agent start its server; the launch-time budget still binds it, and
+    // the budget arguments of the attach are not used.
+    TestApp app = launchTarget("noServer=true,probeMaxRate=100", "-XX:+EnableDynamicAgentLoading");
+    CliRun hot = null;
+    try {
+      int pid = app.getPid();
+      loadAgentByAttach(pid, "telemetry=false,probeMaxRate=100000000,port=" + freePort());
+      assertTrue(
+          awaitOutput(app, "its command server was started for this attach", 10_000L),
+          "the loaded agent did not start its server on attach:" + app(app));
+
+      hot = deploy(pid, HOT_PROBE, false);
+      assertNotNull(
+          hot.awaitLine(removalPattern("BudgetHotProbe", "100"), REMOVAL_DEADLINE_MS),
+          "the launch-time budget does not bind the server started on attach:\n"
+              + hot.output()
+              + app(app));
+      assertEquals(BUDGET_EXIT_CODE, hot.awaitExit(15), hot.output());
+      assertTargetStillRunning(app);
+    } finally {
+      destroy(hot);
+      app.stop();
+    }
+  }
+
+  @Test
+  @Timeout(value = 120, unit = TimeUnit.SECONDS)
+  void stockClientAttachesToAgentLaunchedWithoutServer() throws Exception {
+    TestApp app = launchTarget("noServer=true", "-XX:+EnableDynamicAgentLoading");
+    CliRun quiet = null;
+    try {
+      // The client finds no endpoint, loads the agent, and the agent already in the JVM starts
+      // its server for it.
+      quiet = deploy(app.getPid(), QUIET_PROBE, false);
+      assertNotNull(
+          quiet.awaitLine(Pattern.compile("^budget-quiet-hit$"), REMOVAL_DEADLINE_MS),
+          "the client could not deploy to an agent launched without a server:\n"
+              + quiet.output()
+              + app(app));
+      assertTrue(
+          app.capturedOutput().contains("its command server was started for this attach"),
+          "the server was not started by the already loaded agent:" + app(app));
+    } finally {
+      destroy(quiet);
+      app.stop();
+    }
+  }
+
+  @Test
+  @Timeout(value = 120, unit = TimeUnit.SECONDS)
+  void failedFirstAttachDoesNotBlockARetry() throws Exception {
+    TestApp app =
+        launchTestAppWithAgent(
+            TARGET,
+            null,
+            "-XX:+EnableDynamicAgentLoading",
+            "-Dbtrace.comm.protocol=2",
+            "-Dbtrace.comm.autoNegotiate=false",
+            "-Dbtrace.comm.forceVersion=true");
+    CliRun quiet = null;
+    try (ServerSocket taken = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+      int pid = app.getPid();
+      // The first load asks for a port that is in use, so its initialization fails.
+      try {
+        loadAgentByAttach(pid, "telemetry=false,port=" + taken.getLocalPort());
+      } catch (Exception expected) {
+        // the attach API reports the failed initialization
+      }
+      assertTrue(
+          awaitOutput(app, "FATAL: Initialization failed", 10_000L),
+          "the first load did not fail on the taken port:" + app(app));
+
+      quiet = deploy(pid, QUIET_PROBE, false);
+      assertNotNull(
+          quiet.awaitLine(Pattern.compile("^budget-quiet-hit$"), REMOVAL_DEADLINE_MS),
+          "a failed first load left the JVM untraceable:\n" + quiet.output() + app(app));
+    } finally {
+      destroy(quiet);
+      app.stop();
+    }
+  }
+
+  @Test
   @Timeout(value = 90, unit = TimeUnit.SECONDS)
   void attachTimeBudgetArgumentIsIgnored() throws Exception {
     // No operator budget. The attacher loads the agent with probeMaxRate=100: it is not the
@@ -612,7 +699,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
   @Test
   @Timeout(value = 60, unit = TimeUnit.SECONDS)
   void invalidLimitAtLaunchKeepsTargetRunningWithoutServer() throws Exception {
-    TestApp app = launchTarget("probeMaxRate=abc");
+    TestApp app = launchTarget("probeMaxRate=abc", "-XX:+EnableDynamicAgentLoading");
     try {
       app.getPid();
       // stderr is read on its own thread and can trail the ready line on stdout.
@@ -641,6 +728,14 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       } finally {
         destroy(doctor);
       }
+      // A later attach does not get a server from this agent either.
+      loadAgentByAttach(app.getPid(), "telemetry=false,port=" + freePort());
+      assertTrue(
+          awaitOutput(app, "the probe budget set at launch is invalid", 10_000L),
+          "a later attach was not refused a server:" + app(app));
+      assertFalse(
+          app.capturedOutput().contains("its command server was started for this attach"),
+          "a later attach started a server despite the invalid budget:" + app(app));
       assertTargetStillRunning(app);
     } finally {
       app.stop();

@@ -69,6 +69,7 @@ import io.btrace.instr.BTraceTransformer;
 import io.btrace.instr.Constants;
 import io.btrace.instr.ProbeBudgets;
 import io.btrace.runtime.BTraceBootstrap;
+import io.btrace.runtime.BTraceRuntimeAccess;
 import io.btrace.runtime.BTraceRuntimes;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -101,6 +102,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
@@ -235,12 +237,13 @@ public final class Main {
   private static volatile ControlServer controlServer;
 
   /**
-   * Serializes agent initialization only ({@code premain} and {@code agentmain} may race on a
-   * target that both boots with {@code -javaagent} and is attached to). Deliberately an object lock
-   * and not the {@code Main} class monitor: holding {@code Main.class} for the whole of
-   * initialization made the "BTrace Server Shutdown" hook block on {@code Main.class} when a target
-   * exits while the agent is still initializing -- the hook could never run, never close the
-   * control server, and the JVM hung in exit with nothing to report (issue #932).
+   * Serializes this agent's initialization against a later agent load handed over to it (see {@link
+   * #startServerOnAttach}); which load gets to initialize at all is decided by {@code
+   * BTraceRuntimeAccess.claimAgent}. Deliberately an object lock and not the {@code Main} class
+   * monitor: holding {@code Main.class} for the whole of initialization made the "BTrace Server
+   * Shutdown" hook block on {@code Main.class} when a target exits while the agent is still
+   * initializing -- the hook could never run, never close the control server, and the JVM hung in
+   * exit with nothing to report (issue #932).
    */
   private static final Object INIT_LOCK = new Object();
 
@@ -288,29 +291,103 @@ public final class Main {
     }
   }
 
-  /** Set once the agent has been loaded into this JVM; see {@link #claimJvm}. */
-  static final String LOADED_PROPERTY = "btrace.agent.loaded";
-
   static final String ALREADY_LOADED =
       "BTrace agent is already loaded in this JVM; this load and its arguments are ignored";
 
+  static final String SERVER_STARTED_ON_ATTACH =
+      "BTrace agent is already loaded in this JVM; its command server was started for this"
+          + " attach, every other argument of this load is ignored";
+
+  private static final String SERVER_NOT_STARTED =
+      "BTrace agent is already loaded in this JVM; its command server was not started: ";
+
+  // Written under INIT_LOCK.
+  private static boolean initialized;
+  private static boolean runtimeHooksInstalled;
+  private static boolean budgetValidAtInit;
+
+  // What a later agent load in this JVM calls instead of initializing an agent of its own. An
+  // anonymous class, not a lambda: Main's static initializer runs on the premain path.
+  private static final UnaryOperator<String> AGENT_CONTROL =
+      new UnaryOperator<String>() {
+        @Override
+        public String apply(String args) {
+          return startServerOnAttach(args);
+        }
+      };
+
   /**
-   * Claims the JVM for this agent load. Only the first load gets it: a second agent instance would
-   * take over the runtime hooks the first one depends on and break its probes, and it would not be
-   * bound by what the first one was told at launch, such as a probe budget.
+   * Handles a later agent load on behalf of this, already loaded, agent. If this agent has no
+   * command server, because it was launched without one, the server is started from the port and
+   * bind address of the later load, as for a dynamic attach. Nothing else of that load is used:
+   * this agent's settings, startup scripts and probe budget stay what they are.
    *
-   * @return whether this is the first agent load in the JVM
+   * @return the line to print in the target
    */
-  static boolean claimJvm(Properties systemProperties) {
-    return systemProperties.putIfAbsent(LOADED_PROPERTY, "true") == null;
+  static String startServerOnAttach(String args) {
+    // Also waits for an initialization that is still running.
+    synchronized (INIT_LOCK) {
+      if (!initialized) {
+        return SERVER_NOT_STARTED + "the agent did not finish initializing";
+      }
+      if (controlServer != null) {
+        return ALREADY_LOADED;
+      }
+      if (!budgetValidAtInit) {
+        return SERVER_NOT_STARTED + "the probe budget set at launch is invalid";
+      }
+      ControlServer endpoint;
+      try {
+        endpoint = ControlServer.open(parseAgentArgs(args), false);
+      } catch (IOException | RuntimeException e) {
+        return SERVER_NOT_STARTED + e.getMessage();
+      }
+      System.setProperty("btrace.wireio", String.valueOf(WireIO.VERSION));
+      controlServer = endpoint;
+      serverRunning = true;
+      installServerShutdownHook();
+      Thread agentThread = serverThread(endpoint);
+      agentThread.setDaemon(true);
+      BTraceRuntime.enter();
+      try {
+        agentThread.start();
+      } finally {
+        BTraceRuntime.leave();
+      }
+      return SERVER_STARTED_ON_ATTACH;
+    }
+  }
+
+  private static Thread serverThread(final ControlServer endpoint) {
+    return new Thread(
+        new Runnable() {
+          @Override
+          public void run() {
+            BTraceRuntime.enter();
+            try {
+              runServer(endpoint);
+            } finally {
+              BTraceRuntime.leave();
+            }
+          }
+        });
   }
 
   private static void mainLocked(String args, Instrumentation inst) {
     if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization started");
-    if (!claimJvm(System.getProperties())) {
+    if (!BTraceRuntimeAccess.claimAgent(AGENT_CONTROL)) {
       // Every agent load gets its own class loader, so this is a different Main than the one
-      // that loaded first, and its own statics say nothing about that one.
-      System.err.println("[BTrace Agent] " + ALREADY_LOADED);
+      // that loaded first. That one decides what this load may still do.
+      String outcome = ALREADY_LOADED;
+      UnaryOperator<String> loaded = BTraceRuntimeAccess.agentControl();
+      if (loaded != null) {
+        try {
+          outcome = loaded.apply(args);
+        } catch (Throwable t) {
+          outcome = SERVER_NOT_STARTED + t;
+        }
+      }
+      System.err.println("[BTrace Agent] " + outcome);
       return;
     }
     Main.inst = inst;
@@ -379,6 +456,7 @@ public final class Main {
         System.err.println("[BTrace Agent] " + message);
         log.error(message);
       }
+      budgetValidAtInit = budgetValid;
       boolean loadProbes = loadsStartupProbes(budgetValid, agentMode);
 
       Thread agentThread = null;
@@ -404,22 +482,12 @@ public final class Main {
         if (controlServer != null) {
           serverRunning = true;
           installServerShutdownHook();
-          ControlServer endpoint = controlServer;
-          agentThread =
-              new Thread(
-                  new Runnable() {
-                    @Override
-                    public void run() {
-                      BTraceRuntime.enter();
-                      try {
-                        runServer(endpoint);
-                      } finally {
-                        BTraceRuntime.leave();
-                      }
-                    }
-                  });
+          agentThread = serverThread(controlServer);
         }
       }
+      // From here on this instance installs itself into the runtime classes all agent loads
+      // share, so a failure no longer leaves the JVM free for another load.
+      runtimeHooksInstalled = true;
       // set the fall-back instrumentation object to BTraceRuntime
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Setting up runtime");
       BTraceRuntime.instrumentation = inst;
@@ -502,11 +570,16 @@ public final class Main {
           BTraceRuntime.leave();
         }
       }
+      initialized = true;
       if (AGENT_DEBUG)
         System.err.println(
             "[BTrace Agent] Initialization complete, " + startedScripts + " scripts started");
     } catch (Throwable t) {
       shutdownServer();
+      if (!runtimeHooksInstalled) {
+        // Nothing shared was touched yet: let a retry, with other arguments, load an agent.
+        BTraceRuntimeAccess.releaseAgent(AGENT_CONTROL);
+      }
       // FATAL errors should always be printed
       System.err.println(
           "[BTrace Agent] FATAL: Initialization failed: "

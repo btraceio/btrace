@@ -112,9 +112,14 @@ agent loaded a second time was a separate instance. It knew nothing of a budget 
 agent arguments, so an attacher loading the agent directly got an unbudgeted, trustable agent. It
 also took over the runtime hooks of the first instance: every later deploy through the first agent
 failed with a `ClassCastException` in `BTraceRuntimeAccessImpl.enterInternal`. A second load is
-now refused: the first load sets the `btrace.agent.loaded` system property atomically, and a load
-that finds it set prints one line and does nothing. Consequence: a JVM launched with a
-`noServer=true` agent cannot get a command server later by attaching.
+now handed over to the first: the first instance claims the JVM with an atomic compare-and-set
+in `BTraceRuntimeAccess`, a class all loads share, and a load that finds the claim taken calls
+the holder instead of initializing. The holder ignores everything in that load except the port
+and bind address: if it has no command server (launched with `noServer=true`, only with
+`script=`, or with a rejected `port=`), it starts its own server for the attach, bound by its own
+settings and budget; otherwise it does nothing. An invalid launch-time budget still means no
+server. A first load that fails before it installs its runtime hooks gives the claim back, so a
+retry with other arguments can load.
 
 Trusted argument ordering (added 2026-11-15): under dynamic attach with an operator property set,
 `trusted=true` is not applied at all while the agent arguments are parsed, instead of being set

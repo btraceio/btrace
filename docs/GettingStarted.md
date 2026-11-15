@@ -465,9 +465,12 @@ property, so the smaller value wins. When the agent is loaded by dynamic attach,
 `probeMaxRate` agent arguments are ignored with one line: the `-D` property set at JVM launch is
 then the only way to have a limit. Both limits are fixed when the agent loads; a later attach to a
 JVM that already has the agent cannot change them, and a `$io.btrace.probeTtl=...` or
-`$io.btrace.probeMaxRate=...` agent argument is rejected. The agent can be loaded into a JVM
-only once: a second load is ignored, with one line in the target JVM, so it can neither change the
-limits nor run anything outside them.
+`$io.btrace.probeMaxRate=...` agent argument is rejected. A JVM holds one agent:
+loading the agent again does not create a second one. If the agent already there has no command
+server (it was launched with `noServer=true`, or only with `script=`), that load makes it start
+its server on the requested port, and a client can then attach. Every other argument of the later
+load is ignored, with one line in the target JVM, so it cannot change the limits. An agent whose
+launch-time budget is invalid starts no server this way.
 
 `probeMaxRate` counts the handlers BTrace attaches to application code (`@OnMethod` and the other
 instrumentation sites). Handlers the runtime calls itself, such as `@OnTimer`, `@OnEvent` and

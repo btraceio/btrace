@@ -19,17 +19,19 @@ package io.btrace.agent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.btrace.core.ArgsMap;
 import io.btrace.core.SharedSettings;
+import io.btrace.runtime.BTraceRuntimeAccess;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.Test;
 
 class MainTest {
@@ -337,11 +339,29 @@ class MainTest {
   }
 
   @Test
-  void onlyTheFirstAgentLoadClaimsTheJvm() {
-    Properties system = new Properties();
-    assertTrue(Main.claimJvm(system), "the first load was refused");
-    assertFalse(Main.claimJvm(system), "a second load was accepted");
-    assertFalse(Main.claimJvm(system));
-    assertEquals("true", system.getProperty(Main.LOADED_PROPERTY));
+  void onlyOneAgentInstanceHoldsTheJvmUntilItReleasesIt() {
+    UnaryOperator<String> first = args -> "first";
+    UnaryOperator<String> second = args -> "second";
+    assertTrue(BTraceRuntimeAccess.claimAgent(first), "the first load was refused");
+    try {
+      assertFalse(BTraceRuntimeAccess.claimAgent(second), "a second load was accepted");
+      assertSame(first, BTraceRuntimeAccess.agentControl());
+      // Only the holder can give the claim back.
+      BTraceRuntimeAccess.releaseAgent(second);
+      assertSame(first, BTraceRuntimeAccess.agentControl());
+    } finally {
+      BTraceRuntimeAccess.releaseAgent(first);
+    }
+    assertNull(BTraceRuntimeAccess.agentControl());
+    assertTrue(BTraceRuntimeAccess.claimAgent(second), "a released JVM could not be claimed");
+    BTraceRuntimeAccess.releaseAgent(second);
+  }
+
+  @Test
+  void laterLoadGetsNoServerFromAnAgentThatDidNotInitialize() {
+    // This test JVM never ran agent initialization.
+    String outcome = Main.startServerOnAttach("port=0");
+    assertTrue(outcome.contains("its command server was not started"), outcome);
+    assertTrue(outcome.contains("did not finish initializing"), outcome);
   }
 }
