@@ -40,6 +40,7 @@ import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -48,6 +49,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -745,6 +747,67 @@ class BudgetGovernorTest {
   }
 
   @Test
+  void tripMarkIsKeptWhileAnotherTrippedClientSharesTheName() throws Exception {
+    String shared = "test.budget.Shared" + PROBE_SEQ.incrementAndGet();
+    FakeClient first = new FakeClient(null, shared);
+    FakeClient second = new FakeClient(null, shared);
+    Collection<Client> live = new ArrayList<>();
+    live.add(first);
+    live.add(second);
+    BudgetGovernor governor =
+        new BudgetGovernor(
+            limits("5", null), () -> now[0], () -> new ArrayList<>(live), Runnable::run);
+
+    // Both outlive the time-to-live. The first trip marks the shared name, so the second client
+    // is tripped on a later tick, after the mark of the first was dropped with its client.
+    now[0] += 6 * ONE_SECOND;
+    governor.tick();
+    assertEquals(1, first.exits.size());
+    assertTrue(ProbeBudgets.isTripped(first.internalName));
+
+    live.remove(first);
+    governor.tick();
+    assertEquals(1, second.exits.size(), "the second client was never tripped");
+    assertTrue(
+        ProbeBudgets.isTripped(second.internalName),
+        "the mark was dropped while a live client with that name is tripped");
+
+    live.clear();
+    governor.tick();
+    assertFalse(ProbeBudgets.isTripped(shared.replace('.', '/')));
+  }
+
+  @Test
+  void readingTheRateCreatesNoCounter() throws Exception {
+    FakeClient client = new FakeClient();
+    BudgetGovernor governor = governor(limits(null, "1000"), client);
+
+    governor.tick();
+    now[0] += ONE_SECOND;
+    governor.tick();
+
+    Field field = ProbeBudgets.class.getDeclaredField("counters");
+    field.setAccessible(true);
+    Map<?, ?> counters = (Map<?, ?>) field.get(null);
+    assertFalse(
+        counters.containsKey(client.internalName),
+        "the governor created budget state for a probe that never counted a hit");
+  }
+
+  @Test
+  void deployMarksAnExemptClientsProbeExempt() {
+    FakeClient client = new FakeClient();
+    assertFalse(ProbeBudgets.isExempt(client.internalName));
+    client.exempt = true;
+    client.setProbeForTest(probe(client.className, client.className), DEPLOYED_AT);
+    try {
+      assertTrue(ProbeBudgets.isExempt(client.internalName), "an exempt probe was not marked");
+    } finally {
+      ProbeBudgets.forget(client.internalName);
+    }
+  }
+
+  @Test
   void probeThatStartsCountingAfterTheFirstTickIsStillTripped() throws Exception {
     FakeClient client = new FakeClient();
     BudgetGovernor governor = governor(limits(null, "1000"), client);
@@ -865,12 +928,19 @@ class BudgetGovernorTest {
 
     /** A probe whose loaded name is renamed into the auxiliary package; null keeps a test name. */
     FakeClient(String declaredName) {
+      this(declaredName, null);
+    }
+
+    /** {@code fixedClassName}, when not null, is used as is: two fakes can then share a name. */
+    FakeClient(String declaredName, String fixedClassName) {
       super(new ClientContext(null, null, new ArgsMap(), new SharedSettings()));
       String seq = String.valueOf(PROBE_SEQ.incrementAndGet());
       className =
-          declaredName == null
-              ? "test.budget.Probe" + seq
-              : "io.btrace.runtime.auxiliary." + declaredName + seq;
+          fixedClassName != null
+              ? fixedClassName
+              : declaredName == null
+                  ? "test.budget.Probe" + seq
+                  : "io.btrace.runtime.auxiliary." + declaredName + seq;
       internalName = className.replace('.', '/');
       setProbeForTest(
           probe(className, declaredName == null ? className : declaredName), DEPLOYED_AT);

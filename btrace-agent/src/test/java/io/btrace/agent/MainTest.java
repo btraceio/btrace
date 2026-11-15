@@ -288,7 +288,46 @@ class MainTest {
           "a client inherited trusted mode from attach arguments under a budget");
       assertFalse(Main.refuseTrustedMode(new SharedSettings()), "no trusted request to report");
     } finally {
-      Client.refuseTrustedMode(false);
+      Main.resetTrustRefusalForTesting();
     }
+  }
+
+  @Test
+  void attachTimeTrustedArgumentIsNotAppliedUnderAnOperatorBudget() {
+    SharedSettings agentSettings = new SharedSettings();
+    try {
+      Main.applyTrustedArgument(agentSettings, true, true);
+      assertFalse(
+          agentSettings.isTrusted(),
+          "trusted mode was on while the remaining agent arguments were processed");
+      assertTrue(Main.isTrustRequestedAndRefused(), "the refused request was not recorded");
+    } finally {
+      Main.resetTrustRefusalForTesting();
+    }
+  }
+
+  @Test
+  void trustedArgumentIsAppliedWhenNotBarred() {
+    SharedSettings agentSettings = new SharedSettings();
+    try {
+      Main.applyTrustedArgument(agentSettings, true, false);
+      assertTrue(agentSettings.isTrusted());
+      assertFalse(Main.isTrustRequestedAndRefused());
+      Main.applyTrustedArgument(agentSettings, false, true);
+      assertFalse(agentSettings.isTrusted());
+      assertFalse(Main.isTrustRequestedAndRefused(), "trusted=false is not a refused request");
+    } finally {
+      Main.resetTrustRefusalForTesting();
+    }
+  }
+
+  @Test
+  void trustedHintDoesNotRecommendTheClientFlagUnderABudget() {
+    String plain = Main.ineffectiveTrustedPropertyWarning("true", false, false);
+    assertTrue(plain.contains("or the client's -u flag"), plain);
+    String budgeted = Main.ineffectiveTrustedPropertyWarning("true", false, true);
+    assertTrue(budgeted.contains("at JVM launch"), budgeted);
+    assertTrue(budgeted.contains("the client's -u flag is refused"), budgeted);
+    assertEquals(plain, Main.ineffectiveTrustedPropertyWarning("true", false));
   }
 }

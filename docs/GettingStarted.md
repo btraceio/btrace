@@ -465,7 +465,9 @@ property, so the smaller value wins. When the agent is loaded by dynamic attach,
 `probeMaxRate` agent arguments are ignored with one line: the `-D` property set at JVM launch is
 then the only way to have a limit. Both limits are fixed when the agent loads; a later attach to a
 JVM that already has the agent cannot change them, and a `$io.btrace.probeTtl=...` or
-`$io.btrace.probeMaxRate=...` agent argument is rejected.
+`$io.btrace.probeMaxRate=...` agent argument is rejected. The limits in force at launch are also
+written to the two system properties, so they bind an agent that is loaded into the same JVM a
+second time.
 
 `probeMaxRate` counts the handlers BTrace attaches to application code (`@OnMethod` and the other
 instrumentation sites). Handlers the runtime calls itself, such as `@OnTimer`, `@OnEvent` and
@@ -474,7 +476,8 @@ instrumentation sites). Handlers the runtime calls itself, such as `@OnTimer`, `
 A probe that exceeds a limit is stopped and removed, and the client exits with code `5` (see
 [Troubleshooting](Troubleshooting.md#probe-removed-a-budget-was-exceeded)). A client that has
 stopped reading, or whose exit takes too long, is disconnected instead; the line logged in the
-target JVM is then the record. Probes the agent loads itself (from `script=` or `scriptdir=`, or
+target JVM is then the record. A client cannot reconnect to a detached probe while it is being
+removed. Probes the agent loads itself (from `script=` or `scriptdir=`, or
 bundled into the agent) are exempt when the agent is loaded at JVM launch. When it is loaded by
 dynamic attach, those probes are limited like any other; they have no client, so their removal is
 logged in the target JVM. While a budget is set, a client cannot deploy a probe in trusted mode

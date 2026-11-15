@@ -158,4 +158,47 @@ class BudgetLimitsTest {
       }
     }
   }
+
+  @Test
+  void launchLimitsArePublishedForLaterAgentLoads() throws Exception {
+    Properties system = new Properties();
+    Map<String, String> launch = new HashMap<>();
+    launch.put("probeTtl", "30");
+    launch.put("probeMaxRate", "500");
+    ArgsMap args = new ArgsMap(launch);
+    BudgetLimits limits =
+        BudgetLimits.resolve(BudgetLimits.snapshot(system), args, true, line -> {});
+    BudgetLimits.publish(limits, system);
+
+    // A later agent load is in attach mode and sees only the properties.
+    BudgetLimits.Snapshot later = BudgetLimits.snapshot(system);
+    assertTrue(later.present());
+    BudgetLimits inherited = BudgetLimits.resolve(later, new ArgsMap(), false, line -> {});
+    assertEquals(30, inherited.ttlSeconds());
+    assertEquals(500, inherited.maxRatePerSecond());
+  }
+
+  @Test
+  void publishingNoLimitsSetsNoProperty() {
+    Properties system = new Properties();
+    BudgetLimits.publish(BudgetLimits.NONE, system);
+    assertTrue(system.isEmpty());
+    assertFalse(BudgetLimits.snapshot(system).present());
+  }
+
+  @Test
+  void invalidLaunchArgumentIsPublishedSoALaterLoadFailsToo() {
+    Properties system = new Properties();
+    ArgsMap args = args("probeMaxRate", "lots");
+    InvalidAgentOptionException invalid =
+        assertThrows(
+            InvalidAgentOptionException.class,
+            () -> BudgetLimits.resolve(BudgetLimits.snapshot(system), args, true, line -> {}));
+    BudgetLimits.publishInvalid(invalid, system);
+
+    assertThrows(
+        InvalidAgentOptionException.class,
+        () ->
+            BudgetLimits.resolve(BudgetLimits.snapshot(system), new ArgsMap(), false, line -> {}));
+  }
 }

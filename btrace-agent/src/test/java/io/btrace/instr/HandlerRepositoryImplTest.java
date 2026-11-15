@@ -528,6 +528,72 @@ public class HandlerRepositoryImplTest {
   }
 
   @Test
+  void exemptMarkSetBeforeRegistrationSurvivesIt() throws Throwable {
+    ProbeBudgets.setRateLimited(true);
+    BTraceProbe probe = stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class);
+    // The order a deploy uses: marked first, so a handler resolved the moment the probe's
+    // transformer becomes active is already not counted.
+    ProbeBudgets.markExempt(SELF_PROBE);
+    try {
+      HandlerRepositoryImpl.registerProbe(probe);
+      resolvePing(SELF_PROBE).invokeExact();
+      assertEquals(0, ProbeBudgets.hits(SELF_PROBE), "registration dropped the exempt mark");
+    } finally {
+      HandlerRepositoryImpl.unregisterProbe(probe);
+    }
+    assertFalse(ProbeBudgets.isExempt(SELF_PROBE), "unregistration kept the exempt mark");
+  }
+
+  @Test
+  void registrationResetsCounterAndTrippedMark() {
+    BTraceProbe probe = stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class);
+    ProbeBudgets.counter(SELF_PROBE).add(7);
+    ProbeBudgets.markTripped(SELF_PROBE);
+    try {
+      HandlerRepositoryImpl.registerProbe(probe);
+      assertEquals(0, ProbeBudgets.hits(SELF_PROBE));
+      assertFalse(ProbeBudgets.isTripped(SELF_PROBE));
+    } finally {
+      HandlerRepositoryImpl.unregisterProbe(probe);
+    }
+  }
+
+  /**
+   * A probe disabled between a call site's resolution and its linking: the invalidation finds the
+   * site not yet holding the handler, and the site must still end up disabled.
+   */
+  @Test
+  void callSiteLinkedWhileItsProbeIsDisabledStaysDisabled() throws Throwable {
+    BTraceProbe probe = stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class);
+    final HandlerRepository real = IndyDispatcher.repository;
+    final AtomicBoolean first = new AtomicBoolean(true);
+    try {
+      HandlerRepositoryImpl.registerProbe(probe);
+      IndyDispatcher.repository =
+          new HandlerRepository() {
+            @Override
+            public MethodHandle resolveHandler(String name, String handler, MethodType type) {
+              MethodHandle resolved = real.resolveHandler(name, handler, type);
+              if (first.compareAndSet(true, false)) {
+                // The trip, right after this site resolved its handler and before it linked.
+                ProbeBudgets.markTripped(name);
+                IndyDispatcher.invalidateProbe(name);
+              }
+              return resolved;
+            }
+          };
+      CallSite site =
+          IndyDispatcher.bootstrap(
+              MethodHandles.lookup(), PING, MethodType.methodType(void.class), SELF_PROBE);
+      site.dynamicInvoker().invokeExact();
+      assertEquals(0, PING_COUNT.get(), "a call site linked during the trip ran its handler");
+    } finally {
+      IndyDispatcher.repository = real;
+      HandlerRepositoryImpl.unregisterProbe(probe);
+    }
+  }
+
+  @Test
   void rateLimitedHandlerCountsEachInvocation() throws Throwable {
     ProbeBudgets.setRateLimited(true);
     BTraceProbe probe = stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class);

@@ -39,6 +39,7 @@ import io.btrace.core.comm.SocketKeepAlive;
 import io.btrace.core.comm.StatusCommand;
 import io.btrace.core.comm.WireProtocol;
 import io.btrace.extension.ExtensionRegistry;
+import io.btrace.instr.ProbeBudgets;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -199,6 +200,13 @@ class RemoteClient extends Client {
               log.debug("Attempting to reconnect client for probe {}", probeId);
               Client client = Client.findClient(probeId);
               log.debug("Found client {}", client);
+              if (removedByBudget(client)) {
+                // Its handlers are disabled and its removal is under way: a client attaching now
+                // would only see the connection drop.
+                wireProtocol.write(new StatusCommand(-1 * ReconnectCommand.STATUS_FLAG));
+                throw new IOException(
+                    "Can not reconnect to probe " + probeId + ": its probe budget removed it");
+              }
               if (client instanceof RemoteClient) {
                 sock.setSoTimeout(previousTimeout);
                 timeoutRestored = true;
@@ -689,6 +697,12 @@ class RemoteClient extends Client {
     } catch (IOException ignore) {
       // best effort
     }
+  }
+
+  /** Whether {@code client}'s probe was disabled by its budget and is being removed. */
+  static boolean removedByBudget(Client client) {
+    String name = client != null ? client.probeInternalName() : null;
+    return name != null && ProbeBudgets.isTripped(name);
   }
 
   void reconnect(WireProtocol protocol, Socket socket) throws IOException {

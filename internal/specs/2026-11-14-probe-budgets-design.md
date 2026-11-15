@@ -106,6 +106,27 @@ of trusted mode, on every later deploy until the JVM restarts.
 Limits are fixed when the agent loads. A later attach to a JVM that already has the agent cannot
 change them.
 
+Second agent load (added 2026-11-15 after an independent review): every `premain`/`agentmain`
+call gets a fresh agent class loader (`Loader.startAgent`), so an agent loaded a second time is a
+separate instance that knows nothing of the first one's limits. A budget set only by launch-time
+agent arguments was therefore invisible to it, and an attacher loading the agent directly got an
+unbudgeted, trustable agent. The agent loaded at launch now writes its resolved limits (or the
+invalid launch argument) to the two system properties, which every instance reads; the later
+instance is in attach mode, so it can neither raise nor remove them.
+
+Trusted argument ordering (added 2026-11-15): under dynamic attach with an operator property set,
+`trusted=true` is not applied at all while the agent arguments are parsed, instead of being set
+and cleared afterwards. Otherwise `btrace.system.appendJar`, which requires trusted mode, was
+honoured during parsing. The hints that name the ways to enable trusted mode leave out the
+client's `-u` flag when a budget is requested, because it is refused then.
+
+Reconnect (added 2026-11-15): a client cannot reconnect to a detached probe once its budget has
+tripped; it gets a refused reconnect instead of a connection that drops when the probe is removed.
+
+Known limit: `SharedSettings.GLOBAL` is shared by all agent instances in a JVM. If the operator
+launched with `trusted=true` and a budget, a second agent load by an attacher clears that shared
+flag, and later deploys through the first agent are verified. This fails toward less trust.
+
 Protecting the ceiling — *my call*: `Main.parseArgs` turns any `$key=value` agent argument into
 `System.setProperty` (`Main.java:1213-1215`), so an attaching client could overwrite the operator's
 property. The two `io.btrace.probe*` properties are therefore read once, before agent arguments
@@ -219,11 +240,11 @@ $ echo $?
   Also: a call site that links after the trip runs no handler; a `$io.btrace.probeMaxRate` attach
   argument cannot raise an operator ceiling; an invalid attach argument leaves the server running
   with the operator ceiling in force.
-- **Benchmark:** `benchmarks/agent-benchmark` `BTraceBench`, handler with and without a rate
-  ceiling. Report the per-hit delta; this decides `LongAdder` versus a plain field. The benchmark
-  deploys with `noServer=true,script=…` (`benchmarks/agent-benchmark/build.gradle:58`), which is
-  the exempt startup-script mode: the handler is counted but never tripped, which is what the
-  measurement needs.
+- **Benchmark (not done):** the per-hit cost of the counter, which decides `LongAdder` versus a
+  plain field, is unmeasured. `benchmarks/agent-benchmark` `BTraceBench` deploys with
+  `noServer=true,script=…`, the exempt startup-script mode, and an exempt probe is not counted,
+  so that benchmark cannot show the cost. Measuring it needs a benchmark that deploys its probe
+  through a client.
 - **Gates:** `./gradlew build`, `spotlessCheck`, integration matrix on the JDK tiers available
   locally via `TEST_JAVA_HOME`.
 

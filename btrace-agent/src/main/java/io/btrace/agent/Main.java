@@ -36,6 +36,8 @@ import static io.btrace.core.Args.NO_SERVER;
 import static io.btrace.core.Args.OUTPUT;
 import static io.btrace.core.Args.PROBES;
 import static io.btrace.core.Args.PROBE_DESC_PATH;
+import static io.btrace.core.Args.PROBE_MAX_RATE;
+import static io.btrace.core.Args.PROBE_TTL;
 import static io.btrace.core.Args.SCRIPT;
 import static io.btrace.core.Args.SCRIPT_DIR;
 import static io.btrace.core.Args.SCRIPT_OUTPUT_DIR;
@@ -300,6 +302,10 @@ public final class Main {
 
     // Read the operator's budget properties before any agent argument can write system properties.
     BudgetLimits.Snapshot budgetSnapshot = BudgetLimits.snapshot(System.getProperties());
+    // Under dynamic attach an operator budget property, valid or not, always ends in trusted mode
+    // being refused. Known before the arguments are parsed, so that nothing they do is trusted.
+    attachTrustBarred = !"premain".equals(agentMode) && budgetSnapshot.present();
+    budgetPropertySet = budgetSnapshot.present();
     try {
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Loading arguments");
       loadArgs(args);
@@ -328,13 +334,17 @@ public final class Main {
         BudgetLimits limits =
             BudgetLimits.resolve(
                 budgetSnapshot, argMap, "premain".equals(agentMode), BUDGET_REPORTER);
+        boolean premain = "premain".equals(agentMode);
         if (limits.any()) {
           ProbeBudgets.setRateLimited(limits.maxRatePerSecond() > 0);
           BudgetGovernor.start(limits);
+          if (premain) {
+            BudgetLimits.publish(limits, System.getProperties());
+          }
         }
-        boolean premain = "premain".equals(agentMode);
         if (BudgetLimits.refusesClientTrust(limits, premain, settings.isTrusted())) {
-          if (refuseTrustedMode(settings)) {
+          // Not short-circuited: the refusal is recorded whether or not the flag was still set.
+          if (refuseTrustedMode(settings) | trustRequestedAndRefused) {
             BUDGET_REPORTER.accept(
                 "ignoring agent argument trusted=true, every probe is verified: "
                     + BudgetLimits.TRUSTED_REFUSED);
@@ -345,6 +355,9 @@ public final class Main {
         // without a command socket. The operator's startup scripts still run at launch; under
         // dynamic attach nothing is loaded and nothing may run unverified.
         budgetValid = false;
+        if ("premain".equals(agentMode)) {
+          BudgetLimits.publishInvalid(e, System.getProperties());
+        }
         String message = e.getMessage() + "; the command server was not started";
         if (!loadsStartupProbes(false, agentMode)) {
           refuseTrustedMode(settings);
@@ -1061,7 +1074,7 @@ public final class Main {
     // unreachable.
     String trusted = argMap.get(TRUSTED);
     if (trusted != null && !trusted.isEmpty()) {
-      settings.setTrusted(Boolean.parseBoolean(trusted));
+      applyTrustedArgument(Boolean.parseBoolean(trusted));
     }
     String config = argMap.get(CONFIG);
     processClasspaths();
@@ -1176,7 +1189,7 @@ public final class Main {
         case TRUSTED:
           {
             if (!p.isEmpty()) {
-              settings.setTrusted(Boolean.parseBoolean(p));
+              applyTrustedArgument(Boolean.parseBoolean(p));
               log.debug("trustedMode is {}", settings.isTrusted());
             }
             break;
@@ -1271,7 +1284,7 @@ public final class Main {
     }
     String ineffective =
         ineffectiveTrustedPropertyWarning(
-            System.getProperty(TRUSTED_PROPERTY), settings.isTrusted());
+            System.getProperty(TRUSTED_PROPERTY), settings.isTrusted(), budgetRequested());
     if (ineffective != null) {
       log.warn(ineffective);
     }
@@ -1286,6 +1299,15 @@ public final class Main {
    * @return the warning, or {@code null} when the property is unset or trusted mode is on anyway
    */
   static String ineffectiveTrustedPropertyWarning(String propertyValue, boolean trusted) {
+    return ineffectiveTrustedPropertyWarning(propertyValue, trusted, false);
+  }
+
+  /**
+   * @param budget whether a probe budget is requested for this JVM; the client's {@code -u} flag is
+   *     then refused, so the warning does not recommend it
+   */
+  static String ineffectiveTrustedPropertyWarning(
+      String propertyValue, boolean trusted, boolean budget) {
     if (propertyValue == null || trusted) {
       return null;
     }
@@ -1293,8 +1315,29 @@ public final class Main {
         + TRUSTED_PROPERTY
         + "="
         + propertyValue
-        + ": it has no effect. Trusted mode is enabled only by the trusted=true agent argument"
-        + " (-javaagent:btrace.jar=trusted=true,... or the client's -u flag).";
+        + ": it has no effect. Trusted mode is enabled only by the trusted=true agent argument "
+        + trustedHowTo(budget)
+        + ".";
+  }
+
+  /** Where the {@code trusted=true} agent argument can come from, with or without a budget. */
+  static String trustedHowTo(boolean budget) {
+    return budget
+        ? "(-javaagent:btrace.jar=trusted=true,... at JVM launch; this JVM has a probe budget, so"
+            + " the client's -u flag is refused)"
+        : "(-javaagent:btrace.jar=trusted=true,... or the client's -u flag)";
+  }
+
+  // Whether the operator set a budget property, valid or not; read before arguments are parsed.
+  private static volatile boolean budgetPropertySet;
+
+  /** Whether a probe budget is requested, by property or by a launch-time agent argument. */
+  private static boolean budgetRequested() {
+    if (budgetPropertySet) {
+      return true;
+    }
+    return "premain".equals(agentMode)
+        && (argMap.get(PROBE_TTL) != null || argMap.get(PROBE_MAX_RATE) != null);
   }
 
   /**
@@ -1416,10 +1459,10 @@ public final class Main {
     if (sysAppend != null && !sysAppend.isEmpty()) {
       if (!settings.isTrusted()) {
         log.warn(
-            "Ignoring btrace.system.appendJar: it requires the trusted=true agent argument"
-                + " (-javaagent:btrace.jar=trusted=true,... or the client's -u flag); a system"
-                + " property does not enable trusted mode."
-                + " Use extensions or migration patterns instead.");
+            "Ignoring btrace.system.appendJar: it requires the trusted=true agent argument {}; a"
+                + " system property does not enable trusted mode."
+                + " Use extensions or migration patterns instead.",
+            trustedHowTo(budgetRequested()));
       } else {
         try {
           Path p = Paths.get(sysAppend).toAbsolutePath().normalize();
@@ -1787,6 +1830,35 @@ public final class Main {
 
   // Whether trusted=true in the agent arguments was refused because of a probe budget.
   private static volatile boolean trustRequestedAndRefused;
+
+  // Whether attach-time agent arguments cannot turn trusted mode on: set before they are parsed.
+  private static volatile boolean attachTrustBarred;
+
+  /**
+   * Applies the {@code trusted} agent argument. Under dynamic attach with an operator budget the
+   * request is recorded and not applied, so nothing the arguments configure runs trusted.
+   */
+  private static void applyTrustedArgument(boolean trusted) {
+    applyTrustedArgument(settings, trusted, attachTrustBarred);
+  }
+
+  static void applyTrustedArgument(SharedSettings agentSettings, boolean trusted, boolean barred) {
+    if (trusted && barred) {
+      trustRequestedAndRefused = true;
+      return;
+    }
+    agentSettings.setTrusted(trusted);
+  }
+
+  static boolean isTrustRequestedAndRefused() {
+    return trustRequestedAndRefused;
+  }
+
+  static void resetTrustRefusalForTesting() {
+    trustRequestedAndRefused = false;
+    attachTrustBarred = false;
+    Client.refuseTrustedMode(false);
+  }
 
   /**
    * Refuses trusted mode for the life of the agent, decided once at the source. A trusted flag in

@@ -26,7 +26,9 @@ import java.util.function.Consumer;
  * unset (0). The operator sets them with the {@code io.btrace.probeTtl} and {@code
  * io.btrace.probeMaxRate} system properties; the {@code probeTtl} and {@code probeMaxRate} agent
  * arguments count only when the agent is loaded at JVM launch, where they can tighten the
- * properties but never loosen them. Under dynamic attach they are ignored.
+ * properties but never loosen them. Under dynamic attach they are ignored. The limits resolved at
+ * launch are written back to the two properties, so an agent loaded into the same JVM later is
+ * bound by them too.
  */
 final class BudgetLimits {
   static final String TTL_PROPERTY = "io.btrace.probeTtl";
@@ -84,6 +86,11 @@ final class BudgetLimits {
       this.ttl = ttl;
       this.rate = rate;
     }
+
+    /** Whether the operator set either property, valid or not. */
+    boolean present() {
+      return ttl != null || rate != null;
+    }
   }
 
   /** Reads the two operator properties. Call before agent arguments are parsed. */
@@ -111,6 +118,32 @@ final class BudgetLimits {
             parse(MAX_RATE_PROPERTY, operator.rate),
             argument(Args.PROBE_MAX_RATE, args, premain, report));
     return ttl == 0 && rate == 0 ? NONE : new BudgetLimits(ttl, rate);
+  }
+
+  /**
+   * Writes the limits resolved at launch to the operator properties. Every agent load gets its own
+   * agent instance, and a later one reads only these properties: without this, a budget set by
+   * launch-time agent arguments would not bind an agent that an attacher loads afterwards.
+   */
+  static void publish(BudgetLimits limits, Properties systemProperties) {
+    if (limits.ttlSeconds > 0) {
+      systemProperties.setProperty(TTL_PROPERTY, Long.toString(limits.ttlSeconds));
+    }
+    if (limits.maxRatePerSecond > 0) {
+      systemProperties.setProperty(MAX_RATE_PROPERTY, Long.toString(limits.maxRatePerSecond));
+    }
+  }
+
+  /**
+   * Writes an invalid launch-time budget argument to its operator property, so a later agent load
+   * fails on it the same way instead of running without a budget.
+   */
+  static void publishInvalid(InvalidAgentOptionException invalid, Properties systemProperties) {
+    if (Args.PROBE_TTL.equals(invalid.getOption())) {
+      systemProperties.setProperty(TTL_PROPERTY, invalid.getValue());
+    } else if (Args.PROBE_MAX_RATE.equals(invalid.getOption())) {
+      systemProperties.setProperty(MAX_RATE_PROPERTY, invalid.getValue());
+    }
   }
 
   private static long argument(String name, ArgsMap args, boolean premain, Consumer<String> report)

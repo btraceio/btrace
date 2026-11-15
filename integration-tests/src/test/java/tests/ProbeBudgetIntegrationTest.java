@@ -221,7 +221,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
 
   @Test
   @Timeout(value = 90, unit = TimeUnit.SECONDS)
-  void attachArgumentCannotRaiseOperatorCeiling() throws Exception {
+  void launchArgumentCannotRaiseOperatorCeiling() throws Exception {
     TestApp app = launchTarget("probeMaxRate=100000000", "-Dio.btrace.probeMaxRate=100");
     CliRun hot = null;
     try {
@@ -419,6 +419,83 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       assertFalse(
           app.capturedOutput().contains("budget-trusted-ran"),
           "a probe ran in trusted mode under a budget:" + app(app));
+      assertTargetStillRunning(app);
+    } finally {
+      app.stop();
+    }
+  }
+
+  @Test
+  @Timeout(value = 90, unit = TimeUnit.SECONDS)
+  void secondAgentLoadInheritsLaunchArgumentBudget() throws Exception {
+    // The budget is set only by a launch-time agent argument. Loading the agent again by dynamic
+    // attach starts a second, separate agent instance; it must be bound by the same budget.
+    TestApp app = launchTarget("probeMaxRate=100", "-XX:+EnableDynamicAgentLoading");
+    try {
+      int pid = app.getPid();
+      File hotScript = locateTrace("btrace/BudgetHotProbe.class");
+      assertNotNull(hotScript, "compiled probe is missing: BudgetHotProbe.class");
+      loadAgentByAttach(
+          pid,
+          "telemetry=false,port="
+              + freePort()
+              + ",scriptOutputFile=::stdout,script="
+              + hotScript.getAbsolutePath());
+
+      assertTrue(
+          awaitOutput(app, "budget-hot-alive", 15_000L),
+          "the second agent load did not run its startup script:" + app(app));
+      assertTrue(
+          awaitOutput(app, "BTrace: probe btrace.BudgetHotProbe removed: ", REMOVAL_DEADLINE_MS),
+          "a second agent load escaped the launch-argument budget:" + app(app));
+      assertTrue(
+          app.capturedOutput().contains("exceeded probeMaxRate=100"),
+          "the removal does not name the rate ceiling:" + app(app));
+      assertTargetStillRunning(app);
+    } finally {
+      app.stop();
+    }
+  }
+
+  @Test
+  @Timeout(value = 90, unit = TimeUnit.SECONDS)
+  void attachTimeBudgetArgumentIsIgnored() throws Exception {
+    // No operator budget. The attacher loads the agent with probeMaxRate=100: it is not the
+    // operator, so the argument sets no budget and the hot probe keeps running.
+    TestApp app =
+        launchTestAppWithAgent(
+            TARGET,
+            null,
+            "-XX:+EnableDynamicAgentLoading",
+            "-Dbtrace.comm.protocol=2",
+            "-Dbtrace.comm.autoNegotiate=false",
+            "-Dbtrace.comm.forceVersion=true");
+    try {
+      int pid = app.getPid();
+      File hotScript = locateTrace("btrace/BudgetHotProbe.class");
+      assertNotNull(hotScript, "compiled probe is missing: BudgetHotProbe.class");
+      loadAgentByAttach(
+          pid,
+          "telemetry=false,port="
+              + freePort()
+              + ",probeMaxRate=100,scriptOutputFile=::stdout,script="
+              + hotScript.getAbsolutePath());
+
+      assertTrue(
+          awaitOutput(app, "ignoring agent argument probeMaxRate=100", 10_000L),
+          "agent did not report ignoring the attach-time budget argument:" + app(app));
+      assertTrue(
+          awaitOutput(app, "budget-hot-alive", 15_000L),
+          "the attach-time startup script did not run:" + app(app));
+      // Several governor periods: a budget would have removed the probe by now.
+      int alive = count(app.capturedOutput(), "budget-hot-alive");
+      Thread.sleep(6_000L);
+      assertTrue(
+          count(app.capturedOutput(), "budget-hot-alive") > alive,
+          "the probe stopped running:" + app(app));
+      assertFalse(
+          app.capturedOutput().contains("BTrace: probe btrace.BudgetHotProbe removed: "),
+          "an attach-time argument set a budget:" + app(app));
       assertTargetStillRunning(app);
     } finally {
       app.stop();
