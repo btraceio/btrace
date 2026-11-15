@@ -445,6 +445,52 @@ command. Older clients cannot connect to a 3.0 prepared endpoint. Remote prepare
 is not supported in 3.0.0; use startup-script mode with `noServer=true` or dynamic attach where the
 target JVM's policy permits it instead of exposing the command server remotely.
 
+#### Probe budgets
+
+The operator of the target JVM can cap what any probe may cost. Two limits exist, each set either
+as an agent argument or as a JVM system property:
+
+| Agent argument | System property | Meaning |
+| --- | --- | --- |
+| `probeTtl=<seconds>` | `-Dio.btrace.probeTtl=<seconds>` | maximum lifetime of a probe, counted from its deploy |
+| `probeMaxRate=<hits/s>` | `-Dio.btrace.probeMaxRate=<hits/s>` | maximum executions per second of one probe's handlers attached to application code, summed over those handlers |
+
+```bash
+java -javaagent:/path/to/btrace.jar=port=0,probeMaxRate=10000,probeTtl=600 MyApp
+```
+
+Unset means no limit, and then nothing changes. The system property is the operator's ceiling. The
+agent arguments count only when the agent is loaded at JVM launch, where they can tighten the
+property, so the smaller value wins. When the agent is loaded by dynamic attach, `probeTtl` and
+`probeMaxRate` agent arguments are ignored with one line: the `-D` property set at JVM launch is
+then the only way to have a limit. Both limits are fixed when the agent loads; a later attach to a
+JVM that already has the agent cannot change them, and a `$io.btrace.probeTtl=...` or
+`$io.btrace.probeMaxRate=...` agent argument is rejected.
+
+`probeMaxRate` counts the handlers BTrace attaches to application code (`@OnMethod` and the other
+instrumentation sites). Handlers the runtime calls itself, such as `@OnTimer`, `@OnEvent` and
+`@OnLowMemory`, are not counted; only `probeTtl` bounds a probe that does its work there.
+
+A probe that exceeds a limit is stopped and removed, and the client exits with code `5` (see
+[Troubleshooting](Troubleshooting.md#probe-removed-a-budget-was-exceeded)). A client that has
+stopped reading, or whose exit takes too long, is disconnected instead; the line logged in the
+target JVM is then the record. Probes the agent loads itself (from `script=` or `scriptdir=`, or
+bundled into the agent) are exempt when the agent is loaded at JVM launch. When it is loaded by
+dynamic attach, those probes are limited like any other; they have no client, so their removal is
+logged in the target JVM. While a budget is set, a client cannot deploy a probe in trusted mode
+(`-u`): the deploy fails with one line and the client exits with code `1` (see
+[Troubleshooting](Troubleshooting.md#trusted-mode-is-not-available-under-a-probe-budget)). Under
+dynamic attach with a budget set, a `trusted=true` agent argument is ignored, with one line in the
+target JVM, and every probe is verified, including those from `script=` or `scriptdir=`. An operator
+who puts `trusted=true` in the launch-time `-javaagent` arguments has opted out: probes then run
+unverified, and an unverified probe is arbitrary code that a budget cannot contain.
+
+A value that is not a positive whole number makes the agent print one line naming the option and
+skip the command server, as for an invalid `port=`; the application keeps running. An invalid system
+property found when the agent is loaded by dynamic attach also stops the agent from loading any
+probe itself (`script=`, `scriptdir=`, bundled probes), and the line says so; at JVM launch the
+operator's startup scripts still run.
+
 #### Optional agent telemetry
 
 Agent telemetry is disabled by default. The agent creates no telemetry thread and performs no

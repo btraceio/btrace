@@ -54,16 +54,12 @@ public class NumberDataCommand extends DataCommand {
   @Override
   protected void write(ObjectOutput out) throws IOException {
     out.writeUTF(name != null ? name : "");
-    out.writeObject(value);
+    TypedEncoding.writeNumber(out, value);
   }
 
   @Override
   protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
     name = in.readUTF();
-    Object obj = in.readObject();
-    if (obj != null && !(obj instanceof Number)) {
-      throw new IOException("Invalid data type: expected Number, got " + obj.getClass().getName());
-    }
-    value = (Number) obj;
+    value = TypedEncoding.readNumber(in);
   }
 }

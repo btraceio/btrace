@@ -69,9 +69,12 @@ public class InstrumentCommand extends Command {
   @Override
   protected void read(ObjectInput in) throws IOException {
     int len = in.readInt();
+    if (len < 0 || len > TypedEncoding.MAX_CODE_BYTES)
+      throw new IOException("Invalid code length: " + len);
     code = new byte[len];
     in.readFully(code);
     len = in.readInt();
+    if (len < 0 || len > TypedEncoding.MAX_ARGS) throw new IOException("Invalid args size: " + len);
     args = new ArgsMap(len);
     for (int i = 0; i < len; i++) {
       String key = in.readUTF();

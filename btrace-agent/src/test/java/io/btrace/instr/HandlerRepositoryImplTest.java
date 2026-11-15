@@ -32,6 +32,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -57,6 +58,11 @@ public class HandlerRepositoryImplTest {
    * reads the class via {@code probe.getProbeClass()}).
    */
   private static BTraceProbe stubProbe(String internalName, Class<?> probeClass) {
+    return stubProbe(internalName, probeClass, Collections.<OnMethod>emptyList());
+  }
+
+  private static BTraceProbe stubProbe(
+      String internalName, Class<?> probeClass, Collection<OnMethod> onMethods) {
     return new BTraceProbe() {
       @Override
       public String getClassName() {
@@ -93,7 +99,7 @@ public class HandlerRepositoryImplTest {
 
       @Override
       public Iterable<OnMethod> onmethods() {
-        return Collections.emptyList();
+        return onMethods;
       }
 
       @Override
@@ -162,13 +168,25 @@ public class HandlerRepositoryImplTest {
    */
   public static void ping() {
     HANDLER_CALLED.set(true);
+    PING_COUNT.incrementAndGet();
   }
 
   private static final AtomicBoolean HANDLER_CALLED = new AtomicBoolean();
+  private static final AtomicInteger PING_COUNT = new AtomicInteger();
+
+  private static final String SELF_PROBE =
+      HandlerRepositoryImplTest.class.getName().replace('.', '/');
+  private static final String PING = "HandlerRepositoryImplTest$ping";
 
   @AfterEach
   void cleanup() {
     HANDLER_CALLED.set(false);
+    PING_COUNT.set(0);
+    ProbeBudgets.resetForTesting();
+  }
+
+  private static MethodHandle resolvePing(String probeName) {
+    return HandlerRepositoryImpl.resolveHandler(probeName, PING, MethodType.methodType(void.class));
   }
 
   @Test
@@ -489,5 +507,163 @@ public class HandlerRepositoryImplTest {
     MethodHandle objectHandler =
         HandlerRepositoryImpl.failClosed(MethodType.methodType(Object.class));
     assertNull((Object) objectHandler.invokeExact());
+  }
+
+  @Test
+  void exemptProbeIsNotCounted() throws Throwable {
+    ProbeBudgets.setRateLimited(true);
+    BTraceProbe probe = stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class);
+    try {
+      HandlerRepositoryImpl.registerProbe(probe);
+      ProbeBudgets.markExempt(SELF_PROBE);
+      MethodHandle mh = resolvePing(SELF_PROBE);
+      for (int i = 0; i < 3; i++) {
+        mh.invokeExact();
+      }
+      assertEquals(0, ProbeBudgets.hits(SELF_PROBE), "an exempt probe's handler was counted");
+      assertEquals(3, PING_COUNT.get());
+    } finally {
+      HandlerRepositoryImpl.unregisterProbe(probe);
+    }
+  }
+
+  @Test
+  void rateLimitedHandlerCountsEachInvocation() throws Throwable {
+    ProbeBudgets.setRateLimited(true);
+    BTraceProbe probe = stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class);
+    try {
+      HandlerRepositoryImpl.registerProbe(probe);
+      MethodHandle mh = resolvePing(SELF_PROBE);
+      for (int i = 0; i < 3; i++) {
+        mh.invokeExact();
+      }
+      assertEquals(3, ProbeBudgets.counter(SELF_PROBE).sum());
+      assertEquals(3, PING_COUNT.get());
+    } finally {
+      HandlerRepositoryImpl.unregisterProbe(probe);
+    }
+  }
+
+  @Test
+  void noCountingStepWhenNotRateLimited() throws Throwable {
+    ProbeBudgets.setRateLimited(false);
+    BTraceProbe probe = stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class);
+    try {
+      HandlerRepositoryImpl.registerProbe(probe);
+      MethodHandle mh = resolvePing(SELF_PROBE);
+      for (int i = 0; i < 3; i++) {
+        mh.invokeExact();
+      }
+      assertEquals(0, ProbeBudgets.counter(SELF_PROBE).sum());
+      assertEquals(3, PING_COUNT.get());
+    } finally {
+      HandlerRepositoryImpl.unregisterProbe(probe);
+    }
+  }
+
+  @Test
+  void trippedProbeResolvesToNoop() throws Throwable {
+    BTraceProbe probe = stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class);
+    try {
+      HandlerRepositoryImpl.registerProbe(probe);
+      // resolve and cache before the mark
+      resolvePing(SELF_PROBE).invokeExact();
+      assertEquals(1, PING_COUNT.get());
+
+      ProbeBudgets.markTripped(SELF_PROBE);
+
+      MethodHandle again = resolvePing(SELF_PROBE);
+      assertNotNull(again);
+      again.invokeExact();
+      assertEquals(1, PING_COUNT.get(), "tripped probe must not run its handler");
+    } finally {
+      HandlerRepositoryImpl.unregisterProbe(probe);
+    }
+  }
+
+  @Test
+  void redeployAfterTripStartsClean() throws Throwable {
+    ProbeBudgets.setRateLimited(true);
+    BTraceProbe probe = stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class);
+    HandlerRepositoryImpl.registerProbe(probe);
+    ProbeBudgets.markTripped(SELF_PROBE);
+    ProbeBudgets.counter(SELF_PROBE).add(100);
+    HandlerRepositoryImpl.unregisterProbe(probe);
+
+    BTraceProbe redeployed = stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class);
+    try {
+      HandlerRepositoryImpl.registerProbe(redeployed);
+      assertFalse(ProbeBudgets.isTripped(SELF_PROBE));
+      assertEquals(0, ProbeBudgets.counter(SELF_PROBE).sum());
+      resolvePing(SELF_PROBE).invokeExact();
+      assertEquals(1, PING_COUNT.get());
+      assertEquals(1, ProbeBudgets.counter(SELF_PROBE).sum());
+    } finally {
+      HandlerRepositoryImpl.unregisterProbe(redeployed);
+    }
+  }
+
+  @Test
+  void registerClearsStaleBudgetState() throws Throwable {
+    // State left behind with no unregister to clear it, as when a trip races the probe's own exit.
+    ProbeBudgets.setRateLimited(true);
+    ProbeBudgets.markTripped(SELF_PROBE);
+    ProbeBudgets.counter(SELF_PROBE).add(100);
+
+    BTraceProbe probe = stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class);
+    try {
+      HandlerRepositoryImpl.registerProbe(probe);
+      assertFalse(ProbeBudgets.isTripped(SELF_PROBE));
+      assertEquals(0, ProbeBudgets.counter(SELF_PROBE).sum());
+      resolvePing(SELF_PROBE).invokeExact();
+      assertEquals(1, PING_COUNT.get(), "a fresh deploy must run its handler");
+    } finally {
+      HandlerRepositoryImpl.unregisterProbe(probe);
+    }
+  }
+
+  @Test
+  void twoProbesCountSeparately() throws Throwable {
+    ProbeBudgets.setRateLimited(true);
+    String otherName = "test/budgets/OtherProbe";
+    BTraceProbe probe = stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class);
+    BTraceProbe other = stubProbe(otherName, HandlerRepositoryImplTest.class);
+    try {
+      HandlerRepositoryImpl.registerProbe(probe);
+      HandlerRepositoryImpl.registerProbe(other);
+      MethodHandle mh = resolvePing(SELF_PROBE);
+      MethodHandle otherMh = resolvePing(otherName);
+      assertNotNull(otherMh);
+      for (int i = 0; i < 5; i++) {
+        mh.invokeExact();
+      }
+      assertEquals(5, ProbeBudgets.counter(SELF_PROBE).sum());
+      assertEquals(0, ProbeBudgets.counter(otherName).sum());
+    } finally {
+      HandlerRepositoryImpl.unregisterProbe(probe);
+      HandlerRepositoryImpl.unregisterProbe(other);
+    }
+  }
+
+  @Test
+  void levelRejectedCallIsNotCounted() throws Throwable {
+    ProbeBudgets.setRateLimited(true);
+    // No BTraceRuntime is registered for this probe, so its level is 0 and ">0" is not met.
+    OnMethod om = new OnMethod();
+    om.setTargetName("ping");
+    om.setLevel(Level.fromString(">0"));
+    BTraceProbe probe =
+        stubProbe(SELF_PROBE, HandlerRepositoryImplTest.class, Collections.singletonList(om));
+    try {
+      HandlerRepositoryImpl.registerProbe(probe);
+      MethodHandle mh = resolvePing(SELF_PROBE);
+      for (int i = 0; i < 3; i++) {
+        mh.invokeExact();
+      }
+      assertEquals(0, PING_COUNT.get(), "level guard must reject the call");
+      assertEquals(0, ProbeBudgets.counter(SELF_PROBE).sum());
+    } finally {
+      HandlerRepositoryImpl.unregisterProbe(probe);
+    }
   }
 }

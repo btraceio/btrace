@@ -48,28 +48,22 @@ public class SetSettingsCommand extends Command {
     out.writeInt(params.size());
     for (Map.Entry<String, ?> e : params.entrySet()) {
       out.writeUTF(e.getKey());
-      out.writeObject(e.getValue());
+      TypedEncoding.writeValue(out, e.getValue());
     }
   }
 
   @Override
   protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
     int size = in.readInt();
-    if (size < 0 || size > 10000) { // Reasonable limit to prevent memory exhaustion
+    if (size < 0 || size > TypedEncoding.MAX_PARAMS) {
       throw new IOException("Invalid params size: " + size);
     }
     for (int i = 0; i < size; i++) {
       String k = in.readUTF();
-      Object v = in.readObject();
-      // Validate that value is a reasonable settings type
-      if (v != null
-          && !(v instanceof String)
-          && !(v instanceof Number)
-          && !(v instanceof Boolean)) {
-        throw new IOException(
-            "Invalid settings value type: expected String/Number/Boolean, got "
-                + v.getClass().getName());
+      if (k.length() > TypedEncoding.MAX_KEY_LEN) {
+        throw new IOException("Settings key too long: " + k.length());
       }
+      Object v = TypedEncoding.readValue(in);
       params.put(k, v);
     }
   }

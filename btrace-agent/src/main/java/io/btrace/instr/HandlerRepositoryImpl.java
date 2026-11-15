@@ -27,6 +27,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.LongAdder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,6 +69,10 @@ public final class HandlerRepositoryImpl {
    */
   public static void registerProbe(BTraceProbe probe) {
     String probeName = probe.getClassName(true);
+    // A fresh deploy starts not tripped with a zero counter, however the previous probe of this
+    // name ended: a budget trip racing that probe's exit can leave state unregister already
+    // cleared.
+    ProbeBudgets.forget(probeName);
     probeMap.put(probeName, probe);
   }
 
@@ -89,6 +94,8 @@ public final class HandlerRepositoryImpl {
     IndyDispatcher.invalidateProbe(probeName);
     // Release the probe's @Injected service instances so a redeploy starts with fresh ones.
     ExtensionIndy.invalidateProbe(probeName);
+    // Drop the probe's hit counter and tripped mark so a redeploy starts clean.
+    ProbeBudgets.forget(probeName);
   }
 
   /**
@@ -149,6 +156,25 @@ public final class HandlerRepositoryImpl {
           "Failed to create level guard for handler {}; the handler is disabled",
           simpleHandlerName,
           e);
+      return failClosed(handlerType);
+    }
+  }
+
+  /**
+   * Compose an increment of the probe's hit counter in front of {@code handler}. Fails closed: if
+   * the counting step cannot be built the handler is disabled rather than run uncounted.
+   */
+  private static MethodHandle applyHitCounter(
+      MethodHandle handler, String probeName, String handlerName, MethodType handlerType) {
+    try {
+      MethodHandle increment =
+          MethodHandles.lookup()
+              .findVirtual(LongAdder.class, "increment", MethodType.methodType(void.class))
+              .bindTo(ProbeBudgets.counter(probeName));
+      return MethodHandles.foldArguments(handler, increment);
+    } catch (Throwable e) {
+      log.error(
+          "Failed to create hit counter for handler {}; the handler is disabled", handlerName, e);
       return failClosed(handlerType);
     }
   }
@@ -267,6 +293,13 @@ public final class HandlerRepositoryImpl {
       return null;
     }
 
+    // A tripped probe must not run: checked before the cache so a handle cached before the trip
+    // is not returned. The no-op is deliberately not cached.
+    if (ProbeBudgets.isTripped(probeName)) {
+      log.debug("[INDY] probe {} is tripped, resolving {} to a no-op", probeName, handlerName);
+      return failClosed(handlerType);
+    }
+
     MethodHandle cached = probe.getCachedHandler(handlerName, handlerType);
     if (cached != null) {
       log.debug("[INDY] cached handler {} for {}", cached, handlerName);
@@ -318,6 +351,12 @@ public final class HandlerRepositoryImpl {
           // publicLookup so it gets logged with proper context in the outer catch.
           throw publicLookupFailed;
         }
+      }
+
+      // Count hits when a rate ceiling is set, except for a probe the governor skips. Composed
+      // inside the level guard so a call the level rejects is not counted.
+      if (ProbeBudgets.isRateLimited() && !ProbeBudgets.isExempt(probeName)) {
+        mh = applyHitCounter(mh, probeName, handlerName, handlerType);
       }
 
       // Apply level guard if this handler has a level check

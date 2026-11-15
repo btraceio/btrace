@@ -22,8 +22,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.btrace.core.ArgsMap;
+import io.btrace.core.SharedSettings;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -187,6 +189,106 @@ class MainTest {
       releaseInit.countDown();
       init.join(TimeUnit.SECONDS.toMillis(10));
       shutdown.join(TimeUnit.SECONDS.toMillis(10));
+    }
+  }
+
+  @Test
+  void dollarBudgetPropertyArgumentIsRejected() {
+    String name = "io.btrace.probeMaxRate";
+    String before = System.getProperty(name);
+    List<String> reported = new ArrayList<>();
+    try {
+      System.clearProperty(name);
+      Main.applyDollarProperty("$" + name, "999999", reported::add);
+      assertNull(System.getProperty(name));
+      assertEquals(1, reported.size());
+      assertTrue(reported.get(0).contains("$" + name), reported.get(0));
+
+      reported.clear();
+      Main.applyDollarProperty("$io.btrace.probeTtl", "1", reported::add);
+      assertNull(System.getProperty("io.btrace.probeTtl"));
+      assertEquals(1, reported.size());
+    } finally {
+      if (before == null) {
+        System.clearProperty(name);
+      } else {
+        System.setProperty(name, before);
+      }
+    }
+  }
+
+  @Test
+  void otherDollarArgumentsStillSetProperties() {
+    String name = "some.other.btrace.test.property";
+    List<String> reported = new ArrayList<>();
+    try {
+      Main.applyDollarProperty("$" + name, "1", reported::add);
+      assertEquals("1", System.getProperty(name));
+      assertTrue(reported.isEmpty());
+    } finally {
+      System.clearProperty(name);
+    }
+  }
+
+  @Test
+  void startupProbesAreExemptFromBudgetsOnlyWhenLoadedAtLaunch() {
+    assertTrue(Main.startupProbesExempt("premain"), "a launch-time startup probe must be exempt");
+    assertFalse(
+        Main.startupProbesExempt("agentmain"), "an attach-time startup probe must be budgeted");
+    assertFalse(
+        Main.startupProbesExempt("unknown"), "an unknown load mode must not exempt a probe");
+  }
+
+  @Test
+  void bundledProbeRejectedOnlyBecauseTrustWasRefusedIsSkipped() {
+    assertTrue(
+        Main.skipsUnverifiedBundledProbe(Main.ScriptLoad.UNVERIFIED, true, true),
+        "a bundled probe that failed verification after trusted=true was ignored must be skipped");
+  }
+
+  @Test
+  void otherBundledProbeFailuresStayFatal() {
+    // No budget refusing trust (no budget, or trusted=true granted at launch).
+    assertFalse(Main.skipsUnverifiedBundledProbe(Main.ScriptLoad.UNVERIFIED, false, true));
+    // Trust refused, but nobody asked for it: the probe is simply invalid.
+    assertFalse(Main.skipsUnverifiedBundledProbe(Main.ScriptLoad.UNVERIFIED, true, false));
+    // Missing or broken for another reason.
+    assertFalse(Main.skipsUnverifiedBundledProbe(Main.ScriptLoad.FAILED, true, true));
+    assertFalse(Main.skipsUnverifiedBundledProbe(Main.ScriptLoad.LOADED, true, true));
+  }
+
+  @Test
+  void invalidOperatorBudgetStopsAttachTimeProbesOnly() {
+    assertFalse(
+        Main.loadsStartupProbes(false, "agentmain"),
+        "an attacher's probes loaded with an invalid operator budget");
+    assertFalse(
+        Main.loadsStartupProbes(false, "unknown"),
+        "an unknown load mode must not load probes with an invalid operator budget");
+    assertTrue(
+        Main.loadsStartupProbes(false, "premain"),
+        "the operator's own startup scripts must still run with an invalid value");
+    assertTrue(Main.loadsStartupProbes(true, "agentmain"), "a valid budget must not stop probes");
+    assertTrue(Main.loadsStartupProbes(true, "premain"), "a valid budget must not stop probes");
+  }
+
+  @Test
+  void refusedTrustIsClearedAtTheSourceSoNoClientInheritsIt() {
+    SharedSettings agentSettings = new SharedSettings();
+    agentSettings.setTrusted(true);
+    assertTrue(
+        Main.newClientSettings(agentSettings).isTrusted(),
+        "without a budget a client must inherit trusted mode as before");
+    try {
+      assertTrue(Main.refuseTrustedMode(agentSettings), "the trusted request was not reported");
+      assertTrue(Client.isTrustedModeRefused());
+      assertFalse(agentSettings.isTrusted(), "the agent-wide settings still say trusted");
+      assertFalse(
+          Main.newClientSettings(agentSettings).isTrusted(),
+          "a client inherited trusted mode from attach arguments under a budget");
+      assertFalse(Main.refuseTrustedMode(new SharedSettings()), "no trusted request to report");
+    } finally {
+      Client.refuseTrustedMode(false);
     }
   }
 }
