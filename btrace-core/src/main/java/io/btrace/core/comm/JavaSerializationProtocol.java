@@ -66,7 +66,7 @@ public class JavaSerializationProtocol implements WireProtocol {
       tempOos = new ObjectOutputStream(outputStream);
       tempOos.flush(); // Write stream header immediately
       this.oos = tempOos;
-      this.ois = new ObjectInputStream(inputStream);
+      this.ois = new ValidatingObjectInputStream(inputStream);
     } catch (IOException e) {
       if (tempOos != null) {
         try {
