@@ -188,7 +188,56 @@ calls/s; a busy machine will not match the baseline exactly).
 > `invokedynamic` call sites that become no-ops once the client is gone, so even a window in which
 > the old bytecode is still running leaves no lingering overhead.
 
-## Step 6 - Clean up
+## Step 6 - Let the agent enforce a budget
+
+So far you removed the probe yourself. The operator of the JVM can also set a limit that the agent
+enforces on its own. Stop the app in terminal 1 and restart it with a rate ceiling of 10,000 probe
+hits per second:
+
+```sh
+java -javaagent:$BTRACE_HOME/libs/btrace.jar=port=0,probeMaxRate=10000 HotLoopApp.java
+```
+
+Attach the same probe from terminal 2 and check the exit code:
+
+```sh
+btrace '~HotLoopApp' HotPathProbe.java; echo "exit code: $?"
+```
+
+**You should see** (the `hits/s` figure is what the agent measured, so yours will differ):
+
+```
+[main] INFO io.btrace.client.Main - Attaching BTrace to PID: 70839
+[main] INFO io.btrace.client.Client - Successfully started BTrace probe: HotPathProbe.java
+BTrace: probe HotPathProbe removed: 23478274 hits/s exceeded probeMaxRate=10000
+[BTRACE] terminal cleanup: runtime=cleaned,mbean=absent
+exit code: 5
+```
+
+The client returned on its own, about four seconds after it started. Terminal 1 shows the
+app's throughput (these figures come from a separate run on another machine than the numbers in
+the earlier steps, with a baseline near 360 M calls/s):
+
+```
+[demo] 352.6 M calls/s
+[demo] 107.5 M calls/s
+[BTrace Budget Exit] WARN io.btrace.agent.Client - BTrace: probe HotPathProbe removed: 23478274 hits/s exceeded probeMaxRate=10000
+[demo] 263.1 M calls/s
+[demo] 352.1 M calls/s
+[demo] 352.0 M calls/s
+```
+
+> **What just happened?** The agent counts executions of the handlers a probe attaches to application code. Once a second it compared
+> the count with `probeMaxRate`, saw far more hits than allowed, switched the probe's handlers off,
+> removed its instrumentation, sent the client the one line above, and logged the same line in the
+> target JVM, which is the only record when the probe is detached. The dip in the
+> two throughput windows around the removal is the time between attach and the governor's first
+> check. `probeTtl=<seconds>` works the same way for a
+> probe's lifetime. Exit code `5` tells scripts that this was a budget removal, not a clean exit.
+> The limits are set by whoever launches the JVM; a client cannot raise them. See
+> [Probe budgets](../GettingStarted.md#probe-budgets).
+
+## Step 7 - Clean up
 
 Stop the app in terminal 1 with `Ctrl+C` (or `kill <PID>`). Generated token files are removed during
 orderly shutdown of the JVM, and the plain JVM from Step 3 was already stopped. There is nothing

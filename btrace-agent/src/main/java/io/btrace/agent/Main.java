@@ -65,6 +65,7 @@ import io.btrace.extension.impl.ExtensionBridgeImpl;
 import io.btrace.instr.BTraceProbeFactory;
 import io.btrace.instr.BTraceTransformer;
 import io.btrace.instr.Constants;
+import io.btrace.instr.ProbeBudgets;
 import io.btrace.runtime.BTraceBootstrap;
 import io.btrace.runtime.BTraceRuntimes;
 import java.io.ByteArrayOutputStream;
@@ -97,6 +98,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
+import java.util.function.Consumer;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
@@ -296,6 +298,8 @@ public final class Main {
     // Running BTrace on Java < 17 is deprecated as of 3.0; warn exactly once per target JVM
     io.btrace.core.JavaVersionCheck.warnIfDeprecatedJvm();
 
+    // Read the operator's budget properties before any agent argument can write system properties.
+    BudgetLimits.Snapshot budgetSnapshot = BudgetLimits.snapshot(System.getProperties());
     try {
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Loading arguments");
       loadArgs(args);
@@ -317,8 +321,44 @@ public final class Main {
       // settings are all built-up; set the logging system properties accordingly
       DebugSupport.initLoggers(settings.isDebug(), log);
 
+      // Budget enforcement must be on before the command server accepts clients and before
+      // startup scripts load, so that no handler is resolved uncounted.
+      boolean budgetValid = true;
+      try {
+        BudgetLimits limits =
+            BudgetLimits.resolve(
+                budgetSnapshot, argMap, "premain".equals(agentMode), BUDGET_REPORTER);
+        if (limits.any()) {
+          ProbeBudgets.setRateLimited(limits.maxRatePerSecond() > 0);
+          BudgetGovernor.start(limits);
+        }
+        boolean premain = "premain".equals(agentMode);
+        if (BudgetLimits.refusesClientTrust(limits, premain, settings.isTrusted())) {
+          if (refuseTrustedMode(settings)) {
+            BUDGET_REPORTER.accept(
+                "ignoring agent argument trusted=true, every probe is verified: "
+                    + BudgetLimits.TRUSTED_REFUSED);
+          }
+        }
+      } catch (InvalidAgentOptionException e) {
+        // Handled like a misconfigured command server: name the option on one line and run
+        // without a command socket. The operator's startup scripts still run at launch; under
+        // dynamic attach nothing is loaded and nothing may run unverified.
+        budgetValid = false;
+        String message = e.getMessage() + "; the command server was not started";
+        if (!loadsStartupProbes(false, agentMode)) {
+          refuseTrustedMode(settings);
+          message += "; attach-time probes were not loaded";
+        }
+        System.err.println("[BTrace Agent] " + message);
+        log.error(message);
+      }
+      boolean loadProbes = loadsStartupProbes(budgetValid, agentMode);
+
       Thread agentThread = null;
-      if (!shouldStartServer(argMap)) {
+      if (!budgetValid) {
+        log.debug("invalid probe budget, server not started");
+      } else if (!shouldStartServer(argMap)) {
         log.debug("noServer is true, server not started");
       } else {
         System.setProperty("btrace.wireio", String.valueOf(WireIO.VERSION));
@@ -405,7 +445,7 @@ public final class Main {
         log.debug("Failed to instrument MethodHandleNatives", t);
       }
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Starting scripts");
-      int startedScripts = startScripts();
+      int startedScripts = loadProbes ? startScripts() : 0;
       // Thread.class retransform fires after startScripts() but before initExtensions()
       // deliberately: retransformation only rewrites bytecode; extension service calls
       // happen at invocation time (Thread.start events). No race with extension init.
@@ -425,7 +465,7 @@ public final class Main {
 
       // initialize extension system after transformer is installed so early app code is not delayed
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing extensions");
-      initExtensions();
+      initExtensions(loadProbes);
       if (agentThread != null) {
         BTraceRuntime.enter();
         try {
@@ -594,7 +634,7 @@ public final class Main {
    * Initialize the extension system by discovering and loading extensions from configured extension
    * directories or embedded resources.
    */
-  private static void initExtensions() {
+  private static void initExtensions(boolean loadProbes) {
     try {
       log.info("Initializing BTrace extension system");
 
@@ -618,7 +658,9 @@ public final class Main {
       ExtensionBridgeImpl.initialize(extensionLoader);
 
       // Load standalone bundled probes or probes selected by embedded extension configurators.
-      loadBundledProbes();
+      if (loadProbes) {
+        loadBundledProbes();
+      }
 
     } catch (BundledProbeException e) {
       throw e;
@@ -713,9 +755,14 @@ public final class Main {
   static void loadStandaloneProbes(List<String> probeNames, boolean traceToStdOut) {
     for (String probeName : probeNames) {
       String resourcePath = bundledProbeResourcePath(probeName);
-      if (!loadEmbeddedProbe(resourcePath, probeName, traceToStdOut)) {
-        throw new BundledProbeException(
-            "Bundled probe '" + probeName + "' was not found or could not be loaded");
+      ScriptLoad result = loadEmbeddedProbe(resourcePath, probeName, traceToStdOut);
+      if (result != ScriptLoad.LOADED) {
+        bundledProbeNotLoaded(
+            probeName,
+            result,
+            new BundledProbeException(
+                "Bundled probe '" + probeName + "' was not found or could not be loaded"));
+        continue;
       }
       log.info("Loaded bundled probe: {}", probeName);
     }
@@ -727,13 +774,18 @@ public final class Main {
     for (String probeName : probeNames) {
       String resolvedProbeName = resolveExtensionProbeName(ext, probeName);
       String path = bundledProbeResourcePath(resolvedProbeName);
-      if (!loadEmbeddedProbe(path, resolvedProbeName, traceToStdOut)) {
-        throw new BundledProbeException(
-            "Bundled probe '"
-                + probeName
-                + "' from extension '"
-                + ext.getId()
-                + "' was not found or could not be loaded");
+      ScriptLoad result = loadEmbeddedProbe(path, resolvedProbeName, traceToStdOut);
+      if (result != ScriptLoad.LOADED) {
+        bundledProbeNotLoaded(
+            resolvedProbeName,
+            result,
+            new BundledProbeException(
+                "Bundled probe '"
+                    + probeName
+                    + "' from extension '"
+                    + ext.getId()
+                    + "' was not found or could not be loaded"));
+        continue;
       }
       log.info("Loaded bundled probe: {} from extension {}", probeName, ext.getId());
     }
@@ -779,7 +831,7 @@ public final class Main {
   }
 
   /** Load an embedded probe from classpath resources. */
-  private static boolean loadEmbeddedProbe(
+  private static ScriptLoad loadEmbeddedProbe(
       String resourcePath, String probeName, boolean traceToStdOut) {
     ClassLoader loader = Main.class.getClassLoader();
     try (InputStream is =
@@ -788,7 +840,7 @@ public final class Main {
             : ClassLoader.getSystemResourceAsStream(resourcePath)) {
       if (is == null) {
         log.debug("Probe resource not found: {}", resourcePath);
-        return false;
+        return ScriptLoad.FAILED;
       }
       byte[] probeBytes = readAllBytes(is);
       File tmp = File.createTempFile("btrace-probe-", ".class");
@@ -804,7 +856,7 @@ public final class Main {
       }
     } catch (IOException e) {
       log.warn("Failed to load embedded probe {}: {}", probeName, e.getMessage());
-      return false;
+      return ScriptLoad.FAILED;
     }
   }
 
@@ -892,7 +944,7 @@ public final class Main {
 
     List<String> scripts = locateScripts(argMap);
     for (String script : scripts) {
-      if (loadBTraceScript(script, traceToStdOut)) {
+      if (loadBTraceScript(script, traceToStdOut) == ScriptLoad.LOADED) {
         scriptCount++;
       }
     }
@@ -1199,9 +1251,7 @@ public final class Main {
         default:
           {
             if (key.startsWith("$")) {
-              String pKey = key.substring(1);
-              System.setProperty(pKey, p);
-              log.debug("Setting system property: {}={}", pKey, p);
+              applyDollarProperty(key, p, BUDGET_REPORTER);
             }
           }
       }
@@ -1234,6 +1284,37 @@ public final class Main {
         + ": it has no effect. Trusted mode is enabled only by the trusted=true agent argument"
         + " (-javaagent:btrace.jar=trusted=true,... or the client's -u flag).";
   }
+
+  /**
+   * Applies a {@code $key=value} agent argument as a system property. The probe budget properties
+   * are the operator's ceiling and cannot be written this way: the argument is skipped and
+   * reported.
+   */
+  static void applyDollarProperty(String key, String value, Consumer<String> report) {
+    String pKey = key.substring(1);
+    if (BudgetLimits.TTL_PROPERTY.equals(pKey) || BudgetLimits.MAX_RATE_PROPERTY.equals(pKey)) {
+      report.accept(
+          "ignoring agent argument "
+              + key
+              + ": probe budget properties can only be set by the operator"
+              + " with -D"
+              + pKey);
+      return;
+    }
+    System.setProperty(pKey, value);
+    log.debug("Setting system property: {}={}", pKey, value);
+  }
+
+  // An anonymous class, not a method reference: this runs on the premain path, which must not
+  // reach any invokedynamic call site (see BootstrapPathIndyFreedomTest).
+  private static final Consumer<String> BUDGET_REPORTER =
+      new Consumer<String>() {
+        @Override
+        public void accept(String line) {
+          System.err.println("[BTrace Agent] " + line);
+          log.warn(line);
+        }
+      };
 
   private static void processClasspaths() throws ClassNotFoundException {
     // Experimental: prefer manifest-driven libs when enabled
@@ -1459,8 +1540,8 @@ public final class Main {
     }
   }
 
-  private static boolean loadBTraceScript(String filePath, boolean traceToStdOut) {
-    if (!BTraceProbeFactory.canLoad(filePath)) return false;
+  private static ScriptLoad loadBTraceScript(String filePath, boolean traceToStdOut) {
+    if (!BTraceProbeFactory.canLoad(filePath)) return ScriptLoad.FAILED;
 
     try {
       String scriptName = "";
@@ -1477,7 +1558,7 @@ public final class Main {
         if (log.isDebugEnabled()) {
           log.debug("refusing {} - script should be a pre-compiled class file", filePath);
         }
-        return false;
+        return ScriptLoad.FAILED;
       }
 
       SharedSettings clientSettings = newClientSettings(settings);
@@ -1495,10 +1576,13 @@ public final class Main {
         }
       }
       ClientContext ctx = new ClientContext(inst, transformer, argMap, clientSettings);
-      Client client = new FileClient(ctx, traceScript);
+      Client client = new FileClient(ctx, traceScript, startupProbesExempt(agentMode));
       if (client.isInitialized()) {
         handleNewClient(client).get();
-        return true;
+        return ScriptLoad.LOADED;
+      }
+      if (client.failedVerification()) {
+        return ScriptLoad.UNVERIFIED;
       }
     } catch (NullPointerException e) {
       if (log.isDebugEnabled()) {
@@ -1509,7 +1593,63 @@ public final class Main {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
-    return false;
+    return ScriptLoad.FAILED;
+  }
+
+  /**
+   * Whether probes the agent loads itself ({@code script=}, {@code scriptdir=}, bundled probes) are
+   * exempt from probe budgets: only when the agent was loaded at JVM launch, where the operator
+   * wrote those arguments. Under dynamic attach, or when the load mode is unknown, they are not.
+   */
+  static boolean startupProbesExempt(String mode) {
+    return "premain".equals(mode);
+  }
+
+  /** How loading one probe the agent starts itself ended. */
+  enum ScriptLoad {
+    LOADED,
+    /** The probe was read but did not pass verification. */
+    UNVERIFIED,
+    /** Missing, unreadable, or failed for any reason other than verification. */
+    FAILED
+  }
+
+  /**
+   * Whether a bundled probe that did not load is skipped instead of failing agent startup: only
+   * when it failed verification while trusted mode was asked for in the agent arguments and refused
+   * because of a probe budget. In trusted mode it would not have been verified at all. Every other
+   * failure stays fatal.
+   */
+  static boolean skipsUnverifiedBundledProbe(
+      ScriptLoad result, boolean trustRefused, boolean trustRequested) {
+    return result == ScriptLoad.UNVERIFIED && trustRefused && trustRequested;
+  }
+
+  /**
+   * Handles a bundled probe that did not load: skipped with one line when {@link
+   * #skipsUnverifiedBundledProbe} allows it, otherwise {@code failure} is thrown.
+   */
+  private static void bundledProbeNotLoaded(
+      String probeName, ScriptLoad result, BundledProbeException failure) {
+    if (!skipsUnverifiedBundledProbe(
+        result, Client.isTrustedModeRefused(), trustRequestedAndRefused)) {
+      throw failure;
+    }
+    BUDGET_REPORTER.accept(
+        "bundled probe '"
+            + probeName
+            + "' did not pass verification and was not loaded: "
+            + BudgetLimits.TRUSTED_REFUSED);
+  }
+
+  /**
+   * Whether the agent loads the probes it starts itself ({@code script=}, {@code scriptdir=},
+   * bundled probes). Not when the operator's budget property is invalid and the agent was not
+   * loaded at JVM launch: the attacher's probes would otherwise run with no limit at all. At launch
+   * those probes are the operator's own and still run.
+   */
+  static boolean loadsStartupProbes(boolean budgetValid, String mode) {
+    return budgetValid || "premain".equals(mode);
   }
 
   // -- Internals only below this point
@@ -1631,6 +1771,28 @@ public final class Main {
    */
   static ClientContext newRemoteClientContext() {
     return new ClientContext(inst, transformer, argMap, newClientSettings(settings));
+  }
+
+  // Whether trusted=true in the agent arguments was refused because of a probe budget.
+  private static volatile boolean trustRequestedAndRefused;
+
+  /**
+   * Refuses trusted mode for the life of the agent, decided once at the source. A trusted flag in
+   * {@code agentSettings} can then only have come from attach-time agent arguments, which the
+   * operator did not write: it is cleared there, so no client settings seeded from them inherit it.
+   * A remote client that asks for trusted mode itself is refused with a reason (see {@link
+   * Client#loadClass}).
+   *
+   * @return whether {@code agentSettings} had asked for trusted mode
+   */
+  static boolean refuseTrustedMode(SharedSettings agentSettings) {
+    Client.refuseTrustedMode(true);
+    boolean requested = agentSettings.isTrusted();
+    if (requested) {
+      trustRequestedAndRefused = true;
+      agentSettings.setTrusted(false);
+    }
+    return requested;
   }
 
   private static Future<?> handleNewClient(Client client) {

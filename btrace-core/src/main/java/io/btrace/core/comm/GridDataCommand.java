@@ -233,7 +233,7 @@ public class GridDataCommand extends DataCommand {
       for (Object[] row : data) {
         out.writeInt(row.length);
         for (Object cell : row) {
-          out.writeObject(cell);
+          TypedEncoding.writeCell(out, cell);
         }
       }
     } else {
@@ -255,12 +255,16 @@ public class GridDataCommand extends DataCommand {
     }
 
     int rowCount = in.readInt();
+    if (rowCount < 0 || rowCount > TypedEncoding.MAX_ROWS)
+      throw new IOException("Invalid row count: " + rowCount);
     data = new ArrayList<>(rowCount);
     for (int i = 0; i < rowCount; i++) {
       int cellCount = in.readInt();
+      if (cellCount < 0 || cellCount > TypedEncoding.MAX_CELLS)
+        throw new IOException("Invalid cell count: " + cellCount);
       Object[] row = new Object[cellCount];
       for (int j = 0; j < cellCount; j++) {
-        row[j] = in.readObject();
+        row[j] = TypedEncoding.readCell(in);
       }
       data.add(row);
     }

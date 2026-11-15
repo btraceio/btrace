@@ -66,7 +66,7 @@ public class NumberMapDataCommand extends DataCommand {
       out.writeInt(data.size());
       for (String key : data.keySet()) {
         out.writeUTF(key);
-        out.writeObject(data.get(key));
+        TypedEncoding.writeNumber(out, data.get(key));
       }
     } else {
       out.writeInt(0);
@@ -78,8 +78,9 @@ public class NumberMapDataCommand extends DataCommand {
     name = in.readUTF();
     Map<String, Number> map = new HashMap<>();
     int sz = in.readInt();
+    if (sz < 0 || sz > TypedEncoding.MAX_MAP_SIZE) throw new IOException("Invalid map size: " + sz);
     for (int i = 0; i < sz; i++) {
-      map.put(in.readUTF(), (Number) in.readObject());
+      map.put(in.readUTF(), TypedEncoding.readNumber(in));
     }
     data = map;
   }
