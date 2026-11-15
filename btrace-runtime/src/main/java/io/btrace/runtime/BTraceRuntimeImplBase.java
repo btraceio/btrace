@@ -284,7 +284,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
 
   // map of client event handling methods
   private volatile Map<String, Method> eventHandlerMap;
-  private Map<String, LowMemoryHandler> lowMemoryHandlerMap;
+  private volatile LowMemoryHandlers lowMemory;
 
   // timer to run profile provider actions
   private volatile Timer timer;
@@ -634,20 +634,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     }
 
     if (lowMemoryHandlers != null) {
-      lowMemoryHandlerMap = new HashMap<>();
-      for (LowMemoryHandler lmh : lowMemoryHandlers) {
-        String poolName = args.template(lmh.pool);
-        lowMemoryHandlerMap.put(poolName, lmh);
-      }
-      for (MemoryPoolMXBean mpoolBean : getMemoryPoolMXBeans()) {
-        String name = mpoolBean.getName();
-        LowMemoryHandler lmh = lowMemoryHandlerMap.get(name);
-        if (lmh != null) {
-          if (mpoolBean.isUsageThresholdSupported()) {
-            mpoolBean.setUsageThreshold(lmh.threshold);
-          }
-        }
-      }
+      lowMemory = new LowMemoryHandlers(lowMemoryHandlers, args::template);
+      lowMemory.arm(getMemoryPoolMXBeans());
       NotificationEmitter emitter = (NotificationEmitter) memoryMBean;
       emitter.addNotificationListener(memoryListener, null, null);
     }
@@ -1206,7 +1194,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
               CompositeData cd = (CompositeData) notif.getUserData();
               MemoryNotificationInfo info = MemoryNotificationInfo.from(cd);
               String name = info.getPoolName();
-              LowMemoryHandler handler = lowMemoryHandlerMap.get(name);
+              LowMemoryHandler handler = lowMemory.handlerFor(name);
               if (handler != null) {
                 threadPool.submit(
                     new Runnable() {
