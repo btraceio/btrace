@@ -79,7 +79,7 @@ class MainTest {
 
   @Test
   void trustedSystemPropertyWithoutAgentArgumentIsReported() {
-    String warning = Main.ineffectiveTrustedPropertyWarning("true", false);
+    String warning = Main.ineffectiveTrustedPropertyWarning("true", false, false);
 
     assertTrue(warning.contains("btrace.trusted=true"), warning);
     assertTrue(warning.contains("has no effect"), warning);
@@ -88,8 +88,8 @@ class MainTest {
 
   @Test
   void trustedSystemPropertyIsNotReportedWhenUnsetOrTrustedAnyway() {
-    assertNull(Main.ineffectiveTrustedPropertyWarning(null, false));
-    assertNull(Main.ineffectiveTrustedPropertyWarning("true", true));
+    assertNull(Main.ineffectiveTrustedPropertyWarning(null, false, false));
+    assertNull(Main.ineffectiveTrustedPropertyWarning("true", true, false));
   }
 
   @Test
@@ -328,6 +328,6 @@ class MainTest {
     String budgeted = Main.ineffectiveTrustedPropertyWarning("true", false, true);
     assertTrue(budgeted.contains("at JVM launch"), budgeted);
     assertTrue(budgeted.contains("the client's -u flag is refused"), budgeted);
-    assertEquals(plain, Main.ineffectiveTrustedPropertyWarning("true", false));
+    assertNull(Main.ineffectiveTrustedPropertyWarning("true", true, true));
   }
 }

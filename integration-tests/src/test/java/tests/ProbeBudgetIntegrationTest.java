@@ -459,6 +459,34 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
 
   @Test
   @Timeout(value = 90, unit = TimeUnit.SECONDS)
+  void secondAgentLoadKeepsLaunchTimeTrustedGrant() throws Exception {
+    // The operator grants trusted mode at launch, next to a budget. A second agent load by
+    // dynamic attach must not take that grant away.
+    TestApp app =
+        launchTarget("probeMaxRate=100000000,trusted=true", "-XX:+EnableDynamicAgentLoading");
+    CliRun trusted = null;
+    try {
+      int pid = app.getPid();
+      loadAgentByAttach(pid, "telemetry=false,port=" + freePort());
+
+      trusted = deploy(pid, QUIET_PROBE, false, "-u");
+      assertNotNull(
+          trusted.awaitLine(Pattern.compile("^budget-quiet-hit$"), REMOVAL_DEADLINE_MS),
+          "trusted deploy produced no output:\n" + trusted.output() + app(app));
+      assertFalse(
+          trusted.output().contains("trusted mode is not available"),
+          "the operator's trusted grant was revoked:\n" + trusted.output());
+      assertFalse(
+          app.capturedOutput().contains(TRUSTED_ARGUMENT_IGNORED),
+          "agent reported a trusted argument nobody passed:" + app(app));
+    } finally {
+      destroy(trusted);
+      app.stop();
+    }
+  }
+
+  @Test
+  @Timeout(value = 90, unit = TimeUnit.SECONDS)
   void attachTimeBudgetArgumentIsIgnored() throws Exception {
     // No operator budget. The attacher loads the agent with probeMaxRate=100: it is not the
     // operator, so the argument sets no budget and the hot probe keeps running.

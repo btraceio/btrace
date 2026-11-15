@@ -131,7 +131,9 @@ public final class IndyDispatcher {
       if (current != null) {
         mcs.setTarget(current);
       } else if (mh != null) {
-        mcs.setTarget(noop(type));
+        // Null means unregistered or a failed resolution. The trampoline covers both: it runs
+        // nothing while resolution fails and links the handler if a later one succeeds.
+        mcs.setTarget(makeTrampoline(mcs, probeClassName, name, type));
       }
     }
     return mcs;

@@ -736,16 +736,16 @@ abstract class Client implements CommandListener {
   // registering a real one.
   final synchronized void setProbeForTest(BTraceProbe probe, long deployedAtNanos) {
     this.probe = probe;
+    if (budgetExempt()) {
+      // What loadClass does before it registers a real probe.
+      ProbeBudgets.markExempt(probe.getClassName(true));
+    }
     markDeployed(deployedAtNanos);
   }
 
   private void markDeployed(long nanos) {
     deployedAtNanos = nanos;
-    String name = probe.getClassName(true);
-    if (budgetExempt()) {
-      ProbeBudgets.markExempt(name);
-    }
-    probeInternalName = name;
+    probeInternalName = probe.getClassName(true);
   }
 
   final String getClassName() {

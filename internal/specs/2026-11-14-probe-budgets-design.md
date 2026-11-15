@@ -123,9 +123,10 @@ client's `-u` flag when a budget is requested, because it is refused then.
 Reconnect (added 2026-11-15): a client cannot reconnect to a detached probe once its budget has
 tripped; it gets a refused reconnect instead of a connection that drops when the probe is removed.
 
-Known limit: `SharedSettings.GLOBAL` is shared by all agent instances in a JVM. If the operator
-launched with `trusted=true` and a budget, a second agent load by an attacher clears that shared
-flag, and later deploys through the first agent are verified. This fails toward less trust.
+Shared trusted flag: `SharedSettings.GLOBAL` is shared by all agent instances in a JVM. Under
+dynamic attach with a budget property the attach-time `trusted=true` is never applied, so a
+trusted flag a later instance finds there is the operator's launch-time grant. It is honoured and
+not cleared; a second agent load does not revoke it.
 
 Protecting the ceiling — *my call*: `Main.parseArgs` turns any `$key=value` agent argument into
 `System.setProperty` (`Main.java:1213-1215`), so an attaching client could overwrite the operator's

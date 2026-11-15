@@ -342,7 +342,11 @@ public final class Main {
             BudgetLimits.publish(limits, System.getProperties());
           }
         }
-        if (BudgetLimits.refusesClientTrust(limits, premain, settings.isTrusted())) {
+        // Under dynamic attach with a budget property the attach-time trusted argument is never
+        // applied, so a trusted flag seen here is the operator's own launch-time grant, held in
+        // the settings all agent instances of this JVM share. It is honoured, not cleared.
+        boolean operatorGrant = premain || attachTrustBarred;
+        if (BudgetLimits.refusesClientTrust(limits, operatorGrant, settings.isTrusted())) {
           // Not short-circuited: the refusal is recorded whether or not the flag was still set.
           if (refuseTrustedMode(settings) | trustRequestedAndRefused) {
             BUDGET_REPORTER.accept(
@@ -360,7 +364,9 @@ public final class Main {
         }
         String message = e.getMessage() + "; the command server was not started";
         if (!loadsStartupProbes(false, agentMode)) {
-          refuseTrustedMode(settings);
+          // Not refuseTrustedMode(settings): that would clear a launch-time grant in the settings
+          // shared with an agent instance loaded earlier.
+          Client.refuseTrustedMode(true);
           message += "; attach-time probes were not loaded";
         }
         System.err.println("[BTrace Agent] " + message);
@@ -1296,15 +1302,9 @@ public final class Main {
    * the argument that works instead of leaving a security-relevant setting silently ignored. Agent
    * initialization runs once per target JVM, so this is reported at most once.
    *
-   * @return the warning, or {@code null} when the property is unset or trusted mode is on anyway
-   */
-  static String ineffectiveTrustedPropertyWarning(String propertyValue, boolean trusted) {
-    return ineffectiveTrustedPropertyWarning(propertyValue, trusted, false);
-  }
-
-  /**
    * @param budget whether a probe budget is requested for this JVM; the client's {@code -u} flag is
    *     then refused, so the warning does not recommend it
+   * @return the warning, or {@code null} when the property is unset or trusted mode is on anyway
    */
   static String ineffectiveTrustedPropertyWarning(
       String propertyValue, boolean trusted, boolean budget) {
