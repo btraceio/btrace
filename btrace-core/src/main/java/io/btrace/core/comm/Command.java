@@ -16,12 +16,13 @@
  */
 package io.btrace.core.comm;
 
+import io.btrace.core.extensions.ClientMessage;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.Serializable;
 
-public abstract class Command implements Serializable {
+public abstract class Command implements Serializable, ClientMessage {
   public static final byte ERROR = 0;
   public static final byte EVENT = 1;
   public static final byte EXIT = 2;

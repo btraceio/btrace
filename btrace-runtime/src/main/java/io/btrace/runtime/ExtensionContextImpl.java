@@ -19,6 +19,7 @@ package io.btrace.runtime;
 import io.btrace.core.ArgsMap;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.MessageCommand;
+import io.btrace.core.extensions.ClientMessage;
 import io.btrace.core.extensions.Extension;
 import io.btrace.core.extensions.ExtensionContext;
 import io.btrace.core.extensions.Permission;
@@ -55,8 +56,12 @@ public final class ExtensionContextImpl implements ExtensionContext {
   }
 
   @Override
-  public void send(Command command) {
-    runtime.send(command);
+  public void send(ClientMessage message) {
+    if (!(message instanceof Command)) {
+      throw new IllegalArgumentException(
+          "Not a protocol command: " + (message == null ? "null" : message.getClass().getName()));
+    }
+    runtime.send((Command) message);
   }
 
   @Override

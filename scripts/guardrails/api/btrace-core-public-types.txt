@@ -107,6 +107,7 @@ io.btrace.core.comm.v2.CommandAdapter
 io.btrace.core.comm.v2.CommandDeserializationException
 io.btrace.core.comm.v2.MalformedCommandException
 io.btrace.core.comm.v2.ProtocolVersionMismatchException
+io.btrace.core.extensions.ClientMessage
 io.btrace.core.extensions.Extension
 io.btrace.core.extensions.ExtensionConfigurator
 io.btrace.core.extensions.ExtensionContext
