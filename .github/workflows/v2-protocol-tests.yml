@@ -45,13 +45,13 @@ jobs:
       # The JDK under test (matrix.java) is handed to Gradle as a toolchain installation path and
       # selected through the testJavaVersion toolchain property (see btrace-core/build.gradle).
       - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: 8
           distribution: temurin
       - name: Set up Temurin ${{ matrix.java }} (JDK under test)
         id: test-jdk
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: ${{ matrix.java }}
           distribution: temurin
@@ -61,7 +61,7 @@ jobs:
       # (which every setup-java step overwrites) hosts the Gradle daemon on JDK 21, whatever the
       # matrix JDK is; it is cheap when the tool cache already holds JDK 21.
       - name: Set up JDK 21 (Gradle runner)
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: 21
           distribution: temurin
@@ -118,13 +118,13 @@ jobs:
 
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: 8
           distribution: temurin
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: 21
           distribution: temurin
@@ -176,13 +176,13 @@ jobs:
 
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: 8
           distribution: temurin
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: 21
           distribution: temurin
@@ -233,13 +233,13 @@ jobs:
 
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: 8
           distribution: temurin
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: 21
           distribution: temurin
@@ -300,13 +300,13 @@ jobs:
 
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: 8
           distribution: temurin
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: 21
           distribution: temurin
@@ -397,13 +397,13 @@ jobs:
 
       # Gradle 9.x requires JVM 17+ to run.
       - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: 8
           distribution: temurin
       - name: Set up JDK 21
         if: steps.cache-java.outputs.cache-hit != 'true'
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
         with:
           java-version: 21
           distribution: temurin
