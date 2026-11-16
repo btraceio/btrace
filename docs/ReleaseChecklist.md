@@ -98,6 +98,11 @@ extracted candidate distribution and retains target, client, compiler, migration
 | Docker | OCI version/license labels match and `/opt/btrace/libs/btrace.jar` is the intended layout |
 | GitHub release | Binary ZIP, TGZ, SDKMAN ZIP, DEB, RPM, and masked Maven JAR assets are present |
 
+For an `rc` release (`X.Y.Z-RCn`, see [Releasing: Release Candidates](releasing.md#release-candidates)) the workflow
+skips the Gradle Plugin Portal publication, the JBang catalog update and alias check, and the SDKMAN
+announcement, so the Plugin Portal row and the catalog-alias half of the JBang row do not apply; the
+exact Maven coordinate and the SDKMAN archive layout are still verified.
+
 Public download counts and analytics are never release inputs.
 
 ## Exceptions and release decision

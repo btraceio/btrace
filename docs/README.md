@@ -69,7 +69,7 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 ## Documentation by Topic
 
 ### Core Features
-- **Method Tracing** → [Tutorial Lesson 1](BTraceTutorial.md), [Quick Reference: @OnMethod](QuickReference.md#onmethod)
+- **Method Tracing** → [Tutorial Lesson 2](BTraceTutorial.md), [Quick Reference: @OnMethod](QuickReference.md#onmethod)
 - **Timing & Duration** → [Quick Reference: @Duration](QuickReference.md#parameter-annotations), [Pattern: Method Timing](QuickReference.md#pattern-1-method-entryexit-timing)
 - **Exception Tracking** → [Quick Reference: Kind.ERROR](QuickReference.md#location-kinds), [Pattern: Exception Tracking](QuickReference.md#pattern-3-exception-tracking)
 - **Field Access** → [Quick Reference: Kind.FIELD_GET/SET](QuickReference.md#location-kinds)

@@ -314,7 +314,7 @@ needs `allowExtensions=<id>` (or `allowPrivileged=true`) among the agent argumen
 
 ## Troubleshooting
 
-- **`Cannot attach to process` / `Can not attach to PID` / `BTrace server not available at port
+- **`Cannot attach to process` / `Failed to attach to PID` / `BTrace server not available at port
   2020`** — in plain Docker, a separate BTrace container has to join the target container's PID
   namespace (to see and attach to the JVM) **and** its network namespace (after loading the agent,
   the client connects to it on `localhost:2020`, which is only the target's localhost if the
@@ -334,9 +334,8 @@ needs `allowExtensions=<id>` (or `allowPrivileged=true`) among the agent argumen
   inside the container rather than in your host shell) and
   `docker exec <container> env | grep BTRACE`.
 - **`Java tools not available` (`jps`/`javac` missing)** — you copied a JRE-only base image
-  instead of a full JDK; the sidecar/app image needs the JDK. On Java 9+ bases you may also need
-  `--add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED` on `JAVA_OPTS` for PID
-  discovery tools to work.
+  instead of a full JDK; the sidecar/app image needs the JDK. (On Java 9+ the `btrace` launcher
+  already passes `--add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED` itself.)
 - **The sidecar can't see the app's process at all** — Pod Security Policies/admission controllers
   can block `ptrace`-family syscalls even with `shareProcessNamespace: true`; add the `SYS_PTRACE`
   capability (Step 4) and check your cluster's PSP/OPA policy. Note GKE Autopilot in particular may

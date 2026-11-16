@@ -127,7 +127,7 @@ Resource loading (`findResource`, `getResourceAsStream`) checks the section-spec
 
 #### MaskedJarUtils (`io.btrace.boot.MaskedJarUtils`)
 
-Utility class for detecting masked JARs. A JAR is identified as masked by the presence of a `META-INF/btrace/shared/` entry. Used by `Client.java` and integration tests to detect whether they are running from a masked JAR or the legacy multi-JAR layout.
+Utility class for detecting masked JARs. A JAR is identified as masked by the presence of a `META-INF/btrace/shared/` entry. Used by `Client.java` and the compiler's `CompilerHelper` to find the masked JAR on the class path.
 
 ### Bootstrap Class Selection
 
@@ -172,4 +172,4 @@ This prints classloader decisions to stderr, prefixed with `[BTrace Boot]`.
 
 ## Backward Compatibility
 
-The masked JAR coexists with the legacy multi-JAR distribution. Detection logic in `Client.java` and `RuntimeTest` checks for `btrace.jar` first and falls back to `btrace-agent.jar` if not found. The `--agent-jar` and `--boot-jar` CLI flags allow explicit path overrides for any layout.
+The 3.0 distribution ships only the masked `btrace.jar`. `Client.java` requires it: when no masked JAR is on the class path, attaching fails with `No masked btrace.jar found in classpath`, and there is no fallback to the legacy `btrace-agent.jar`/`btrace-boot.jar`/`btrace-client.jar` layout. The CLI has no `--agent-jar` or `--boot-jar` flag; only the programmatic `Client` constructor takes an explicit agent JAR path. The integration-test harness (`RuntimeTest`) still looks for `btrace.jar` first and falls back to a `btrace-agent.jar` if one is present.

@@ -20,7 +20,9 @@ ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:/opt/btrace/bin"
 ## Tags
 
 Every release publishes three version tags and moves the three floating ones
-(`.github/workflows/release.yml`, job `publish-container-images`):
+(`.github/workflows/release.yml`, job `publish-container-images`); a release candidate publishes
+only its three version tags (`<version>`, `<version>-alpine`, `<version>-distroless`) and leaves
+the floating ones on the last release:
 
 | Variant | Pinned tag | Floating tag |
 |---------|------------|--------------|
@@ -40,7 +42,7 @@ experiments.
 ### Debian: `ghcr.io/btraceio/btrace:<version>`
 **Debian-based** - Full distribution with all tools and shell access
 
-- **Base:** OpenJDK 21 JDK on Debian Slim
+- **Base:** BellSoft Liberica OpenJDK 21 JDK on Debian
 - **Use case:** General purpose, development, interactive debugging
 - **Includes:** Complete BTrace toolchain, shell access, samples
 - **Best for:** Development environments, interactive troubleshooting
@@ -99,7 +101,7 @@ ENTRYPOINT ["java", "-jar", "myapp.jar"]
 ```bash
 docker build -t myapp:latest .
 docker run -d --name myapp myapp:latest
-docker exec myapp btrace <PID> /scripts/trace.btrace
+docker exec myapp btrace <PID> /scripts/Trace.java
 ```
 
 ### Pattern 2: Kubernetes Sidecar
@@ -138,7 +140,7 @@ spec:
 **Usage:**
 ```bash
 kubectl exec myapp-with-btrace -c btrace-sidecar -- \
-  sh -c 'btrace $(pgrep -f "[m]yapp.jar") /scripts/trace.btrace'
+  sh -c 'btrace $(pgrep -f "[m]yapp.jar") /scripts/Trace.java'
 ```
 
 `pgrep -f` matches full command lines, so the pattern must match only the application JVM: the
@@ -153,11 +155,14 @@ Extend BTrace image for development:
 FROM ghcr.io/btraceio/btrace:3.0.0-alpine
 
 COPY target/myapp.jar /app/myapp.jar
-COPY scripts/*.btrace /scripts/
+COPY scripts/*.class /scripts/
 
 ENTRYPOINT ["btracer"]
-CMD ["-v", "-o", "/tmp/btrace-output.txt", "/app/myapp.jar"]
+CMD ["-v", "-o", "/tmp/btrace-output.txt", "/scripts/Trace.class", "-jar", "/app/myapp.jar"]
 ```
+
+`btracer` takes `<options> <compiled script> <java args>`: the script must be precompiled with
+`btracec` (the agent does not compile sources), and everything after it is passed to `java`.
 
 ### Pattern 4: Distroless Production
 
@@ -172,9 +177,13 @@ COPY --from=build /app/target/myapp.jar /app/
 COPY --from=btrace /opt/btrace/libs /opt/btrace/libs
 
 ENTRYPOINT ["java", \
-  "-javaagent:/opt/btrace/libs/btrace.jar=script=/scripts/trace.btrace", \
+  "-javaagent:/opt/btrace/libs/btrace.jar=script=/scripts/Trace.class", \
   "-jar", "/app/myapp.jar"]
 ```
+
+The agent loads only precompiled probes (`btracec -d scripts Trace.java`); a `script=` path that is
+a source file is skipped. Copy the compiled `.class` into the image yourself, e.g.
+`COPY scripts/ /scripts/`.
 
 BTrace 3.0 ships as a single self-contained, masked JAR (`btrace.jar`, task `btraceJar` in `btrace-dist/build.gradle`; it declares itself as its own `Boot-Class-Path`), so there is no separate `btrace-boot.jar` and no `-Xbootclasspath/a:` flag needed — see [Masked JAR Architecture](../docs/architecture/MaskedJarArchitecture.md).
 
@@ -198,7 +207,7 @@ services:
       - ./scripts:/scripts
       - ./output:/output
     command: >
-      sh -c 'sleep 5; btrace $(pgrep -f myapp) /scripts/trace.btrace'
+      sh -c 'sleep 5; btrace $$(pgrep -f "[m]yapp.jar") /scripts/Trace.java'
 ```
 
 ## Image Selection Guide
@@ -219,9 +228,8 @@ services:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `BTRACE_HOME` | `/opt/btrace` | BTrace installation directory |
-| `BTRACE_OPTS` | (empty) | Additional BTrace command options |
-| `JAVA_HOME` | (auto-detected) | Java installation path |
-| `BTRACE_VERBOSE` | `false` | Print version info on startup |
+| `JAVA_HOME` | (set by the image) | Java installation path (Debian: inherited from the base image; Alpine: `/usr/lib/jvm/default-jvm`) |
+| `BTRACE_VERBOSE` | `false` | Print `BTRACE_HOME`, `JAVA_HOME` and `java -version` on startup |
 
 ## Scenarios
 
@@ -229,16 +237,13 @@ services:
 
 ```bash
 # Copy script into container
-docker cp troubleshoot.btrace myapp:/tmp/
+docker cp Troubleshoot.java myapp:/tmp/
 
 # Find Java process PID
 docker exec myapp jps -l
 
-# Attach BTrace
-docker exec myapp btrace <PID> /tmp/troubleshoot.btrace
-
-# View output
-docker exec myapp cat /tmp/btrace-output.txt
+# Attach BTrace (the probe output is printed here; Ctrl+C detaches)
+docker exec -it myapp btrace <PID> /tmp/Troubleshoot.java
 ```
 
 ### Continuous Monitoring in Kubernetes
@@ -246,17 +251,19 @@ docker exec myapp cat /tmp/btrace-output.txt
 ```bash
 # Deploy scripts as ConfigMap
 kubectl create configmap btrace-scripts \
-  --from-file=monitor.btrace=./scripts/monitor.btrace
+  --from-file=Monitor.java=./scripts/Monitor.java
 
-# Deploy application with sidecar
+# Deploy application with sidecar (the Pattern 2 manifest)
 kubectl apply -f app-with-btrace-sidecar.yaml
 
-# Stream output
-kubectl logs -f myapp-pod -c btrace-sidecar
+# Attach from the sidecar; the probe output is printed here
+kubectl exec -it myapp-with-btrace -c btrace-sidecar -- \
+  sh -c 'btrace $(pgrep -f "[m]yapp.jar") /scripts/Monitor.java'
 
-# Update script without restart
+# Update the script without restarting the pod (the mounted ConfigMap refreshes after a
+# short delay; detach and run btrace again to deploy the new version)
 kubectl create configmap btrace-scripts \
-  --from-file=monitor.btrace=./scripts/updated.btrace \
+  --from-file=Monitor.java=./scripts/Monitor.java \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
@@ -267,14 +274,14 @@ FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
 FROM bellsoft/liberica-openjdk-debian:21-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
-ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:${BTRACE_HOME}/bin"
+ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:/opt/btrace/bin"
 
 COPY target/myapp.jar /app/
-COPY scripts/profile-*.btrace /scripts/
+COPY scripts/Profile*.class /scripts/
 
 ENTRYPOINT ["btracer", \
   "-v", "-o", "/tmp/profile.txt", \
-  "/scripts/profile-methods.btrace", \
+  "/scripts/ProfileMethods.class", \
   "-jar", "/app/myapp.jar"]
 ```
 
@@ -313,6 +320,8 @@ ENTRYPOINT ["btracer", \
        drop: ["ALL"]
        add: ["SYS_PTRACE"]  # Required
    ```
+   The BTrace images set no `USER` (they run as root), so `runAsNonRoot: true` also needs a
+   `runAsUser`.
 
 6. **Monitor BTrace overhead:**
    - Start with minimal instrumentation
@@ -327,7 +336,7 @@ ENTRYPOINT ["btracer", \
 # namespace (the client then connects to the agent on localhost:2020).
 # The target image must contain BTrace at /opt/btrace (see Pattern 2).
 docker run --rm --pid=container:target-container --network=container:target-container \
-  -v "$PWD/scripts":/scripts ghcr.io/btraceio/btrace:3.0.0 btrace <PID> /scripts/trace.java
+  -v "$PWD/scripts":/scripts ghcr.io/btraceio/btrace:3.0.0 btrace <PID> /scripts/Trace.java
 
 # Kubernetes: verify shareProcessNamespace
 kubectl get pod myapp -o yaml | grep shareProcessNamespace
@@ -346,8 +355,8 @@ docker exec myapp env | grep BTRACE
 docker exec myapp java -version
 docker exec myapp which javac
 
-# Java 9+ requires module exports
-ENV JAVA_OPTS="--add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
+# Java 9+: the launchers in /opt/btrace/bin already pass
+# --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED; nothing to set
 ```
 
 ## Building Images Locally
@@ -356,15 +365,17 @@ ENV JAVA_OPTS="--add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAME
 # Build BTrace distribution first
 ./gradlew :btrace-dist:build
 
-# Build Docker images
-./gradlew :btrace-dist:buildDockerImages
+# Build Docker images (skipped unless -PdockerEnabled is given); tags them
+# ghcr.io/btraceio/btrace:<project version>[-alpine|-distroless] and latest[-alpine|-distroless]
+./gradlew -PdockerEnabled :btrace-dist:buildDockerImages
 
-# Or build manually
-VERSION=3.0.0  # Set this to your BTrace version
+# Or build manually: the Dockerfiles expect a context with the distribution under btrace/
+# plus docker-entrypoint.sh, which buildDockerContext assembles
+./gradlew :btrace-dist:buildDockerContext
 cd docker
-docker build -t ghcr.io/btraceio/btrace:local -f Dockerfile ../btrace-dist/build/resources/main/v${VERSION}
-docker build -t ghcr.io/btraceio/btrace:local-alpine -f Dockerfile.alpine ../btrace-dist/build/resources/main/v${VERSION}
-docker build -t ghcr.io/btraceio/btrace:local-distroless -f Dockerfile.distroless ../btrace-dist/build/resources/main/v${VERSION}
+docker build -t ghcr.io/btraceio/btrace:local -f Dockerfile ../btrace-dist/build/docker-context
+docker build -t ghcr.io/btraceio/btrace:local-alpine -f Dockerfile.alpine ../btrace-dist/build/docker-context
+docker build -t ghcr.io/btraceio/btrace:local-distroless -f Dockerfile.distroless ../btrace-dist/build/docker-context
 ```
 
 ## Supported Platforms
