@@ -72,7 +72,7 @@ public final class BTraceRuntime {
   private static volatile Unsafe unsafe = null;
   private static Properties dotWriterProps;
   // this field is 'back-set' by the agent at startup thus needs to remain non-final
-  private static volatile BTraceRuntimeAccessor rtAccessor = () -> null;
+  private static volatile BTraceRuntimeAccessor rtAccessor = new NoRuntimeAccessor();
   private static final String INDENT = "    ";
 
   public static volatile Instrumentation instrumentation = null;

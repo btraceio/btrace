@@ -122,13 +122,27 @@ public final class IndyDispatcher {
   public static CallSite bootstrap(
       MethodHandles.Lookup caller, String name, MethodType type, String probeClassName) {
     MutableCallSite mcs = new MutableCallSite(type);
+    // Registered before resolving, so an invalidation from here on reaches this site.
+    registerSite(probeClassName, mcs);
     MethodHandle mh = tryResolve(probeClassName, name, type);
     if (mh != null) {
       mcs.setTarget(mh);
     } else {
       mcs.setTarget(makeTrampoline(mcs, probeClassName, name, type));
     }
-    registerSite(probeClassName, mcs);
+    // The probe may have been disabled or unregistered between the resolution above and
+    // setTarget, whose invalidation setTarget then overwrote. Resolving again sees that state; an
+    // invalidation that starts after this point runs after setTarget and wins.
+    MethodHandle current = tryResolve(probeClassName, name, type);
+    if (current != mh) {
+      if (current != null) {
+        mcs.setTarget(current);
+      } else if (mh != null) {
+        // Null means unregistered or a failed resolution. The trampoline covers both: it runs
+        // nothing while resolution fails and links the handler if a later one succeeds.
+        mcs.setTarget(makeTrampoline(mcs, probeClassName, name, type));
+      }
+    }
     return mcs;
   }
 

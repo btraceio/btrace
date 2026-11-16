@@ -35,6 +35,7 @@ import io.btrace.core.comm.MessageCommand;
 import io.btrace.core.comm.ProtocolVersion;
 import io.btrace.core.comm.WireProtocol;
 import io.btrace.instr.BTraceProbe;
+import io.btrace.instr.ProbeBudgets;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Proxy;
@@ -47,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -177,7 +179,7 @@ class RemoteClientTerminalExitTest {
   }
 
   @Test
-  void budgetExitRemovesDetachedProbe() throws Exception {
+  void forcedRemovalRemovesDetachedProbe() throws Exception {
     try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
       AtomicInteger requestedExitCode = new AtomicInteger(Integer.MIN_VALUE);
       BTraceRuntime.Impl runtime = runtimeProxy(requestedExitCode::set);
@@ -207,6 +209,58 @@ class RemoteClientTerminalExitTest {
         assertEquals(1, unregistered.get(), "the probe's transformer was not cleaned up");
         assertTrue(remote.isShuttingDown());
       } finally {
+        executor.shutdownNow();
+      }
+    }
+  }
+
+  /** The governor and a real detached client together, with nothing called by hand. */
+  @Test
+  void governorRemovesDetachedProbeOnItsOwn() throws Exception {
+    try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+      AtomicInteger requestedExitCode = new AtomicInteger(Integer.MIN_VALUE);
+      BTraceRuntime.Impl runtime = runtimeProxy(requestedExitCode::set);
+      AtomicInteger unregistered = new AtomicInteger();
+      String probeName = "test.budget.GovernedDetachedProbe";
+      String internalName = probeName.replace('.', '/');
+      ExecutorService executor = Executors.newSingleThreadExecutor();
+      try {
+        Future<RemoteClient> accepted = executor.submit(() -> acceptClient(server, runtime, null));
+        RemoteClient remote;
+        try (Socket socket = new Socket(server.getInetAddress(), server.getLocalPort())) {
+          remote = accepted.get(5, TimeUnit.SECONDS);
+          remote.setProbeForTest(probeProxy(probeName, unregistered), 0L);
+        }
+        awaitTrue(remote::isDisconnected, "agent did not notice the client going away");
+        String listed = remote.id + " [" + probeName + "]";
+        assertFalse(RemoteClient.removedByBudget(remote));
+
+        long[] now = {TimeUnit.SECONDS.toNanos(2)};
+        Properties operator = new Properties();
+        operator.setProperty(BudgetLimits.TTL_PROPERTY, "1");
+        BudgetLimits limits =
+            BudgetLimits.resolve(BudgetLimits.snapshot(operator), new ArgsMap(), false, line -> {});
+        BudgetGovernor governor =
+            new BudgetGovernor(
+                limits,
+                () -> now[0],
+                () -> Collections.<Client>singletonList(remote),
+                Runnable::run);
+
+        // The trip: the exit is requested, but its Exit command has no client to reach.
+        governor.tick();
+        assertEquals(Client.BUDGET_EXIT_CODE, requestedExitCode.get());
+        assertTrue(Client.listProbes().contains(listed), "the dropped exit removed the probe");
+        assertTrue(
+            RemoteClient.removedByBudget(remote), "a client could still reconnect to the probe");
+
+        // The follow-up on the next tick sees the lost transport and removes the probe.
+        governor.tick();
+        assertFalse(Client.listProbes().contains(listed), "detached probe is still listed");
+        assertEquals(1, unregistered.get(), "the probe's transformer was not cleaned up");
+        assertTrue(remote.isShuttingDown());
+      } finally {
+        ProbeBudgets.forget(internalName);
         executor.shutdownNow();
       }
     }
@@ -243,7 +297,7 @@ class RemoteClientTerminalExitTest {
   }
 
   @Test
-  void budgetExitRemovesProbeDetachedDuringExit() throws Exception {
+  void forcedRemovalRemovesProbeDetachedDuringExit() throws Exception {
     try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
       AtomicReference<Socket> peer = new AtomicReference<>();
       AtomicReference<RemoteClient> client = new AtomicReference<>();

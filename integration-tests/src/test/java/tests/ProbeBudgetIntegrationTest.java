@@ -19,6 +19,7 @@ package tests;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.sun.tools.attach.AgentLoadException;
@@ -30,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -38,6 +40,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -79,6 +82,10 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
   /** The line the agent logs when it ignores an attach-time {@code trusted=true}. */
   private static final String TRUSTED_ARGUMENT_IGNORED =
       "ignoring agent argument trusted=true, every probe is verified";
+
+  /** The line the agent prints when it is loaded into a JVM that already has it. */
+  private static final String AGENT_ALREADY_LOADED =
+      "BTrace agent is already loaded in this JVM; this load and its arguments are ignored";
 
   /** Exit code of {@code btrace doctor} when the target publishes no control endpoint. */
   private static final int DOCTOR_PREPARATION_REQUIRED = 2;
@@ -221,7 +228,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
 
   @Test
   @Timeout(value = 90, unit = TimeUnit.SECONDS)
-  void attachArgumentCannotRaiseOperatorCeiling() throws Exception {
+  void launchArgumentCannotRaiseOperatorCeiling() throws Exception {
     TestApp app = launchTarget("probeMaxRate=100000000", "-Dio.btrace.probeMaxRate=100");
     CliRun hot = null;
     try {
@@ -333,7 +340,8 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
     CliRun verified = null;
     try {
       int pid = app.getPid();
-      String port = String.valueOf(freePort());
+      // -p 0: the agent picks a free port and the client reads the one it published.
+      String port = "0";
       trusted = deploy(pid, QUIET_PROBE, false, "-u", "-p", port);
       assertNotNull(
           trusted.awaitLine(TRUSTED_REFUSED, REMOVAL_DEADLINE_MS),
@@ -384,9 +392,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       assertNotNull(hotScript, "compiled probe is missing: BudgetHotProbe.class");
       loadAgentByAttach(
           pid,
-          "telemetry=false,port="
-              + freePort()
-              + ",trusted=true,scriptOutputFile=::stdout,script="
+          "telemetry=false,port=0,trusted=true,scriptOutputFile=::stdout,script="
               + trustedScript.getAbsolutePath()
               + ":"
               + hotScript.getAbsolutePath());
@@ -426,6 +432,261 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
   }
 
   @Test
+  @Timeout(value = 120, unit = TimeUnit.SECONDS)
+  void secondAgentLoadIsRefusedAndTheBudgetStillHolds() throws Exception {
+    // The budget is set only by a launch-time agent argument. An attacher loads the agent again
+    // with a startup script of its own: the load is refused, the script does not run, and the
+    // agent loaded at launch keeps working and keeps enforcing its budget.
+    TestApp app = launchTarget("probeMaxRate=100", "-XX:+EnableDynamicAgentLoading");
+    CliRun hot = null;
+    try {
+      int pid = app.getPid();
+      File hotScript = locateTrace("btrace/BudgetHotProbe.class");
+      assertNotNull(hotScript, "compiled probe is missing: BudgetHotProbe.class");
+      loadAgentByAttach(
+          pid,
+          "telemetry=false,port=0,scriptOutputFile=::stdout,script=" + hotScript.getAbsolutePath());
+      assertTrue(
+          awaitOutput(app, AGENT_ALREADY_LOADED, 10_000L),
+          "the second agent load was not refused:" + app(app));
+
+      hot = deploy(pid, HOT_PROBE, false);
+      assertNotNull(
+          hot.awaitLine(removalPattern("BudgetHotProbe", "100"), REMOVAL_DEADLINE_MS),
+          "the launch-time agent no longer enforces its budget:\n" + hot.output() + app(app));
+      assertEquals(BUDGET_EXIT_CODE, hot.awaitExit(15), hot.output());
+      // The refused load's startup script would print to the target's own output.
+      assertEquals(
+          0,
+          count(app.capturedOutput(), "budget-hot-alive"),
+          "the refused load ran its startup script:" + app(app));
+      assertTargetStillRunning(app);
+    } finally {
+      destroy(hot);
+      app.stop();
+    }
+  }
+
+  @Test
+  @Timeout(value = 90, unit = TimeUnit.SECONDS)
+  void secondAgentLoadCannotRevokeLaunchTimeTrustedGrant() throws Exception {
+    // The operator grants trusted mode at launch, next to a budget. A later agent load by
+    // dynamic attach that passes trusted=false is refused and changes nothing.
+    TestApp app =
+        launchTarget("probeMaxRate=100000000,trusted=true", "-XX:+EnableDynamicAgentLoading");
+    CliRun trusted = null;
+    try {
+      int pid = app.getPid();
+      loadAgentByAttach(pid, "telemetry=false,trusted=false,port=0");
+      assertTrue(
+          awaitOutput(app, AGENT_ALREADY_LOADED, 10_000L),
+          "the second agent load was not refused:" + app(app));
+
+      // No -u: the probe needs trusted mode, which only the launch-time grant can give it.
+      trusted = deploy(pid, "btrace/BudgetTrustedProbe.class", false);
+      assertTrue(
+          awaitOutput(app, "budget-trusted-ran", REMOVAL_DEADLINE_MS),
+          "the launch-time trusted grant was revoked:\n" + trusted.output() + app(app));
+      assertFalse(
+          trusted.output().contains("trusted mode is not available"),
+          "the operator's trusted grant was refused:\n" + trusted.output());
+    } finally {
+      destroy(trusted);
+      app.stop();
+    }
+  }
+
+  @Test
+  @Timeout(value = 120, unit = TimeUnit.SECONDS)
+  void serverStartedOnAttachIsBoundByTheLaunchBudget() throws Exception {
+    // The agent is loaded at launch with a budget and no command server. A client attaching
+    // later makes that same agent start its server; the launch-time budget still binds it, and
+    // the budget arguments of the attach are not used.
+    TestApp app = launchTarget("noServer=true,probeMaxRate=100", "-XX:+EnableDynamicAgentLoading");
+    CliRun hot = null;
+    try {
+      int pid = app.getPid();
+      loadAgentByAttach(pid, "telemetry=false,probeMaxRate=100000000,port=0");
+      assertTrue(
+          awaitOutput(app, "its command server was started for this attach", 10_000L),
+          "the loaded agent did not start its server on attach:" + app(app));
+
+      // The agent was loaded at launch, so its server requires the token whenever it starts.
+      assertEquals("true", targetProperties(pid).getProperty("btrace.auth.required"), app(app));
+
+      hot = deploy(pid, HOT_PROBE, false);
+      assertNotNull(
+          hot.awaitLine(removalPattern("BudgetHotProbe", "100"), REMOVAL_DEADLINE_MS),
+          "the launch-time budget does not bind the server started on attach:\n"
+              + hot.output()
+              + app(app));
+      assertEquals(BUDGET_EXIT_CODE, hot.awaitExit(15), hot.output());
+      assertTargetStillRunning(app);
+    } finally {
+      destroy(hot);
+      app.stop();
+    }
+  }
+
+  @Test
+  @Timeout(value = 120, unit = TimeUnit.SECONDS)
+  void serverStartedOnAttachRequiresTheLaunchTimeToken() throws Exception {
+    // The operator launches a trusted agent without a server and names the token file. The
+    // server a later attach starts takes its token from there, not from the attach.
+    Path tokens = Files.createTempDirectory("btrace-budget-token");
+    Path operatorToken = tokens.resolve("operator.token").toAbsolutePath().normalize();
+    Path attacherToken = tokens.resolve("attacher.token").toAbsolutePath().normalize();
+    TestApp app =
+        launchTarget(
+            "noServer=true,trusted=true,authTokenFile=" + operatorToken,
+            "-XX:+EnableDynamicAgentLoading");
+    try {
+      int pid = app.getPid();
+      // port=0: the agent picks a free port and publishes it, so no other process can take it
+      // between the test choosing one and the agent binding it.
+      loadAgentByAttach(pid, "telemetry=false,port=0,authTokenFile=" + attacherToken);
+      assertTrue(
+          awaitOutput(app, "its command server was started for this attach", 10_000L),
+          "the loaded agent did not start its server on attach:" + app(app));
+
+      Properties published = targetProperties(pid);
+      assertEquals("true", published.getProperty("btrace.auth.required"), app(app));
+      assertEquals(operatorToken.toString(), published.getProperty("btrace.auth.tokenFile"));
+      assertFalse(Files.exists(attacherToken), "the token file of the later load was used");
+
+      // A client that presents another token is turned away; the right one gets in.
+      byte[] token = Files.readAllBytes(operatorToken);
+      Files.write(operatorToken, "not-the-token".getBytes(StandardCharsets.UTF_8));
+      IOException rejected = assertThrows(IOException.class, () -> listDetachedProbes(pid));
+      assertTrue(
+          String.valueOf(rejected.getMessage()).contains("authentication rejected"),
+          "unexpected failure: " + rejected);
+      Files.write(operatorToken, token);
+      listDetachedProbes(pid);
+      assertTargetStillRunning(app);
+    } finally {
+      app.stop();
+      Files.deleteIfExists(operatorToken);
+      Files.deleteIfExists(tokens);
+    }
+  }
+
+  @Test
+  @Timeout(value = 120, unit = TimeUnit.SECONDS)
+  void stockClientAttachesToAgentLaunchedWithoutServer() throws Exception {
+    TestApp app = launchTarget("noServer=true", "-XX:+EnableDynamicAgentLoading");
+    CliRun quiet = null;
+    try {
+      // The client finds no endpoint, loads the agent, and the agent already in the JVM starts
+      // its server for it. The client picks up the token that server requires on its own.
+      quiet = deploy(app.getPid(), QUIET_PROBE, false, "-p", "0");
+      assertNotNull(
+          quiet.awaitLine(Pattern.compile("^budget-quiet-hit$"), REMOVAL_DEADLINE_MS),
+          "the client could not deploy to an agent launched without a server:\n"
+              + quiet.output()
+              + app(app));
+      assertTrue(
+          app.capturedOutput().contains("its command server was started for this attach"),
+          "the server was not started by the already loaded agent:" + app(app));
+    } finally {
+      destroy(quiet);
+      app.stop();
+    }
+  }
+
+  @Test
+  @Timeout(value = 120, unit = TimeUnit.SECONDS)
+  void failedFirstAttachDoesNotBlockARetry() throws Exception {
+    TestApp app =
+        launchTestAppWithAgent(
+            TARGET,
+            null,
+            "-XX:+EnableDynamicAgentLoading",
+            "-Dbtrace.comm.protocol=2",
+            "-Dbtrace.comm.autoNegotiate=false",
+            "-Dbtrace.comm.forceVersion=true");
+    CliRun quiet = null;
+    CliRun trusted = null;
+    try (ServerSocket taken = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+      int pid = app.getPid();
+      // The first load asks for trusted mode and a port that is in use, so its initialization
+      // fails.
+      try {
+        loadAgentByAttach(pid, "telemetry=false,trusted=true,port=" + taken.getLocalPort());
+      } catch (Exception expected) {
+        // the attach API reports the failed initialization
+      }
+      assertTrue(
+          awaitOutput(app, "FATAL: Initialization failed: java.net.BindException", 10_000L),
+          "the first load did not fail on the taken port:" + app(app));
+
+      quiet = deploy(pid, QUIET_PROBE, false, "-p", "0");
+      assertNotNull(
+          quiet.awaitLine(Pattern.compile("^budget-quiet-hit$"), REMOVAL_DEADLINE_MS),
+          "a failed first load left the JVM untraceable:\n" + quiet.output() + app(app));
+
+      // The failed load's trusted=true is gone with it: a probe that needs trusted mode, deployed
+      // without -u, does not pass verification.
+      trusted = deploy(pid, "btrace/BudgetTrustedProbe.class", false);
+      int refused = trusted.awaitExit(30);
+      assertTrue(
+          refused > 0,
+          "the probe was not turned away (exit " + refused + "):\n" + trusted.output() + app(app));
+      assertEquals(
+          0,
+          count(app.capturedOutput(), "budget-trusted-ran"),
+          "the failed load left trusted mode on:\n" + trusted.output() + app(app));
+    } finally {
+      destroy(trusted);
+      destroy(quiet);
+      app.stop();
+    }
+  }
+
+  @Test
+  @Timeout(value = 90, unit = TimeUnit.SECONDS)
+  void attachTimeBudgetArgumentIsIgnored() throws Exception {
+    // No operator budget. The attacher loads the agent with probeMaxRate=100: it is not the
+    // operator, so the argument sets no budget and the hot probe keeps running.
+    TestApp app =
+        launchTestAppWithAgent(
+            TARGET,
+            null,
+            "-XX:+EnableDynamicAgentLoading",
+            "-Dbtrace.comm.protocol=2",
+            "-Dbtrace.comm.autoNegotiate=false",
+            "-Dbtrace.comm.forceVersion=true");
+    try {
+      int pid = app.getPid();
+      File hotScript = locateTrace("btrace/BudgetHotProbe.class");
+      assertNotNull(hotScript, "compiled probe is missing: BudgetHotProbe.class");
+      loadAgentByAttach(
+          pid,
+          "telemetry=false,port=0,probeMaxRate=100,scriptOutputFile=::stdout,script="
+              + hotScript.getAbsolutePath());
+
+      assertTrue(
+          awaitOutput(app, "ignoring agent argument probeMaxRate=100", 10_000L),
+          "agent did not report ignoring the attach-time budget argument:" + app(app));
+      assertTrue(
+          awaitOutput(app, "budget-hot-alive", 15_000L),
+          "the attach-time startup script did not run:" + app(app));
+      // Several governor periods: a budget would have removed the probe by now.
+      int alive = count(app.capturedOutput(), "budget-hot-alive");
+      Thread.sleep(6_000L);
+      assertTrue(
+          count(app.capturedOutput(), "budget-hot-alive") > alive,
+          "the probe stopped running:" + app(app));
+      assertFalse(
+          app.capturedOutput().contains("BTrace: probe btrace.BudgetHotProbe removed: "),
+          "an attach-time argument set a budget:" + app(app));
+      assertTargetStillRunning(app);
+    } finally {
+      app.stop();
+    }
+  }
+
+  @Test
   @Timeout(value = 90, unit = TimeUnit.SECONDS)
   void invalidOperatorBudgetStopsAttachTimeProbes() throws Exception {
     // The operator mistyped the limit; an attacher then loads the agent with a startup script
@@ -445,9 +706,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       assertNotNull(trustedScript, "compiled probe is missing: BudgetTrustedProbe.class");
       loadAgentByAttach(
           pid,
-          "telemetry=false,port="
-              + freePort()
-              + ",trusted=true,scriptOutputFile=::stdout,script="
+          "telemetry=false,port=0,trusted=true,scriptOutputFile=::stdout,script="
               + trustedScript.getAbsolutePath());
 
       assertTrue(
@@ -496,7 +755,7 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
   @Test
   @Timeout(value = 60, unit = TimeUnit.SECONDS)
   void invalidLimitAtLaunchKeepsTargetRunningWithoutServer() throws Exception {
-    TestApp app = launchTarget("probeMaxRate=abc");
+    TestApp app = launchTarget("probeMaxRate=abc", "-XX:+EnableDynamicAgentLoading");
     try {
       app.getPid();
       // stderr is read on its own thread and can trail the ready line on stdout.
@@ -525,6 +784,14 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       } finally {
         destroy(doctor);
       }
+      // A later attach does not get a server from this agent either.
+      loadAgentByAttach(app.getPid(), "telemetry=false,port=0");
+      assertTrue(
+          awaitOutput(app, "the probe budget set at launch is invalid", 10_000L),
+          "a later attach was not refused a server:" + app(app));
+      assertFalse(
+          app.capturedOutput().contains("its command server was started for this attach"),
+          "a later attach started a server despite the invalid budget:" + app(app));
       assertTargetStillRunning(app);
     } finally {
       app.stop();
@@ -678,6 +945,15 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
     return probes;
   }
 
+  private static Properties targetProperties(int pid) throws Exception {
+    VirtualMachine vm = VirtualMachine.attach(String.valueOf(pid));
+    try {
+      return vm.getSystemProperties();
+    } finally {
+      vm.detach();
+    }
+  }
+
   /** Loads the agent into {@code pid} by dynamic attach with {@code agentArguments}. */
   private void loadAgentByAttach(int pid, String agentArguments) throws Exception {
     Path agent = locateAgent();
@@ -686,9 +962,10 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
     try {
       vm.loadAgent(agent.toString(), agentArguments);
     } catch (AgentLoadException e) {
-      // HotSpot on JDK 8 reports a successful load as AgentLoadException("...: 0"), as the BTrace
-      // client also allows for. The callers' assertions on the target prove the agent ran.
-      if (e.getMessage() == null || !e.getMessage().endsWith("0")) {
+      // HotSpot on JDK 8 reports a successful load as AgentLoadException with the result code 0,
+      // as the BTrace client also allows for. Only that code: 100, for one, is a real failure.
+      String message = e.getMessage();
+      if (message == null || !(message.equals("0") || message.endsWith(": 0"))) {
         throw e;
       }
     } finally {
@@ -704,12 +981,6 @@ public class ProbeBudgetIntegrationTest extends RuntimeTest {
       }
     }
     return count;
-  }
-
-  private static int freePort() throws IOException {
-    try (ServerSocket socket = new ServerSocket(0)) {
-      return socket.getLocalPort();
-    }
   }
 
   private static boolean containsProbe(List<String> probes, String name) {

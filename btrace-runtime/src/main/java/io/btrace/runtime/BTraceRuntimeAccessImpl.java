@@ -84,7 +84,16 @@ public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delega
   protected static final ThreadLocal<RTWrapper> rt;
 
   static {
-    rt = ThreadLocal.withInitial(RTWrapper::new);
+    rt = new RuntimeLocal();
+  }
+
+  // A class and not ThreadLocal.withInitial(RTWrapper::new): this initializer runs on the agent's
+  // premain path, which must not reach an invokedynamic call site.
+  private static final class RuntimeLocal extends ThreadLocal<RTWrapper> {
+    @Override
+    protected RTWrapper initialValue() {
+      return new RTWrapper();
+    }
   }
 
   // BTraceRuntime against BTrace class name

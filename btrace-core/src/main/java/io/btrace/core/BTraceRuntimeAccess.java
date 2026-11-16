@@ -22,6 +22,8 @@ import io.btrace.core.handlers.EventHandler;
 import io.btrace.core.handlers.ExitHandler;
 import io.btrace.core.handlers.LowMemoryHandler;
 import io.btrace.core.handlers.TimerHandler;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.UnaryOperator;
 
 /** Bootstrap-visible runtime access shim. */
 public final class BTraceRuntimeAccess {
@@ -30,7 +32,34 @@ public final class BTraceRuntimeAccess {
   // for testing purposes; needs to be non-final
   private static volatile boolean uniqueClientClassNames = true;
 
+  // The one agent instance of this JVM, as the entry point a later agent load hands over to.
+  private static final AtomicReference<UnaryOperator<String>> agentControl =
+      new AtomicReference<>();
+
   private BTraceRuntimeAccess() {}
+
+  /**
+   * Claims this JVM for one agent instance. Every agent load gets a class loader, and with it an
+   * agent, of its own, while this class is shared by all of them: a second agent would replace the
+   * delegate installed here and break the first one's probes.
+   *
+   * @param control what a later agent load calls with its argument string; returns one line saying
+   *     what was done
+   * @return whether this is the first agent instance, which may go on to initialize
+   */
+  public static boolean claimAgent(UnaryOperator<String> control) {
+    return agentControl.compareAndSet(null, control);
+  }
+
+  /** The control of the agent instance that holds the claim, or {@code null}. */
+  public static UnaryOperator<String> agentControl() {
+    return agentControl.get();
+  }
+
+  /** Gives the claim back. Only for an instance that failed before installing itself here. */
+  public static void releaseAgent(UnaryOperator<String> control) {
+    agentControl.compareAndSet(control, null);
+  }
 
   public static void install(Delegate delegate) {
     BTraceRuntimeAccess.delegate = delegate;

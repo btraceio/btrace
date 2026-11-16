@@ -227,7 +227,13 @@ public class ClassFilter {
   }
 
   private static void addSensitiveMethod(String owner, String name) {
-    SENSITIVE_METHODS.computeIfAbsent(owner, k -> new HashSet<>()).add(name);
+    // No lambda: this runs from the static initializer, on the agent's premain path.
+    Set<String> methods = SENSITIVE_METHODS.get(owner);
+    if (methods == null) {
+      methods = new HashSet<>();
+      SENSITIVE_METHODS.put(owner, methods);
+    }
+    methods.add(name);
   }
 
   public boolean isCandidate(Class<?> target) {

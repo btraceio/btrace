@@ -72,7 +72,8 @@ public final class HandlerRepositoryImpl {
     // A fresh deploy starts not tripped with a zero counter, however the previous probe of this
     // name ended: a budget trip racing that probe's exit can leave state unregister already
     // cleared.
-    ProbeBudgets.forget(probeName);
+    // The exempt mark is kept: it is set just before registration (see Client).
+    ProbeBudgets.forgetCounts(probeName);
     probeMap.put(probeName, probe);
   }
 
@@ -181,8 +182,8 @@ public final class HandlerRepositoryImpl {
 
   /**
    * A replacement for a handler that must never run: it accepts the handler's arguments, does
-   * nothing, and returns the default value of the handler's return type. Used when a level guard
-   * cannot be constructed.
+   * nothing, and returns the default value of the handler's return type. Used when a level guard or
+   * hit counter cannot be constructed, and for a probe disabled by its budget.
    */
   static MethodHandle failClosed(MethodType handlerType) {
     try {
@@ -357,6 +358,10 @@ public final class HandlerRepositoryImpl {
       // inside the level guard so a call the level rejects is not counted.
       if (ProbeBudgets.isRateLimited() && !ProbeBudgets.isExempt(probeName)) {
         mh = applyHitCounter(mh, probeName, handlerName, handlerType);
+        if (probeMap.get(probeName) != probe) {
+          // Unregistered while this was resolving: drop the counter this just created.
+          ProbeBudgets.forget(probeName);
+        }
       }
 
       // Apply level guard if this handler has a level check

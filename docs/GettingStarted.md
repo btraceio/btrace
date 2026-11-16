@@ -465,7 +465,24 @@ property, so the smaller value wins. When the agent is loaded by dynamic attach,
 `probeMaxRate` agent arguments are ignored with one line: the `-D` property set at JVM launch is
 then the only way to have a limit. Both limits are fixed when the agent loads; a later attach to a
 JVM that already has the agent cannot change them, and a `$io.btrace.probeTtl=...` or
-`$io.btrace.probeMaxRate=...` agent argument is rejected.
+`$io.btrace.probeMaxRate=...` agent argument is rejected. A JVM holds one agent:
+loading the agent again does not create a second one. If the agent already there has no command
+server (it was launched with `noServer=true`, or only with `script=`), that load makes it start
+its server on the requested port, and a client can then attach. Every other argument of the later
+load is ignored, with one line in the target JVM, so it cannot change the limits. An agent whose
+launch-time budget is invalid starts no server this way.
+
+A server started this way belongs to the agent loaded at launch, and its clients get that agent's
+settings, a launch-time `trusted=true` included. It therefore requires the same token as a server
+started at launch: the token file is the launch-time `authTokenFile=` if one was given, otherwise
+the agent generates one when the server starts, and a 3.0 client run as the same user picks it up
+without any option. What is ignored includes the options the client turns into agent arguments,
+such as `-cp` and `-statsd`: a probe that needs extra classes on the target's class path gets
+them only from the launch-time `bootClassPath=` and `systemClassPath=` arguments. The client's
+`-u` is not among them. It is requested per connection and is honoured unless a probe budget is
+in effect, as on any command server. An agent first loaded by dynamic attach that fails late in
+its initialization cannot be replaced: a later load is answered with
+`the agent failed to initialize; restart the JVM to use BTrace in it`.
 
 `probeMaxRate` counts the handlers BTrace attaches to application code (`@OnMethod` and the other
 instrumentation sites). Handlers the runtime calls itself, such as `@OnTimer`, `@OnEvent` and
@@ -474,7 +491,8 @@ instrumentation sites). Handlers the runtime calls itself, such as `@OnTimer`, `
 A probe that exceeds a limit is stopped and removed, and the client exits with code `5` (see
 [Troubleshooting](Troubleshooting.md#probe-removed-a-budget-was-exceeded)). A client that has
 stopped reading, or whose exit takes too long, is disconnected instead; the line logged in the
-target JVM is then the record. Probes the agent loads itself (from `script=` or `scriptdir=`, or
+target JVM is then the record. A client cannot reconnect to a detached probe while it is being
+removed. Probes the agent loads itself (from `script=` or `scriptdir=`, or
 bundled into the agent) are exempt when the agent is loaded at JVM launch. When it is loaded by
 dynamic attach, those probes are limited like any other; they have no client, so their removal is
 logged in the target JVM. While a budget is set, a client cannot deploy a probe in trusted mode

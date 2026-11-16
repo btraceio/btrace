@@ -86,7 +86,18 @@ public final class ProbeBudgets {
     tripped.remove(probeInternalName);
   }
 
-  /** Drops the counter and tripped mark; called when the probe is unregistered. */
+  /** Drops only the exempt mark. */
+  public static void clearExempt(String probeInternalName) {
+    exempt.remove(probeInternalName);
+  }
+
+  /** Drops the counter and tripped mark, keeping the exempt mark; called on registration. */
+  public static void forgetCounts(String probeInternalName) {
+    counters.remove(probeInternalName);
+    tripped.remove(probeInternalName);
+  }
+
+  /** Drops all budget state of a probe; called when the probe is unregistered. */
   public static void forget(String probeInternalName) {
     counters.remove(probeInternalName);
     tripped.remove(probeInternalName);

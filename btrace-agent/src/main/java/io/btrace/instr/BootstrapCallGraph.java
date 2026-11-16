@@ -28,11 +28,14 @@ import java.util.Set;
 import java.util.function.Predicate;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Handle;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TypeInsnNode;
 
 /**
  * Walks the static call graph reachable from a root method, collecting every {@link
@@ -51,7 +54,9 @@ import org.objectweb.asm.tree.MethodNode;
  * classes are never loaded or descended into. It does, however, follow every {@code invokedynamic}
  * site's bootstrap-method {@link Handle} arguments into the synthetic implementation method a
  * lambda/method-reference compiles to, so calls made only from inside a lambda's own body (not
- * visible as a direct {@code MethodInsnNode} edge) are still reached.
+ * visible as a direct {@code MethodInsnNode} edge) are still reached. It also follows class
+ * initialization: the static initializer of every in-scope class a reached method calls into,
+ * instantiates, or reads or writes a static field of.
  */
 public final class BootstrapCallGraph {
 
@@ -169,11 +174,28 @@ public final class BootstrapCallGraph {
         } else if (insn instanceof MethodInsnNode) {
           MethodInsnNode call = (MethodInsnNode) insn;
           worklist.push(new MethodKey(call.owner, call.name, call.desc));
+          worklist.push(initializerOf(call.owner));
+        } else if (insn instanceof FieldInsnNode) {
+          int opcode = insn.getOpcode();
+          if (opcode == Opcodes.GETSTATIC || opcode == Opcodes.PUTSTATIC) {
+            worklist.push(initializerOf(((FieldInsnNode) insn).owner));
+          }
+        } else if (insn.getOpcode() == Opcodes.NEW) {
+          worklist.push(initializerOf(((TypeInsnNode) insn).desc));
         }
       }
     }
 
     return new Result(indySites, visited);
+  }
+
+  /**
+   * The static initializer of {@code owner}. Calling a method of a class, touching one of its
+   * static fields or instantiating it initializes the class first, so its initializer is reachable
+   * from wherever that happens. A class without one yields a key the scan finds nothing for.
+   */
+  private static MethodKey initializerOf(String owner) {
+    return new MethodKey(owner, "<clinit>", "()V");
   }
 
   private static byte[] readClassBytes(String internalClassName, ClassLoader loader)

@@ -134,28 +134,26 @@ class BudgetLimitsTest {
   @Test
   void budgetRefusesTrustRequestedByAClient() throws Exception {
     BudgetLimits limits = resolve(props(null, "100"), new ArgsMap(), true, new ArrayList<>());
-    assertTrue(BudgetLimits.refusesClientTrust(limits, true, false));
+    assertTrue(BudgetLimits.refusesClientTrust(limits, false));
   }
 
   @Test
   void budgetAllowsTrustGrantedByTheOperatorAtLaunch() throws Exception {
     BudgetLimits limits = resolve(props(null, "100"), new ArgsMap(), true, new ArrayList<>());
-    assertFalse(BudgetLimits.refusesClientTrust(limits, true, true));
+    assertFalse(BudgetLimits.refusesClientTrust(limits, true));
   }
 
   @Test
-  void budgetRefusesTrustFromAttachArguments() throws Exception {
+  void budgetResolvedUnderAttachRefusesTrustWithoutAGrant() throws Exception {
     BudgetLimits limits = resolve(props("60", null), new ArgsMap(), false, new ArrayList<>());
-    assertTrue(BudgetLimits.refusesClientTrust(limits, false, true));
-    assertTrue(BudgetLimits.refusesClientTrust(limits, false, false));
+    assertTrue(BudgetLimits.refusesClientTrust(limits, false));
+    assertFalse(BudgetLimits.refusesClientTrust(limits, true));
   }
 
   @Test
   void noBudgetNeverRefusesTrust() {
-    for (boolean premain : new boolean[] {true, false}) {
-      for (boolean trusted : new boolean[] {true, false}) {
-        assertFalse(BudgetLimits.refusesClientTrust(BudgetLimits.NONE, premain, trusted));
-      }
+    for (boolean operatorGrant : new boolean[] {true, false}) {
+      assertFalse(BudgetLimits.refusesClientTrust(BudgetLimits.NONE, operatorGrant));
     }
   }
 }

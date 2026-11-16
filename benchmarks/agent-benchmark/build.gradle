@@ -55,10 +55,9 @@ jmh {
   duplicateClassesStrategy = DuplicatesStrategy.WARN
   def agentJarPath = tasks.getByPath(':btrace-dist:btraceJar').outputs.getFiles().getSingleFile()
   def scriptPath = buildDir.toPath().resolve('classes/java/main/TraceScript.btclass')
-  // -Pbudget=<hits/s> appends probeMaxRate to the agent string. The benchmark script is a startup
-  // script loaded at JVM launch, so its probe is exempt: neither counted nor removed.
-  def budgetOption = project.hasProperty('budget') ? ",probeMaxRate=${project.property('budget')}" : ''
-  def agent = "-javaagent:${agentJarPath}=stdout=false,noServer=true,debug=false,script=${scriptPath}${budgetOption}"
+  // The benchmark script is a startup script loaded at JVM launch. Such a probe is exempt from
+  // probe budgets (neither counted nor removed), so this benchmark cannot measure their cost.
+  def agent = "-javaagent:${agentJarPath}=stdout=false,noServer=true,debug=false,script=${scriptPath}"
   def jvmArgs = ["-Djmh.basedir=${buildDir.getParentFile()}", "-Dproject.version=${project.version}", "-Xmx128m"]
   // The async-profiler agent is added only where its library exists.
   def asyncProfiler = new File('/tmp/libasyncProfiler.dylib')

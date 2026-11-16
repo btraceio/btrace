@@ -106,6 +106,47 @@ of trusted mode, on every later deploy until the JVM restarts.
 Limits are fixed when the agent loads. A later attach to a JVM that already has the agent cannot
 change them.
 
+Second agent load (added 2026-11-15 after an independent review; decided by the maintainer):
+every `premain`/`agentmain` call gets a fresh agent class loader (`Loader.startAgent`), so an
+agent loaded a second time was a separate instance. It knew nothing of a budget set by launch-time
+agent arguments, so an attacher loading the agent directly got an unbudgeted, trustable agent. It
+also took over the runtime hooks of the first instance: every later deploy through the first agent
+failed with a `ClassCastException` in `BTraceRuntimeAccessImpl.enterInternal`. A second load is
+now handed over to the first: the first instance claims the JVM with an atomic compare-and-set
+in `BTraceRuntimeAccess`, a class all loads share, and a load that finds the claim taken calls
+the holder instead of initializing. The holder ignores everything in that load except the port
+and bind address: if it has no command server (launched with `noServer=true`, only with
+`script=`, or with a rejected `port=`), it starts its own server for the attach, bound by its own
+settings and budget; otherwise it does nothing. An invalid launch-time budget still means no
+server. A first load that fails before it installs its runtime hooks gives the claim back, so a
+retry with other arguments can load; the shared settings are put back to what they were before
+that load, so its `trusted=true` does not carry over (system properties it set, class-path
+appends and its governor thread stay). A load that fails after installing its hooks keeps the
+claim: nothing can replace it, and later loads are told to restart the JVM.
+
+Token on the late server (decided by the maintainer 2026-11-15): the server a launch-time agent
+starts for a later load requires authentication exactly as one started at launch does. Its
+clients inherit the launch-time settings, `trusted=true` included, so leaving it open would give
+every local user who can reach the loopback port a trusted endpoint. The token file comes from
+the launch-time `authTokenFile=`, or is generated; the later load's `authTokenFile=` is ignored
+like its other arguments. The 3.0 client reads the published token file after loading the agent,
+so `btrace <pid>` needs no new option. An agent first loaded by dynamic attach keeps the
+unauthenticated server dynamic attach has always had. Client options that travel as agent
+arguments (`-cp`, `-statsd`) do not reach an agent that is already loaded; this is documented,
+and the target prints one line. `-u` also travels per connection and keeps working unless a
+budget refuses it. The restart answer is reachable only for an agent first loaded by dynamic
+attach: a failed launch-time agent stops the JVM. Telling the client would need a new discovery
+property and is not done.
+
+Trusted argument ordering (added 2026-11-15): under dynamic attach with an operator property set,
+`trusted=true` is not applied at all while the agent arguments are parsed, instead of being set
+and cleared afterwards. Otherwise `btrace.system.appendJar`, which requires trusted mode, was
+honoured during parsing. The hints that name the ways to enable trusted mode leave out the
+client's `-u` flag when a budget is requested, because it is refused then.
+
+Reconnect (added 2026-11-15): a client cannot reconnect to a detached probe once its budget has
+tripped; it gets a refused reconnect instead of a connection that drops when the probe is removed.
+
 Protecting the ceiling — *my call*: `Main.parseArgs` turns any `$key=value` agent argument into
 `System.setProperty` (`Main.java:1213-1215`), so an attaching client could overwrite the operator's
 property. The two `io.btrace.probe*` properties are therefore read once, before agent arguments
@@ -219,11 +260,11 @@ $ echo $?
   Also: a call site that links after the trip runs no handler; a `$io.btrace.probeMaxRate` attach
   argument cannot raise an operator ceiling; an invalid attach argument leaves the server running
   with the operator ceiling in force.
-- **Benchmark:** `benchmarks/agent-benchmark` `BTraceBench`, handler with and without a rate
-  ceiling. Report the per-hit delta; this decides `LongAdder` versus a plain field. The benchmark
-  deploys with `noServer=true,script=…` (`benchmarks/agent-benchmark/build.gradle:58`), which is
-  the exempt startup-script mode: the handler is counted but never tripped, which is what the
-  measurement needs.
+- **Benchmark (not done):** the per-hit cost of the counter, which decides `LongAdder` versus a
+  plain field, is unmeasured. `benchmarks/agent-benchmark` `BTraceBench` deploys with
+  `noServer=true,script=…`, the exempt startup-script mode, and an exempt probe is not counted,
+  so that benchmark cannot show the cost. Measuring it needs a benchmark that deploys its probe
+  through a client.
 - **Gates:** `./gradlew build`, `spotlessCheck`, integration matrix on the JDK tiers available
   locally via `TEST_JAVA_HOME`.
 

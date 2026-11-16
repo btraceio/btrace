@@ -195,7 +195,7 @@
   - `tripHappensOnce` — over the ceiling on two consecutive ticks → `budgetExit` called once. *(Review Focus 5)*
   - `hotProbeTripsQuietProbeStays` — two clients, one over → only that one exits. *(Review Focus 3)*
   In `RemoteClientTerminalExitTest`:
-  - `budgetExitRemovesDetachedProbe` — detached client, `budgetExit(...)` → client no longer in `Client.listProbes()`, its transformer was cleaned up.
+  - `forcedRemovalRemovesDetachedProbe` — detached client, `budgetExit(...)` → client no longer in `Client.listProbes()`, its transformer was cleaned up.
   - `budgetExitAfterClientExitIsHarmless` — exit the client normally, then `budgetExit(...)` → no exception, finalization ran once. *(Review Focus 5)*
 - [ ] **Step 2: Run and see them fail** — `./gradlew :btrace-agent:test --tests '*BudgetGovernorTest' --tests '*RemoteClientTerminalExitTest'` → compilation failure.
 - [ ] **Step 3: Implement** the `Client` / `RemoteClient` additions and `BudgetGovernor` to the interfaces above. Set `deployedAtNanos` in `Client.loadClass` once the probe is loaded. `FileClient` overrides `budgetExempt()` to return `true`.
@@ -242,7 +242,7 @@
   - `hotProbeIsRemovedWithReasonAndExitCode` — target started with `port=0,probeMaxRate=100`; deploy `BudgetHotProbe` → client output contains `removed:` and `exceeded probeMaxRate=100`; client exit code is `5`; the target is still running; a probe listing shows nothing left.
   - `quietProbeSurvivesNextToHotProbe` — same target, deploy `BudgetQuietProbe` and `BudgetHotProbe` → the hot one is removed, the quiet one still produces output afterwards. *(Review Focus 3)*
   - `detachedProbeIsRemovedByTtl` — target started with `port=0,probeTtl=5`; deploy, detach the client; within 15 s the probe listing is empty and the target's captured output contains `lifetime exceeded probeTtl=5s`.
-  - `attachArgumentCannotRaiseOperatorCeiling` — target launched with `-Dio.btrace.probeMaxRate=100`, agent loaded with `probeMaxRate=100000000` → hot probe is still removed at 100.
+  - `launchArgumentCannotRaiseOperatorCeiling` — target launched with `-Dio.btrace.probeMaxRate=100`, agent loaded with `probeMaxRate=100000000` → hot probe is still removed at 100.
   - `invalidLimitAtLaunchKeepsTargetRunningWithoutServer` — `port=0,probeMaxRate=abc` → output names `probeMaxRate=abc`, no stack trace, target runs (same assertions as `AgentInvalidOptionsIntegrationTest.assertRejectedWithoutCrash`).
   - `noLimitsBehavesAsBefore` — no budget options; deploy `BudgetHotProbe`; after 5 s it is still attached and exits `0` when asked.
 - [ ] **Step 2: Prove they can fail.** Temporarily make `BudgetGovernor.start` a no-op, run

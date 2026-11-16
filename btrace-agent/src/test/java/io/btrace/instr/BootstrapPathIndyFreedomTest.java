@@ -16,6 +16,7 @@
  */
 package io.btrace.instr;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -32,9 +33,11 @@ import org.junit.jupiter.api.Test;
  * internal/superpowers/plans/2026-07-12-extension-loader-classcircularity-investigation.md for the
  * full root-cause writeup.
  *
- * <p>Scans from two roots: {@code Main.<clinit>} (the class's static field initializers, which run
- * unconditionally as soon as {@code Main} is first referenced -- before {@code premain()}'s body
- * even starts) and {@code Main.premain} itself.
+ * <p>Scans from these roots: {@code Main.<clinit>} (the class's static field initializers, which
+ * run unconditionally as soon as {@code Main} is first referenced -- before {@code premain()}'s
+ * body even starts), {@code Main.premain} itself, and the parts of {@code AgentHandOver} the scan
+ * cannot reach from there: its static initializer, and the two methods a later agent load runs
+ * through an interface call, which is what a second {@code -javaagent} entry does at launch.
  *
  * <p>If this test fails, the reported call sites are exactly the lambdas/method references that
  * need converting to anonymous classes (see {@code io.btrace.extension.ExtensionLoader#initialize}
@@ -43,6 +46,7 @@ import org.junit.jupiter.api.Test;
 class BootstrapPathIndyFreedomTest {
 
   private static final String MAIN = "io/btrace/agent/Main";
+  private static final String HAND_OVER = "io/btrace/agent/AgentHandOver";
   private static final java.util.function.Predicate<String> IN_SCOPE =
       owner -> owner.startsWith("io/btrace/");
 
@@ -50,25 +54,40 @@ class BootstrapPathIndyFreedomTest {
   void bootstrapPathReachesNoInvokedynamicCallSite() {
     ClassLoader loader = BootstrapPathIndyFreedomTest.class.getClassLoader();
     List<IndyScanner.IndySite> found = new ArrayList<>();
-    found.addAll(BootstrapCallGraph.scan(MAIN, "<clinit>", "()V", IN_SCOPE, loader).indySites);
+    found.addAll(scanRoot(MAIN, "<clinit>", "()V", loader));
+    // The scan follows calls, not class initialization. This initializer runs on the premain
+    // path too, when Main first uses the class, so it is a root of its own.
+    found.addAll(scanRoot(HAND_OVER, "<clinit>", "()V", loader));
+    // Reached only through UnaryOperator.apply and Supplier.get, which the scan does not follow.
     found.addAll(
-        BootstrapCallGraph.scan(
-                MAIN,
-                "premain",
-                "(Ljava/lang/String;Ljava/lang/instrument/Instrumentation;)V",
-                IN_SCOPE,
-                loader)
-            .indySites);
+        scanRoot(
+            HAND_OVER, "startServerOnAttach", "(Ljava/lang/String;)Ljava/lang/String;", loader));
+    found.addAll(scanRoot(HAND_OVER + "$2", "get", "()Ljava/util/function/UnaryOperator;", loader));
+    found.addAll(
+        scanRoot(
+            MAIN,
+            "premain",
+            "(Ljava/lang/String;Ljava/lang/instrument/Instrumentation;)V",
+            loader));
 
     if (!found.isEmpty()) {
       String report =
           found.stream().map(IndyScanner.IndySite::toString).collect(Collectors.joining("\n  "));
       assertTrue(
           false,
-          "Main.<clinit>/premain() reaches "
+          "The agent startup path reaches "
               + found.size()
               + " invokedynamic call site(s) -- convert each to an anonymous class:\n  "
               + report);
     }
+  }
+
+  /** Scans from one root, which must exist: the scan itself skips a method it cannot find. */
+  private static List<IndyScanner.IndySite> scanRoot(
+      String owner, String name, String desc, ClassLoader loader) {
+    BootstrapCallGraph.Result result = BootstrapCallGraph.scan(owner, name, desc, IN_SCOPE, loader);
+    assertFalse(
+        result.visitedMethods.isEmpty(), "scan root not found: " + owner + "#" + name + desc);
+    return result.indySites;
   }
 }

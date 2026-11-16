@@ -66,13 +66,12 @@ final class BudgetLimits {
   /**
    * Whether trusted mode must be refused to clients. A trusted probe is unverified code that can
    * defeat the budget, so under a budget only the operator can grant it: {@code trusted=true} in
-   * agent arguments written by the operator (premain).
+   * the agent arguments at JVM launch.
    *
-   * @param premain true when agent arguments were written by the operator
-   * @param argumentTrusted true when the agent arguments turned trusted mode on
+   * @param operatorGrant true when the operator granted trusted mode at launch
    */
-  static boolean refusesClientTrust(BudgetLimits limits, boolean premain, boolean argumentTrusted) {
-    return limits.any() && !(premain && argumentTrusted);
+  static boolean refusesClientTrust(BudgetLimits limits, boolean operatorGrant) {
+    return limits.any() && !operatorGrant;
   }
 
   /** The raw operator property values, captured before agent arguments are parsed. */
@@ -83,6 +82,11 @@ final class BudgetLimits {
     private Snapshot(String ttl, String rate) {
       this.ttl = ttl;
       this.rate = rate;
+    }
+
+    /** Whether the operator set either property, valid or not. */
+    boolean present() {
+      return ttl != null || rate != null;
     }
   }
 

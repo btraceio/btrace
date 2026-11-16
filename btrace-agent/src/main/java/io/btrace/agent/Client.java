@@ -524,7 +524,21 @@ abstract class Client implements CommandListener {
     boolean entered = false;
     try {
       entered = BTraceRuntimeAccess.enter((BTraceRuntimeBridge) runtime);
-      Class<?> probeClass = probe.register(runtime, transformer);
+      // Marked before registration activates the probe's transformer: a handler resolved by a
+      // class loading right then must already see the mark, because a resolved call site is not
+      // resolved again.
+      String exemptName = budgetExempt() ? probe.getClassName(true) : null;
+      if (exemptName != null) {
+        ProbeBudgets.markExempt(exemptName);
+      }
+      Class<?> probeClass = null;
+      try {
+        probeClass = probe.register(runtime, transformer);
+      } finally {
+        if (probeClass == null && exemptName != null) {
+          ProbeBudgets.clearExempt(exemptName);
+        }
+      }
       if (probeClass != null) {
         markDeployed(System.nanoTime());
       }
@@ -722,17 +736,16 @@ abstract class Client implements CommandListener {
   // registering a real one.
   final synchronized void setProbeForTest(BTraceProbe probe, long deployedAtNanos) {
     this.probe = probe;
+    if (budgetExempt()) {
+      // What loadClass does before it registers a real probe.
+      ProbeBudgets.markExempt(probe.getClassName(true));
+    }
     markDeployed(deployedAtNanos);
   }
 
   private void markDeployed(long nanos) {
     deployedAtNanos = nanos;
-    String name = probe.getClassName(true);
-    if (budgetExempt()) {
-      // Registration cleared the probe's budget state, so this is marked afterwards.
-      ProbeBudgets.markExempt(name);
-    }
-    probeInternalName = name;
+    probeInternalName = probe.getClassName(true);
   }
 
   final String getClassName() {
