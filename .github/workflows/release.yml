@@ -1450,7 +1450,7 @@ jobs:
             echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${RELEASE_TAG})" >> $GITHUB_STEP_SUMMARY
             echo "- [Maven Central](https://central.sonatype.com/search?q=io.btrace&version=${{ inputs.release_version }})" >> $GITHUB_STEP_SUMMARY
             echo "- [SDKMan](https://sdkman.io/sdks#btrace)" >> $GITHUB_STEP_SUMMARY
-            echo "- JBang: \`jbang btrace@${{ inputs.release_version }}\` (uses Maven Central)" >> $GITHUB_STEP_SUMMARY
+            echo "- JBang: \`jbang io.btrace:btrace:${{ inputs.release_version }}\` (uses Maven Central)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "## Maven Coordinates" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY

@@ -739,6 +739,58 @@ tasks.matching { it.name.startsWith('publishBtracePublicationTo') }.configureEac
     dependsOn verifyEmbeddedExtensions
 }
 
+// Maven Central validates a release deployment and rejects a component without a signed
+// -sources.jar and -javadoc.jar beside the main jar
+// (https://central.sonatype.org/publish/requirements/#supply-javadoc-and-sources). Snapshots are
+// not validated, so a publication that lacks them publishes snapshots for months and then fails
+// at the first release or release candidate. The check publishes to a scratch repository and
+// reads what landed there, so it sees the files Central would.
+def releaseCheckRepo = layout.buildDirectory.dir('release-check-repo')
+// Emptied first so files left by an earlier run cannot satisfy the check
+tasks.register('cleanReleaseCheckRepo', Delete) {
+    delete releaseCheckRepo
+}
+tasks.register('verifyBtracePublication') {
+    group = 'verification'
+    description = 'Checks that io.btrace:btrace is publishable to Maven Central'
+    dependsOn 'publishBtracePublicationToReleaseCheckRepository'
+    doLast {
+        def dir = releaseCheckRepo.get().dir("io/btrace/btrace/${project.version}").asFile
+        def files = (dir.listFiles() ?: []) as List
+        def base = java.util.regex.Pattern.quote('btrace-' + project.version.toString().replace('-SNAPSHOT', '')) + '(?:-SNAPSHOT|-[0-9.]+-[0-9]+)?'
+        def find = { String suffix -> files.find { it.name ==~ (base + java.util.regex.Pattern.quote(suffix)) } }
+        def entriesOf = { File f -> new java.util.zip.ZipFile(f).withCloseable { z -> z.entries().collect { it.name } } }
+        def failures = []
+        ['.jar', '-sources.jar', '-javadoc.jar', '.pom'].each { suffix ->
+            if (find(suffix) == null) {
+                failures << "missing btrace-<version>${suffix} in ${dir}"
+            }
+        }
+        // A jar that exists but is empty passes Central and helps nobody: require the script API
+        def sources = find('-sources.jar')
+        if (sources != null && !entriesOf(sources).contains('io/btrace/core/BTraceUtils.java')) {
+            failures << "${sources.name} does not contain io/btrace/core/BTraceUtils.java"
+        }
+        def javadoc = find('-javadoc.jar')
+        if (javadoc != null && !entriesOf(javadoc).contains('io/btrace/core/BTraceUtils.html')) {
+            failures << "${javadoc.name} does not contain io/btrace/core/BTraceUtils.html"
+        }
+        if (failures) {
+            throw new GradleException('io.btrace:btrace is not publishable to Maven Central:\n  ' + failures.join('\n  '))
+        }
+        logger.lifecycle("[dist] Verified the Maven publication of io.btrace:btrace:${project.version} (jar, sources, javadoc, pom)")
+    }
+}
+tasks.matching { it.name == 'publishBtracePublicationToReleaseCheckRepository' }.configureEach {
+    dependsOn 'cleanReleaseCheckRepo'
+}
+tasks.matching { it.name == 'publishBtracePublicationToSonatypeRepository' }.configureEach {
+    dependsOn 'verifyBtracePublication'
+}
+tasks.named('check') {
+    dependsOn 'verifyBtracePublication'
+}
+
 task releaseSmoke(type: Exec) {
     group = 'Verification'
     description = 'Run acquisition and first-trace smoke tests against the built distribution'
@@ -978,6 +1030,47 @@ sdkman {
     }
 }
 
+// The companions Maven Central requires for io.btrace:btrace. Sources: the modules whose classes
+// the published jar carries (the embedded extensions publish their own sources as
+// io.btrace:<id>). Javadoc: btrace-core, the API that scripts and extensions compile against
+// (io.btrace.BTrace, BTraceUtils, the annotations and the extension SPI).
+def publishedSourceProjects = [
+    ':btrace-boot', ':btrace-core', ':btrace-runtime', ':btrace-compiler', ':btrace-agent', ':btrace-client'
+]
+// Their source sets and javadoc task are read below, so they must be evaluated first
+publishedSourceProjects.each { evaluationDependsOn(it) }
+tasks.register('btraceSourcesJar', Jar) {
+    group = 'Documentation'
+    description = 'Builds the sources jar published as io.btrace:btrace:<version>:sources'
+    archiveBaseName.set('btrace')
+    archiveVersion.set('')
+    archiveClassifier.set('sources')
+    destinationDirectory.set(layout.buildDirectory.dir('publication-jars'))
+    // Modules repeat resource names (META-INF/services entries, package-info); the first wins
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    publishedSourceProjects.each { path ->
+        def sets = project(path).sourceSets
+        from(sets.main.allSource)
+        // Multi-release variants (btrace-runtime java9/java11, btrace-agent java24) sit where a
+        // multi-release jar would put their classes
+        sets.matching { it.name ==~ /java\d+/ }.each { set ->
+            into("META-INF/versions/${set.name.substring(4)}") {
+                from(set.allSource)
+            }
+        }
+    }
+}
+tasks.register('btraceJavadocJar', Jar) {
+    group = 'Documentation'
+    description = 'Builds the javadoc jar published as io.btrace:btrace:<version>:javadoc'
+    archiveBaseName.set('btrace')
+    archiveVersion.set('')
+    archiveClassifier.set('javadoc')
+    destinationDirectory.set(layout.buildDirectory.dir('publication-jars'))
+    dependsOn ':btrace-core:javadoc'
+    from({ project(':btrace-core').tasks.javadoc.destinationDir })
+}
+
 publishing {
     repositories {
         maven {
@@ -992,6 +1085,11 @@ publishing {
                 password = project.hasProperty("sonatype.password") ? project.property("sonatype.password") : System.getenv('SONATYPE_PASSWORD')
             }
         }
+        // Scratch target for verifyBtracePublication
+        maven {
+            name = 'releaseCheck'
+            url = layout.buildDirectory.dir('release-check-repo')
+        }
     }
 
     publications {
@@ -1005,6 +1103,9 @@ publishing {
             // script injects it. The distribution is unaffected: it keeps shipping the lean
             // libs/btrace.jar alongside its extensions directory.
             artifact fatAgentJar
+            // Central rejects a release without these two; see verifyBtracePublication
+            artifact tasks.named('btraceSourcesJar')
+            artifact tasks.named('btraceJavadocJar')
             pom.withXml {
                 addPomDetails(asNode(), 'btrace')
             }
