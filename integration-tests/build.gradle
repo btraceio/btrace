@@ -12,6 +12,11 @@ dependencies {
     testImplementation libs.testcontainers
 }
 
+// Not shipped: the dummy test fixtures use jdk.jfr, which --release 8 omits.
+compileJava {
+    options.release.set((Integer) null)
+}
+
 compileTestJava {
     sourceCompatibility = 8
     targetCompatibility = 8

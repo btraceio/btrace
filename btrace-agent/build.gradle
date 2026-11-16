@@ -23,6 +23,15 @@ configurations.testRuntimeClasspath {
     resolutionStrategy.force 'org.junit.jupiter:junit-jupiter:5.14.4'
 }
 
+configurations {
+    // The BTrace compiler and its runtime classpath, used by compileTestProbes. Not part of any
+    // compile or runtime classpath of this module.
+    testProbeCompiler {
+        canBeConsumed = false
+        canBeResolved = true
+    }
+}
+
 sourceSets {
     java24 {
         java {
@@ -60,7 +69,11 @@ dependencies {
     }
     implementation project(':btrace-core')
     implementation project(':btrace-runtime')
-    implementation project(':btrace-compiler')
+    // The agent loads only pre-compiled probes (Main refuses .java scripts), so its main code has
+    // no dependency on btrace-compiler; the compiler depends on the agent at runtime instead, for
+    // the probe-pack generator it finds through ServiceLoader. The compiler is needed only as a
+    // build tool, to compile the test probes (compileTestProbes below).
+    testProbeCompiler project(':btrace-compiler')
 
     java24Implementation files(sourceSets.main.output.classesDirs) {
         builtBy compileJava
@@ -70,6 +83,13 @@ dependencies {
     java24Implementation libs.asm
     java24Implementation libs.slf4j
 
+    // The ClassFile API backend (java24 source set) ships inside this module's jar. Tests that
+    // select it (BackendSelectorTest, ClassFileApiBackendTest) need its classes on the test
+    // runtime classpath; they used to get them only through the btrace-compiler dependency,
+    // which pulled this module's own jar back in.
+    testRuntimeOnly files(sourceSets.java24.output.classesDirs) {
+        builtBy compileJava24Java
+    }
     testImplementation libs.asm.util
     testImplementation libs.slf4j.simple
     testImplementation libs.junit.jupiter
@@ -91,14 +111,14 @@ tasks.named('javadoc').configure {
 task compileTestProbes {
     // Mirror the integration-tests compiler invocation so dependent project outputs and extension
     // API JARs are available before the compiler classpath is resolved.
-    dependsOn compileTestJava, processTestResources,
+    dependsOn compileTestJava, processTestResources, configurations.testProbeCompiler,
             ':btrace-agent:jar',
             ':btrace-boot:jar',
             ':btrace-compiler:jar',
             ':btrace-extensions:btrace-utils:buildApiJar',
             ':btrace-extensions:btrace-statsd:buildApiJar'
     doLast {
-        def path = project(':btrace-agent').sourceSets.main.runtimeClasspath
+        def path = configurations.testProbeCompiler
 
         def loader = new URLClassLoader(path.collect { f -> f.toURL() } as URL[])
         def compiler = loader.loadClass('io.btrace.compiler.Compiler')

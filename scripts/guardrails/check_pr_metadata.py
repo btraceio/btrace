@@ -8,9 +8,13 @@ PRs are squash-merged, so the title becomes the commit subject on develop. Fails
     How verified / Verification / Validation / Evidence section with at least one line that is not a template placeholder,
     an unticked checkbox, or an HTML comment;
   - the PR changes golden instrumentation data and the description does not say it was
-    regenerated with -PupdateTestData (the data must never be edited by hand).
+    regenerated with -PupdateTestData (the data must never be edited by hand);
+  - the PR changes exactly one of the two instrumentation backends (ASM, ClassFile API) and the
+    description has no `Sibling: <reason>` line saying why the other needs no change. The line
+    must be real text: inside an HTML comment or left as the template's `<...>` it does not count.
+    The rule checks that a reason is given, not that it is adequate.
 
-Bot-authored PRs (Renovate) are held to the title rule only.
+Bot-authored PRs (Renovate) are held to the title rule only (so also exempt from the Sibling rule).
 
 Usage: check_pr_metadata.py EVENT_JSON [CHANGED_FILES]
   EVENT_JSON     the workflow's $GITHUB_EVENT_PATH; non-pull_request events pass trivially
@@ -28,6 +32,43 @@ SECTION_RE = re.compile(
     re.I,
 )
 HEADING_RE = re.compile(r"^\s*#{1,6}\s")
+# The two instrumentation backends (principle P4). A change to one is a change to both or says why not.
+CLASSFILE_BACKEND = ("btrace-agent/src/main/java24/",)
+# Exact paths. Regenerate with `python3 -I scripts/guardrails/derive_asm_backend.py`: the two seeds
+# (Instrumentor, AsmInstrumentationBackend) plus every io/btrace/instr main-source file referenced
+# only from files already in the set. Assembler.java and BTraceClassWriter.java are deliberately
+# absent: backend-neutral code (MethodTrackingContext, InstrumentUtils) references them too.
+# test_check_pr_metadata.py fails when this tuple differs from the derivation's output.
+ASM_BACKEND = tuple(
+    "btrace-agent/src/main/java/io/btrace/instr/%s.java" % name
+    for name in (
+        "ArrayAccessInstrumentor",
+        "ArrayAllocInstrumentor",
+        "AsmInstrumentationBackend",
+        "BTraceMethodVisitor",
+        "CatchInstrumentor",
+        "ErrorReturnInstrumentor",
+        "FieldAccessInstrumentor",
+        "InstrumentingMethodVisitor",
+        "Instrumentor",
+        "LastFrameAtOffsetVisitor",
+        "LineNumberInstrumentor",
+        "MethodCallInstrumentor",
+        "MethodEntryExitInstrumentor",
+        "MethodEntryInstrumentor",
+        "MethodInstrumentor",
+        "MethodReturnInstrumentor",
+        "ObjectAllocInstrumentor",
+        "SynchronizedInstrumentor",
+        "ThrowInstrumentor",
+        "TypeCheckInstrumentor",
+        "VariableMapper",
+    )
+)
+# Same line only: `[ \t]*`, not `\s*`, so an empty `Sibling:` cannot borrow the next line as its reason.
+SIBLING_RE = re.compile(r"^Sibling:[ \t]*(\S.*)$", re.M)
+# The template's unfilled prompt, `Sibling: <...>`, carries no reason.
+SIBLING_PLACEHOLDER_RE = re.compile(r"^<[^<>]*>$")
 GOLDEN_PREFIX = "btrace-agent/src/test/resources/instrumentorTestData/"
 # Lines of .github/pull_request_template.md that carry no information when left as they are.
 PLACEHOLDERS = (
@@ -66,6 +107,26 @@ def verification_lines(body):
     return lines
 
 
+def sibling_reason(body):
+    """The text after a `Sibling:` line outside HTML comments, or None."""
+    body = re.sub(r"<!--.*?-->", "", body, flags=re.S)
+    for m in SIBLING_RE.finditer(body):
+        if not SIBLING_PLACEHOLDER_RE.match(m.group(1).strip()):
+            return m.group(1).strip()
+    return None
+
+
+def one_sided_backend_change(changed):
+    """('ASM', 'ClassFile API') or the reverse when exactly one backend changed, else None."""
+    asm = any(p in ASM_BACKEND for p in changed)
+    classfile = any(p.startswith(CLASSFILE_BACKEND) for p in changed)
+    if asm and not classfile:
+        return ("ASM", "ClassFile API")
+    if classfile and not asm:
+        return ("ClassFile API", "ASM")
+    return None
+
+
 def check(event, changed):
     pr = event.get("pull_request")
     if pr is None:
@@ -90,6 +151,13 @@ def check(event, changed):
             "golden instrumentation data changed (%s); say in the description that it was "
             "regenerated with ./gradlew test -PupdateTestData and why the bytecode changed"
             % GOLDEN_PREFIX
+        )
+    sides = one_sided_backend_change(changed)
+    if sides and sibling_reason(body) is None:
+        errors.append(
+            "this PR changes the %s instrumentation backend but not the %s one; add a line "
+            "'Sibling: <reason>' to the description saying why the %s backend needs no "
+            "change (or change it too)" % (sides + (sides[1],))
         )
     return errors
 

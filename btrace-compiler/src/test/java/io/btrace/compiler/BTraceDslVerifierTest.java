@@ -127,6 +127,47 @@ public class BTraceDslVerifierTest {
     assertFalse(result.isEmpty(), "Should produce class bytes");
   }
 
+  @Test
+  void lowMemoryHandlerSignatures() {
+    assertNotNull(compileLowMemoryProbe("NoArgLowMemoryProbe", ""));
+    assertNotNull(compileLowMemoryProbe("UsageLowMemoryProbe", "MemoryUsage usage"));
+    assertLowMemorySignatureRejected("StringLowMemoryProbe", "String pool");
+    assertLowMemorySignatureRejected("IntLowMemoryProbe", "int used");
+    assertLowMemorySignatureRejected("TwoArgLowMemoryProbe", "MemoryUsage usage, int extra");
+  }
+
+  private static void assertLowMemorySignatureRejected(String className, String params) {
+    StringWriter err = new StringWriter();
+    assertNull(compileLowMemoryProbe(className, params, err), "Compilation should fail");
+    assertTrue(
+        err.toString().contains("@OnLowMemory annotation applicable only"),
+        "Expected @OnLowMemory signature diagnostic: " + err);
+  }
+
+  private static Map<String, byte[]> compileLowMemoryProbe(String className, String params) {
+    return compileLowMemoryProbe(className, params, new StringWriter());
+  }
+
+  private static Map<String, byte[]> compileLowMemoryProbe(
+      String className, String params, StringWriter err) {
+    return new Compiler()
+        .compile(
+            className + ".java",
+            "import io.btrace.core.annotations.*;\n"
+                + "import java.lang.management.MemoryUsage;\n"
+                + "@BTrace public class "
+                + className
+                + " {\n"
+                + "  @OnLowMemory(pool = \"Metaspace\", threshold = 1048576)\n"
+                + "  public static void onLowMemory("
+                + params
+                + ") {}\n"
+                + "}\n",
+            new PrintWriter(err),
+            null,
+            System.getProperty("java.class.path"));
+  }
+
   private static void assertRecursionFails(String fileName, String source) {
     StringWriter err = new StringWriter();
     Map<String, byte[]> result =

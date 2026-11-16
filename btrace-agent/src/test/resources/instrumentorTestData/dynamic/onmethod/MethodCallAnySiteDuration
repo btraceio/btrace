@@ -16,7 +16,7 @@ LSUB
 LSTORE 4
 L1
 FRAME FULL [resources/OnMethodTest java/lang/String J J J J java/lang/String resources/OnMethodTest] [J]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L2
 ALOAD 11
 LDC "callTarget"
@@ -45,7 +45,7 @@ LSUB
 LSTORE 12
 L3
 FRAME FULL [resources/OnMethodTest java/lang/String J J J J java/lang/String resources/OnMethodTest J J J java/lang/String] [J J]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L4
 ACONST_NULL
 LDC "callTargetStatic"

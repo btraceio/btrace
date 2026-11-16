@@ -1,0 +1,2 @@
+# Main-source Java files allowed to grow past 1,000 lines (gate G13, principle P8).
+# Format: <path>  # reason. An entry for a file that is gone or no longer over the limit fails as stale.

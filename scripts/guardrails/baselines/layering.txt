@@ -1,0 +1,11 @@
+# Known violations of the module layering rules (check_layering.py, gate G6).
+#
+# Format: <rule-id> <repo-relative-path>[:<detail>]  # reason
+# The check fails on a violation that is not listed here and on a listed entry that is gone, so
+# this file only shrinks. Fix the violation, then delete its line.
+
+import btrace-extensions/btrace-otel/src/main/java/io/btrace/otel/OTelImpl.java:io.btrace.core.ArgsMap  # extension impl imports core internals outside io.btrace.core.extensions
+import btrace-extensions/btrace-otel/src/test/java/io/btrace/otel/OTelImplTest.java:io.btrace.core.ArgsMap  # test of an impl class that itself imports BTrace internals
+import btrace-extensions/btrace-otel/src/test/java/io/btrace/otel/OTelOtlpConformanceTest.java:io.btrace.core.ArgsMap  # test of an impl class that itself imports BTrace internals
+import btrace-extensions/btrace-statsd/src/main/java/io/btrace/statsd/StatsdImpl.java:io.btrace.core.SharedSettings  # extension impl imports core internals outside io.btrace.core.extensions
+import btrace-extensions/btrace-statsd/src/test/java/io/btrace/statsd/StatsdImplTest.java:io.btrace.core.SharedSettings  # test of an impl class that itself imports BTrace internals

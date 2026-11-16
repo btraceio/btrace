@@ -361,7 +361,7 @@ the [Migration guide](../Migration-2.x-to-3.0.md):
   prepared endpoint ([wire protocol](../Migration-2.x-to-3.0.md#wire-protocol-mixed-versions-keep-working)).
 - **ClassFile API backend.** On JDK 24+ agents, classes newer than the bundled ASM's validated
   ceiling are instrumented through the JDK's ClassFile API ([backends](../architecture/InstrumentationBackends.md)).
-- **`libs=` profiles removed.** The agent logs an error and loads nothing; extensions replace
+- **`libs=` profiles removed.** The agent ignores the `libs` argument and loads nothing; extensions replace
   them ([migration guide](../architecture/migrating-from-libs-profiles.md)).
 - **Pre-17 targets are deprecated.** They keep working throughout 3.x with a one-time warning, and
   support ends in 4.0; `-Dbtrace.suppressJavaDeprecationWarning=true` silences it.

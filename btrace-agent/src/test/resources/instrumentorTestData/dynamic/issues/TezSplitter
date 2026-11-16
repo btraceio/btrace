@@ -1,4 +1,4 @@
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 ICONST_4
 ANEWARRAY java/lang/Object
@@ -26,7 +26,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TezSplitter"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 ICONST_5
 ANEWARRAY java/lang/Object

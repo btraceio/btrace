@@ -1,0 +1,3 @@
+# Agent options (io.btrace.core.Args) that the usage text or docs/QuickReference.md does not
+# document. Format: <usage|quickref> <option>  # reason. A new gap fails; a gap fixed in the docs must
+# be removed from here (stale). Checked by ArgsRegistryTest, which defines what "documented" means.

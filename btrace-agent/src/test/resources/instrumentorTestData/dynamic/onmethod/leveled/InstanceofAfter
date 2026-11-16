@@ -1,6 +1,6 @@
 DUP
 ASTORE 3
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "casts"

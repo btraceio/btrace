@@ -1,0 +1,55 @@
+# Classes allowed at the root of btrace.jar, where the bootstrap class loader sees them
+# (Boot-Class-Path: btrace.jar). Read by BootstrapClosureTest.
+#
+# A line ending in / matches the classes directly in that package, not its subpackages.
+# A line ending in .class matches that class and its nested classes (Name$*.class).
+# Every root class must match a line, and every line must match a root class.
+# The sources are bootIncludes and the from blocks of the btraceJar task in
+# btrace-dist/build.gradle; change this file together with them.
+
+# btraceJar: btrace-boot output, the agent and client entry point
+io/btrace/boot/
+
+# bootIncludes: io/btrace/core/ except Messages, messages.properties, comm/ and extensions/
+io/btrace/core/
+io/btrace/core/annotations/
+io/btrace/core/handlers/
+io/btrace/core/jfr/
+io/btrace/core/types/
+
+# btraceJar: io/btrace/core/extensions/ from the btrace-core output, needed by bootstrap code
+io/btrace/core/extensions/
+
+# bootIncludes: flat DSL entry class, needed by javac when compiling scripts
+io/btrace/BTrace.class
+
+# bootIncludes: selected runtime support classes
+io/btrace/runtime/BTraceBootstrap.class
+io/btrace/runtime/ExtensionIndy.class
+io/btrace/runtime/IndyDispatcher.class
+io/btrace/runtime/auxiliary/Auxiliary.class
+
+# bootIncludes: extension bridge interface, referenced by ExtensionIndy
+io/btrace/extension/ExtensionBridge.class
+
+# Tool-only root classes, read as
+#
+#   tool-only <entry> uses <package>...  # reason
+#
+# javac or a build tool loads these from btrace.jar as an ordinary class path or processor path
+# entry; the bootstrap loader never links them. They may reference root classes, boot-loader JDK
+# types and the listed tool API packages with their subpackages. BootstrapClosureTest fails if any
+# other root class references them, and on a tool API package none of their classes uses.
+
+# btraceJar: the @ExternalType annotation processor. Extension builds name it with -processor and
+# put btrace.jar on the processor path (BTraceExtensionPlugin, BTraceExtensionDevelopmentGuide.md);
+# javac's processor loader reads .class entries only, so it cannot be masked. btrace.jar ships no
+# META-INF/services/javax.annotation.processing.Processor, so no javac discovers it on its own.
+tool-only io/btrace/extension/processor/ uses javax/annotation/processing/ javax/lang/model/ javax/tools/  # loaded by javac from the processor path; java.compiler is not boot-loader visible on JDK 9+, and nothing on the agent or runtime path references this package
+
+# bootIncludes: SLF4J, relocated to io.btrace.libs.org.slf4j, for logging from bootstrap code
+io/btrace/libs/org/slf4j/
+io/btrace/libs/org/slf4j/event/
+io/btrace/libs/org/slf4j/helpers/
+io/btrace/libs/org/slf4j/simple/
+io/btrace/libs/org/slf4j/spi/

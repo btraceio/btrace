@@ -1,0 +1,74 @@
+# JDK packages that the bootstrap class loader cannot see on JDK 9+, although their names fall
+# under a prefix BootstrapClosureTest otherwise treats as a JDK type (java/, javax/, jdk/, sun/)
+# or under com/sun/. A line names one package; it does not cover subpackages. The module that
+# defines the package follows the #.
+#
+# Generated on Temurin 21.0.5 (the build JDK); Temurin 17.0.14 adds only com/sun/jarsigner/ and
+# Temurin 26.0.1 gives the same list as 21. The list is every unqualified export, under the prefixes
+# above, of each module in the boot layer whose class loader is not the boot loader:
+#
+#   java --add-modules ALL-SYSTEM NonBootPackages.java
+#
+#   for (Module m : ModuleLayer.boot().modules())
+#     if (m.getClassLoader() != null)
+#       for (ModuleDescriptor.Exports e : m.getDescriptor().exports())
+#         if (!e.isQualified()) print(e.source().replace('.', '/') + "/  # " + m.getName());
+#
+# Regenerate it when the build JDK changes. On JDK 8 these packages are either in rt.jar or not on
+# the bootstrap class path at all; the JDK 9+ rule is the stricter one. On JDK 9+ BootstrapClosureTest
+# fails if a package of the JDK running it is missing here, and names the lines to add.
+
+com/sun/java/accessibility/util/  # jdk.accessibility
+com/sun/jdi/  # jdk.jdi
+com/sun/jdi/connect/  # jdk.jdi
+com/sun/jdi/connect/spi/  # jdk.jdi
+com/sun/jdi/event/  # jdk.jdi
+com/sun/jdi/request/  # jdk.jdi
+com/sun/net/httpserver/  # jdk.httpserver
+com/sun/net/httpserver/spi/  # jdk.httpserver
+com/sun/security/auth/  # jdk.security.auth
+com/sun/security/auth/callback/  # jdk.security.auth
+com/sun/security/auth/login/  # jdk.security.auth
+com/sun/security/auth/module/  # jdk.security.auth
+com/sun/security/jgss/  # jdk.security.jgss
+com/sun/source/doctree/  # jdk.compiler
+com/sun/source/tree/  # jdk.compiler
+com/sun/source/util/  # jdk.compiler
+com/sun/tools/attach/  # jdk.attach
+com/sun/tools/attach/spi/  # jdk.attach
+com/sun/tools/javac/  # jdk.compiler
+com/sun/tools/jconsole/  # jdk.jconsole
+java/net/http/  # java.net.http
+java/sql/  # java.sql
+javax/annotation/processing/  # java.compiler
+javax/lang/model/  # java.compiler
+javax/lang/model/element/  # java.compiler
+javax/lang/model/type/  # java.compiler
+javax/lang/model/util/  # java.compiler
+javax/script/  # java.scripting
+javax/security/auth/kerberos/  # java.security.jgss
+javax/smartcardio/  # java.smartcardio
+javax/sql/  # java.sql
+javax/sql/rowset/  # java.sql.rowset
+javax/sql/rowset/serial/  # java.sql.rowset
+javax/sql/rowset/spi/  # java.sql.rowset
+javax/tools/  # java.compiler
+javax/transaction/xa/  # java.transaction.xa
+javax/xml/crypto/  # java.xml.crypto
+javax/xml/crypto/dom/  # java.xml.crypto
+javax/xml/crypto/dsig/  # java.xml.crypto
+javax/xml/crypto/dsig/dom/  # java.xml.crypto
+javax/xml/crypto/dsig/keyinfo/  # java.xml.crypto
+javax/xml/crypto/dsig/spec/  # java.xml.crypto
+jdk/dynalink/  # jdk.dynalink
+jdk/dynalink/beans/  # jdk.dynalink
+jdk/dynalink/linker/  # jdk.dynalink
+jdk/dynalink/linker/support/  # jdk.dynalink
+jdk/dynalink/support/  # jdk.dynalink
+jdk/javadoc/doclet/  # jdk.javadoc
+jdk/jshell/  # jdk.jshell
+jdk/jshell/execution/  # jdk.jshell
+jdk/jshell/spi/  # jdk.jshell
+jdk/jshell/tool/  # jdk.jshell
+jdk/security/jarsigner/  # jdk.jartool
+jdk/swing/interop/  # jdk.unsupported.desktop

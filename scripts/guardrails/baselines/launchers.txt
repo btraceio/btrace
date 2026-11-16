@@ -1,0 +1,8 @@
+# Known differences between shell launchers and their .bat twins (check_launchers.py, gate G9).
+#
+# Format: <rule-id> <bin/launcher>:<flag>:missing-in-<sh|bat>  # reason
+# The check fails on a difference that is not listed here and on a listed entry that is gone, so
+# this file only shrinks. Make the launchers agree, then delete the line.
+launcher-flag bin/btracec:-XX:+AllowRedefinitionToAddDeleteMethods:missing-in-sh  # btracec shell launcher never passed it; the .bat twin does. Compiler only, so harmless in practice
+launcher-flag bin/btracex:-XX:+AllowRedefinitionToAddDeleteMethods:missing-in-sh  # btracex shell launcher never passed it; the .bat twin does
+launcher-flag bin/btracex:--add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED:missing-in-sh  # btracex shell launcher never passed it; the .bat twin does

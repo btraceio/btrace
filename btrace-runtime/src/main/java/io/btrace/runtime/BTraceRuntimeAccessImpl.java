@@ -17,6 +17,7 @@
 package io.btrace.runtime;
 
 import io.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntimeAccess;
 import io.btrace.core.BTraceRuntimeBridge;
 import io.btrace.core.SharedSettings;
 import io.btrace.core.comm.Command;

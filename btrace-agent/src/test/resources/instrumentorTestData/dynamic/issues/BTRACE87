@@ -1,5 +1,5 @@
 ASTORE 2
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L2
 ALOAD 0
 LDC "containerMethod"
@@ -18,7 +18,7 @@ L3
 LINENUMBER 29 L3
 ASTORE 3
 ASTORE 4
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L4
 ALOAD 0
 LDC "containerMethod"

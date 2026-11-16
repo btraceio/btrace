@@ -45,8 +45,18 @@ import java.util.jar.JarFile;
  *   <li>Client section: Classes stored as .classdata files in META-INF/btrace/client/
  * </ul>
  *
- * <p>When loading a class, this classloader first checks the specific section (agent or client),
- * then falls back to the shared section, and finally delegates to the parent classloader.
+ * <p>Class loading is parent-first: this class does not override {@link #loadClass(String,
+ * boolean)}, so the parent (the bootstrap loader when the parent is {@code null}) is asked first,
+ * and {@link #findClass} runs only when it fails. {@code findClass} looks in the specific section
+ * (agent or client), then in the shared section, and otherwise throws {@link
+ * ClassNotFoundException}. A class that is both a root {@code .class} entry and a masked {@code
+ * .classdata} entry is therefore loaded from the root whenever the parent sees the root, as it does
+ * for the agent (whose parent is the bootstrap loader, with {@code btrace.jar} appended) and for
+ * the client (whose parent loaded {@link Loader} from the root).
+ *
+ * <p>{@link #findResource} and {@link #getResourceAsStream} look in the specific section, then at
+ * the JAR root; they do not consult the shared section. {@code getResourceAsStream} does not ask
+ * the parent first.
  *
  * @author Jaroslav Bachorik
  */

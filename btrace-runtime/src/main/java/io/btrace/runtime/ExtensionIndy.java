@@ -16,6 +16,7 @@
  */
 package io.btrace.runtime;
 
+import io.btrace.core.BTraceRuntimeAccess;
 import io.btrace.core.SharedSettings;
 import io.btrace.core.annotations.InjectionMode;
 import io.btrace.core.extensions.Extension;

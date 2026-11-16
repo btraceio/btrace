@@ -21,9 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import io.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntimeAccess;
 import io.btrace.core.MethodID;
 import io.btrace.core.SharedSettings;
-import io.btrace.runtime.BTraceRuntimeAccess;
 import io.btrace.runtime.BTraceRuntimeAccessImpl;
 import io.btrace.runtime.auxiliary.Auxiliary;
 import java.io.ByteArrayOutputStream;

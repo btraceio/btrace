@@ -22,6 +22,7 @@ import io.btrace.core.annotations.OnLowMemory;
 import java.lang.management.MemoryUsage;
 
 import static io.btrace.BTrace.println;
+import static io.btrace.BTrace.str;
 
 /**
  * This sample traces memory threshold exceeds.
@@ -30,15 +31,19 @@ import static io.btrace.BTrace.println;
  * script that dumps heap by dumpHeap on crossing
  * the threshold instead of just printing a message.
  * Note that the name of the old gen is dependent on
- * GC algorithm. With ParallelGC, the name is "PS Old Gen".
+ * GC algorithm. "G1 Old Gen" is the G1 collector's, the
+ * default since JDK 9; with the Parallel collector (the
+ * JDK 8 default) it is "PS Old Gen", with the Serial
+ * collector "Tenured Gen". If the pool does not exist
+ * the agent warns and lists the pools it can watch.
  */
 @BTrace
 public class MemAlerter {
     @OnLowMemory(
-            pool = "Tenured Gen",
+            pool = "G1 Old Gen",
             threshold = 6000000
     )
     public static void onLowMem(MemoryUsage mu) {
-        println(mu);
+        println(str(mu));
     }
 }

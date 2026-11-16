@@ -40,6 +40,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import jdk.jfr.EventType;
 import jdk.jfr.consumer.RecordedEvent;
@@ -223,6 +224,90 @@ public class BTraceFunctionalTests extends RuntimeTest {
           assertFalse(stdout.contains("FAILED"), "Script should not have failed");
           assertTrue(stderr.isEmpty(), "Non-empty stderr");
           assertTrue(stdout.contains("onexit"));
+        });
+  }
+
+  @Test
+  public void testOnLowMemory() throws Exception {
+    // The probe arms a 1 MiB usage threshold on Metaspace; with the agent loaded the target is
+    // already past it, and MetaspaceTarget keeps allocating Metaspace so the JVM checks the
+    // threshold and sends the notification.
+    testDynamic(
+        "resources.MetaspaceTarget",
+        "btrace/OnLowMemoryTest.java",
+        Completion.untilContains("lowmem used="),
+        (stdout, stderr, retcode, jfrFile) -> {
+          assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+          assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+          Matcher m = Pattern.compile("lowmem used=(\\d+)").matcher(stdout);
+          assertTrue(m.find(), "the @OnLowMemory handler did not run; stdout: " + stdout);
+          long used = Long.parseLong(m.group(1));
+          assertTrue(
+              used >= 1048576,
+              "the handler got a usage below the 1 MiB threshold it was armed with: " + used);
+        });
+  }
+
+  @Test
+  public void testOnLowMemoryRunsEveryHandlerOfAPool() throws Exception {
+    // Two handlers on one pool used to share a map slot, so only the last one ever ran.
+    testDynamic(
+        "resources.MetaspaceTarget",
+        "btrace/OnLowMemoryTwoHandlersTest.java",
+        Completion.untilContains("lowmem-first-handler", "lowmem-second-handler"),
+        (stdout, stderr, retcode, jfrFile) -> {
+          assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+          assertTrue(
+              stdout.contains("lowmem-first-handler"),
+              "the first handler did not run; stdout: " + stdout);
+          assertTrue(
+              stdout.contains("lowmem-second-handler"),
+              "the second handler did not run; stdout: " + stdout);
+        });
+  }
+
+  @Test
+  public void testOnLowMemoryUnknownPoolIsReported() throws Exception {
+    // A pool name that matches no pool must not be silent: the client is told, with the pools
+    // the probe could have watched.
+    testDynamic(
+        "resources.MetaspaceTarget",
+        "btrace/OnLowMemoryUnknownPoolTest.java",
+        Completion.untilContains("[BTRACE WARN] @OnLowMemory pool 'No Such Pool' does not exist"),
+        (stdout, stderr, retcode, jfrFile) -> {
+          assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+          assertTrue(
+              stdout.contains("[BTRACE WARN] @OnLowMemory pool 'No Such Pool' does not exist"),
+              "the client was not told the pool does not exist; stdout: " + stdout);
+          assertTrue(
+              Pattern.compile("Pools with usage thresholds: \\[[^\\]]*Metaspace")
+                  .matcher(stdout)
+                  .find(),
+              "the warning did not list the available pools; stdout: " + stdout);
+        });
+  }
+
+  @Test
+  public void testOnLowMemoryHandlerExceptionIsReported() throws Exception {
+    // An exception thrown by an @OnLowMemory handler must be routed to @OnError like any other
+    // handler failure, and must not end the probe.
+    testDynamic(
+        "resources.MetaspaceTarget",
+        "btrace/OnLowMemoryErrorTest.java",
+        Completion.untilContains(
+            "lowmem-error-handler:java.lang.StringIndexOutOfBoundsException",
+            "lowmem-probe-alive-after-failure"),
+        (stdout, stderr, retcode, jfrFile) -> {
+          assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+          assertTrue(
+              stdout.contains("lowmem-handler-entered"),
+              "the @OnLowMemory handler did not run; stdout: " + stdout);
+          assertTrue(
+              stdout.contains("lowmem-error-handler:java.lang.StringIndexOutOfBoundsException"),
+              "the handler's exception did not reach @OnError; stdout: " + stdout);
+          assertTrue(
+              stdout.contains("lowmem-probe-alive-after-failure"),
+              "the probe stopped after the handler failed; stdout: " + stdout);
         });
   }
 

@@ -21,6 +21,7 @@ import static org.objectweb.asm.Opcodes.INVOKEINTERFACE;
 import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
 
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -36,6 +37,11 @@ import org.objectweb.asm.Type;
  * org/openjdk/btrace/} package to the current {@code io/btrace/} namespace. This shim is applied
  * during probe loading so that old persisted probe {@code .class} files continue to work without
  * recompilation.
+ *
+ * <p>It also follows the two bootstrap classes that moved from {@code io/btrace/runtime} to {@code
+ * io/btrace/core}: {@code BTraceRuntimeAccess} and {@code LinkingFlag}. Probes from 2.x and from
+ * pre-release 3.0 builds name them in the old package. No other {@code io/btrace/runtime} class
+ * moved, so only these two names and their nested classes are rewritten.
  */
 final class ProbePackageMigrator {
 
@@ -55,6 +61,16 @@ final class ProbePackageMigrator {
   private static final String OLD_RUNTIME_ACCESS = "org/openjdk/btrace/runtime/BTraceRuntimeAccess";
   private static final String OLD_ENTER_DESC = "(Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z";
   private static final String BRIDGE_ENTER_DESC = "(" + RUNTIME_BRIDGE_DESC + ")Z";
+
+  // Bootstrap classes that moved out of io/btrace/runtime, as old and new internal names.
+  private static final String MOVED_FROM = "io/btrace/runtime/";
+  private static final String MOVED_TO = "io/btrace/core/";
+  private static final String[] MOVED_CLASSES = {"BTraceRuntimeAccess", "LinkingFlag"};
+  // A moved class in a descriptor or signature: the name ends at ';', at '<', or at the '$' or '.'
+  // of a nested class, never at a longer name such as BTraceRuntimeAccessImpl.
+  private static final Pattern MOVED_IN_DESC =
+      Pattern.compile("L" + MOVED_FROM + "(" + String.join("|", MOVED_CLASSES) + ")(?=[;<$.])");
+  private static final String MOVED_IN_DESC_REPLACEMENT = "L" + MOVED_TO + "$1";
 
   private ProbePackageMigrator() {}
 
@@ -84,7 +100,15 @@ final class ProbePackageMigrator {
    */
   private static boolean needsMigration(byte[] bytes) {
     String raw = new String(bytes, StandardCharsets.ISO_8859_1);
-    return raw.contains(OLD_PREFIX);
+    if (raw.contains(OLD_PREFIX)) {
+      return true;
+    }
+    for (String moved : MOVED_CLASSES) {
+      if (raw.contains(MOVED_FROM + moved)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -112,25 +136,60 @@ final class ProbePackageMigrator {
       return RUNTIME_BRIDGE;
     }
     if (name != null && name.startsWith(OLD_PREFIX)) {
-      return NEW_PREFIX + name.substring(OLD_PREFIX.length());
+      return remapMovedClass(NEW_PREFIX + name.substring(OLD_PREFIX.length()));
+    }
+    return remapMovedClass(name);
+  }
+
+  /** Maps a moved bootstrap class, or one of its nested classes, to its new internal name. */
+  private static String remapMovedClass(String name) {
+    if (name == null || !name.startsWith(MOVED_FROM)) {
+      return name;
+    }
+    for (String moved : MOVED_CLASSES) {
+      String old = MOVED_FROM + moved;
+      if (name.equals(old) || name.startsWith(old + "$")) {
+        return MOVED_TO + name.substring(MOVED_FROM.length());
+      }
     }
     return name;
   }
 
+  private static String remapMovedClassesIn(String descOrSig) {
+    return descOrSig.contains(MOVED_FROM)
+        ? MOVED_IN_DESC.matcher(descOrSig).replaceAll(MOVED_IN_DESC_REPLACEMENT)
+        : descOrSig;
+  }
+
   private static String remapDescriptor(String desc) {
-    if (desc != null && desc.contains(OLD_DESC_PREFIX)) {
-      return desc.replace(OLD_RUNTIME_IMPL_DESC, RUNTIME_BRIDGE_DESC)
-          .replace(OLD_DESC_PREFIX, NEW_DESC_PREFIX);
+    if (desc == null) {
+      return null;
     }
-    return desc;
+    String remapped = desc;
+    if (remapped.contains(OLD_DESC_PREFIX)) {
+      remapped =
+          remapped
+              .replace(OLD_RUNTIME_IMPL_DESC, RUNTIME_BRIDGE_DESC)
+              .replace(OLD_DESC_PREFIX, NEW_DESC_PREFIX);
+    }
+    remapped = remapMovedClassesIn(remapped);
+    // keep the identity of an unchanged descriptor; callers compare with == to detect a change
+    return remapped.equals(desc) ? desc : remapped;
   }
 
   private static String remapSignature(String sig) {
-    if (sig != null && sig.contains(OLD_PREFIX)) {
-      return sig.replace(OLD_RUNTIME_IMPL_DESC, RUNTIME_BRIDGE_DESC)
-          .replace(OLD_PREFIX, NEW_PREFIX);
+    if (sig == null) {
+      return null;
     }
-    return sig;
+    String remapped = sig;
+    if (remapped.contains(OLD_PREFIX)) {
+      remapped =
+          remapped
+              .replace(OLD_RUNTIME_IMPL_DESC, RUNTIME_BRIDGE_DESC)
+              .replace(OLD_PREFIX, NEW_PREFIX);
+    }
+    remapped = remapMovedClassesIn(remapped);
+    return remapped.equals(sig) ? sig : remapped;
   }
 
   private static String[] remapExceptions(String[] exceptions) {

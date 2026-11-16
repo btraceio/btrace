@@ -1,4 +1,4 @@
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L2
 ALOAD 0
 LDC "caught"
@@ -11,7 +11,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 ]
 L2
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "caught"
@@ -26,7 +26,7 @@ L3
 FRAME SAME1 java/lang/RuntimeException
 L4
 LINENUMBER 171 L4
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
 LDC "caught"
@@ -41,7 +41,7 @@ L5
 FRAME APPEND [java/lang/RuntimeException]
 L6
 LINENUMBER 173 L6
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L7
 ALOAD 0
 LDC "caught"

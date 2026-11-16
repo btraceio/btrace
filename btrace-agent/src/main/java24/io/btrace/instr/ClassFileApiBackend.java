@@ -124,7 +124,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   // class that is reachable from MethodHandleNatives.linkCallSite() can re-enter linkCallSite()
   // for its own not-yet-linked bootstrap, forming an infinite recursion → StackOverflowError.
   private static final ClassDesc CD_LINKING_FLAG =
-      ClassDesc.ofInternalName("io/btrace/runtime/LinkingFlag");
+      ClassDesc.ofInternalName("io/btrace/core/LinkingFlag");
   private static final MethodTypeDesc LINKING_GET_MTD = MethodTypeDesc.ofDescriptor("()I");
 
   @Override
@@ -222,7 +222,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       else if (kind == Kind.NEW) newobjHandlers.add(ph);
       else if (kind == Kind.SYNC_ENTRY) syncEntryHandlers.add(ph);
       else if (kind == Kind.SYNC_EXIT) syncExitHandlers.add(ph);
-      else log.debug("Skipping unsupported probe kind {} for class {}", kind, javaClassName);
+      else UnhandledKindReport.report(ph.probe, ph.om, javaClassName, "ClassFile API");
     }
     if (entryHandlers.isEmpty()
         && returnHandlers.isEmpty()

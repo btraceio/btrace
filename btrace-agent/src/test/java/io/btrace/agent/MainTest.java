@@ -25,8 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.btrace.core.Args;
 import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntimeAccess;
 import io.btrace.core.SharedSettings;
-import io.btrace.runtime.BTraceRuntimeAccess;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;

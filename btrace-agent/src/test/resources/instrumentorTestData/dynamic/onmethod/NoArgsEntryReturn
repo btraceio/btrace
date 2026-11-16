@@ -1,4 +1,4 @@
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 ALOAD 0
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$NoArgsEntryReturn$argsEmptyEntry(Ljava/lang/Object;)V [
@@ -8,7 +8,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/NoArgsEntryReturn"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L1
 DUP2
 LSTORE 6

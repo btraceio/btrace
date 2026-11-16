@@ -5,6 +5,14 @@ buildscript { scriptHandler ->
     apply from: rootProject.file('buildSrc/shared.gradle'), to: scriptHandler
 }
 
+// --release 8 omits com.sun.tools.attach and sun.jvmstat (tools.jar) and sun.misc.Signal, which
+// this module uses; the JDK 8 compiler accepts them and, like --release 8, rejects JDK 9+ APIs.
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
+
 dependencies {
     implementation libs.slf4j
     implementation libs.asm
@@ -13,6 +21,7 @@ dependencies {
 
     def toolsJar = getToolsJar();
     if (toolsJar.getAsFile().exists()) {
+        compileOnly files("${toolsJar}")
         runtimeOnly files("${toolsJar}")
     }
 

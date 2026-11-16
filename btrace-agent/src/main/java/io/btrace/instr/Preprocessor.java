@@ -22,10 +22,11 @@ import io.btrace.core.DebugSupport;
 import io.btrace.core.annotations.Event;
 import io.btrace.core.annotations.Return;
 import io.btrace.core.extensions.Extension;
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionLoader;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -150,8 +151,8 @@ final class Preprocessor {
   private static final String JFR_EVENT_FACTORY_DESC = "L" + JFR_EVENT_FACTORY_INTERNAL + ";";
 
   private static final Map<String, String> BOX_TYPE_MAP = new HashMap<>();
-  private static final Set<String> GUARDED_ANNOTS = new HashSet<>();
-  private static final Set<String> RT_AWARE_ANNOTS = new HashSet<>();
+  static final Set<String> GUARDED_ANNOTS = new HashSet<>();
+  static final Set<String> RT_AWARE_ANNOTS = new HashSet<>();
   // For each @Export field, we create a perf counter
   // with the name "btrace.<class name>.<field name>"
   private static final String BTRACE_COUNTER_PREFIX = "btrace.";
@@ -176,8 +177,8 @@ final class Preprocessor {
 
     GUARDED_ANNOTS.addAll(RT_AWARE_ANNOTS);
 
-    // @OnExit is rtAware but not guarded
-    RT_AWARE_ANNOTS.add(Constants.ONEXIT_DESC);
+    // rtAware, not guarded: the runtime enters before calling them, so a guard would never run them
+    RT_AWARE_ANNOTS.addAll(Arrays.asList(Constants.ONEXIT_DESC, Constants.ONLOWMEMORY_DESC));
   }
 
   private final Set<String> tlsFldNames = new HashSet<>();
@@ -1037,7 +1038,6 @@ final class Preprocessor {
         if (an.desc.equals(Constants.ONLOWMEMORY_DESC)) {
           String pool = "";
           long threshold = Long.MAX_VALUE;
-          String thresholdProp = null;
 
           for (int i = 0; i < an.values.size(); i += 2) {
             String key = (String) an.values.get(i);
@@ -1053,11 +1053,6 @@ final class Preprocessor {
                   threshold = (long) val;
                   break;
                 }
-              case "thresholdFrom":
-                {
-                  thresholdProp = (String) val;
-                  break;
-                }
             }
           }
           // trackUsage is true when the handler declares a MemoryUsage parameter; it drives both
@@ -1071,19 +1066,13 @@ final class Preprocessor {
           il.add(new LdcInsnNode(mn.name));
           il.add(new LdcInsnNode(pool));
           il.add(new LdcInsnNode(threshold));
-          // thresholdProp is null unless a threshold property was declared; LDC of null is illegal.
-          if (thresholdProp != null) {
-            il.add(new LdcInsnNode(thresholdProp));
-          } else {
-            il.add(new InsnNode(Opcodes.ACONST_NULL));
-          }
           il.add(new InsnNode(trackUsage ? Opcodes.ICONST_1 : Opcodes.ICONST_0));
           il.add(
               new MethodInsnNode(
                   Opcodes.INVOKESPECIAL,
                   LOWMEMORYHANDLER_INTERNAL,
                   "<init>",
-                  "(Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Z)V",
+                  "(Ljava/lang/String;Ljava/lang/String;JZ)V",
                   false));
           il.add(new InsnNode(Opcodes.AASTORE));
         }
@@ -1496,51 +1485,28 @@ final class Preprocessor {
   }
 
   /**
-   * Ensures that the extension providing the given service class is loaded. Uses reflection to
-   * access Main.getExtensionLoader() to avoid compile-time dependency on btrace-agent module.
+   * Ensures that the extension providing the given service class is loaded. The agent registers its
+   * loader as {@link ExtensionLoader#instance()}; where no loader was initialized (probe-pack
+   * generation in the compiler, unit tests) this does nothing.
    *
    * @param serviceClassName fully qualified service class name
    */
   private void ensureExtensionLoaded(String serviceClassName) {
     try {
-      // Use reflection to obtain the agent's ExtensionLoader instance
-      Class<?> mainClass = Class.forName("io.btrace.agent.Main");
-      Method getLoaderMethod = mainClass.getMethod("getExtensionLoader");
-      Object extensionLoader = getLoaderMethod.invoke(null);
-
+      ExtensionLoader extensionLoader = ExtensionLoader.instance();
       if (extensionLoader == null) {
         return; // Extension system not initialized; let later resolution fail clearly
       }
 
-      // Find an extension that provides this service API
-      Class<?> loaderClass = extensionLoader.getClass();
-      Method findMethod = loaderClass.getMethod("findExtensionForService", String.class);
-      Object descriptor = findMethod.invoke(extensionLoader, serviceClassName);
-
+      ExtensionDescriptorDTO descriptor = extensionLoader.findExtensionForService(serviceClassName);
       if (descriptor != null) {
         // Ensure API JAR is appended to bootstrap, then load implementation if needed
-        try {
-          Method ensureApi = loaderClass.getMethod("ensureApiOnBootstrap", descriptor.getClass());
-          ensureApi.invoke(extensionLoader, descriptor);
-        } catch (NoSuchMethodException ignored) {
-          // Older loaders may not expose this method; continue to load()
-        }
-
-        // Invoke a compatible load(...) method
-        try {
-          Method loadMethod = loaderClass.getMethod("load", descriptor.getClass());
-          loadMethod.invoke(extensionLoader, descriptor);
-        } catch (NoSuchMethodException nsme) {
-          for (Method m : loaderClass.getMethods()) {
-            if (m.getName().equals("load")
-                && m.getParameterCount() == 1
-                && m.getParameterTypes()[0].isAssignableFrom(descriptor.getClass())) {
-              m.invoke(extensionLoader, descriptor);
-              break;
-            }
-          }
-        }
+        extensionLoader.ensureApiOnBootstrap(descriptor);
+        extensionLoader.load(descriptor);
       }
+    } catch (LinkageError e) {
+      // Best-effort, as below: an extension that cannot be linked fails later with details
+      log.debug("Unable to load the extension providing {}", serviceClassName, e);
     } catch (Exception ignored) {
       // Best-effort only; if extension/system not ready, resolution can fail later with details
     }

@@ -31,7 +31,6 @@ import static io.btrace.core.Args.FILE_ROLL_MILLISECONDS;
 import static io.btrace.core.Args.GRANT;
 import static io.btrace.core.Args.GRANT_ALL;
 import static io.btrace.core.Args.HELP;
-import static io.btrace.core.Args.LIBS;
 import static io.btrace.core.Args.NO_SERVER;
 import static io.btrace.core.Args.OUTPUT;
 import static io.btrace.core.Args.PROBES;
@@ -50,6 +49,7 @@ import static io.btrace.core.Args.TRUSTED;
 
 import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntimeAccess;
 import io.btrace.core.DebugSupport;
 import io.btrace.core.Function;
 import io.btrace.core.JavaVersionCheck;
@@ -68,7 +68,6 @@ import io.btrace.instr.BTraceTransformer;
 import io.btrace.instr.Constants;
 import io.btrace.instr.ProbeBudgets;
 import io.btrace.runtime.BTraceBootstrap;
-import io.btrace.runtime.BTraceRuntimeAccess;
 import io.btrace.runtime.BTraceRuntimes;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -514,19 +513,6 @@ public final class Main {
     } finally {
       log.debug("Agent init took: {}", (System.nanoTime() - ts) + "ns");
     }
-  }
-
-  /**
-   * {@code grant=}, {@code deny=} and {@code grantAll=} are parsed for compatibility with earlier
-   * 3.0 builds, but nothing consults them: extension linking is decided by {@code
-   * allowExtensions=}, {@code denyExtensions=}, {@code allowPrivileged=} and the permission policy
-   * file. Say so instead of letting the option silently do nothing.
-   */
-  private static void warnIneffectivePermissionOption(String option) {
-    log.warn(
-        "{}= has no effect in BTrace 3.0; use allowExtensions=, denyExtensions= or"
-            + " allowPrivileged= (or the permission policy file) to control extension linking",
-        option);
   }
 
   static boolean shouldStartServer(ArgsMap args) {
@@ -1066,17 +1052,6 @@ public final class Main {
       usage();
     }
 
-    String libs = argMap.get(LIBS);
-    if (libs != null && !libs.isEmpty()) {
-      // Reported as an error, not a warning: this used to load jars and no longer does, so a
-      // milder message would let a target start up looking healthy while every probe that relied
-      // on those classes fails later with an unrelated-looking NoClassDefFoundError.
-      log.error(
-          "The 'libs' profile feature has been removed and has no effect: '{}' will not be loaded. "
-              + "Package the integration as a BTrace extension instead. "
-              + "See docs/architecture/migrating-from-libs-profiles.md for migration guidance.",
-          libs);
-    }
     // Read before processClasspaths, which consults it for the btrace.system.appendJar escape
     // hatch. The main argument loop below runs later and would leave the hatch permanently
     // unreachable.
@@ -1236,7 +1211,7 @@ public final class Main {
           {
             if (!p.isEmpty()) {
               settings.setGrantedPermissions(SharedSettings.parsePermissions(p));
-              warnIneffectivePermissionOption(GRANT);
+              AgentOptionWarnings.ineffectivePermission(GRANT, log);
             }
             break;
           }
@@ -1244,7 +1219,7 @@ public final class Main {
           {
             if (!p.isEmpty()) {
               settings.setDeniedPermissions(SharedSettings.parsePermissions(p));
-              warnIneffectivePermissionOption(DENY);
+              AgentOptionWarnings.ineffectivePermission(DENY, log);
             }
             break;
           }
@@ -1252,7 +1227,7 @@ public final class Main {
           {
             if (!p.isEmpty()) {
               settings.setGrantAll(Boolean.parseBoolean(p));
-              warnIneffectivePermissionOption(GRANT_ALL);
+              AgentOptionWarnings.ineffectivePermission(GRANT_ALL, log);
             }
             break;
           }
@@ -1290,6 +1265,7 @@ public final class Main {
           }
       }
     }
+    AgentOptionWarnings.misspelledOptions(argMap, log);
     String ineffective =
         AgentTrust.ineffectiveTrustedPropertyWarning(
             System.getProperty(AgentTrust.TRUSTED_PROPERTY),

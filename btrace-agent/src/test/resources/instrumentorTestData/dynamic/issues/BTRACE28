@@ -1,4 +1,4 @@
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L1
 LDC "resources.issues.BTRACE28"
 LDC "<init>"
@@ -18,7 +18,7 @@ ASTORE 6
 ASTORE 7
 ALOAD 7
 FRAME FULL [resources/issues/BTRACE28 java/lang/String java/lang/String java/lang/String java/lang/String [B [B java/lang/StringBuilder] [java/lang/Throwable]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L11
 LDC "resources.issues.BTRACE28"
 LDC "serveResource"

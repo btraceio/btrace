@@ -70,7 +70,7 @@ public final class ExtRepoBrowser {
         new MultiWindowTextGUI(screen, new DefaultWindowManager(), new EmptySpace());
 
     final Window window = new BasicWindow("BTrace Extensions");
-    window.setHints(List.of(Window.Hint.FULL_SCREEN));
+    window.setHints(Collections.singletonList(Window.Hint.FULL_SCREEN));
 
     Panel root = new Panel(new BorderLayout());
     Panel headerPanel = new Panel(new LinearLayout(Direction.VERTICAL));

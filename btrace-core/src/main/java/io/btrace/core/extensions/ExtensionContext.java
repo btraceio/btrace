@@ -17,7 +17,6 @@
 package io.btrace.core.extensions;
 
 import io.btrace.core.ArgsMap;
-import io.btrace.core.comm.Command;
 
 /**
  * Context provided to extensions at initialization.
@@ -34,11 +33,12 @@ public interface ExtensionContext {
   void send(String message);
 
   /**
-   * Sends a command to the BTrace client.
+   * Sends a protocol command to the BTrace client.
    *
-   * @param command the command to send
+   * @param message the command to send; must be a protocol command, see {@link ClientMessage}
+   * @throws IllegalArgumentException if {@code message} is not a protocol command
    */
-  void send(Command command);
+  void send(ClientMessage message);
 
   /**
    * Returns the script arguments.

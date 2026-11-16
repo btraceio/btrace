@@ -25,6 +25,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,12 +52,12 @@ final class Installer {
                   zipPath.getFileName() != null
                       ? zipPath.getFileName().toString()
                       : zipPath.toString());
-    } else if (target.endsWith(".zip") && Files.exists(Path.of(target))) {
-      zipPath = Path.of(target);
+    } else if (target.endsWith(".zip") && Files.exists(Paths.get(target))) {
+      zipPath = Paths.get(target);
       derivedId =
           derivedId != null
               ? derivedId
-              : deriveIdFromZipName(Path.of(target).getFileName().toString());
+              : deriveIdFromZipName(Paths.get(target).getFileName().toString());
     } else if (target.contains(":")) {
       // GAV coordinate: group:artifact:version
       String[] parts = target.split(":");
@@ -224,11 +225,11 @@ final class Installer {
   private static Path getExtensionsRoot() throws IOException {
     String home = System.getenv("BTRACE_HOME");
     if (home != null && !home.isEmpty()) {
-      Path p = Path.of(home, "extensions");
+      Path p = Paths.get(home, "extensions");
       Files.createDirectories(p);
       return p;
     }
-    Path user = Path.of(System.getProperty("user.home"), ".btrace", "extensions");
+    Path user = Paths.get(System.getProperty("user.home"), ".btrace", "extensions");
     Files.createDirectories(user);
     return user;
   }

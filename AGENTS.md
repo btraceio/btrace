@@ -21,6 +21,7 @@ For the developer command reference and code-navigation pointers, see [CLAUDE.md
 - Main code targets Java 8. The build needs JDK 8, 11, 24 and 28 toolchains installed locally (see [CONTRIBUTING.md](CONTRIBUTING.md#local-development)); without JDK 28, `classFileApiBackendTest` is skipped and has not verified anything. Follow Spotless/Google Java Format.
 - Unit tests live in `src/test/java` and use `*Test`; integration tests live in `integration-tests/src/test/java`.
 - Changes to user-visible behavior that crosses modules or process boundaries must include end-to-end functional coverage in `integration-tests`; unit and component tests are required where useful but are not a substitute for exercising the real client, agent, target JVM, and protocol interaction.
+- Follow the [design principles](docs/architecture/DesignPrinciples.md): layering, sibling implementations, never failing open. Each lists its case and what enforces it, or says it is unenforced.
 - Confirm that a new test or build gate **fails when it should**, not only that it passes. Run it against the unfixed code, or against input it must reject, and check the failure is the expected one. A check that cannot fail reports success regardless of what the code does, and reads as coverage while providing none. Where a revert is used to produce the failure, revert only the code under test: reverting too much fails for an unrelated reason and proves nothing about the behavior being asserted.
 
 ## Build and verification
@@ -63,6 +64,7 @@ Task procedures live as skills in `.agents/skills/<name>/SKILL.md` (read by Code
 ## Reference map
 
 - [Contribution workflow](CONTRIBUTING.md)
+- [Design principles](docs/architecture/DesignPrinciples.md)
 - [Instrumentation backend selection](docs/architecture/InstrumentationBackends.md)
 - [v2 wire protocol](docs/architecture/Version2ProtocolArchitecture.md)
 - [Extension development](docs/BTraceExtensionDevelopmentGuide.md) and [interface rules](docs/ExtensionInterfaceRules.md)

@@ -2,7 +2,7 @@ TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
 FRAME SAME1 java/lang/Throwable
 DUP
 ASTORE 1
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L2
 ALOAD 0
 LDC "uncaught"

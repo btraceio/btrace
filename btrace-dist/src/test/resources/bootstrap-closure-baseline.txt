@@ -1,0 +1,7 @@
+# References from a root class of btrace.jar to a type the bootstrap class loader cannot see.
+# Read by BootstrapClosureTest. One entry per line, in internal names:
+#
+#   <root class> -> <referenced class>  # reason
+#
+# Every entry needs a reason. The test fails on a reference not listed here and on a listed
+# entry that no longer occurs, so remove an entry when its reference is fixed.

@@ -22,8 +22,8 @@ import static io.btrace.core.Args.PORT;
 
 import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntimeAccess;
 import io.btrace.core.comm.WireIO;
-import io.btrace.runtime.BTraceRuntimeAccess;
 import java.io.IOException;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;

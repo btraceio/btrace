@@ -1,4 +1,4 @@
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public long resources.OnMethodTest#args(java.lang.String, long, java.lang.String[], int[])"
 ALOAD 1

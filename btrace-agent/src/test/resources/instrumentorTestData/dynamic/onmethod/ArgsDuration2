@@ -10,7 +10,7 @@ LSUB
 LSTORE 6
 L1
 FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J] [J]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L2
 DUP2
 LSTORE 10
@@ -35,7 +35,7 @@ LSUB
 LSTORE 6
 L3
 FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J T T] [J]
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L4
 DUP2
 LSTORE 12

@@ -4,7 +4,7 @@ LCONST_0
 LSTORE 3
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 3
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.issues.BTRACE256#doStuff"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$BTRACE256$entry(Ljava/lang/String;)V [
@@ -20,7 +20,7 @@ LSUB
 LSTORE 1
 L3
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L4
 LDC "public void resources.issues.BTRACE256#doStuff"
 LLOAD 1

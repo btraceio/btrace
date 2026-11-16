@@ -1,4 +1,4 @@
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L1
 LDC "public void resources.OnMethodTest#<init>"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -8,7 +8,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME FULL [resources/OnMethodTest] []
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L1
 LDC "private void resources.OnMethodTest#<init>(java.lang.String)"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -18,7 +18,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME FULL [resources/OnMethodTest java/lang/String] []
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.OnMethodTest#noargs"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -29,7 +29,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 ]
 FRAME SAME
 MAXSTACK = 1
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public static void resources.OnMethodTest#noargs$static"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -40,7 +40,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 ]
 FRAME SAME
 MAXSTACK = 1
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public long resources.OnMethodTest#args(java.lang.String, long, java.lang.String[], int[])"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -50,7 +50,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public static long resources.OnMethodTest#args$static(java.lang.String, long, java.lang.String[], int[])"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -60,7 +60,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public static long resources.OnMethodTest#callTopLevelStatic(java.lang.String, long)"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -70,7 +70,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public static long resources.OnMethodTest#callTargetStatic(java.lang.String, long)"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -80,7 +80,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public long resources.OnMethodTest#callTopLevel(java.lang.String, long)"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -90,7 +90,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "private long resources.OnMethodTest#callTarget(java.lang.String, long)"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -100,7 +100,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.OnMethodTest#exception"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -110,7 +110,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.OnMethodTest#uncaught"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -120,7 +120,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.OnMethodTest#array(int)"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -130,7 +130,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.OnMethodTest#field"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -140,7 +140,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.OnMethodTest#newObject"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -150,7 +150,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.OnMethodTest#newArray"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -160,7 +160,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.OnMethodTest#casts"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -170,7 +170,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L4
 LDC "public void resources.OnMethodTest#sync"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -180,7 +180,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public long resources.OnMethodTest#callTopLevel1(java.lang.String, long)"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -190,7 +190,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "private long resources.OnMethodTest#calLTargetX(java.lang.String, long)"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -200,7 +200,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public long resources.OnMethodTest#argsMultiReturn(java.lang.String, long, java.lang.String[], int[])"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -210,7 +210,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.OnMethodTest#staticField"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -220,7 +220,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L4
 LDC "public void resources.OnMethodTest#syncM"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -230,7 +230,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public java.lang.String resources.OnMethodTest#argsTypeMatch(java.util.ArrayList)"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
@@ -240,7 +240,7 @@ io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Looku
 "io/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
-INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/core/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.OnMethodTest#caught"
 INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [

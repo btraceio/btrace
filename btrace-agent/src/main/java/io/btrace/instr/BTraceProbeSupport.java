@@ -20,8 +20,8 @@ import static io.btrace.instr.ClassFilter.isSubTypeOf;
 
 import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntimeAccess;
 import io.btrace.core.extensions.Permission;
-import io.btrace.runtime.BTraceRuntimeAccess;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
