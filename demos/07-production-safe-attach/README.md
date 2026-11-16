@@ -23,7 +23,7 @@ btrace '~HotLoopApp' HotPathProbe.java
 
 ## You should see
 
-Doctor on the prepared JVM, then on a plain JVM (numbers and ports vary):
+Doctor on the prepared JVM, then on a plain JVM (excerpts; numbers and ports vary):
 
 ```
 $ btrace doctor 39936
@@ -40,13 +40,13 @@ Remediation:
 exit code: 2
 ```
 
-Throughput as printed by the app (JDK 17, Intel Mac; absolute values depend on the machine, and
+Throughput as printed by the app (JDK 21, Linux x86-64; absolute values depend on the machine, and
 the empty-handler probe on a ~200+ M calls/s loop is a worst case):
 
 ```
-before:   [demo] 296.8 M calls/s   [demo] 293.6 M calls/s
-attached: [demo] 22.0 M calls/s    [demo] 16.9 M calls/s    [demo] 20.2 M calls/s
-after:    [demo] 22.2 M calls/s    [demo] 15.8 M calls/s    [demo] 16.4 M calls/s
+before:   [demo] 470.0 M calls/s   [demo] 479.4 M calls/s
+attached: [demo] 106.4 M calls/s   [demo] 106.6 M calls/s   [demo] 109.2 M calls/s
+after:    [demo] 251.9 M calls/s   [demo] 503.1 M calls/s   [demo] 496.2 M calls/s
 ```
 
 Throughput while the probe is attached drops sharply on this deliberately tight loop (an empty

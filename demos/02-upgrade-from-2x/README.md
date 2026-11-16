@@ -34,6 +34,7 @@ for the compiled class, then
 
 ```
 migrated: .../SlowChargeProbe.java (backup: .../SlowChargeProbe.java.bak)
+    3: * io.btrace package. demos/02-upgrade-from-2x uses it two ways: the SlowChargeProbe.class
     9:import io.btrace.core.annotations.BTrace;
     ...
 Done: 1 file(s) migrated (of 1 examined).

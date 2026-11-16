@@ -140,7 +140,7 @@ terminal 1 when you're done.
 
 ## Troubleshooting
 
-- **`Can not attach to PID ...`** — make sure you run `btrace` as the same OS user as the target
+- **`Failed to attach to PID ...`** — make sure you run `btrace` as the same OS user as the target
   JVM, and check [Troubleshooting: attachment issues](../Troubleshooting.md).
 - **A warning about your Java version** — if the target JVM is older than Java 17 you'll see the
   3.0 deprecation warning. Everything still works; see the

@@ -1,13 +1,13 @@
 # Migrating from BTrace 2.x to 3.0
 
-Good news first: for most users, migrating to BTrace 3.0 requires **no action at all**. The agent transparently handles old compiled probes, the compiler handles imports for you, and old and new clients/agents keep talking to each other. The few things that do require a change are mechanical.
+Good news first: for most users, migrating to BTrace 3.0 requires **no action at all**. The agent transparently handles old compiled probes, the compiler auto-imports the 3.0 API (a 2.x source still has to drop or rename its `org.openjdk.btrace` imports), and old and new clients/agents keep talking to each other. The few things that do require a change are mechanical.
 
 ## TL;DR
 
 | What you have | What you must do |
 |---|---|
 | Compiled/persisted probes (`.class`) | **Nothing** — the agent auto-migrates them at load time |
-| BTrace script sources (`.java`) | **Nothing** for most scripts — or a one-line rename (see below) |
+| BTrace script sources (`.java`) | A mechanical rename of the `org.openjdk.btrace` imports — or delete them (see below) |
 | Mixed 2.x/3.0 client and agent (dynamic attach) | **Nothing** — the wire protocol auto-negotiates |
 | 2.x client against a 3.0 *prepared* agent (`-javaagent:...=port=`) | **Upgrade the client** — prepared mode is authenticated and rejects old clients |
 | Maven/Gradle dependencies | Update coordinates to `io.btrace:btrace` |
