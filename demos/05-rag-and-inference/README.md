@@ -30,28 +30,34 @@ Or run both unattended: `demos/05-rag-and-inference/run.sh`.
 ...
 === RAG + Inference Dashboard ===
 === RAG Quality Summary ===
+
 Source: vectorstore
   Queries: 18 (3 empty, 16%)
   Results: 75 total (avg 4/query)
   Similarity (top): avg 0.730, min 0.000, max 0.896
   Latency: avg 53ms, min 26ms, max 82ms
   Context: 14610 tokens
+
 --- Totals ---
   Queries: 18
   Empty retrievals: 3 (16%)
+
 === GPU Bridge Summary ===
+
 Model: onnx/embed-small
   Inferences: 17
   Latency: avg 13ms, min 5ms, max 23ms
   Batch size: avg 1
   Throughput: 74.6 items/sec
+
 --- Totals ---
   Inferences: 17
+
 empty retrievals: 3
 =================================
 ```
 
-(The first dashboard, printed before any traffic is recorded, reads `No RAG queries recorded.`; numbers vary per run.)
+(A dashboard printed before any retrieval has been recorded reads `No RAG queries recorded.`; numbers vary per run.)
 
 ## Against a real stack
 

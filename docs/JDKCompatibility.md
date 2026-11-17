@@ -11,7 +11,7 @@ and push to `develop`:
 | JDK Version | How CI installs it | Distribution | Status |
 |-------------|--------------------|--------------|--------|
 | 8 | `actions/setup-java` with `java-version: 8`, `check-latest: true` → newest Temurin 8 release at run time | Eclipse Temurin | Supported (LTS) — deprecated target, removed in 4.0 |
-| 11 | `actions/setup-java` with `java-version: 11`, `check-latest: true` → newest Temurin 11 release at run time | Eclipse Temurin | Supported (LTS) — compile toolchain (auto-provisioned by Gradle); deprecated target, removed in 4.0 |
+| 11 | `actions/setup-java` with `java-version: 11`, `check-latest: true` → newest Temurin 11 release at run time | Eclipse Temurin | Supported (LTS) — default compile toolchain; deprecated target, removed in 4.0 |
 | 17 | `actions/setup-java` with `java-version: 17`, `check-latest: true` → newest Temurin 17 release at run time | Eclipse Temurin | Supported (LTS) |
 | 21 | `actions/setup-java` with `java-version: 21`, `check-latest: true` → newest Temurin 21 release at run time | Eclipse Temurin | Supported (LTS) |
 | 25 | `actions/setup-java` with `java-version: 25`, `check-latest: true` → newest Temurin 25 release at run time | Eclipse Temurin | Supported (LTS) |
@@ -37,11 +37,13 @@ If you discover a distribution-specific issue, please [open a GitHub issue](#rep
 ## Minimum Java Version
 
 BTrace compiles with `sourceCompatibility = 8` and `targetCompatibility = 8`, targeting the widest
-possible deployment base. Compilation uses a JDK 11 toolchain that Gradle auto-provisions, so you
-do not need JDK 11 installed. Gradle itself (9.8) needs JDK 17 or newer to run; the CI build uses
-JDK 24 (with JDK 21 and a Java 28 early-access build installed for the test lanes), which is the
-configuration the release is built with. Use `TEST_JAVA_HOME=<path>` to run the tests on a specific
-JDK.
+possible deployment base. Compilation uses a JDK 11 toolchain (JDK 8 for `btrace-agent`, JDK 24 for
+its ClassFile API source set). Gradle does not download toolchains, so these JDKs must be installed
+(see [Contributing](../CONTRIBUTING.md#local-development)); CI takes JDK 8 and 24 from
+`actions/setup-java` and JDK 11 from the runner image. Gradle itself (9.8) needs JDK 17 or newer to
+run; the CI build and the release workflow run it on JDK 21 (CI also installs a Java 28 early-access
+build for the ClassFile API backend tests). Use `TEST_JAVA_HOME=<path>` to run the integration
+tests' target JVMs on a specific JDK.
 
 ## Reporting Compatibility Issues
 

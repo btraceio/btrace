@@ -54,7 +54,7 @@ btrace-metrics.stats.window-size=1000
 **extensions.autoload**
 - Format: boolean (true/false)
 - Default: `true`
-- Description: If `true`, extensions are loaded on demand when scripts use their services. If `false`, all enabled extensions are loaded at agent startup.
+- Description: Intended to choose between on-demand loading (`true`) and loading at agent startup (`false`). In 3.0 the value is parsed but not consulted: every enabled extension is loaded when the agent discovers it, whatever this is set to.
 
 ### Extension-Specific Settings
 
@@ -75,7 +75,7 @@ my-extension.feature.enabled=true
 my-extension.endpoint=http://localhost:8080
 ```
 
-Extension-specific settings are passed to the extension when loaded. Extensions can access these via their configuration API.
+Extension-specific settings are parsed and available inside the agent through `ExtensionConfig.getExtensionProperties(extensionId)` (prefix stripped). In 3.0 nothing hands them to the extension: `ExtensionContext` has no configuration accessor, so an extension implementation cannot read them yet. Use agent arguments (`ExtensionContext.getArgs()`) or system properties for extension settings.
 
 ## Usage Examples
 
@@ -96,7 +96,7 @@ extensions.enabled=btrace-metrics,my-custom-extension
 ### Example 3: Configure Extension Settings
 
 ```properties
-# Configure metrics extension
+# Parsed, but not delivered to the extension in 3.0 (see above)
 btrace-metrics.histogram.default-precision=3
 btrace-metrics.histogram.max-value=3600000000
 ```
@@ -104,7 +104,7 @@ btrace-metrics.histogram.max-value=3600000000
 ### Example 4: Load All Extensions at Startup
 
 ```properties
-# Disable lazy loading, load all extensions immediately
+# No effect in 3.0: enabled extensions are always loaded at discovery
 extensions.autoload=false
 ```
 
@@ -112,10 +112,10 @@ extensions.autoload=false
 
 ### ExtensionConfig Class
 
-New class to manage extension configuration:
+`io.btrace.extension.impl.ExtensionConfig` manages extension configuration:
 
 ```java
-public class ExtensionConfig {
+public final class ExtensionConfig {
   public boolean isEnabled(String extensionId);
   public boolean isAutoLoad();
   public Properties getExtensionProperties(String extensionId);
@@ -124,11 +124,12 @@ public class ExtensionConfig {
 
 ### ExtensionLoader Integration
 
-ExtensionLoader will:
-1. Load configuration on initialization
-2. Filter discovered extensions based on enabled/disabled lists
-3. Apply autoload setting (lazy vs eager loading)
-4. Pass extension-specific properties when loading extensions
+ExtensionLoader:
+1. Loads configuration on initialization
+2. Filters discovered extensions based on enabled/disabled lists
+
+Not implemented in 3.0: applying the autoload setting (lazy vs eager loading) and passing
+extension-specific properties when loading extensions.
 
 ### Configuration Loading Priority
 

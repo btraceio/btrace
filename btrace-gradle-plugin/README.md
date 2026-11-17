@@ -99,7 +99,7 @@ Build self-contained fat agent JARs with embedded extensions for single-JAR depl
 ### Features
 - Embeds extensions directly into the agent JAR
 - Auto-discovers extension projects in multi-project builds
-- Supports project references, separately published third-party Maven coordinates, and local files
+- Supports project references, published Maven coordinates, and local files
 - API classes as `.class` files (bootstrap), impl as `.classdata` under `META-INF/btrace-extensions/<id>/` (runtime loaded, isolated per extension)
 - Integrates with ShadowJar for package relocation
 
@@ -131,7 +131,7 @@ btraceFatAgent {
 
         // Local extension ZIPs or directories
         file('/path/to/extension.zip')
-        files('/path/to/extensions/*.zip')
+        files('extensions/*.zip')      // pattern relative to the project directory
     }
 
     // Bundled probes (optional)
@@ -151,7 +151,7 @@ btraceFatAgent {
     relocate 'org.objectweb.asm', 'io.btrace.libs.org.objectweb.asm'
 
     // Auto-discovery options
-    autoDiscover = true              // find extensions with btrace.extension plugin
+    autoDiscover = true              // find subprojects with the io.btrace.extension plugin
     filterProperty = 'embedExtensions'  // use -PembedExtensions=ext1,ext2 to filter
     defaultExtensions = [':ext-a']   // embed just these when the property is absent
 }
@@ -248,8 +248,8 @@ plugins {
 btraceFatAgent {
     baseName = 'my-custom-agent'
 
-    // Task producing the masked BTrace JAR (required for standalone builds)
-    agentJarTask = 'btraceJar'
+    // Public masked BTrace engine (io.btrace:btrace) to build on; defaults to the plugin's version
+    btraceVersion = '3.0.0'
 
     embedExtensions {
         file('/path/to/btrace-metrics-3.0.0-extension.zip')
@@ -343,9 +343,10 @@ jar -tf btrace-dist/build/fat-agent/btrace-agent-fat.jar | grep btrace-extension
 
 ### Fat Agent Plugin
 - Use auto-discovery for monorepo setups
-- Use Maven coordinates only for separately published third-party extensions. BTrace-built
-  extensions are packages in the BTrace distribution's `extensions/` directory and should be
-  embedded with `file(...)`.
+- BTrace's bundled extensions are published as `io.btrace:<id>:<version>`. `maven(...)` resolves
+  a coordinate's main artifact, which for them is the API JAR, so name the extension package
+  explicitly (`maven('io.btrace:btrace-metrics:3.0.0:extension@zip')`), or embed the package from
+  the BTrace distribution's `extensions/` directory with `file(...)`.
 - Test the fat agent in isolation before production deployment
 - Package relocations help avoid classpath conflicts in target JVMs
 

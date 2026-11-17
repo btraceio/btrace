@@ -26,7 +26,7 @@ btrace -n 'class::method @location { action }' <PID>
 
 # Real examples
 btrace -n 'javax.swing.*::setText @entry { print method, args }' 1234
-btrace -n 'java.sql.Statement::execute* @return if duration>100ms { print method, duration }' 1234
+btrace -n '/.*Statement/::/execute.*/ @return if duration>100ms { print method, duration }' 1234
 btrace -n 'java.util.HashMap::get @entry { count }' 1234
 ```
 
@@ -66,10 +66,10 @@ class-pattern::method-pattern @location [filter] { action [, action]* }
 '/com\.myapp\..*/::execute'
 
 # Regex in method name
-'java.sql.Statement::/execute.*/'
+'com.myapp.OrderService::/execute.*/'
 
 # Both
-'/com\.myapp\..*/::/handle.*/
+'/com\.myapp\..*/::/handle.*/'
 ```
 
 **Special method names:**
@@ -195,7 +195,7 @@ Only valid for `@return` and `@error` locations.
 **Examples:**
 ```bash
 # Time database queries
-btrace -n 'java.sql.Statement::execute* @return { time }' <PID>
+btrace -n '/.*Statement/::/execute.*/ @return { time }' <PID>
 
 # Time method execution
 btrace -n 'MyClass::expensiveOperation @return { time }' <PID>
@@ -238,7 +238,7 @@ Separate actions with commas:
 
 **Find slow database queries:**
 ```bash
-btrace -n 'java.sql.Statement::execute* @return if duration>100ms { print method, duration }' <PID>
+btrace -n '/.*Statement/::/execute.*/ @return if duration>100ms { print method, duration }' <PID>
 ```
 
 **Find slow HTTP requests:**
@@ -306,17 +306,17 @@ btrace -n 'com.myapp.OrderService::process @entry if args[0]=="PRIORITY" { print
 
 **Find who's calling deprecated methods:**
 ```bash
-btrace -n 'com.myapp.LegacyService::oldMethod @entry { print stack(3) }' <PID>
+btrace -n 'com.myapp.LegacyService::oldMethod @entry { stack(3) }' <PID>
 ```
 
 **Identify slow REST endpoints:**
 ```bash
-btrace -n 'org.springframework.web.bind.annotation.RequestMapping::* @return if duration>1000ms { print method, duration }' <PID>
+btrace -n 'org.springframework.web.servlet.DispatcherServlet::doDispatch @return if duration>1000ms { print method, duration }' <PID>
 ```
 
 **Monitor database connection usage:**
 ```bash
-btrace -n 'javax.sql.DataSource::getConnection @entry { count }' <PID>
+btrace -n 'com.zaxxer.hikari.HikariDataSource::getConnection @entry { count }' <PID>
 ```
 
 ## Advanced Examples
@@ -347,8 +347,8 @@ btrace -n 'com.myapp.OrderService::processOrder @entry if args[0]=="EXPRESS" { c
 
 **Filter by return value (manual workaround - not directly supported yet):**
 ```bash
-# Use duration filter as proxy for successful operations
-btrace -n 'com.myapp.Service::operation @return if duration>0ms { print return }' <PID>
+# Print the return value and filter the output outside of BTrace
+btrace -n 'com.myapp.Service::operation @return { print return }' <PID> | grep -v null
 ```
 
 ## Limitations
@@ -361,6 +361,8 @@ Current limitations of oneliners:
 4. **No field access** - Cannot track field reads/writes
 5. **Simple filters only** - No AND/OR logic in filters
 6. **No state** - Cannot maintain variables across invocations
+7. **No subtype matching** - A class pattern matches class names only: naming an interface such as `java.sql.Statement` instruments none of its implementations, so match the implementing classes (e.g. `/.*Statement/`)
+8. **Keywords as names** - A method named like a oneliner keyword (`method`, `args`, `count`, `time`, ...) must be written as a regex, e.g. `MyClass::/method/`
 
 **Potential future enhancements:**
 - Multi-probe support: `probe1 | probe2 | probe3`
@@ -427,7 +429,7 @@ Current limitations of oneliners:
 
 ### Security
 
-1. **Oneliners run in untrusted mode by default** - Use `-u` flag for trusted operations
+1. **Oneliners always run in untrusted mode** - The generated script is a plain `@BTrace` class, so `-u` changes nothing for it; write a full script with `@BTrace(trusted = true)` when you need trusted operations
 
 2. **Be careful with production** - Test oneliners in staging first
 
@@ -467,10 +469,10 @@ Current limitations of oneliners:
 1. Check quotes - use single quotes for shell:
    ```bash
    # Correct
-   btrace -n 'MyClass::method @entry { print }' <PID>
+   btrace -n 'Outer$Inner::process @entry { print }' <PID>
 
    # Wrong - shell interprets $
-   btrace -n "MyClass::method @entry { print }" <PID>
+   btrace -n "Outer$Inner::process @entry { print }" <PID>
    ```
 
 2. Check spacing around symbols:
@@ -498,7 +500,7 @@ Current limitations of oneliners:
 **Solutions:**
 1. Enable debug mode to see generated code:
    ```bash
-   btrace -v -n 'MyClass::method @entry { print }' <PID>
+   btrace -v -n 'MyClass::myMethod @entry { print }' <PID>
    ```
 
 2. Check for unsupported features:

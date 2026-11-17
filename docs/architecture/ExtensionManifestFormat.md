@@ -43,7 +43,7 @@ BTrace-Extension-Requires: btrace-core
 BTrace-Shaded-Packages: org.HdrHistogram->io.btrace.metrics.sh
  aded.hdrhistogram,com.clearspring.analytics->io.btrace.metrics
  .shaded.clearspring
-BTrace-Extension-Permissions: NETWORK,THREADS
+BTrace-Extension-Permissions: THREADS,REFLECTION,CLASSLOADER
 ```
 
 ## Attribute Definitions
@@ -97,6 +97,14 @@ BTrace-Extension-Permissions: NETWORK,THREADS
 - Example: `org.HdrHistogram->io.btrace.metrics.shaded.hdrhistogram`
 - Description: Package relocation mappings for shaded dependencies
 
+**BTrace-Extension-Permissions**
+- Format: comma-separated permission names
+- Example: `NETWORK,THREADS,FILE_WRITE`
+- Description: Permissions required by the extension implementation. Automatically inferred by the build plugin via code scanning, with optional overrides in Gradle.
+
+**BTrace-Extension-Impl**, **BTrace-Extension-Exports**
+- Written by the build plugin (implementation JAR file name; summary of the exported API types). The agent uses `BTrace-Extension-Impl` to find the implementation JAR in the extension directory (falling back to any `*-impl.jar` there); `BTrace-Extension-Exports` is informational for the agent, and the fat-agent plugin copies it into the embedded `exports` property.
+
 ## MANIFEST.MF Line Continuation
 
 Per JAR specification, manifest attributes longer than 72 bytes must be continued on the next line with a leading space:
@@ -122,7 +130,9 @@ MANIFEST.MF. The agent reads the following keys from that file:
 | `btrace.api.version` | no (defaults to `3.0+`) | `3.0.0` | Minimum BTrace API version |
 | `java.version` | no (defaults to `8+`) | `11+` | Minimum Java version |
 | `services` | no | `org.example.SparkService` | Comma-separated service class names |
-| `probes` | no | `SparkJobTracer,SparkStageTracer` | Comma-separated bundled probe class names |
+| `requires.extensions` | no | `btrace-utils` | Comma-separated ids of required extensions |
+| `permissions` | no (defaults to none) | `THREADS,NETWORK` | Required permissions, copied from `BTrace-Extension-Permissions` by the fat-agent plugin; privileged ones gate linking exactly as for an installed extension |
+| `probes` | no | `org.example.SparkJobTracer,org.example.SparkStageTracer` | Comma-separated bundled probe class names (fully qualified) |
 | `configurator` | no | `org.example.SparkConfigurator` | Fully qualified `ExtensionConfigurator` class for zero-config probe auto-selection (see below) |
 
 ### `configurator` — Zero-Config Probe Auto-Selection
@@ -142,40 +152,31 @@ for a full example.
 
 The extension loader supports both formats:
 
-1. Check for MANIFEST.MF attributes first
-2. Fall back to `btrace-extension.properties` if MANIFEST attributes not found
-3. Log deprecation warning if using properties file
+1. Check for MANIFEST.MF attributes first (`BTrace-Extension-Id` and `BTrace-Extension-Version` must both be present)
+2. Fall back to `META-INF/btrace-extension.properties` if MANIFEST attributes not found (no deprecation warning is logged)
+3. Otherwise infer id and version from the JAR file name, provided the JAR has `META-INF/services/` entries
 
 ## Gradle Configuration
 
-Extensions should configure MANIFEST.MF generation in build.gradle:
+The `io.btrace.extension` plugin writes these attributes into the API JAR (`buildApiJar`) from
+the `btraceExtension` block; the plain `jar` task is disabled, so do not set them by hand:
 
 ```gradle
-jar {
-  manifest {
-    attributes(
-      'BTrace-Extension-Id': 'btrace-metrics',
-      'BTrace-Extension-Version': project.version,
-      'BTrace-Extension-Name': 'BTrace HDR Histogram',
-      'BTrace-Extension-Description': 'High-performance metrics...',
-      'BTrace-API-Version': '3.0+',
-      'BTrace-Java-Version': '8+',
-      'BTrace-Extension-Services': 'io.btrace.metrics.MetricsService',
-      'BTrace-Shaded-Packages': 'org.HdrHistogram->io.btrace.metrics.shaded.hdrhistogram'
-    )
-  }
+btraceExtension {
+  id = 'btrace-metrics'
+  name = 'BTrace HDR Histogram'
+  description = 'High-performance metrics...'
+  services = ['io.btrace.metrics.MetricsService']
+  shadedPackages = ['org.HdrHistogram': 'io.btrace.metrics.shaded.hdrhistogram']
 }
 ```
+
+`BTrace-Extension-Version` comes from `btraceExtension.version` or else `project.version`;
+`BTrace-API-Version` (`3.0+`) and `BTrace-Java-Version` (`8+`) are fixed by the plugin.
 
 ## Migration Path
 
 1. ✅ Design MANIFEST.MF format (this document)
-2. Update ExtensionMetadata parser to read MANIFEST.MF
-3. Update btrace-metrics build.gradle to generate MANIFEST attributes
-4. Test with both formats for backward compatibility
-5. Update documentation
-6. Deprecate btrace-extension.properties (remove in future release)
-**BTrace-Extension-Permissions**
-- Format: comma-separated permission names
-- Example: `NETWORK,THREADS,FILE_WRITE`
-- Description: Permissions required by the extension implementation. Automatically inferred by the build plugin via code scanning, with optional overrides in Gradle.
+2. ✅ `ExtensionMetadata` parser reads MANIFEST.MF
+3. ✅ Bundled extensions generate MANIFEST attributes through the `io.btrace.extension` plugin
+4. `btrace-extension.properties` remains a supported fallback (see Backward Compatibility)

@@ -43,8 +43,10 @@ btrace-metrics-3.0.0-extension.zip
 > **What just happened?** `packageExtension` is a real task registered by the `io.btrace.extension`
 > Gradle plugin for every extension module (`BTraceExtensionPlugin.groovy`) — it zips the API jar
 > and the shaded implementation jar together under classifier `extension`. Use that package with
-> the fat-agent plugin's `file()` source. `maven()` remains for separately published third-party
-> extensions; BTrace's bundled extensions are not Maven artifacts.
+> the fat-agent plugin's `file()` source. The bundled extensions are also published as
+> `io.btrace:<id>:3.0.0`; with `maven()` give the package classifier
+> (`maven('io.btrace:btrace-metrics:3.0.0:extension@zip')`), since the plain coordinate resolves
+> only the API jar.
 
 Copy it into a scratch directory. Renaming it to `btrace-metrics.zip` is purely for readability —
 it's the name [demo/fat-agent-build.gradle](demo/fat-agent-build.gradle) references, and Step 3
@@ -179,7 +181,8 @@ Boot-Class-Path: demo-btrace-agent.jar
 BTrace-Embedded-Extensions: btrace-contracts,btrace-gpu-bridge,btrace-llm-trace,btrace-metrics,btrace-otel,btrace-rag-quality,btrace-statsd,btrace-utils
 ```
 
-`Boot-Class-Path` and `BTrace-Embedded-Extensions` are the two attributes `fatAgentJar` sets
+(Attribute order can differ, and the long `BTrace-Embedded-Extensions` value is wrapped onto
+continuation lines at 72 characters.) `Boot-Class-Path` and `BTrace-Embedded-Extensions` are the two attributes `fatAgentJar` sets
 itself; everything else (you'll also see `Main-Class`, `BTrace-Version`, and `BTrace-Client-Main`)
 is copied verbatim from the engine jar's manifest by `seedManifestFromEngine()`. The embedded list
 is *merged*, not replaced: the public `io.btrace:btrace:3.0.0` artifact is itself a fat agent —
@@ -201,18 +204,18 @@ is gated exactly like a filesystem-installed one, so allow it right on the `-jav
 java -javaagent:build/libs/demo-btrace-agent.jar=debug=true,allowExtensions=btrace-metrics DemoApp.java
 ```
 
-**You should see** the usual demo app lines, plus (message text verified against
+**You should see** the usual demo app lines, preceded by the agent's start-up log, which includes (message text verified against
 `Main.java`/`ExtensionLoader.java`; exact log prefixes depend on your SLF4J SimpleLogger config;
 the count is 8 because the engine embeds the default extension set — see Step 3):
 
 ```
-[demo] order service running - stop with Ctrl+C
 Initializing BTrace extension system
 Extension system initialized with 8 available extension(s)
+[demo] order service running - stop with Ctrl+C
 [demo] processed 64 orders, 8 failed
 ```
 
-In terminal 2, get the PID (`jps`) and deploy [Tutorial 4](04-extensions-and-permissions.md)'s
+In terminal 2, get the PID (`jps -m`, the `Main DemoApp.java` line) and deploy [Tutorial 4](04-extensions-and-permissions.md)'s
 metrics probe — reused unchanged from [demo/LatencyHistogram.java](demo/LatencyHistogram.java):
 
 ```sh

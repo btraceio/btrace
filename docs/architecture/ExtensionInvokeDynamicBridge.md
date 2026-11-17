@@ -4,6 +4,27 @@
 
 The BTrace extension system uses invokedynamic to bridge between script classloaders and extension classloaders, avoiding bootstrap classloader pollution while maintaining complete extension isolation.
 
+> **Status of this document.** It was written for the first version of the bridge. The bridge
+> itself (`ExtensionIndy`, `ExtensionBridge`, the `Preprocessor` rewrite) is as described, but in
+> 3.0 the surrounding mechanics differ in these ways, which take precedence over the text below:
+>
+> - **API/impl split is implemented.** Each extension ships an API JAR and an impl JAR. The agent
+>   appends the **API JAR to the bootstrap class path** (embedded API classes are already there)
+>   and loads only the impl JAR in a per-extension classloader, so extension *interfaces* are
+>   bootstrap-visible and implementations are isolated.
+> - **Loading is eager.** `ExtensionLoader.discoverExtensions()` loads every enabled extension at
+>   agent startup; the bridge only resolves and instantiates the implementation on first use.
+> - **Policy gate.** `ExtensionBridgeImpl.getExtensionClass()` first applies the permission policy
+>   (`denyExtensions`, privileged permissions vs `allowExtensions`/`allowPrivileged`) and returns
+>   the bare interface when linking is refused.
+> - **Failure is not a silent `null`.** A required `@Injected` field whose service is unavailable
+>   makes the agent refuse the probe at deploy time; an optional one (or SHIM mode) receives a
+>   throwing stub or a no-op shim. See [Extension Interface Rules](../ExtensionInterfaceRules.md).
+> - **Instances are cached per probe class**, and the call site is a constant bound to that
+>   instance; services are created through a public no-arg constructor or a static factory only.
+> - **`btrace-boot.jar` no longer exists.** Read it below as the bootstrap section of the masked
+>   `btrace.jar`.
+
 **Key Benefits:**
 - **Clean bootstrap namespace** - Only BTrace core classes in bootstrap, no extension JARs
 - **Extension isolation** - Each extension in its own classloader with shaded dependencies
@@ -23,7 +44,7 @@ The BTrace extension system uses invokedynamic to bridge between script classloa
 │ │ }                                │ │
 │ └──────────────────────────────────┘ │
 │                                      │
-│ Classloader: Anonymous (parent=null)│
+│ Classloader: per probe (see below)  │
 └────────────┬─────────────────────────┘
              │ delegates to bootstrap
              ↓
@@ -102,21 +123,21 @@ public static CallSite bootstrapFieldGet(
     MethodType type,
     String serviceClassName,
     String serviceType,
-    String factoryMethod) throws Exception
+    String factoryMethod,
+    Integer optionalFlag,
+    String injectMode) throws Exception
 ```
 
 **Responsibilities:**
 - Receives invokedynamic bootstrap calls from script bytecode
 - Uses ExtensionBridge to load extension service class
-- Creates MethodHandle for service instantiation
-- Handles both SIMPLE (no-arg) and RUNTIME (BTraceRuntime.Impl param) services
-- Supports both constructors and factory methods
-- Returns ConstantCallSite for zero-overhead subsequent calls
+- Instantiates the service once per probe class (no-arg constructor or static factory method) and calls `Extension.initialize(ExtensionContext)`
+- `serviceType` is a legacy hint and is ignored
+- Returns a ConstantCallSite bound to that instance for zero-overhead subsequent calls
 
 **Error Handling:**
-- Gracefully degrades to null on failure
-- Logs errors but doesn't throw exceptions
-- Matches behavior of failed service instantiation
+- Optional field (`optionalFlag != 0`) or SHIM mode: binds a pre-generated shim from the API JAR, or a dynamic-proxy fallback (no-op in `SHIM` mode, throwing in `THROW` mode)
+- Required field: rethrows; the agent checks this ahead of linking (`requiredServiceProblem`) and refuses to deploy the probe
 
 ### 2. ExtensionBridge (btrace-core)
 
@@ -144,19 +165,16 @@ public interface ExtensionBridge {
 
 **Initialization:**
 ```java
-static {
-  try {
-    Class<?> indyClz = Class.forName("io.btrace.runtime.ExtensionIndy");
-    ExtensionBridge bridge = new ExtensionBridgeImpl(Main.getExtensionLoader());
-    indyClz.getField("bridge").set(null, bridge);
-  } catch (ClassNotFoundException e) {
-    // Expected for pre-Java 8 or if ExtensionIndy unavailable
-  }
+// Called by the agent (Main.initExtensions) once the ExtensionLoader exists
+public static void initialize(ExtensionLoader loader) {
+  Class<?> indyClz = Class.forName("io.btrace.runtime.ExtensionIndy");
+  ExtensionBridge bridge = new ExtensionBridgeImpl(loader);
+  indyClz.getField("bridge").set(null, bridge);
 }
 ```
 
 **Responsibilities:**
-- Sets `ExtensionIndy.bridge` field during static initialization
+- Sets `ExtensionIndy.bridge` field when the agent calls `initialize(loader)`
 - Uses ExtensionLoader to find extensions providing requested services
 - Loads extension classes from extension classloaders
 - Ensures extensions are loaded before returning class
@@ -179,7 +197,9 @@ INVOKEDYNAMIC bootstrapFieldGet(
   ExtensionIndy.bootstrapFieldGet,     // bootstrap method
   "io.btrace.metrics.MetricsService",  // service class name
   "RUNTIME",                           // optional type hint (deprecated)
-  ""                                   // factory method (empty = constructor)
+  "",                                  // factory method (empty = constructor)
+  0,                                   // optional flag (non-zero for optional = true)
+  ""                                   // injection mode (SHIM/THROW, empty = unspecified)
 ) : MetricsService
 ```
 
@@ -190,7 +210,7 @@ private AbstractInsnNode updateInjectedUsage(
 ```
 
 **Changes:**
-- Removed local variable caching
+- Stores the first INVOKEDYNAMIC result of a method in a local variable; later reads of the same field in that method load the local
 - Removed service instantiation bytecode
 - Emits InvokeDynamicInsnNode instead
 - Passes service metadata as bootstrap arguments
@@ -199,15 +219,14 @@ private AbstractInsnNode updateInjectedUsage(
 
 **Location:** `btrace-core/src/main/java/io/btrace/extension/ExtensionLoader.java`
 
-**Key Changes:**
-- Avoids `instrumentation.appendToBootstrapClassLoaderSearch(jarFile)`
-- Avoids an eager extension loading loop
-- **Behavior:** Extensions loaded on-demand via invokedynamic
+**Behavior in 3.0:**
+- Appends only each extension's API JAR to the bootstrap class path (`appendApiJarToBootstrap`)
+- Loads every enabled extension during `discoverExtensions()`; the impl JAR gets its own classloader
+- Implementations are resolved and instantiated on demand via invokedynamic
 
 **Impact:**
-- Bootstrap classloader remains clean
-- Extensions only loaded when scripts use them
-- Better resource utilization
+- Only extension API types are visible on bootstrap
+- Implementation classes and their shaded dependencies stay isolated
 
 ## Execution Flow
 
@@ -220,9 +239,9 @@ private AbstractInsnNode updateInjectedUsage(
    - Scans extensions/ directory
    - Creates ExtensionDescriptor for each extension
    - Stores in availableExtensions map
-   - Does NOT load extensions yet
+   - Loads each enabled extension (API JAR to bootstrap, impl classloader created)
    ↓
-3. ExtensionBridgeImpl.<clinit>() (static initializer)
+3. ExtensionBridgeImpl.initialize(loader)
    - Creates new ExtensionBridgeImpl instance
    - Sets ExtensionIndy.bridge = instance
    - Bridge now ready for invokedynamic bootstrap calls
@@ -244,22 +263,23 @@ private AbstractInsnNode updateInjectedUsage(
    ↓
 4. ExtensionBridgeImpl.getExtensionClass():
    a. Call loader.findExtensionForService(serviceClassName)
+   a2. Apply the permission policy; a blocked extension yields the bare interface (no implementation)
    b. If ext.isLoaded() == false:
       - loader.load(ext)  // Loads extension JAR into ExtensionClassLoader
-   c. extClassLoader.loadClass(serviceClassName)
-   d. Return Class<?> to bootstrap method
+   c. extClassLoader.loadClass(serviceClassName), then locate its implementation class
+   d. Return the implementation Class<?> to bootstrap method
    ↓
 5. ExtensionIndy.bootstrapFieldGet() (continued):
-   a. Create MethodHandle for service instantiation:
-      - Auto-detect constructor or factory
+   a. Instantiate the service (once per probe class):
+      - Constructor or factory
       - Initialize extensions via Extension.initialize(ExtensionContext) when first accessed
-   b. Return new ConstantCallSite(methodHandle)
+   b. Return new ConstantCallSite(MethodHandles.constant(type, instance))
    ↓
 6. JVM caches ConstantCallSite
    ↓
 7. Subsequent calls to same INVOKEDYNAMIC:
    - Use cached CallSite (zero overhead)
-   - MethodHandle directly instantiates service
+   - MethodHandle returns the already-created service instance
    - No bootstrap method re-execution
 ```
 
@@ -273,11 +293,10 @@ private AbstractInsnNode updateInjectedUsage(
 3. JVM uses cached CallSite (no bootstrap)
    ↓
 4. MethodHandle executes:
-   - Instantiates MetricsService
-   - Returns service instance
+   - Returns the cached service instance
    ↓
-5. INVOKEVIRTUAL MetricsService.histogram(String)
-   - Normal virtual dispatch
+5. INVOKEINTERFACE MetricsService.histogram(String)
+   - Normal interface dispatch
    - JVM resolves from actual object class
    - Extension method executes
 ```
@@ -364,50 +383,35 @@ public class MyExtension extends Extension {
 }
 ```
 
-**MethodHandle Creation:**
-```java
-Class<?> runtimeImplClass =
-  Class.forName("io.btrace.runtime.BTraceRuntime$Impl");
-
-MethodHandle constructor =
-  MethodHandles.publicLookup().findConstructor(
-    serviceClass,
-    MethodType.methodType(void.class, runtimeImplClass));
-
-// Bind BTraceRuntime.enter() as first argument
-MethodHandle getRuntimeImpl =
-  MethodHandles.publicLookup().findStatic(
-    BTraceRuntime.class,
-    "enter",
-    MethodType.methodType(runtimeImplClass));
-
-mh = MethodHandles.filterReturnValue(getRuntimeImpl, constructor);
-```
+There is no constructor variant that takes a runtime object: after the no-arg constructor (or
+factory) returns, `ExtensionIndy` obtains the context from `BTraceRuntimeAccess.currentContext()`
+and calls `initialize(ctx)` on any instance that extends `Extension`.
 
 ## Classloader Hierarchy
 
 ### Script Classloader
 
 ```java
-// In BTraceRuntimeImpl_8.defineClass()
-ClassLoader loader = new ClassLoader(null) {};  // parent = null
-Class<?> cl = unsafe.defineClass(name, code, 0, code.length, loader, null);
+// In BTraceRuntimeImpl_8 (the Java 8 runtime; BTraceRuntimeImpl_11 instead defines a hidden
+// class in a fresh per-probe anchor loader with the same parent)
+ClassLoader parent = BTraceRuntimeImpl_8.class.getClassLoader();
+if (parent == null) parent = Thread.currentThread().getContextClassLoader();
+IsolatedBTraceClassLoader loader = new IsolatedBTraceClassLoader(parent);
+loader.define(name, code);
 ```
 
-**Parent:** null (delegates directly to bootstrap)
-**Visibility:** Only bootstrap classes
-**Impact:** Scripts can only see classes in bootstrap classpath
+**Parent:** the runtime's own loader, or the thread context class loader when the runtime is on
+the bootstrap path (a fresh loader per probe, so the probe class can be unloaded)
+**Visibility:** Bootstrap classes, including extension API types, plus whatever that parent sees
+**Impact:** Extension implementations are never visible to the script; it reaches them only
+through the injected field
 
 ### Extension Classloader
 
 ```java
-// In ExtensionLoader.load()
-ExtensionClassLoader classLoader = new ExtensionClassLoader(
-  extensionId,
-  extensionVersion,
-  new URL[] {jarUrl},
-  parentClassLoader  // BTrace boot classloader
-);
+// In ExtensionLoaderImpl.load() (filesystem extension; embedded ones use ClassDataLoader)
+URLClassLoader classLoader =
+    new URLClassLoader(new URL[] {implJarUrl}, parentClassLoader);  // BTrace boot classloader
 ```
 
 **Parent:** BTrace boot classloader (btrace-boot.jar)
@@ -423,7 +427,7 @@ ExtensionClassLoader classLoader = new ExtensionClassLoader(
 
 ```
 Script Class
-├── parent = null → Bootstrap ClassLoader
+├── parent = runtime loader, or TCCL → Bootstrap ClassLoader
 │   ├── JRE system classes
 │   ├── btrace-boot.jar (BTraceRuntime, annotations)
 │   └── ExtensionIndy.class
@@ -481,24 +485,28 @@ ExtensionClassLoader (per extension)
 **Behavior:**
 ```java
 try {
-  // Load class and create MethodHandle
+  // Resolve class, create (or reuse) the per-probe instance
 } catch (Throwable t) {
-  // Graceful degradation: return null
-  mh = MethodHandles.constant(type.returnType(), null);
+  if (effectiveMode == InjectionMode.SHIM || isOptional) {
+    mh = MethodHandles.constant(type.returnType(), fallback);  // shim or throwing stub
+  } else {
+    throw t;
+  }
 }
 return new ConstantCallSite(mh);
 ```
 
 **Impact:**
-- Script continues execution
-- Service field is null
-- NPE on first usage (matches current behavior)
+- Required service: the probe is not deployed (`Probe ... was not deployed: required @Injected service ... is unavailable`)
+- Optional service, `THROW` mode (default): every call on the field raises `IllegalStateException: BTrace optional service unavailable: <service>`
+- Optional service, `SHIM` mode: calls are no-ops returning defaults
+- `btrace -le <PID>` lists the extensions that failed to link and why
 
 ### Debugging
 
 **Enable logging:**
 ```
--Dorg.slf4j.simpleLogger.log.io.btrace.agent.extension=DEBUG
+-Dorg.slf4j.simpleLogger.log.io.btrace.extension=DEBUG
 -Dorg.slf4j.simpleLogger.log.io.btrace.runtime.ExtensionIndy=DEBUG
 ```
 
@@ -574,8 +582,8 @@ InvokeDynamicInsnNode indyInsn = new InvokeDynamicInsnNode(
 - Same constructors/factories
 - Same MANIFEST.MF metadata
 
-**Behavioral changes:** None
-- Extension loading now on-demand
+**Behavioral changes:**
+- Extension implementations are resolved on demand
 - Performance characteristics unchanged
 - Error handling identical
 
@@ -630,16 +638,14 @@ InvokeDynamicInsnNode indyInsn = new InvokeDynamicInsnNode(
 
 **Verification:**
 ```bash
-# Check bytecode contains INVOKEDYNAMIC
-javap -v integration-tests/build/classes/java/test/MetricsTest.class | grep INVOKEDYNAMIC
-
-# Check extension NOT in bootstrap
-jcmd <pid> VM.class_hierarchy | grep -v btrace-metrics
+# The @Injected field read is rewritten to INVOKEDYNAMIC by the agent's Preprocessor when the
+# probe (integration-tests/src/test/btrace/MetricsTest.java) is loaded; the class file produced
+# by btracec still contains the plain field access.
 ```
 
 ## Future Enhancements
 
-### 1. Extension API/Impl Split
+### 1. Extension API/Impl Split (implemented in 3.0)
 
 **Concept:**
 - `btrace-metrics-api.jar` → bootstrap (interfaces only)
@@ -650,10 +656,10 @@ jcmd <pid> VM.class_hierarchy | grep -v btrace-metrics
 - Smaller bootstrap JAR
 - Better security boundaries
 
-### 2. Service Caching
+### 2. Service Caching (implemented in 3.0)
 
-**Current:** Each invokedynamic creates new instance
-**Enhancement:** Cache service instances per script
+**Current:** `ExtensionIndy` keeps one instance per probe class and service (`INSTANCES`, a weak map keyed by the probe class)
+**Original proposal:** Cache service instances per script
 
 **Implementation:**
 ```java
@@ -691,12 +697,12 @@ public static void invalidateExtension(String extensionId) {
 
 The invokedynamic extension bridge provides:
 
-✅ **Clean bootstrap namespace** - Only BTrace core in bootstrap
+✅ **Clean bootstrap namespace** - Only BTrace core and extension API types in bootstrap
 ✅ **Extension isolation** - Each extension in own classloader
 ✅ **Java 8+ compatible** - No Java 15+ features required
 ✅ **Zero performance overhead** - After first call
 ✅ **Backward compatible** - No script changes required
 ✅ **Better security** - Extensions lack bootstrap privileges
-✅ **On-demand loading** - Extensions loaded when needed
+✅ **On-demand linking** - Implementations resolved and instantiated when a probe first uses them
 
 This architecture enables scalable, secure, and performant extension loading while maintaining full compatibility with existing BTrace scripts and extensions.

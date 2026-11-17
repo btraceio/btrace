@@ -15,7 +15,7 @@ on-device inference are healthy. **Time:** ~10 minutes.
 
 - JDK 11 or newer with `JAVA_HOME` set (the demo uses single-file source launch; `bin/btrace` refuses to start without `JAVA_HOME`)
 - BTrace 3.0 installed, including the bundled `btrace-rag-quality` and `btrace-gpu-bridge`
-  extensions — `bin/btrace` on your PATH and `BTRACE_HOME` set
+  extensions — `bin/btrace` on your PATH
   ([installation options](../GettingStarted.md#installation))
 - Two terminal windows, both in a checkout of this repository
 - Optional: [Tutorial 7](07-llm-observability.md) covers the LLM-call side (tokens, cost, latency
@@ -114,7 +114,6 @@ questions were answered before you attached):
 
 ```
 === RAG + Inference Dashboard ===
-
 === RAG Quality Summary ===
 
 Source: vectorstore
@@ -127,7 +126,6 @@ Source: vectorstore
 --- Totals ---
   Queries: 17
 
-
 === GPU Bridge Summary ===
 
 Model: onnx/embed-small
@@ -139,9 +137,7 @@ Model: onnx/embed-small
 --- Totals ---
   Inferences: 17
 
-
 empty retrievals: 0
-
 =================================
 ```
 
@@ -167,7 +163,6 @@ Source: vectorstore
   Queries: 35
   Empty retrievals: 3 (8%)
 
-
 === GPU Bridge Summary ===
 
 Model: onnx/embed-small
@@ -178,7 +173,6 @@ Model: onnx/embed-small
 
 --- Totals ---
   Inferences: 35
-
 
 empty retrievals: 3
 ```

@@ -34,8 +34,8 @@ the missing types.
 
 3. Replace profile dependency:
    - Remove `libs=<profile>` from agent args.
-   - Enable the extension in `extensions.conf` (`extensions.enabled`, `extensions.disabled`,
-     `extensions.autoload`).
+   - Enable the extension in `extensions.conf` (`extensions.enabled`, `extensions.disabled`).
+     Every discovered extension is enabled when neither is set.
 
 4. Replace classpath assumptions:
    - Update probes to pass app objects to API methods (object hand-off) instead of importing app types.
@@ -43,7 +43,7 @@ the missing types.
    - Recompile the probes against the new API artifact.
 
 5. Configure runtime:
-   - Add role/config keys to `extensions.conf` (e.g., role=driver|executor; optional classpath hint if the app doesn’t ship libs).
+   - Pass role/config settings (e.g., role=driver|executor; optional classpath hint if the app doesn’t ship libs) as agent arguments, which the implementation reads through `ExtensionContext.getArgs()`, or as system properties. Per-extension keys in `extensions.conf` are parsed but not delivered to extensions in 3.0.
    - The extension plugin scans the implementation and its dependencies and writes the merged
      permission set into the API manifest, so permissions are usually not declared by hand.
      Review what it wrote: a single transitive dependency can make the whole extension privileged.
@@ -51,7 +51,7 @@ the missing types.
      (`allowExtensions`, `denyExtensions`, `allowPrivileged`), not `extensions.conf`.
 
 6. Validate:
-   - Launch/attach runs; verify extension loads and links lazily/eagerly as required.
+   - Launch/attach runs; verify the extension loads and links.
    - Injection throws by default. Marking an injection optional, or selecting shim mode, turns a
      failed link into a no-op returning defaults — convenient in production, and the quickest way
      to make an unfinished migration look complete.

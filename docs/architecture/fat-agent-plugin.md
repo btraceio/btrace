@@ -36,14 +36,15 @@ A single JAR containing:
 ├─────────────────────────────────────────────────────────────┤
 │  Bootstrap Classpath (via Boot-Class-Path manifest)         │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │  io/btrace/agent/...              (agent classes)     │  │
+│  │  io/btrace/boot/...               (loader classes)    │  │
 │  │  io/btrace/core/...               (core classes)      │  │
-│  │  io/btrace/instr/...              (instr classes)     │  │
+│  │  io/btrace/runtime/...            (runtime classes)   │  │
 │  │  org/example/ext/api/...          (extension API)     │  │
 │  └───────────────────────────────────────────────────────┘  │
 ├─────────────────────────────────────────────────────────────┤
 │  Runtime-Loaded (one ClassDataLoader per extension id)      │
 │  ┌───────────────────────────────────────────────────────┐  │
+│  │  META-INF/btrace/agent/...classdata (masked agent)    │  │
 │  │  META-INF/btrace-extensions/                          │  │
 │  │  ├── ext1/extension.properties                        │  │
 │  │  ├── ext1/org/example/ext1/...classdata  (ext1 impl)  │  │
@@ -108,7 +109,8 @@ fatAgentJar
 ├── stageProbes (optional)
 │   ├── copyCompiledProbes() → META-INF/btrace-probes/
 │   └── compileSourceProbes()
-└── btraceJar (single masked JAR from btrace-dist)
+└── btraceJar (single masked JAR from btrace-dist, via agentJarTask)
+    or stageBTraceEngine (resolves io.btrace:btrace:<btraceVersion> in an external build)
 ```
 
 ## Implementation Details
@@ -203,6 +205,7 @@ The fat agent JAR manifest includes:
 |-----------|-------------|
 | `Premain-Class` | `io.btrace.boot.Loader` |
 | `Agent-Class` | `io.btrace.boot.Loader` |
+| `Main-Class` | `io.btrace.boot.Loader` |
 | `BTrace-Agent-Main` | `io.btrace.agent.Main` |
 | `Can-Redefine-Classes` | `true` |
 | `Can-Retransform-Classes` | `true` |
@@ -212,7 +215,8 @@ The fat agent JAR manifest includes:
 After assembly, the plugin verifies that the JAR contains `io/btrace/boot/Loader.class`, the masked
 `META-INF/btrace/agent/io/btrace/agent/Main.classdata` entry, and the mandatory loader manifest
 attributes. A conventional agent JAR is not a valid base input; `agentJarTask` must reference the
-task producing the masked BTrace JAR (normally `btraceJar`).
+task producing the masked BTrace JAR (normally `btraceJar`). Without `agentJarTask` the plugin
+resolves the published `io.btrace:btrace:<btraceVersion>` artifact as the engine instead.
 
 ## Runtime Behavior
 
@@ -233,12 +237,12 @@ At agent startup:
 The `ClassDataLoader` loads `.classdata` files as classes. It registers as parallel-capable via `ClassLoader.registerAsParallelCapable()` and uses per-class-name locking via `getClassLoadingLock(name)` to allow concurrent loading of different classes while serializing attempts to load the same class:
 
 ```java
-public class ClassDataLoader {
+public final class ClassDataLoader extends ClassLoader {
     static {
         ClassLoader.registerAsParallelCapable();
     }
 
-    public Class<?> findClass(String className) {
+    protected Class<?> findClass(String className) {
         synchronized (getClassLoadingLock(className)) {
             String resourceName =
                 "META-INF/btrace-extensions/" + extensionId + "/"
@@ -259,7 +263,7 @@ public class ClassDataLoader {
 btraceFatAgent {
     baseName = 'btrace-spark-agent'
     embedExtensions {
-        project(':btrace-extensions:btrace-spark')
+        project(':btrace-extensions:examples:btrace-spark')
         project(':btrace-extensions:btrace-metrics')
     }
 }

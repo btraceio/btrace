@@ -14,23 +14,15 @@ Build (from repo root):
 
 Both example modules use the default extension layout (`src/main`) while still producing the standard BTrace extension artifacts (`*-api.jar`, `*-impl.jar`, `*-extension.zip`).
 
-Enable in `extensions.conf` (examples):
+Installed extensions are enabled by default; the examples read no settings of their own. To
+restrict loading to them in `extensions.conf`:
 
 ```
-# Spark example
-btrace-spark-example.enabled=true
-# Optional role detection (example-specific key)
-btrace-spark-example.role=auto           # auto|driver|executor
-# Optional external classpath hint (prefer not needed)
-# btrace-spark-example.classpath=/opt/spark/jars
-
-# Hadoop example
-btrace-hadoop-example.enabled=true
-# Optional external classpath hint (prefer not needed)
-# btrace-hadoop-example.classpath=/opt/hadoop/share/hadoop/common
+extensions.enabled=btrace-spark-example,btrace-hadoop-example
 ```
 
-Permissions: the examples declare `REFLECTION`, which is privileged, so allow them to link on the
+Permissions: the plugin's permission scan gives the Spark example `CLASSLOADER`, which is
+privileged (the Hadoop example scans to no permissions), so allow it to link on the
 agent side (agent argument or `~/.btrace/permissions.properties`):
 
 ```
@@ -41,4 +33,4 @@ Notes
 - These are templates only; they are not maintained as core modules.
 - Prefer packaging application libraries with the application; avoid external classpath hints when possible.
 - For rare, short-term needs, the agent supports a single-jar escape hatch (discouraged):
-  - `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM plus the `trusted=true` agent argument (`-Dbtrace.trusted` has no effect)
+  - `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM plus the `trusted=true` agent argument (`-Dbtrace.trusted` has no effect); the jar must lie inside the BTrace home unless `-Dbtrace.allowExternalLibs=true` is also set
