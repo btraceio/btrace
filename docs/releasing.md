@@ -76,8 +76,10 @@ its own `.github/release-notes/vX.Y.Z-RCn.md` (start from the previous candidate
 `vX.Y.Z.md` with the links, download names, coordinates and image tags changed to the candidate);
 without it the pre-release has only the generated list.
 
-The workflow's internal `vX.Y.Z_RC` tag (created before the smoke tests and replaced by the final
-tag) is unrelated: it exists for every run, candidates included.
+The release commit is pushed under no tag until the release-smoke job has passed: the jobs between
+Prepare Release and Finalize Release Tag receive it as a `release-commit` workflow artifact (a git
+bundle). Earlier versions of the workflow parked it under an internal `vX.Y.Z_RC` tag, which the
+repository's tag rules then kept from being deleted; such leftover tags can be ignored.
 
 ### What Happens During Release
 
@@ -246,11 +248,7 @@ If the workflow is waiting for Maven Central and you want to abort:
 
 1. **Cancel the workflow** in GitHub Actions
 2. **Drop the staging repository** via [Central Portal](https://central.sonatype.com/publishing/deployments)
-3. **Delete the tag** (if created). At this point only the workflow's internal `vX.Y.Z_RC` tag exists (the final `vX.Y.Z` tag is created after the release-smoke job), and the next run's validation fails while it is there:
-   ```bash
-   git tag -d vX.Y.Z_RC
-   git push origin :refs/tags/vX.Y.Z_RC
-   ```
+3. No tag needs deleting: the final `vX.Y.Z` tag is only created after the release-smoke job.
 4. **Reset release branch** if needed:
    ```bash
    git checkout release/X.Y._
