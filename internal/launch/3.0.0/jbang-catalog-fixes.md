@@ -1,7 +1,9 @@
-# Pending btraceio/jbang-catalog fix
+# btraceio/jbang-catalog fix (applied)
 
 Found in the 3.0.0-RC1 pre-release check (2026-11-17) against `btraceio/jbang-catalog` @ `b67df6d`.
-Not pushed from that session, which could not write to the catalog repository.
+Applied in the catalog as `f058067` ("Resolve btrace aliases from the Central snapshot repository",
+merged in `3dd8be7`); both `btrace.java` and `btrace-latest.java` there now carry the `//REPOS`
+line below. `jbang-catalog.patch` is kept as the record of the change.
 
 ## Problem
 
