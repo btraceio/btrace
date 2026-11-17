@@ -108,7 +108,7 @@ const TUTS = [
   ['11','Watch Your RAG Pipeline and Your Models','Empty retrievals, similarity scores and embedding latency in one probe.','~10 min','11-ai-workload-observability.md',['ai']],
   ['12','Attach to Production Without Fear','Prepared mode, btrace doctor, no-flag attach, and nothing left behind.','~10 min','12-production-safe-attach.md',['production']]
 ].map(([n, title, desc, time, f, tags]) => ({ n, title, desc, time, href: TUT + f, tags }));
-const INST = { source: { label: '3.0 from source', cmd: 'git clone -b develop https://github.com/btraceio/btrace && cd btrace && ./gradlew :btrace-dist:build' }, stable: { label: 'Stable 2.2.6 (SDKMAN!)', cmd: 'sdk install btrace' } };
+const INST = { jbang: { label: 'JBang', cmd: 'jbang io.btrace:btrace:3.0.0-RC1 <pid> Probe.java' }, archive: { label: 'Archive', cmd: 'mkdir btrace && curl -L https://github.com/btraceio/btrace/releases/download/v3.0.0-RC1/btrace-v3.0.0-RC1-bin.tar.gz | tar xz -C btrace' }, docker: { label: 'Docker', cmd: 'docker pull ghcr.io/btraceio/btrace:3.0.0-RC1' }, stable: { label: 'Stable 2.2.6 (SDKMAN!)', cmd: 'sdk install btrace' } };
 const D = GH + 'docs/';
 const DOCS = [
   { title: 'Learn', links: [['Getting Started', D + 'GettingStarted.md'], ['Oneliner Guide', D + 'OnelinerGuide.md'], ['BTrace Tutorial', D + 'BTraceTutorial.md'], ['Quick Reference', D + 'QuickReference.md']] },
@@ -118,7 +118,7 @@ const DOCS = [
 ].map(c => ({ title: c.title, links: c.links.map(([label, href]) => ({ label, href })) }));
 
 class LandingPage {
-  state = { t: 13, plugin: 'claude', aud: null, goal: null, cls: 'OrderService', meth: '*', loc: 'return', thr: 200, fields: { method: true, time: true }, preset: 'slow', inst: 'source', doctor: 'ready', demo: 5, copied: null, active: 'agent' };
+  state = { t: 13, plugin: 'claude', aud: null, goal: null, cls: 'OrderService', meth: '*', loc: 'return', thr: 200, fields: { method: true, time: true }, preset: 'slow', inst: 'jbang', doctor: 'ready', demo: 5, copied: null, active: 'agent' };
   props = { animateHero: true, defaultAudience: 'sre' };
   setState(patch) {
     this.state = { ...this.state, ...(typeof patch === 'function' ? patch(this.state) : patch) };
