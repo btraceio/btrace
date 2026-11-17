@@ -24,8 +24,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -117,6 +120,38 @@ public class LauncherExtensionCompileIntegrationTest extends RuntimeTest {
     assertTrue(
         output.contains("btrace-metrics"),
         "btracex list did not list the bundled btrace-metrics; output:\n" + output);
+  }
+
+  /**
+   * Every sample the distribution ships compiles with its own btracec. Three did not
+   * (AWTEventTracer, SubtypeTracer, ThreadCounterBean passed non-String values to the flat-DSL
+   * print/println, which take a String).
+   */
+  @Test
+  void everyBundledSampleCompiles() throws Exception {
+    Path home = Paths.get(System.getProperty("btrace.libs")).toAbsolutePath().getParent();
+    List<String> command =
+        new ArrayList<>(
+            Arrays.asList(
+                "sh",
+                home.resolve("bin/btracec").toString(),
+                "-d",
+                Files.createDirectories(work.resolve("samples-out")).toString()));
+    try (Stream<Path> samples = Files.list(home.resolve("samples"))) {
+      samples
+          .filter(p -> p.getFileName().toString().endsWith(".java"))
+          .sorted()
+          .forEach(p -> command.add(p.toString()));
+    }
+    assertTrue(command.size() > 4, "the distribution ships no samples under " + home);
+    ProcessBuilder pb =
+        new ProcessBuilder(command).directory(work.toFile()).redirectErrorStream(true);
+    pb.environment().remove("JAVA_TOOL_OPTIONS");
+    pb.environment().put("JAVA_HOME", javaHome);
+    Process p = pb.start();
+    String output = readAll(p);
+    assertTrue(p.waitFor(5, TimeUnit.MINUTES), "btracec did not finish; output:\n" + output);
+    assertEquals(0, p.exitValue(), "a bundled sample does not compile; output:\n" + output);
   }
 
   private static String readAll(Process p) throws IOException {

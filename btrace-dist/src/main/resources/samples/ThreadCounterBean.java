@@ -23,6 +23,7 @@ import io.btrace.core.annotations.Property;
 import io.btrace.core.annotations.Self;
 
 import static io.btrace.BTrace.println;
+import static io.btrace.BTrace.str;
 
 /**
  * This sample demonstrates that you can expose a BTrace
@@ -48,6 +49,6 @@ public class ThreadCounterBean {
 
     @OnTimer(2000)
     public static void ontimer() {
-        println(count);
+        println(str(count));
     }
 }

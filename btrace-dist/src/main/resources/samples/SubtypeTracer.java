@@ -37,7 +37,7 @@ public class SubtypeTracer {
     public static void onRun(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
         // on every Runnable.run() method entry print class.method
         print(pcn);
-        print('.');
+        print(".");
         println(pmn);
     }
 }
