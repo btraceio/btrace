@@ -11,7 +11,7 @@ plugins {
 // and so the SNAPSHOT-skip guard below evaluates against a real version.
 allprojects {
     group = 'io.btrace'
-    version = '3.0.0-SNAPSHOT'
+    version = '3.0.0-RC1'
 }
 
 repositories {
