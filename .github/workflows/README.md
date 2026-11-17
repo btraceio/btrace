@@ -79,8 +79,8 @@ protocol subset on every PR.
 - Triggered by workflow dispatch. The job also tests for `[benchmark]` in `head_commit.message`, but
   that field exists only on push events, which this workflow does not handle, so a commit message
   cannot trigger it.
-- Passes `-Pjmh.warmupIterations=1 -Pjmh.iterations=2 -Pjmh.fork=1`, but `btrace-core/build.gradle` does not read
-  those properties, so the run uses the build's own settings (warmup=3, iterations=5, fork=2)
+- Passes `-Pjmh.warmupIterations=1 -Pjmh.iterations=2 -Pjmh.fork=1`, which `btrace-core/build.gradle`
+  reads in place of its defaults (warmup=3, iterations=5, fork=2)
 - Focuses on serialization performance
 - Uploads JMH results for 30 days
 
@@ -257,7 +257,7 @@ commit message does not trigger it; see the `jmh-benchmarks` job above.
 ### Benchmark Configuration
 
 **Quick Benchmarks (CI):**
-- Requested: warmup 1, measurement 2, forks 1 (`-Pjmh.*` properties that `btrace-core/build.gradle` does not read, so the settings below apply)
+- Warmup 1, measurement 2, forks 1 (`-Pjmh.warmupIterations`, `-Pjmh.iterations`, `-Pjmh.fork`)
 - Focus: Serialization methods only (`-PjmhInclude=".*Serialize.*"`)
 
 **Full Benchmarks (Local):**

@@ -261,9 +261,8 @@ jobs:
         with:
           name: jmh-results
           retention-days: 30
-          path: |
-            btrace-core/build/reports/jmh/**
-            btrace-core/build/jmh-results/**
+          # Where the me.champeau.jmh plugin writes the results by default
+          path: btrace-core/build/results/jmh/
 
   protocol-compatibility:
     name: Protocol Compatibility Matrix

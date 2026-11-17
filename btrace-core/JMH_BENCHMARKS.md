@@ -120,9 +120,9 @@ Edit `btrace-core/build.gradle` to change JMH settings:
 
 ```gradle
 jmh {
-    warmupIterations = 3      // Number of warmup iterations
-    iterations = 5            // Number of measurement iterations
-    fork = 2                  // Number of forked JVM processes
+    warmupIterations = 3      // Number of warmup iterations (-Pjmh.warmupIterations=<n>)
+    iterations = 5            // Number of measurement iterations (-Pjmh.iterations=<n>)
+    fork = 2                  // Number of forked JVM processes (-Pjmh.fork=<n>)
     threads = 1               // Number of worker threads
     timeUnit = 'ms'          // Time unit for results
     includes = ['.*BinaryProtocol.*'] // Benchmarks to run (overridden by -PjmhInclude)
@@ -176,12 +176,8 @@ Increase the heap of the forked benchmark JVMs:
 
 ### Benchmarks Take Too Long
 Reduce iterations:
-```gradle
-jmh {
-    warmupIterations = 1
-    iterations = 2
-    fork = 1
-}
+```bash
+./gradlew :btrace-core:jmh -Pjmh.warmupIterations=1 -Pjmh.iterations=2 -Pjmh.fork=1
 ```
 
 ### Need More Detail
