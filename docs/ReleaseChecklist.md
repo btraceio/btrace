@@ -11,7 +11,7 @@ decision.
 |-------|-------|
 | Version | |
 | Source commit | |
-| RC tag | |
+| Release commit (Prepare Release output) | |
 | Workflow run | |
 | Release owner | |
 | Decision (`GO` / `NO-GO`) | |

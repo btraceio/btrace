@@ -938,18 +938,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
 
-      - name: Update version for dry run
-        if: ${{ inputs.dry_run == true }}
-        run: |
-          VERSION="${{ inputs.release_version }}"
-          # `version = '...'` lives in build.gradle since c354f12b; 2.2.x release branches keep
-          # `project.version = '...'` in common.gradle. Edit whichever file the checkout carries.
-          VERSION_FILE=build.gradle
-          grep -qE "^[[:space:]]*version = '" build.gradle || VERSION_FILE=common.gradle
-          sed -i -E "s/^([[:space:]]*(project\.)?version = )'[^']*'/\1'${VERSION}'/" "${VERSION_FILE}"
-          echo "VERSION_FILE=${VERSION_FILE}" >> "$GITHUB_ENV"
-          grep -E "^[[:space:]]*(project\.)?version = '" "${VERSION_FILE}"
-
       - name: Build distribution packages from a clean tree
         run: |
           ./gradlew clean :btrace-dist:build --no-daemon
