@@ -16,28 +16,26 @@ The BTrace extension plugin will produce API/impl artifacts. Use with a BTrace d
 
 ## Configuration (`extensions.conf`)
 
+The example reads no settings of its own. `extensions.conf` only controls whether it is loaded:
+
 ```
-# Enable the example
-btrace-spark-example.enabled=true
+# Load only this extension (empty = all discovered extensions)
+extensions.enabled=btrace-spark-example
 
-# Role detection: auto|driver|executor (example only; implement as needed)
-btrace-spark-example.role=auto
-
-# Optional: if your application does not ship Spark libs and you must point
-# the extension at an external classpath for reflective linking. Prefer not needed.
-# btrace-spark-example.classpath=/opt/spark/jars
+# Or keep it from loading
+# extensions.disabled=btrace-spark-example
 ```
 
 ## Permissions
 
-This example uses reflection. Ensure your policy grants the permission:
+The plugin's permission scan marks this extension as requiring `CLASSLOADER`, a privileged
+permission (`btracex inspect` on the built ZIP shows `Required : [CLASSLOADER]`), so the
+target JVM's policy must allow it:
 
 ```
 # permissions.properties (see PermissionPolicy docs)
-grant=REFLECTION,SYSTEM_PROPS
+allowExtensions=btrace-spark-example
 ```
-
-Avoid `CLASSLOADER` unless you explicitly create child loaders from configured paths.
 
 ## Usage Notes
 
@@ -47,12 +45,12 @@ Avoid `CLASSLOADER` unless you explicitly create child loaders from configured p
 - MethodHandle cache: repeated reflective calls are cached for speed.
 
 If you absolutely must expose a jar on the system classpath temporarily:
-- Use the escape hatch (discouraged): `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM plus the `trusted=true` agent argument (`-javaagent:btrace.jar=trusted=true,...`). `-Dbtrace.trusted` has no effect; the agent logs a warning when it sees it.
+- Use the escape hatch (discouraged): `-Dbtrace.system.appendJar=/abs/path/lib.jar` on the target JVM plus the `trusted=true` agent argument (`-javaagent:btrace.jar=trusted=true,...`). The jar must lie inside the BTrace home unless the target JVM also has `-Dbtrace.allowExternalLibs=true`. `-Dbtrace.trusted` has no effect; the agent logs a warning when it sees it.
 - Prefer fixing packaging or using an extension-local child loader instead.
 
 ## Probe Integration (Conceptual)
 
-- Probes can call the API directly (API is on bootstrap). Keep probe signatures generic (`Object` argument types).
+- Probes get the API as an injected service (API is on bootstrap). Keep probe signatures generic (`Object` argument types).
 - Example (pseudo):
 
 ```java
@@ -60,14 +58,20 @@ import org.example.btrace.spark.api.SparkApi;
 import io.btrace.core.annotations.*;
 
 @BTrace
-class SparkProbe {
-  // Using SparkApi statically via extension linkage (no manual wiring needed)
+public class SparkProbe {
+  // The extension bridge links the service; no manual wiring needed
+  @Injected private static SparkApi spark;
+
   @OnMethod(clazz="org.apache.spark.scheduler.DAGScheduler", method="handleJobStart")
   public static void onJobStart(@Self Object self, Object jobStart) {
-    // SparkApi.onJobStart(jobStart); // conceptual example
+    spark.onJobStart(jobStart);
   }
 }
 ```
+
+`SparkApi` is declared only through `btraceExtension.services` and carries no `@ServiceDescriptor`;
+`btracec` rejects the `@Injected` field above with `Injected type is not declared as an extension
+service` until the interface is annotated (as `HadoopApi` in the Hadoop example is).
 
 Note: The example is not maintained as part of core BTrace; adapt for your environment.
 

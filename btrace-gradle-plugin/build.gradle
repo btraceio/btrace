@@ -73,12 +73,15 @@ gradlePlugin {
             implementationClass = 'io.btrace.gradle.BTraceExtensionPlugin'
             displayName = 'BTrace Extension Plugin'
             description = 'Builds and packages BTrace extensions, scanning permissions and wiring manifests.'
+            // The Plugin Portal refuses a plugin without tags (publishPlugins --validate-only)
+            tags = ['btrace', 'tracing', 'instrumentation', 'jvm']
         }
         btraceFatAgent {
             id = 'io.btrace.fat-agent'
             implementationClass = 'io.btrace.gradle.BTraceFatAgentPlugin'
             displayName = 'BTrace Fat Agent Plugin'
             description = 'Builds fat agent JARs with embedded extensions for single-JAR deployment.'
+            tags = ['btrace', 'tracing', 'java-agent', 'jvm']
         }
     }
 }

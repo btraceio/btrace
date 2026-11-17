@@ -32,9 +32,11 @@ dependencies {
 }
 
 jmh {
-    warmupIterations = 3
-    iterations = 5
-    fork = 2
+    // -Pjmh.warmupIterations / -Pjmh.iterations / -Pjmh.fork shorten a run, as the quick benchmark
+    // job in .github/workflows/v2-protocol-tests.yml does
+    warmupIterations = (project.findProperty('jmh.warmupIterations') ?: '3') as int
+    iterations = (project.findProperty('jmh.iterations') ?: '5') as int
+    fork = (project.findProperty('jmh.fork') ?: '2') as int
     threads = 1
     timeUnit = 'ms'
     def jmhIncludeProp = project.findProperty('jmhInclude')

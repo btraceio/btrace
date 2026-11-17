@@ -38,6 +38,8 @@ BTrace is a safe, dynamic tracing tool for the Java platform. It allows you to d
    export BTRACE_HOME=/path/to/btrace
    export PATH=$BTRACE_HOME/bin:$PATH
    ```
+   The launchers find their own installation without `BTRACE_HOME`; an exported `BTRACE_HOME`
+   takes precedence, so it must point at the installation you run.
 
 ### Package Manager Installation
 
@@ -89,7 +91,7 @@ instead; those take precedence over the embedded copies when both are present.
 ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar
 
 # Use it directly with -javaagent:
-java -javaagent:~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar=script=MyTrace.class MyApp
+java -javaagent:$HOME/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar=script=MyTrace.class MyApp
 ```
 
 **Benefits:**
@@ -107,9 +109,8 @@ jbang btrace@btraceio --version
 ```
 
 The output is `BTrace v.<version> (<build commit>)`; a build made outside a git checkout prints
-`dev` instead of the commit.
-
-You should see the BTrace help message with available options.
+`dev` instead of the commit. Running `btrace` without arguments prints the help message with the
+available options.
 
 ## 2-Minute Oneliner Quick Start
 
@@ -232,7 +233,7 @@ public class TraceMethods {
    ...
    ```
 
-5. **Detach BTrace**: Press `Ctrl+C` in the BTrace terminal and type `exit`
+5. **Detach BTrace**: Press `Ctrl+C` in the BTrace terminal and choose option `1` (exit) from the menu
 
 Congratulations! You've successfully traced your first Java application with BTrace.
 
@@ -241,8 +242,8 @@ Congratulations! You've successfully traced your first Java application with BTr
 Capture latency distributions and simple stats without external systems using the built-in histogram metrics extension (HdrHistogram-based).
 
 1. Ensure you built the distribution so extensions are available under `BTRACE_HOME/extensions/`.
-2. Allow the extension to link. `btrace-metrics` declares the privileged `THREADS` permission (it
-   runs a background bookkeeping thread), so the agent blocks it until you say otherwise. On the
+2. Allow the extension to link. `btrace-metrics` declares privileged permissions (`THREADS`,
+   `REFLECTION`, `CLASSLOADER`), so the agent blocks it until you say otherwise. On the
    machine running the target JVM:
    ```bash
    mkdir -p ~/.btrace
@@ -282,6 +283,9 @@ public class LatencyProbe {
 
    @OnTimer(1000)
    public static void report() {
+      if (h == null) {
+         return; // processData has not run yet
+      }
       HistogramSnapshot hs = h.snapshot();
       StatsSnapshot ss = s.snapshot();
       println("=== Metrics Report ===");
@@ -435,8 +439,9 @@ BTrace 3.0 distinguishes launch-time startup scripts from prepared mode:
   wildcard addresses are rejected: the agent reports `invalid agent option bindAddress=<value>:
   ...; the command server was not started` and starts without a command server, and the
   application keeps running (see [Troubleshooting](Troubleshooting.md#invalid-agent-option-the-command-server-was-not-started)).
-  A fixed `port=` that is already in use is different: binding fails with a plain `BindException`
-  and agent initialization aborts, so prefer `port=0` when the port is not under your control. To
+  A fixed `port=` that is already in use is different: binding fails with a plain `BindException`,
+  agent initialization aborts and a JVM launched with `-javaagent` does not start, so prefer
+  `port=0` when the port is not under your control. To
   keep a startup script and accept later authenticated connections, set `noServer=false`
   explicitly.
 
@@ -529,11 +534,14 @@ cancellation after two seconds. Telemetry failures are ignored and do not block 
 
 ### 4. Launcher Mode (btracer)
 
-Use the `btracer` wrapper to compile and attach in one step:
+Use the `btracer` wrapper to launch an application with the agent and a pre-compiled script:
 
 ```bash
-btracer <script.class> <java-app-with-args>
+btracer [options] <script.class> <java-args>
 ```
+
+`<java-args>` is everything you would pass to the `java` command (JVM options, class path, main
+class, application arguments), without the word `java` itself.
 
 **When to use:**
 - Local development and testing
@@ -546,7 +554,7 @@ btracer <script.class> <java-app-with-args>
 btracec MyTrace.java
 
 # Launch app with trace
-btracer MyTrace.class java -cp myapp.jar com.example.Main
+btracer MyTrace.class -cp myapp.jar com.example.Main
 ```
 
 ## Your First BTrace Scripts
@@ -600,8 +608,8 @@ import io.btrace.core.annotations.*;
 
 @BTrace
 public class MethodDuration {
-    @OnMethod(clazz = "com.example.MyClass", method = "slowMethod")
-    public static void onEntry(@Duration long durationNanos) {
+    @OnMethod(clazz = "com.example.MyClass", method = "slowMethod", location = @Location(Kind.RETURN))
+    public static void onReturn(@Duration long durationNanos) {
         if (durationNanos > 0) {
             println("slowMethod took: " + str(durationNanos / 1000000) + " ms");
         }
@@ -802,7 +810,7 @@ spec:
 **Using the sidecar:**
 ```bash
 # Execute BTrace from sidecar
-kubectl exec <pod-name> -c btrace -- btrace $(pgrep -f myapp) /scripts/trace.btrace
+kubectl exec <pod-name> -c btrace -- sh -c 'btrace $(pgrep -f myapp) /scripts/MyTrace.java'
 
 # View output
 kubectl logs <pod-name> -c btrace
@@ -812,8 +820,8 @@ kubectl logs <pod-name> -c btrace
 
 1. **PID Discovery**: Use `jps` or `ps aux` to find Java process ID
 2. **Port Conflicts**: BTrace uses port 2020 by default; use `-p` flag if needed. A fixed `port=`
-   that is already bound aborts agent initialization with a `BindException`, so prefer `port=0`
-   for prepared mode in pods
+   that is already bound aborts agent initialization with a `BindException` and the JVM does not
+   start, so prefer `port=0` for prepared mode in pods
 3. **Security Policies**: Pod Security Policies may block ptrace; adjust as needed
 4. **Resource Limits**: BTrace overhead may trigger CPU/memory limits
 
@@ -834,7 +842,7 @@ The fat agent bundles everything into a single JAR that works without `$BTRACE_H
 ### Building the Fat Agent
 
 ```bash
-# Build with all available extensions
+# Build with the default (released) extensions
 ./gradlew :btrace-dist:fatAgentJar
 
 # Build with specific extensions only
@@ -889,9 +897,10 @@ ENTRYPOINT ["java", "-javaagent:/opt/btrace/btrace-agent-fat.jar", "-jar", "/app
 
 For custom extension combinations, use the Gradle plugin:
 
-Built-in extensions are supplied as packages in the BTrace distribution's `extensions/` directory.
-Use `file(...)` for those packages or `project(...)` for an in-tree/custom extension. The
-`maven(...)` source is only for separately published third-party extensions.
+Built-in extensions are supplied as packages in the BTrace distribution's `extensions/` directory
+and published as `io.btrace:<extension-id>:<version>`. Use `file(...)` for a package,
+`project(...)` for an in-tree/custom extension, or `maven(...)` with the package named explicitly
+(`maven('io.btrace:btrace-metrics:3.0.0:extension@zip')`; the plain coordinate resolves the API JAR).
 
 ```groovy
 plugins {
@@ -956,11 +965,11 @@ resolved.
 
 ### 1. Permission Denied / Attachment Fails
 
-**Problem:** `Unable to attach to target VM`
+**Problem:** `Failed to attach to PID <pid>`
 
 **Solutions:**
 - Ensure BTrace and target app run as the same user
-- **JDK 20 and older**: Check if target JVM has `-XX:+DisableAttachMechanism` (remove it)
+- **Any JDK**: Check if target JVM has `-XX:+DisableAttachMechanism` (remove it)
 - **JDK 21+**: Add `-XX:+EnableDynamicAgentLoading` to target JVM to suppress warnings and ensure compatibility
 - Verify JDK (not JRE) is installed
 
@@ -968,7 +977,7 @@ resolved.
 
 ### 2. Script Verification Errors
 
-**Problem:** `BTrace script verification failed`
+**Problem:** `BTrace compilation failed`, after `error:` lines such as `object creation is not allowed`
 
 **Common causes:**
 - Using forbidden operations (creating new threads, I/O operations)
@@ -985,7 +994,7 @@ resolved.
 - Verify class and method names are correct (case-sensitive)
 - Check if the method is actually being called in the target app
 - Use regular expressions carefully: `/com\\.example\\..*/` not `/com.example.*/`
-- Ensure `println()` is imported from `BTraceUtils`
+- `println()` needs no import (it is auto-imported); with `-o <file>` the output goes to that file, not the console
 
 ### 4. Script Not Finding Classes
 
@@ -1010,9 +1019,10 @@ resolved.
 
 **Problem:** Garbled output with special characters
 
-**Solution:** Set encoding:
+**Solution:** Set the client JVM's encoding. `btrace` does not accept `-D` options, so pass them
+through `JAVA_TOOL_OPTIONS` (`stdout.encoding` is what JDK 19+ uses for console output):
 ```bash
-btrace -Dfile.encoding=UTF-8 <PID> script.java
+JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8" btrace <PID> script.java
 ```
 
 ## Next Steps

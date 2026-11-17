@@ -35,7 +35,7 @@ curl -Ls https://sh.jbang.dev | bash -s - app setup
 jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
 
 # Trace slow methods in your running app
-jbang btrace@btraceio -n 'com.myapp.*::* @return if duration>100ms { print method, duration }' $(pgrep -f myapp)
+jbang btrace@btraceio -n 'com.myapp.**::* @return if duration>100ms { print method, duration }' $(pgrep -f myapp)
 ```
 
 ---
@@ -44,7 +44,7 @@ jbang btrace@btraceio -n 'com.myapp.*::* @return if duration>100ms { print metho
 
 **Method timing:**
 ```sh
-btrace -n 'java.sql.Statement::execute* @return { print method, duration }' <PID>
+btrace -n 'org.postgresql.jdbc.PgStatement::execute* @return { print method, duration }' <PID>
 ```
 
 **Exception tracking:**
@@ -55,7 +55,8 @@ btrace -n 'java.lang.Exception::<init> @return { print self, stack(5) }' <PID>
 **Custom probes:**
 ```java
 @BTrace public class Trace {
-    @OnMethod(clazz = "com.example.OrderService", method = "checkout")
+    @OnMethod(clazz = "com.example.OrderService", method = "checkout",
+              location = @Location(Kind.RETURN))
     public static void onCheckout(@Self Object self, @Duration long ns) {
         println("checkout: " + str(ns / 1_000_000) + "ms");
     }
@@ -85,7 +86,7 @@ curl -LO https://github.com/btraceio/btrace/releases/download/v${BTRACE_VERSION}
 #   FROM ghcr.io/btraceio/btrace:3.0.0 AS btrace
 ```
 
-With an installed distribution the commands are `btrace <PID> <script.java>` (attach), `btracec <script.java>` (compile) and `btracer <script.class> <java-application-and-args>` (launch with the agent).
+With an installed distribution the commands are `btrace <PID> <script.java>` (attach), `btracec <script.java>` (compile) and `btracer <script.class> <java-args>` (launch with the agent; `<java-args>` is what you would pass to `java`, without the word `java`).
 
 Details for every option live in one place each:
 - [Installation](docs/GettingStarted.md#installation): archives, RPM/DEB packages, JBang, using the agent JAR with `-javaagent`
@@ -166,7 +167,7 @@ BTrace supports extensions (like the bundled StatsD extension) that provide addi
 * **Standard permissions** (granted unless denied): FILE_READ, SYSTEM_PROPS, THREAD_INFO, MEMORY_INFO
 * **Privileged permissions** (require explicit grant): FILE_WRITE, NETWORK, THREADS, NATIVE, EXEC, REFLECTION, CLASSLOADER, UNLIMITED_MEMORY
 
-Permissions are enforced based on extension/service descriptors and agent grants specified at attach-time.
+Permissions are declared in extension descriptors; whether an extension may link is decided by the target JVM's agent options and permission policy file.
 
 An extension that declares a privileged permission links only when the operator allows it via agent options (there is no client-side flag), e.g. when starting the target with the agent:
 ```sh
@@ -185,8 +186,8 @@ Extensions CLI: use `btracex` to inspect and manage extensions and the simplifie
 - `btracex inspect <zip|dir>` prints extension id, version, services, and whether it’s privileged.
 - `btracex policy print|set [--policy-file <path>|--home|--classpath <outDir>]` edits `allowExtensions`, `denyExtensions`, `allowPrivileged`.
 - `btracex list` shows installed extensions; `btracex install` accepts a local extension package or
-  separately published third-party Maven coordinates. BTrace-built packages are supplied in the
-  distribution's `extensions/` directory, not as individual Maven artifacts.
+  Maven coordinates. BTrace-built packages are supplied in the distribution's `extensions/`
+  directory and are also published to Maven Central as `io.btrace:<extension-id>:<version>`.
 
 Note: Extension “required permissions” are informational and help operators assess risk. Implementation linking is controlled by per‑extension allow/deny lists and the `allowPrivileged` flag. When an extension is blocked, a plain `@Injected` field fails the probe deployment fast; only `@Injected(optional = true)` falls back, and the fallback is a throwing stub by default (`mode = SHIM` or `-Dbtrace.extension.shimMode=shim` selects a no-op shim).
 

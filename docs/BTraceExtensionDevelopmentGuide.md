@@ -23,7 +23,7 @@ Bootstrap ClassLoader
     ├── Extension 2 (e.g., btrace-statsd)
     └── Extension N (your extension)
 
-Script ClassLoader (parent = null)
+Script ClassLoader (fresh per probe; extension impls not visible)
 ├── Script classes
 └── Accesses extensions via invokedynamic bridge
 ```
@@ -107,10 +107,10 @@ Optional companion to the DSL — `@ExtensionDescriptor`:
 - Fields: `name`, `version`, `description`, `minBTraceVersion`, `dependencies`, `permissions`.
 - **`permissions` is the field that does work.** The plugin scans it and fails the build when the annotation requires a permission the manifest does not grant, so it is a useful assertion that the code's needs and the shipped manifest agree.
 - **The other fields are not propagated.** The `btraceExtension` block is the single source of the manifest, and the manifest is what the runtime loads and what `btracex inspect` reports. A `version` stated only in the annotation describes nothing the build or the runtime will use — leave it unset rather than let it drift from the real artifact version.
-- The annotation is entirely optional; most of the extensions shipped with BTrace do not declare one.
+- The annotation is entirely optional; half of the extensions shipped with BTrace do not declare one.
 
 Outputs produced by the plugin:
-- API JAR: `build/libs/<name>-<version>-api.jar` (manifest + properties with extension metadata)
+- API JAR: `build/libs/<name>-<version>-api.jar` (manifest with extension metadata, plus the generated shim classes and `META-INF/btrace/shims.index` / `exports.index`)
 - Impl JAR: `build/libs/<name>-<version>-impl.jar` (shadowed/minimized, isolated at runtime)
 - Distribution ZIP: `build/distributions/<name>-<version>-extension.zip` (bundles API + Impl)
 
@@ -141,7 +141,7 @@ public interface MyService {
 }
 ```
 
-Keep API signatures to JDK and your own API types; avoid external library types.
+Keep API signatures to JDK and your own API types; avoid external library types. Annotate every injectable interface with `@ServiceDescriptor` even when it is also listed in `services`: `btracec` rejects an `@Injected` field whose type lacks it (`Injected type is not declared as an extension service`).
 
 ### Implementation
 
@@ -412,12 +412,12 @@ String version = (String) call.invoke(3);
 
 ## Metadata and Permissions (Auto-Generated)
 
-The plugin writes extension metadata into the API JAR manifest and a dedicated properties file; manual manifest editing is not needed. Key attributes include:
+The plugin writes extension metadata into the API JAR manifest; manual manifest editing is not needed. Key attributes include:
 - `BTrace-Extension-Id`, `BTrace-Extension-Name`, `BTrace-Extension-Description`
 - `BTrace-Extension-Services` (service interfaces)
 - `BTrace-Extension-Permissions` (merged from scan + explicit `requiredPermissions`)
 - `BTrace-Extension-Requires` (dependent extension IDs)
-- `BTrace-Extension-Impl` (Impl artifact coordinates/path)
+- `BTrace-Extension-Impl` (Impl JAR file name)
 - `BTrace-Shaded-Packages` (diagnostic relocations)
 
 Permission configuration:
@@ -510,17 +510,18 @@ privileged ones only need to be allowed (`allowExtensions=<id>` or the policy fi
 
 | Extension id | Manifest name | Service interface | Privileged |
 |--------------|---------------|-------------------|------------|
-| `btrace-metrics` | BTrace HDR Histogram | `io.btrace.metrics.MetricsService` | yes (`THREADS`) |
+| `btrace-metrics` | BTrace HDR Histogram | `io.btrace.metrics.MetricsService` | yes (`THREADS`, `REFLECTION`, `CLASSLOADER`) |
 | `btrace-statsd` | BTrace StatsD | `io.btrace.statsd.Statsd` | yes (`NETWORK`) |
 | `btrace-otel` | BTrace OpenTelemetry | `io.btrace.otel.OTel` | yes (`NETWORK`, `THREADS`) |
-| `btrace-contracts` | BTrace Contracts | `io.btrace.contracts.ContractService` | no |
-| `btrace-llm-trace` | BTrace LLM Tracing | `io.btrace.llm.LlmTraceService` | no |
-| `btrace-rag-quality` | BTrace RAG Quality | `io.btrace.rag.RagQualityService` | no |
-| `btrace-gpu-bridge` | BTrace GPU Bridge | `io.btrace.gpu.GpuBridgeService` | no |
+| `btrace-contracts` | BTrace Contracts | `io.btrace.contracts.ContractService` | yes (`THREADS`) |
+| `btrace-llm-trace` | BTrace LLM Tracing | `io.btrace.llm.LlmTraceService` | yes (`THREADS`) |
+| `btrace-rag-quality` | BTrace RAG Quality | `io.btrace.rag.RagQualityService` | yes (`THREADS`) |
+| `btrace-gpu-bridge` | BTrace GPU Bridge | `io.btrace.gpu.GpuBridgeService` | yes (`THREADS`) |
 | `btrace-utils` | BTrace Utilities | `io.btrace.utils.PrinterService` | no |
 
-`btracex list` prints the same information for whatever is installed; `btracex inspect <zip|dir>`
-does so for a package that is not installed yet.
+`btracex list` prints the id, privileged flag and location of whatever is installed;
+`btracex inspect <id|zip|dir>` prints the version, required permissions and services, also for a
+package that is not installed yet.
 
 ## Distribution and Installation
 
@@ -529,27 +530,31 @@ Build artifacts:
 - Impl JAR: `build/libs/<name>-<version>-impl.jar`
 - ZIP: `build/distributions/<name>-<version>-extension.zip`
 
-Install with `btracex install <zip>` (or a Maven coordinate for a separately published third-party
-extension), or by copying the ZIP contents (API + Impl) into an extensions directory:
+Install with `btracex install <zip>` (or a Maven coordinate for a published
+extension), or by copying the ZIP contents (API + Impl) into a per-extension subdirectory of an
+extensions directory:
 
 ```bash
 # System-wide
-unzip your-extension-<version>-extension.zip -d "$BTRACE_HOME/extensions/"
+unzip your-extension-<version>-extension.zip -d "$BTRACE_HOME/extensions/your-extension/"
 
 # User-specific
 mkdir -p "$HOME/.btrace/extensions"
-unzip your-extension-<version>-extension.zip -d "$HOME/.btrace/extensions/"
+unzip your-extension-<version>-extension.zip -d "$HOME/.btrace/extensions/your-extension/"
 ```
 
-Discovery locations:
-1. `$BTRACE_HOME/extensions/*.jar`
-2. `~/.btrace/extensions/*.jar`
+Discovery locations (each extension is a subdirectory holding its `*-api.jar` and `*-impl.jar`;
+JARs placed directly in the extensions directory are not discovered):
+1. `$BTRACE_HOME/extensions/<id>/`
+2. `~/.btrace/extensions/<id>/`
+3. each directory listed in `$BTRACE_EXT_PATH`
 
-Configuration: `$BTRACE_HOME/conf/extensions.conf`
+Configuration: `$BTRACE_HOME/conf/extensions.conf` (Java properties; see
+[Extension Configuration](architecture/ExtensionConfiguration.md))
 
-```hocon
-autoload = true
-repositories = [ "${btrace.home}/extensions", "${user.home}/.btrace/extensions" ]
+```properties
+extensions.enabled=
+extensions.disabled=
 ```
 
 ## Fat Agent Deployment (Embedded Extensions)
@@ -558,9 +563,9 @@ For environments where installing extensions separately is impractical (Spark, H
 
 BTrace's built-in extensions are extension packages in a BTrace distribution's `extensions/`
 directory (or from the matching `packageExtension` task in a source checkout). Use `file(...)` to
-embed one, or `project(...)` for an in-tree/custom extension. `maven(...)` is reserved for a
-separately published third-party extension; BTrace does not publish its bundled extensions as Maven
-artifacts.
+embed one, or `project(...)` for an in-tree/custom extension. They are also published as
+`io.btrace:<id>:<version>`; `maven(...)` resolves a coordinate's main artifact, which is the API
+JAR, so name the package: `maven('io.btrace:btrace-metrics:3.0.0:extension@zip')`.
 
 ### Building a Fat Agent with Your Extension
 
@@ -713,12 +718,16 @@ public final class SparkConfigurator implements ExtensionConfigurator {
 
 ### Registering the Configurator
 
-Declare the configurator class in `extension.properties`:
+Declare the configurator class in `extension.properties`, a file you add at the root of the
+extension ZIP (or directory) that the fat-agent build embeds with `file(...)`; the fat-agent plugin
+copies its `probes` and `configurator` keys into the embedded metadata (a `project(...)` source
+carries neither). `probes` lists the bundled probes by binary name, which is what lets the
+configurator enable them by simple name:
 
 ```properties
 id=btrace-spark
 version=1.0.0
-probes=SparkJobTracer,SparkStageTracer,SparkExecutorTracer
+probes=org.example.spark.SparkJobTracer,org.example.spark.SparkStageTracer,org.example.spark.SparkExecutorTracer
 configurator=org.example.spark.SparkConfigurator
 ```
 
@@ -739,7 +748,7 @@ configurator is not called:
 
 ```bash
 # Override: load only SparkJobTracer regardless of what the configurator would choose
-java -javaagent:my-btrace-agent-fat.jar=probes=SparkJobTracer org.apache.spark.deploy.SparkSubmit ...
+java -javaagent:my-btrace-agent-fat.jar=probes=org.example.spark.SparkJobTracer org.apache.spark.deploy.SparkSubmit ...
 ```
 
 ### Checklist for Configurator Extensions
@@ -749,7 +758,7 @@ java -javaagent:my-btrace-agent-fat.jar=probes=SparkJobTracer org.apache.spark.d
 - [ ] Configurator has a public no-arg constructor
 - [ ] Configurator class is in the impl artifact (not the API JAR)
 - [ ] `configurator=` key set in `extension.properties`
-- [ ] `enable()` returns an empty config (not null) when the framework is absent
+- [ ] `configure()` returns an empty config (not null) when the framework is absent
 - [ ] Unit-tested with a mock `RuntimeEnvironment`
 
 ## Testing
@@ -804,7 +813,7 @@ public interface HistogramConfigBuilder {
 
 // Probe (no `new` in scripts)
 @BTrace
-class HistoProbe {
+public class HistoProbe {
   @Injected static MetricsService metrics;
 }
 ```

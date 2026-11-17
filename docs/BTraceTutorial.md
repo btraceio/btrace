@@ -1,6 +1,6 @@
 # BTrace Tutorial (BTrace 3.0)
 
-> **Note:** Examples use `btrace.jar` -- the single masked JAR (BTrace 2.2+). If using a legacy multi-JAR distribution, replace `btrace.jar` with `btrace-agent.jar` (and add `-Xbootclasspath/a:btrace-boot.jar` where needed).
+> **Note:** Examples use `btrace.jar` -- the single masked JAR (new in BTrace 3.0). If using a legacy multi-JAR 2.x distribution, replace `btrace.jar` with `btrace-agent.jar` (and add `-Xbootclasspath/a:btrace-boot.jar` where needed).
 
 > **Package namespace:** BTrace 3.0+ uses the `io.btrace` package (previously `org.openjdk.btrace`). The compiler auto-injects `import static io.btrace.BTrace.*` into every script, so common helpers like `println`, `str`, `monotonic`, etc. are available without any import. Legacy probes compiled against `org.openjdk.btrace` are transparently migrated at load time. See the [Migration Guide 2.x → 3.0](Migration-2.x-to-3.0.md) for full upgrade details.
 
@@ -190,14 +190,14 @@ The syntax is straightforward - `./btracep <binary trace file>`. The tool will p
 * trace name
 * verification status (trusted or not)
 * transformation status (will cause class retransformation or not)
-* all probe handlers (all `@OnProbe`, `@OnTimer` etc. definitions)
+* all probe handlers (all `@OnMethod` and `@OnProbe` definitions)
 * ASM-ified version of the associated "data holder" class - the class contains the information that needs to be globally accessible from instrumented code
 
 ## Lesson 2 - Tracing methods
 
 This is the main purpose of BTrace - inject a custom code to custom locations to give the insights about the internal state and dynamics of the application.
 
-> **Import convention:** Code examples in this lesson use `import ...;` as a shorthand. In practice you need **no explicit imports at all**: the compiler auto-injects both `import static io.btrace.BTrace.*;` (utility methods like `println`, `str`, `monotonic`) and `import io.btrace.core.annotations.*;` (all BTrace annotations). The `import ...;` placeholder is kept in these examples only to signal which packages are in use. See [Lesson 7](#lesson-7---flat-dsl) for details.
+> **Import convention:** Code examples in this lesson use `import ...;` as a shorthand. For most of them you need **no explicit imports at all**: the compiler auto-injects both `import static io.btrace.BTrace.*;` (utility methods like `println`, `str`, `monotonic`) and `import io.btrace.core.annotations.*;` (all BTrace annotations). Examples that go beyond the flat DSL still need the matching import: `import static io.btrace.core.BTraceUtils.*;` for `printArray`, `classOf`, `field`, `getInt` and the nested `Reflective` helpers (examples 6, 12 and 16), and `import io.btrace.core.types.AnyType;` for `AnyType` (example 6). See [Lesson 7](#lesson-7---flat-dsl) for details.
 
 1. Getting just the information that any method is being executed
 ```java
@@ -365,7 +365,7 @@ import ...;
 
 @BTrace
 public class HelloWorldTrace {
-    @OnMethod(clazz="extra.HelloWorld", method="callC", location=@Location(Kind.RETURN))
+    @OnMethod(clazz="extra.HelloWorldExt", method="callC", location=@Location(Kind.RETURN))
     public static void onMethod(@ProbeMethodName(fqn = true) String pmn, @Return String ret) {
         println("Hello from method " + pmn + "; returning " + ret);
     }
@@ -383,7 +383,7 @@ public class HelloWorldTrace {
     @OnMethod(clazz="extra.HelloWorld", method="/call.*/", location=@Location(Kind.RETURN))
     public static void onMethod(@ProbeMethodName(fqn = true) String pmn, @Self Object thiz) {
         println("Hello from method " + pmn);
-        println("field = " + str(getInt("field", thiz)));
+        println("field = " + str(Reflective.getInt("field", thiz)));
     }
 }
 ```
@@ -680,7 +680,7 @@ The fields can only be of a supported type (Java primitives + String, Class and 
 
 ###### Using the event
 
-`BTraceUtils` has been enhanced with the following methods to support working with JFR events:
+`BTraceUtils.Jfr` provides the following methods to support working with JFR events:
 * **prepareEvent(eventFactory)** - prepares a new event using the given factory
 * **begin(event)** - calls `begin()` event method to start measuring the event time span
 * **end(event)** - calls `end()` event method to stop measuring the event time span
@@ -689,6 +689,9 @@ The fields can only be of a supported type (Java primitives + String, Class and 
 
 ###### Example
 ```java
+import static io.btrace.core.BTraceUtils.*;
+import io.btrace.core.jfr.JfrEvent;
+
 @BTrace public class JfrEventsProbe {
     @Event(
         name = "CustomEvent",
@@ -702,10 +705,10 @@ The fields can only be of a supported type (Java primitives + String, Class and 
 
     @OnMethod(clazz = "/.*/", method = "/.*/")
     public static void onMethod() {
-        JfrEvent event = prepareEvent(customEventFactory);
-        setEventField(event, "a", 10);
-        setEventField(event, "b", "hello");
-        commit(event);
+        JfrEvent event = Jfr.prepareEvent(customEventFactory);
+        Jfr.setEventField(event, "a", 10);
+        Jfr.setEventField(event, "b", "hello");
+        Jfr.commit(event);
     }
 }
 ```
@@ -716,23 +719,26 @@ A periodic JFR event is automatically generated by JFR at a given time interval 
 
 ###### Periodic event handler
 
-A periodic event is defined by an event handler - it is a method by `@PeriodEvent` annotation, pretty much like `@OnMethod` or `@OnTimer` handlers.
+A periodic event is defined by an event handler - it is a method by `@PeriodicEvent` annotation, pretty much like `@OnMethod` or `@OnTimer` handlers.
 Similarly to the regular events the annotation defines the event metadata and the event fields.
 In addition to that the annotation defines the period which can be a time unit like `10 s` or `100 ms` or it can be one of
 `everyChunk`, `beginChunk` or `endChunk`.
 
-The handler method takes one parameter of `JfrEvent` type. The value of this parameter can be used in the `BTraceUtils` JFR
-specific methods.
+The handler method takes one parameter of `JfrEvent` type. The value of this parameter can be used in the `BTraceUtils.Jfr`
+methods.
 
 
 ###### Example
 ```java
+import static io.btrace.core.BTraceUtils.*;
+import io.btrace.core.jfr.JfrEvent;
+
 @BTrace public class JfrEventsProbe {
     @PeriodicEvent(name = "PeriodicEvent", fields = @Event.Field(type = Event.FieldType.INT, name = "ts", kind = @Event.Field.Kind(name = Event.FieldKind.TIMESTAMP)), period = "1 s")
     public static void onPeriod(JfrEvent event) {
-        if (shouldCommit(event)) {
-            setEventField(event, "ts", 1);
-            commit(event);
+        if (Jfr.shouldCommit(event)) {
+            Jfr.setEventField(event, "ts", 1);
+            Jfr.commit(event);
         }
     }
 }
@@ -753,6 +759,7 @@ BTrace uses a permission-based security model organized into three tiers:
 ###### Default Permissions (always granted)
 These permissions are safe and always available:
 * **MESSAGING** - Send messages to BTrace client
+* **AGGREGATION** - Use aggregation functions
 * **JFR_EVENTS** - Create and use JFR events
 * **PROFILING** - Use profiling functions
 
@@ -786,14 +793,14 @@ Permissions are defined by extension/service descriptors and enforced via agent 
 Example:
 ```
 @BTrace
-class Example {
+public class Example {
   @Injected static MetricsService metrics;
   static final HistogramConfig cfg;
   static {
-    cfg = metrics.newHistogramConfig().unit("ns").build();
+    cfg = metrics.newHistogramConfig().significantDigits(3).build();
   }
   @OnMethod(clazz="com.example.Foo", method="bar", location=@Location(Kind.RETURN))
-  static void onReturn(@Duration long d) {
+  public static void onReturn(@Duration long d) {
     metrics.histogram("foo.bar.latency", cfg).record(d);
   }
 }
@@ -845,32 +852,23 @@ but have no effect; only the per-extension allow/deny lists and `allowPrivileged
 
 ##### Permission Error Messages
 
-If a probe requires permissions that are not granted, BTrace will display a descriptive error message:
+If a probe injects a service of an extension that has not been allowed, BTrace refuses to deploy the probe and displays a descriptive error message:
 
 ```
-Probe requires permissions that are not granted:
-
-  - NETWORK
-    Network I/O (sockets, HTTP). Risk: Data exfiltration, remote connections.
-  - THREADS
-    Create and manage threads. Risk: Resource exhaustion, concurrent operations.
-
-To allow the extension that declares these permissions, allow it on the agent side, e.g.
-  -javaagent:btrace.jar=allowExtensions=<extension-id>
-  or btracex policy set --allowExtensions <extension-id>
-
-Use allowPrivileged=true to allow every privileged extension (not recommended).
+Probe MetricsProbe was not deployed:
+  required @Injected service io.btrace.metrics.MetricsService (field 'metrics') is unavailable: btrace-metrics: Blocked privileged extension. Required=[THREADS, REFLECTION, CLASSLOADER]
+Allow the extension in the permission policy, or declare the field @Injected(optional = true) to run with a fallback.
 ```
 
-##### Inspecting Probe Permissions
+##### Inspecting Extension Permissions
 
-Use the `btracep` tool to inspect what permissions a compiled probe requires:
+Permissions are declared by extensions, not by probes. Use `btracex inspect` to see what an extension a probe injects requires:
 
 ```bash
-btracep MetricsProbe.class
+btracex inspect btrace-metrics
 ```
 
-The output will include a "Required permissions" line listing all permissions the probe needs.
+The output includes a `Required :` line listing the permissions (here `[CLASSLOADER,REFLECTION,THREADS]`) and a `Privileged:` line telling whether the extension has to be allowed.
 
 ##### Using the StatsD extension
 
@@ -991,7 +989,7 @@ The histogram metrics extension provides high-performance in-process metrics usi
 Requirements:
 - Build the distribution so extensions are exploded under `BTRACE_HOME/extensions/`.
 - The agent discovers built-in extensions automatically, but `btrace-metrics` declares the
-  privileged `THREADS` permission (a background bookkeeping thread), so it is blocked until you allow
+  privileged `THREADS`, `REFLECTION` and `CLASSLOADER` permissions, so it is blocked until you allow
   it: `allowExtensions=btrace-metrics` as an agent argument, or `allowExtensions=btrace-metrics` in
   the [permission policy file](PermissionPolicy.md) read by the target JVM
   (`~/.btrace/permissions.properties`). Without it a required `@Injected MetricsService` fails fast.
@@ -1035,6 +1033,9 @@ public class HistogramExample {
 
     @OnTimer(1000)
     public static void onTimer() {
+        if (histogram == null) {
+            return; // doWork() has not run yet
+        }
         HistogramSnapshot h = histogram.snapshot();
         StatsSnapshot s = stats.snapshot();
 
@@ -1070,9 +1071,10 @@ P99: 16343 μs
 ```
 
 Configuration (optional):
-- You can tune defaults in `btrace.conf` (see Architecture: Extension Configuration):
-  - `btrace-metrics.histogram.default-precision=3`
-  - `btrace-metrics.histogram.max-value=3600000000`
+- Precision and range are set per histogram from the script, with
+  `metrics.newHistogramConfig()` (`lowestDiscernibleValue`, `highestTrackableValue`,
+  `significantDigits`) passed to `metrics.histogram(name, config)`. The `btrace-metrics.*` keys
+  shown commented out in `conf/extensions.conf` are not read by the extension in 3.0.
 
 ##### Building App Integration Extensions with @ExternalType
 
@@ -1348,8 +1350,8 @@ public class HelloWorldTrace {
                                 @Self Object thiz) {
         // println/str come from the flat DSL (auto-injected)
         println("Hello from method " + pmn);
-        // getInt/classOf come from BTraceUtils (explicit import)
-        println("field = " + str(BTraceUtils.getInt("field", thiz)));
+        // getInt comes from BTraceUtils.Reflective (explicit import)
+        println("field = " + str(BTraceUtils.Reflective.getInt("field", thiz)));
     }
 }
 ```
@@ -1391,7 +1393,7 @@ public class HelloWorldTrace {
 }
 ```
 
-__Note:__ `@TLS` is reset to its zero/null value when the thread exits, so it is safe under thread pools where threads are reused across requests.
+__Note:__ `@TLS` is backed by a `ThreadLocal`, so a pooled thread that is reused across requests keeps the value left by its previous request; assign the field at entry (as above) before reading it.
 
 ---
 
@@ -1463,7 +1465,7 @@ While attached interactively (press Ctrl-C), choose option **2** or **3** to sen
 
 ```
 Please enter your option: 3
-Please enter event name: verbose
+Please enter the event name: verbose
 ```
 
 The `setVerbose()` handler fires immediately. No classes are retransformed: every level-gated handler sits behind a per-call `MethodHandle` guard that reads the current level, so switching levels is cheap, and handlers above the active level still cost the guard check at each probe site.
@@ -1571,7 +1573,7 @@ long getTotalViolations()
 ```java
 import io.btrace.contracts.ContractService;
 import io.btrace.core.annotations.*;
-import static io.btrace.BTrace.*;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class ContractCheck {
@@ -1607,13 +1609,14 @@ public class ContractCheck {
     }
 
     @OnTimer(15000)
-    public static void periodicReport() { report(); }
+    public static void periodicReport() { println(contracts.getSummary()); }
 }
 ```
 
-`btrace-contracts` is bundled with the distribution (already present under `$BTRACE_HOME/extensions/btrace-contracts/`), so just run:
+`btrace-contracts` is bundled with the distribution (already present under `$BTRACE_HOME/extensions/btrace-contracts/`), but its manifest declares the privileged `THREADS` permission, so allow it first (see Lesson 6) and then run:
 
 ```bash
+btracex policy set --allowExtensions btrace-contracts
 btrace <PID> ContractCheck.java
 ```
 
@@ -1673,7 +1676,7 @@ The following script instruments the `ChatLanguageModel.generate()` method from 
 import io.btrace.llm.LlmTraceService;
 import io.btrace.llm.CallRecord;
 import io.btrace.core.annotations.*;
-import static io.btrace.BTrace.*;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class LlmTrace {
@@ -1726,7 +1729,8 @@ public class LlmTrace {
         llm.recordError(cls, str(classOf(t)), durationNanos);
     }
 
-    // Print a summary on demand (btrace send event) or every 60 seconds.
+    // Print a summary on demand (Ctrl-C in the client, then "send an event") or every 60 seconds.
+    // A handler can not call another handler, so the timer prints the summary itself.
     @OnEvent
     public static void printSummary() {
         println(llm.getSummary());
@@ -1736,14 +1740,15 @@ public class LlmTrace {
 
     @OnTimer(60000)
     public static void periodicSummary() {
-        printSummary();
+        println(llm.getSummary());
     }
 }
 ```
 
-`btrace-llm-trace` ships in the distribution's `extensions/` directory and the agent discovers it automatically (a third-party package would go in with `btracex install <zip>`). Run as normal:
+`btrace-llm-trace` ships in the distribution's `extensions/` directory and the agent discovers it automatically (a third-party package would go in with `btracex install <zip>`). Its manifest declares the privileged `THREADS` permission, so allow it first (see Lesson 6) and then run:
 
 ```bash
+btracex policy set --allowExtensions btrace-llm-trace
 btrace <PID> LlmTrace.java
 ```
 
@@ -1791,7 +1796,7 @@ import io.btrace.rag.RagQualityService;
 import io.btrace.rag.QueryRecord;
 import io.btrace.llm.LlmTraceService;
 import io.btrace.core.annotations.*;
-import static io.btrace.BTrace.*;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class RagPipeline {
@@ -1813,8 +1818,7 @@ public class RagPipeline {
     public static void onRetrievalReturn(@Return Object results,
                                          @ProbeClassName String store,
                                          @Duration long dur) {
-        int count = (results != null) ? (Integer) call(
-            method("java.util.List", "size"), results) : 0;
+        int count = (results != null) ? size((java.util.Collection<?>) results) : 0;
 
         if (count == 0) {
             rag.recordEmptyRetrieval(store);
@@ -1862,14 +1866,16 @@ public class RagPipeline {
 
     @OnTimer(30000)
     public static void periodicSummary() {
-        printSummary();
+        println(rag.getSummary());
+        println(llm.getSummary());
     }
 }
 ```
 
-Both extensions are bundled under `$BTRACE_HOME/extensions/`, so run:
+Both extensions are bundled under `$BTRACE_HOME/extensions/`; allow them (both declare the privileged `THREADS` permission) and run:
 
 ```bash
+btracex policy set --allowExtensions btrace-rag-quality,btrace-llm-trace
 btrace <PID> RagPipeline.java
 ```
 
@@ -1904,7 +1910,7 @@ long getPeakGpuMemoryBytes()
 import io.btrace.gpu.GpuBridgeService;
 import io.btrace.gpu.InferenceRecord;
 import io.btrace.core.annotations.*;
-import static io.btrace.BTrace.*;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class OnnxTrace {
@@ -1959,14 +1965,15 @@ public class OnnxTrace {
 
     @OnTimer(60000)
     public static void periodicSummary() {
-        printSummary();
+        println(gpu.getSummary());
     }
 }
 ```
 
-`btrace-gpu-bridge` is bundled under `$BTRACE_HOME/extensions/`, so run:
+`btrace-gpu-bridge` is bundled under `$BTRACE_HOME/extensions/`; allow it (it declares the privileged `THREADS` permission) and run:
 
 ```bash
+btracex policy set --allowExtensions btrace-gpu-bridge
 btrace <PID> OnnxTrace.java
 ```
 
@@ -1974,20 +1981,21 @@ btrace <PID> OnnxTrace.java
 
 #### Using multiple AI extensions together
 
-All four extensions can be combined in a single script. They are all bundled, so nothing has to be copied — the agent discovers every extension under `$BTRACE_HOME/extensions/` automatically (use `btracex list` to see them, and `btracex install <zip>` for a third-party one):
+All four extensions can be combined in a single script. They are all bundled, so nothing has to be copied — the agent discovers every extension under `$BTRACE_HOME/extensions/` automatically (use `btracex list` to see them, and `btracex install <zip>` for a third-party one). Each extension the script injects still has to be allowed:
 
 ```bash
 btracex list
+btracex policy set --allowExtensions btrace-llm-trace,btrace-rag-quality,btrace-gpu-bridge,btrace-contracts
 btrace <PID> MyAIObservability.java
 ```
 
-When using the fat agent at JVM startup, the same rule applies — extensions under `$BTRACE_HOME/extensions/` are loaded automatically:
+When using the agent at JVM startup, the same rule applies — extensions under `$BTRACE_HOME/extensions/` are discovered automatically. The script must be compiled with `btracec` first, and the extensions are allowed with an agent argument:
 
 ```bash
-java -javaagent:btrace.jar=script=MyAIObservability.java -jar myapp.jar
+java -javaagent:btrace.jar=allowExtensions=btrace-llm-trace,btrace-rag-quality,btrace-gpu-bridge,btrace-contracts,script=MyAIObservability.class -jar myapp.jar
 ```
 
-Use `@OnEvent` for on-demand reporting triggered by `btrace send event <PID>` and `@OnTimer` for periodic snapshots. Both can coexist in the same script.
+Use `@OnEvent` for on-demand reporting triggered from the client (Ctrl-C, then `send an event`) and `@OnTimer` for periodic snapshots. Both can coexist in the same script.
 
 ---
 
@@ -2066,18 +2074,18 @@ I found your application at PID 12345. Let me deploy a timing probe to the HTTP 
 `[tool: deploy_oneliner]`
 ```
 pid: "12345"
-oneliner: /com\.example\..*/::/.*recommendations.*/i @return { print method, time }
+oneliner: /com\.example\..*/::/.*[Rr]ecommendations.*/ @return { print method, time }
 ```
 
 ```
 Probe deployed successfully to PID 12345.
-Oneliner: /com\.example\..*/::/.*recommendations.*/i @return { print method, time }
+Oneliner: /com\.example\..*/::/.*[Rr]ecommendations.*/ @return { print method, time }
 Port: 2020
 
 Initial output:
-RecommendationController.handle
+handleRecommendations
 execution time: 2341 ms
-RecommendationController.handle
+handleRecommendations
 execution time: 2289 ms
 
 Use send_event, detach_probe, or exit_probe to interact with the running probe.
@@ -2097,9 +2105,9 @@ Oneliner: /com\.example\.recommendation\..*/::/.+/ @return { print method, time 
 Port: 2020
 
 Initial output:
-RecommendationRepository.findCandidates
+findCandidates
 execution time: 1987 ms
-LlmRankingService.rank
+rank
 execution time: 312 ms
 
 Use send_event, detach_probe, or exit_probe to interact with the running probe.

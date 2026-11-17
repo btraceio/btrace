@@ -17,7 +17,7 @@ Please report security issues via GitHub Security Advisories (private disclosure
 **Unpatched users:** bind the agent to loopback explicitly:
 
 ```
--agentpath:btrace-agent.jar=port=2020,bindAddress=127.0.0.1
+-javaagent:btrace-agent.jar=port=2020,bindAddress=127.0.0.1
 ```
 
 or
@@ -31,18 +31,18 @@ Block the agent port at the firewall and avoid exposing it to untrusted networks
 **Patched behavior (this branch and forward-port):**
 
 * V1 payloads rewritten to **type-safe encoding** — `TypedEncoding` (`btrace-core/.../comm/TypedEncoding.java`) handles supported value types explicitly without Java object serialization. Affects `SetSettingsCommand`, `ErrorCommand`, `NumberDataCommand`, `NumberMapDataCommand`, `GridDataCommand`, `RetransformClassNotification`, `InstrumentCommand` limits.
-* Defense-in-depth `ValidatingObjectInputStream` with allow-list (`resolveClass` + reflective `ObjectInputFilter` on JDK 9+) — `btrace-core/.../comm/ValidatingObjectInputStream.java`. Used by `RemoteClient.getClient()`.
+* Defense-in-depth `ValidatingObjectInputStream` with allow-list (`resolveClass` + reflective `ObjectInputFilter` on JDK 9+) — `btrace-core/.../comm/ValidatingObjectInputStream.java`. Used by `JavaSerializationProtocol`, the V1 protocol.
 * `WireIO.read()` validates `type` range before dispatch (`IOException` not `RuntimeException`).
-* Agent default bind changed to **loopback** (`127.0.0.1`). Override with `bindAddress=<host>` agent arg or `-Dbtrace.bindAddress=<host>`. Non-loopback binds log `WARN`; `0.0.0.0` explicitly warns `unauthenticated remote access allowed`.
+* Agent binds **loopback** only (default `127.0.0.1`). The `bindAddress=` agent arg selects `127.0.0.1` or `::1`; in 3.0 non-loopback and wildcard addresses such as `0.0.0.0` are rejected (`invalid agent option bindAddress=...; the command server was not started`). There is no `btrace.bindAddress` system property.
 
 ### Configuration
 
 | Property / Arg | Default | Description |
 |---|---|---|
-| `bindAddress` (agent arg) / `btrace.bindAddress` (system prop) | `127.0.0.1` | Address for `ServerSocket`. Set to `0.0.0.0` to restore pre-patch exposure (not recommended). |
-| `btrace.comm.allowV1` | `true` on V1-only branches, `false` on V2 branches | Gate for V1 protocol. On branches with `ProtocolConfig`/`ProtocolNegotiator` (`f5a8ef2` lineage), V1 is rejected unless `allowV1=true`. See `FORWARD_PORT.md`. |
+| `bindAddress` (agent arg) | `127.0.0.1` | Loopback address for the `ServerSocket` (`127.0.0.1` or `::1`); other addresses are rejected and the command server is not started. |
+| `btrace.comm.allowV1` | `true` | Gate for the V1 protocol, read by `ProtocolConfig`. Set `-Dbtrace.comm.allowV1=false` on the target JVM to reject V1 clients (V2-only). |
 | `WireIO` limits | `TypedEncoding.MAX_*` | `MAX_CODE_BYTES=20MB`, `MAX_PARAMS=1000`, `MAX_KEY_LEN=4096`, `MAX_MAP_SIZE=10000`, etc. |
 
 ### Forward-Port Note
 
-Branches after `f5a8ef2` introduced `BinaryWireProtocol` (V2, magic `BTR2`) and `JavaSerializationProtocol` (V1). The V2-only gate is defined in `ProtocolConfig` (`btrace.comm.allowV1`) and enforced in `RemoteClient` / `ProtocolNegotiator`. See `docs/FORWARD_PORT_BTRACE_005.md` for the exact patch.
+Branches after `f5a8ef2` introduced `BinaryWireProtocol` (V2, magic `BTR2`) and `JavaSerializationProtocol` (V1). The V2-only gate is defined in `ProtocolConfig` (`btrace.comm.allowV1`) and enforced in `RemoteClient`.

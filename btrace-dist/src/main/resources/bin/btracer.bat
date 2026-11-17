@@ -36,7 +36,7 @@ if "%1" == "--version" (
     goto next
   )
   IF "%1"=="-u" (
-    set "OPTIONS=unsafe=true,%OPTIONS%"
+    set "OPTIONS=trusted=true,%OPTIONS%"
     goto next
   )
   if "%1"=="-p" (
@@ -107,7 +107,7 @@ if "%1" == "--version" (
   echo btracer ^<options^> ^<compiled script^> ^<java args^>
   echo Options:
   echo     -v		          Run in verbose mode
-  echo     -u		          Run in unsafe mode
+  echo     -u		          Run in trusted mode (trusted=true)
   echo     -p ^<port^>	            BTrace agent server port
   echo     -statsd ^<host[:port]^>  Use this StatsD server
   echo     -o ^<file^>	            The path to a file the btrace agent will store its output

@@ -2,7 +2,7 @@
 
 This guide helps you diagnose and resolve common BTrace issues.
 
-> **Note:** Examples use `btrace.jar` -- the single masked JAR (BTrace 2.2+). If using a legacy multi-JAR distribution, replace `btrace.jar` with `btrace-agent.jar` (and add `-Xbootclasspath/a:btrace-boot.jar` where needed).
+> **Note:** Examples use `btrace.jar` -- the single masked JAR (BTrace 3.0+). If using a legacy multi-JAR distribution, replace `btrace.jar` with `btrace-agent.jar` (and add `-Xbootclasspath/a:btrace-boot.jar` where needed).
 
 ## Table of Contents
 1. [JVM Attachment Issues](#jvm-attachment-issues)
@@ -35,7 +35,8 @@ relaunch with `-XX:+EnableDynamicAgentLoading`, or configure reviewed prepared m
 
 ### Unable to attach to target VM
 
-**Error message:**
+**Error message:** the client prints `Failed to attach to PID <pid>`; run it with `-v` to see the
+underlying exception:
 ```
 com.sun.tools.attach.AttachNotSupportedException: Unable to attach to target VM
 ```
@@ -139,7 +140,7 @@ error: cannot find symbol
    public class MyTrace {
        @OnMethod(...)
        public static void handler() {
-           println("test");
+           println(str(monotonic()));  // cannot find symbol: monotonic() is flat-DSL only
        }
    }
 
@@ -148,7 +149,7 @@ error: cannot find symbol
    public class MyTrace {
        @OnMethod(...)
        public static void handler() {
-           println("test");  // OK
+           println(str(monotonic()));  // OK
        }
    }
    ```
@@ -158,7 +159,10 @@ error: cannot find symbol
    // Old (pre-2.0)
    import com.sun.btrace.annotations.*;
 
-   // New (2.0+)
+   // Old (2.x)
+   import org.openjdk.btrace.core.annotations.*;
+
+   // New (3.0+)
    import io.btrace.core.annotations.*;
    ```
 
@@ -172,9 +176,10 @@ error: cannot find symbol
 
 ### BTrace script verification failed
 
-**Error message:**
+**Error message:** the compiler names each violation, then the client gives up:
 ```
-BTrace : verification failed
+error: /path/to/MyTrace.java:12:for loops are not allowed [null]
+BTrace compilation failed
 ```
 
 BTrace enforces safety restrictions. Common violations:
@@ -219,6 +224,7 @@ public static void handler() {
 **Right:**
 ```java
 import static io.btrace.core.BTraceUtils.Atomic.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 private static AtomicInteger counter = newAtomicInteger(0);
 
@@ -247,11 +253,11 @@ public static void handler() {
 @OnMethod(...)
 public static void handler() {
     // Use BTraceUtils methods instead
-    // For iteration, use unsafe mode (-u flag) if absolutely necessary
+    // For iteration, use trusted mode (@BTrace(trusted = true) plus the -u flag) if absolutely necessary
 }
 ```
 
-**Note:** ALL loop constructs (`for`, `while`, `do-while`, enhanced `for`) are forbidden in safe mode. Use `-u` (unsafe mode) only in controlled environments if loops are required.
+**Note:** ALL loop constructs (`for`, `while`, `do-while`, enhanced `for`) are forbidden in safe mode. Use trusted mode only in controlled environments if loops are required: the script must be declared `@BTrace(trusted = true)` *and* deployed with `-u`; `-u` alone does not relax the compile-time checks.
 
 ### 4. File I/O operations
 
@@ -270,7 +276,7 @@ public static void handler() {
     println("Output");  // Use BTraceUtils output functions
 }
 
-// Or run in unsafe mode
+// Or run in trusted mode: declare the script @BTrace(trusted = true) and deploy it with
 // btrace -u <PID> script.java
 ```
 
@@ -295,7 +301,7 @@ public class MyTrace {
         myCustomMethod();
 
         // Use BTraceUtils methods
-        println(str(timeMillis()));
+        println(str(timestamp()));
     }
 
     private static void myCustomMethod() {
@@ -393,6 +399,9 @@ public static void onError(Throwable t) {
    ```bash
    btrace -v <PID> script.java
    ```
+   `-v` turns on the client's debug log. It also puts the agent in debug mode, but only when this
+   attach is the one that loads the agent into the target; the agent's log (for example
+   `Attempting to retransform class: ...`) is written to the target JVM's output, not to the client.
 
 7. **Verify instrumention occurred**
    ```bash
@@ -402,15 +411,16 @@ public static void onError(Throwable t) {
    # Check if classes were modified
    ls -la /tmp/btrace-dump/
    ```
+   The instrumented target classes (`<Class>.class` next to `<Class>_orig.class`) are dumped only
+   when this attach is the one that loads the agent; against an agent that is already loaded, `-d`
+   dumps the probe's own classes only.
 
 ## Class/Method Not Found
 
 ### No methods matched
 
-**Error message:**
-```
-No methods matched for probe: ...
-```
+**Symptom:** BTrace prints no message when a probe matches no class or method: the client reports
+`Successfully started BTrace probe: ...` and the handler never fires.
 
 **Solutions:**
 
@@ -430,7 +440,8 @@ No methods matched for probe: ...
    - If classes aren't being instrumented, check if they are modifiable:
    ```bash
    # Some classes cannot be retransformed (e.g., native methods, JVM internals)
-   # Use -v flag to see which classes are being instrumented
+   # Use -v on the attach that loads the agent to see, in the target JVM's output,
+   # which classes are being retransformed
    btrace -v <PID> script.java
    ```
 
@@ -508,6 +519,8 @@ No methods matched for probe: ...
    }
 
    // Better - periodic summary
+   // (needs `import static io.btrace.core.BTraceUtils.*;` and
+   // `import java.util.concurrent.atomic.AtomicInteger;`)
    private static AtomicInteger count = newAtomicInteger(0);
 
    @OnMethod(...)
@@ -600,19 +613,15 @@ java -javaagent:$BTRACE_HOME/libs/btrace.jar=script=Script.class MyApp
 
 ### Script class not found in agent mode
 
-**Error message:**
-```
-ClassNotFoundException: MyTrace
-```
+**Symptom:** no error is printed. A `script=` entry that the agent cannot read as a compiled probe
+(a path that does not exist, or a `.java` source) is skipped silently and the application starts
+untraced; with `debug=true` the agent logs `initial script is ...` and nothing more for it.
 
 **Solutions:**
 ```bash
-# Specify absolute path to script
+# Specify absolute path to the compiled script; a relative path is resolved against the
+# application's working directory
 java -javaagent:btrace.jar=script=/absolute/path/MyTrace.class MyApp
-
-# Or add to classpath
-java -javaagent:btrace.jar=script=MyTrace.class \
-     -cp /path/to/scripts:app.jar MyApp
 ```
 
 ### Invalid agent option: the command server was not started
@@ -638,8 +647,9 @@ way, except that when the agent is loaded by dynamic attach it loads no probe it
 
 A fixed port that is already in use is a different failure: binding throws a plain
 `java.net.BindException` and agent initialization aborts with
-`[BTrace Agent] FATAL: Initialization failed: java.net.BindException ...` (the application starts
-without BTrace). Pick another port or use `port=0`.
+`[BTrace Agent] FATAL: Initialization failed: java.net.BindException ...`; the JVM then exits
+before the application starts (`FATAL ERROR in native method: processing of -javaagent failed`).
+Pick another port or use `port=0`.
 
 ## Compatibility Issues
 
@@ -651,7 +661,7 @@ BTrace automatically excludes certain `java.lang.Thread` methods from instrument
 - **Interrupt methods** — `getAndClearInterrupt()`, `setInterrupt()`, `clearInterrupt()`: Used internally by `Thread.interrupted()`, which BTrace's own runtime calls.
 - **Exception dispatch** — `dispatchUncaughtException()`, `getUncaughtExceptionHandler()`: Instrumenting these interferes with thread exception handling.
 
-These exclusions are enforced in `ClassFilter.SENSITIVE_METHODS` and cannot be overridden by user scripts. If you see "method not instrumented" warnings for these methods, this is expected behavior.
+These exclusions are enforced in `ClassFilter.SENSITIVE_METHODS` and cannot be overridden by user scripts. The methods are skipped silently, so a probe on one of them never firing is expected behavior.
 
 ### Java Version Mismatch
 
@@ -674,10 +684,8 @@ IllegalAccessError: class X cannot access class Y
 
 **Solutions:**
 ```bash
-# Add required --add-opens flags
-btrace --add-opens java.base/jdk.internal.misc=ALL-UNNAMED <PID> script.java
-
-# Or add to target JVM startup
+# Add the required --add-opens flags to the target JVM startup
+# (the btrace launcher takes no JVM flags)
 java --add-opens java.base/java.lang=ALL-UNNAMED \
      --add-opens java.base/jdk.internal.misc=ALL-UNNAMED \
      MyApp
@@ -733,9 +741,9 @@ public static void handler(@ProbeClassName String clazz,
                           @ProbeMethodName String method) {
     println("Class: " + clazz);
     println("Method: " + method);
-    println("Thread: " + threadName());
+    println("Thread: " + threadName(currentThread()));
     println("Stack:");
-    jstack(5);  // Print 5 stack frames
+    printStack();  // Print the current stack
 }
 ```
 
@@ -897,7 +905,7 @@ kubectl exec <pod> -- cat /proc/self/attr/current
 
 **Error:**
 ```
-Error: tools.jar not found
+Unable to locate tools.jar. Please, make sure JAVA_HOME points to a valid JDK installation
 ```
 
 **Solutions:**
@@ -1036,10 +1044,14 @@ kubectl exec <pod> -- btrace -o /data/trace.log <PID> script.java
 
 2. **Stream to external system:**
 ```java
-// Use StatSD integration
+// Use the bundled btrace-statsd extension (import io.btrace.statsd.Statsd;
+// the agent must allow it: allowExtensions=btrace-statsd)
+@Injected
+private static Statsd statsd;
+
 @OnMethod(...)
 public static void handler() {
-    Statsd.send("metric.name", value);
+    statsd.increment("metric.name");
 }
 ```
 
@@ -1051,7 +1063,7 @@ spec:
     image: myapp:latest
     env:
     - name: JAVA_TOOL_OPTIONS
-      value: "-javaagent:/opt/btrace/lib/btrace.jar=script=/scripts/trace.class"
+      value: "-javaagent:/opt/btrace/libs/btrace.jar=script=/scripts/trace.class"
 ```
 
 ### Cloud-Specific Issues
@@ -1087,8 +1099,8 @@ For more K8s deployment patterns, see [Getting Started: K8s](GettingStarted.md#b
 **Sensitive classes (to avoid infinite recursion):**
 - Core classes BTrace depends on: `java.lang.Object`, `String`, `ThreadLocal`, `Integer`, `Number`
 - Package prefixes: `java.lang.instrument.*`, `java.lang.invoke.*`, `java.lang.ref.*`
-- Lock classes: `java.util.concurrent.locks.LockSupport`, `AbstractQueuedSynchronizer`, etc.
-- JDK internals: `jdk.internal.*`, `sun.invoke.*`
+- Concurrency classes: everything under `java.util.concurrent.*` (locks, atomics, executors, ...)
+- JDK internals: `jdk.internal.*`, `sun.invoke.*`, `sun.reflect.*`, `java.lang.classfile.*`
 - BTrace itself: `io.btrace.*`
 
 **Classes annotated with @BTrace** (BTrace scripts themselves)

@@ -17,6 +17,6 @@
 public class HelloSource {
   public static void main(String[] args) throws Exception {
     System.out.println("ready");
-    Thread.sleep(200);
+    Thread.sleep(Long.getLong("hello.sleep", 200L));
   }
 }

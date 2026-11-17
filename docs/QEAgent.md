@@ -1,9 +1,10 @@
 # BTrace QE Agent
 
-`btrace-qe` is a manually run, reproducible harness that probes BTrace itself for spec-conformance
+`btrace-qe` is a reproducible harness that probes BTrace itself for spec-conformance
 gaps and misuse-resilience defects: malformed CLI and agent arguments, absurd inputs, and similar
 abuse. It is a developer tool, not a test suite. It is never part of `build` or `check`, and it
-always exits `0`.
+exits `0` whatever it finds, unless `-Pqe.failOn=<S1..S4>` is given: then a finding at or above that
+severity, or a harness error, fails the task (the `qe` job of CI runs it with `-Pqe.failOn=S2`).
 
 ## Running it
 

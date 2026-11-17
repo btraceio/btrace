@@ -118,6 +118,7 @@ Compliant interface:
 package io.btrace.metrics;
 
 import io.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.ServiceDescriptor;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 

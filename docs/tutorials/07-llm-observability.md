@@ -220,7 +220,8 @@ rm ~/.btrace/permissions.properties
 
 - **`btracex inspect btrace-llm-trace` (or `btrace-contracts`) prints an error or nothing** — it
   scans `$BTRACE_HOME/extensions/` and `~/.btrace/extensions/` (plus `$BTRACE_EXT_PATH` if set).
-  Confirm `BTRACE_HOME` is set and both extensions are exploded under it — see
+  `bin/btracex` uses its own installation unless you exported a different `BTRACE_HOME`; confirm
+  both extensions are exploded in the one in use — see
   [Tutorial 4](04-extensions-and-permissions.md)'s Troubleshooting section for the same check
   against `btrace-metrics`.
 - **The dashboard never appears** — confirm `~/.btrace/permissions.properties` existed *before*
@@ -242,7 +243,8 @@ rm ~/.btrace/permissions.properties
   permission pattern: `btrace-rag-quality` (`RagQualityService` — vector-store query latency,
   result counts, similarity scores) and `btrace-gpu-bridge` (`GpuBridgeService` — ONNX
   Runtime/DJL/TensorFlow Java inference timing and GPU memory tracking). Both are covered
-  conceptually in Lesson 12; neither has a dedicated hands-on lab yet.
+  conceptually in Lesson 12 and hands-on in
+  [Tutorial 11 — Watch Your RAG Pipeline and Your Models](11-ai-workload-observability.md).
 - Full permission model, `btracex`, and what a *denied* privileged extension looks like end to end:
   [Tutorial 4 — Extensions and Permissions Without Tears](04-extensions-and-permissions.md)
 - Everything else you can hook: [Quick Reference](../QuickReference.md)

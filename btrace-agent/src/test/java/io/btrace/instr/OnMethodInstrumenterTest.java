@@ -16,13 +16,16 @@
  */
 package io.btrace.instr;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Named;
@@ -75,9 +78,23 @@ public class OnMethodInstrumenterTest extends InstrumentorTestBase {
   @MethodSource("listTransformations")
   void testTransformation(String trace, String targetClass, boolean verify) throws Exception {
     loadTargetClass(targetClass);
-    transform(trace);
+    // A trace annotated @BTrace(trusted = true) loads only in trusted mode, as on a real agent.
+    // These used to load untrusted because the pack verifier ignored the annotation.
+    transform(trace, requestsTrustedMode(trace));
 
     checkTransformation("dynamic/" + trace, verify);
+  }
+
+  private static final Pattern TRUSTED_ANNOTATION =
+      Pattern.compile("@BTrace\\([^)]*\\b(trusted|unsafe)\\s*=\\s*true");
+
+  /** Whether the trace's source (src/test/btrace/<trace>.java) asks for trusted mode. */
+  private static boolean requestsTrustedMode(String trace) throws IOException {
+    Path source = Paths.get("src/test/btrace", trace + ".java");
+    return Files.isRegularFile(source)
+        && TRUSTED_ANNOTATION
+            .matcher(new String(Files.readAllBytes(source), StandardCharsets.UTF_8))
+            .find();
   }
 
   @SuppressWarnings("resource")

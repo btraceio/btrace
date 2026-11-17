@@ -521,6 +521,9 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
       Verifier v = new Verifier(this, factory.getSettings().isTrusted());
       log.debug("verifying BTrace class ...");
       cr.accept(v, ClassReader.SKIP_DEBUG);
+      if (!factory.getSettings().isTrusted() && !isTrusted()) {
+        HandlerCallVerifier.check(cr);
+      }
       if (log.isDebugEnabled()) {
         String clzName = getClassName();
         log.debug("BTrace class {} verified", clzName);

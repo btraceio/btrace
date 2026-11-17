@@ -108,8 +108,8 @@ public class LatencyHistogram {
 ## Step 3 — Grant the permission and watch the histogram fill in
 
 Before this works, there's a fact worth knowing: `btrace-metrics` requires the `THREADS`
-permission (it runs a background thread for HdrHistogram bookkeeping), and `THREADS` sits in
-BTrace's **privileged** tier — permissions with real security weight that are blocked unless you
+permission (it runs a background thread for HdrHistogram bookkeeping), plus `REFLECTION` and
+`CLASSLOADER`, and all three sit in BTrace's **privileged** tier — permissions with real security weight that are blocked unless you
 explicitly say otherwise. (The three tiers — default, standard, privileged — are documented in
 [Lesson 6](../BTraceTutorial.md#lesson-6---extensions-and-permissions) and
 [Permission Policy](../PermissionPolicy.md); `THREADS` is privileged in both.)
@@ -180,15 +180,15 @@ btrace <NEW_PID> LatencyHistogram.java   # terminal 2
 ```
 ! ERROR
 java.lang.IllegalStateException: BTrace optional service unavailable: io.btrace.metrics.MetricsService
-	at io.btrace.runtime.ExtensionIndy$ThrowingHandler.invoke(ExtensionIndy.java:330)
+	at io.btrace.runtime.ExtensionIndy$ThrowingHandler.invoke(ExtensionIndy.java:357)
 	at jdk.proxy2/jdk.proxy2.$Proxy5.histogramMillis(Unknown Source)
 	at OrderService.chargeCard(DemoApp.java:109)
 	at OrderService.processOrder(DemoApp.java:87)
 	at DemoApp.lambda$main$0(DemoApp.java:50)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: java.lang.IllegalStateException: No implementation available for service (interface returned): io.btrace.metrics.MetricsService
-	at io.btrace.runtime.ExtensionIndy.requireServiceClass(ExtensionIndy.java:210)
-	at io.btrace.runtime.ExtensionIndy.bootstrapFieldGet(ExtensionIndy.java:82)
+	at io.btrace.runtime.ExtensionIndy.requireServiceClass(ExtensionIndy.java:237)
+	at io.btrace.runtime.ExtensionIndy.bootstrapFieldGet(ExtensionIndy.java:83)
 	...
 ```
 
@@ -243,8 +243,8 @@ allow" without touching a running JVM at all.
 btracex list
 ```
 
-**You should see** one line per discovered extension, `[PRIV]` flagging anything with a privileged
-permission:
+**You should see** one line per discovered extension (eight in a stock distribution), `[PRIV]`
+flagging anything with a privileged permission; the `btrace-metrics` line reads:
 
 ```
 btrace-metrics [PRIV] - /opt/btrace-3.0.0/extensions/btrace-metrics
@@ -338,8 +338,9 @@ rm ~/.btrace/permissions.properties
 ## Troubleshooting
 
 - **`btracex list` prints nothing** — it scans `$BTRACE_HOME/extensions/` and
-  `~/.btrace/extensions/` (plus `$BTRACE_EXT_PATH` if set). Confirm `BTRACE_HOME` is set and that
-  your distribution actually exploded extensions under it.
+  `~/.btrace/extensions/` (plus `$BTRACE_EXT_PATH` if set). `bin/btracex` uses its own
+  installation unless you exported a different `BTRACE_HOME`; confirm the one in use actually has
+  the extensions exploded under it.
 - **Histogram never appears, but no `! ERROR` either** — check `~/.btrace/permissions.properties`
   was created *before* the first `btrace` attach against that PID; policy loads once per JVM
   lifetime (see Step 3's callout). Restart the demo app after editing the file.

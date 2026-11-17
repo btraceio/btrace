@@ -355,6 +355,11 @@
       "file": "btrace-dist/build.gradle",
       "expression": "extensionProjectPath",
       "reason": "distribution packages each extension project listed in its own build script; task wiring, not a dependency declaration"
+    },
+    {
+      "file": "btrace-dist/build.gradle",
+      "expression": "publishedSourcePath",
+      "reason": "io.btrace:btrace sources jar reads the source sets of the modules the published jar carries; task wiring, not a dependency declaration"
     }
   ],
   "release_opt_outs": [

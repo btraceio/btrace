@@ -118,7 +118,7 @@ terminal, or `kill <PID>`. To remove the plugin, use `/plugin` in Claude Code.
 - **The assistant answers from general knowledge and never calls a BTrace tool** — the `btrace` MCP
   server is not connected. Check `/mcp`, that `jbang` is on the PATH of the host, and that JDK 11+
   is available. The first start downloads the BTrace artifact, so it can be slow.
-- **`Can not attach to PID ...`** — run the AI host as the same OS user as the target JVM and on the
+- **`Failed to attach to PID ...`** — run the AI host as the same OS user as the target JVM and on the
   same machine; see [Troubleshooting: attachment issues](../Troubleshooting.md#jvm-attachment-issues).
 - **A different probe each time** — expected. The assistant chooses; compare it against the shapes
   in step 4 rather than against fixed output.

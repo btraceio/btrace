@@ -283,10 +283,10 @@ Start a fresh copy of the shared demo app in terminal 1:
 java DemoApp.java
 ```
 
-Get its PID in terminal 2:
+Get its PID in terminal 2 (the line `<PID> Main DemoApp.java`):
 
 ```sh
-jps
+jps -m
 ```
 
 Deploy the probe that injects your new service
@@ -355,7 +355,7 @@ order-counter [PRIV] - /opt/btrace-3.0.0/extensions/order-counter
 
 ## Step 9 — Clean up
 
-`Ctrl+C` the `btrace` client to detach, then `Ctrl+C` the demo app in terminal 1. If you want to
+In the `btrace` terminal, press `Ctrl+C` and choose `1. exit` to remove the probe, then `Ctrl+C` the demo app in terminal 1. If you want to
 leave your BTrace installation as you found it:
 
 ```sh
@@ -372,7 +372,7 @@ rm -rf "$BTRACE_HOME/extensions/order-counter" ~/.btrace/permissions.properties
   interfaces annotated with `io.btrace.core.extensions.ServiceDescriptor`. Confirm the annotation
   is on the compiled service interface (not only its implementation). An explicit `services` list
   remains available when an extension cannot annotate the interface it exports.
-- **`btraceExtension.btraceVersion` is required** — when the plugin runs from a development or
+- **`BTrace version is unavailable. Set btraceExtension.btraceVersion to a concrete BTrace release version`** — when the plugin runs from a development or
   TestKit classpath it cannot read a published plugin manifest. Set
   `btraceExtension { btraceVersion = '3.0.0' }` explicitly. Published Plugin Portal builds carry
   that version in their implementation manifest. External builds resolve only
@@ -382,8 +382,9 @@ rm -rf "$BTRACE_HOME/extensions/order-counter" ~/.btrace/permissions.properties
   grant, or against a demo app process that was already running (and had already loaded an older
   policy) before you wrote the policy file. Start a fresh `java DemoApp.java` after Step 6.
 - **`btracex list` prints nothing** — it scans `$BTRACE_HOME/extensions/` and
-  `~/.btrace/extensions/` (plus `$BTRACE_EXT_PATH`). Confirm `BTRACE_HOME` is set, or check
-  `~/.btrace/extensions/order-counter` if it isn't.
+  `~/.btrace/extensions/` (plus `$BTRACE_EXT_PATH`). `bin/btracex` uses its own installation
+  unless you exported a different `BTRACE_HOME`; check that `~/.btrace/extensions/order-counter`
+  exists.
 
 ## Go deeper
 

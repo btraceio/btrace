@@ -77,7 +77,7 @@ public static void onMyEvent() { }
 ```
 
 ### @OnExit
-Execute when traced process exits.
+Execute when the script calls `exit(int)` or the traced process shuts down.
 ```java
 @OnExit
 public static void onExit(int exitCode) { }
@@ -208,7 +208,7 @@ public static void onEntry(@Self Object self,
 public static void onReturn(@Return int result, @Duration long duration) { }
 
 // Method call tracking
-@OnMethod(clazz = "MyClass", method = "/.*/", location = @Location(Kind.CALL, clazz = "/.*/", method = "/.*/"))
+@OnMethod(clazz = "MyClass", method = "/.*/", location = @Location(value = Kind.CALL, clazz = "/.*/", method = "/.*/"))
 public static void onCall(@TargetInstance Object target, @TargetMethodOrField String method) { }
 ```
 
@@ -217,9 +217,10 @@ public static void onCall(@TargetInstance Object target, @TargetMethodOrField St
 ### @Injected
 Injects an extension/service instance into your script.
 
-- Use plain `@Injected` (no parameters). The invokedynamic injector auto-detects
+- Plain `@Injected` is enough to obtain the service. The invokedynamic injector auto-detects
   whether the service needs a runtime context or a no-arg construction and wires it
-  accordingly.
+  accordingly. `optional = true` (with `mode`) only chooses the fallback when the extension is
+  blocked; see [Permission Policy](PermissionPolicy.md).
 - Annotation type: `io.btrace.core.annotations.Injected`
 - Example:
 
@@ -330,7 +331,7 @@ public static void onError(@ProbeClassName String clazz,
 
 ### Pattern 4: Field Access Monitoring
 ```java
-@OnMethod(clazz = "com.example.State", method = "/.*/", location = @Location(Kind.FIELD_SET, clazz = "/.*/", field = "status"))
+@OnMethod(clazz = "com.example.State", method = "/.*/", location = @Location(value = Kind.FIELD_SET, clazz = "/.*/", field = "status"))
 public static void onFieldSet(@TargetInstance Object target,
                              @TargetMethodOrField String field,
                              Object newValue) {
@@ -340,7 +341,7 @@ public static void onFieldSet(@TargetInstance Object target,
 
 ### Pattern 5: SQL Query Logging
 ```java
-@OnMethod(clazz = "java.sql.Statement", method = "execute.*")
+@OnMethod(clazz = "+java.sql.Statement", method = "/execute.*/")
 public static void onSqlExecute(@Self Object stmt, String sql) {
     println("SQL: " + sql);
 }
@@ -373,6 +374,7 @@ public static void printCount() {
 ### Pattern 8: JFR Event Recording
 ```java
 import io.btrace.core.jfr.JfrEvent;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class JfrMethodTrace {
@@ -451,13 +453,14 @@ form (`"status": "preparation_required"`).
 - `-r <probe-id>` - Reconnect to an active disconnected probe. If the probe id is unknown, or the JVM has no BTrace control endpoint, `-r` prints the reason and exits with code 1
 - `-r help` - Show help on remote commands
 - `-o <file>` - Output to file (disables console output)
-- `-u` - Run in trusted/unsafe mode; refused when the target JVM has a [probe budget](GettingStarted.md#probe-budgets)
+- `-u` - Run in trusted/unsafe mode, required to deploy a `@BTrace(trusted = true)` script; refused when the target JVM has a [probe budget](GettingStarted.md#probe-budgets)
 - `-d <path>` - Dump instrumented classes to specified path
 - `-pd <path>` - Search path for probe XML descriptors
 - `-cp <path>` / `-classpath <path>` - User class files and annotation processors path
 - `-p <port>` - Port for btrace agent listener (default: 2020)
 - `-host <host>` - Connect to an already running agent on the given host without attaching (default: localhost). Skips Attach API discovery, so it cannot authenticate to a 3.0 prepared endpoint; use it only for 2.x agents or endpoints opened by a previous dynamic attach
-- `-statsd <host:port>` - StatSD server configuration
+- `-statsd <host[:port]>` - StatSD server configuration
+- `-n <oneliner>` / `--oneliner <oneliner>` - Run a [oneliner](OnelinerGuide.md) instead of a script file
 - `-x` - Unattended mode (non-interactive)
 
 **Examples:**
@@ -502,9 +505,10 @@ btracec MyTrace.java
 ```
 
 ### btracer
-Launch Java app with BTrace agent.
+Launch Java app with BTrace agent. `<java-args>` is what you would pass to `java` (JVM options,
+class path, main class, application arguments), without the word `java`.
 ```bash
-btracer <script.class> <java-app-and-args>
+btracer [options] <script.class> <java-args>
 ```
 
 **Examples:**
@@ -513,10 +517,10 @@ btracer <script.class> <java-app-and-args>
 btracec MyTrace.java
 
 # Then launch
-btracer MyTrace.class java -jar myapp.jar
+btracer MyTrace.class -jar myapp.jar
 
 # With JVM options
-btracer MyTrace.class java -Xmx2g -jar myapp.jar
+btracer MyTrace.class -Xmx2g -jar myapp.jar
 ```
 
 ### btracex
@@ -564,11 +568,11 @@ endpoint on port 2020. The command server starts unless `noServer=true` is given
 `scriptdir=` is given and `noServer` is unset.
 
 **Agent Parameters:**
-- `script=<path>[:<path>...]` - Compiled BTrace script(s) to run at startup, colon-separated; must be the last argument
+- `script=<path>[:<path>...]` - Compiled BTrace script(s) to run at startup, colon-separated
 - `scriptdir=<dir>` - Directory to load scripts from
 - `port=<port>` - Communication port (default 2020); prepared mode accepts `0` and publishes the selected port.
-  A fixed port that is already in use is not an invalid option: binding fails with a `BindException`
-  and agent initialization aborts
+  A fixed port that is already in use is not an invalid option: binding fails with a `BindException`,
+  agent initialization aborts and a JVM launched with `-javaagent` does not start
 - `bindAddress=<address>` - Loopback bind address (`127.0.0.1` or `::1`); non-loopback and wildcard
   addresses are rejected in 3.0.0. An invalid `port` or `bindAddress` is reported as
   `invalid agent option <name>=<value>: ...; the command server was not started` and the agent
@@ -588,8 +592,9 @@ endpoint on port 2020. The command server starts unless `noServer=true` is given
 - `debug=true` - Verbose agent logging
 - `dumpClasses=true`, `dumpDir=<dir>` - Dump instrumented classes
 - `stdout=true` - Write script output to stdout instead of a file
-- `scriptOutputFile=<file>`, `scriptOutputDir=<dir>` - Script output file, or the directory for the
-  default per-script file (defaults to the script's directory)
+- `scriptOutputFile=<file>`, `scriptOutputDir=<dir>` - Script output file, and the directory it is
+  written to (default: the `scriptdir=` directory, else the target's working directory); an absolute
+  `scriptOutputFile=` is used as given
 - `fileRollMilliseconds=<ms>`, `fileRollMaxRolls=<n>` - Roll the output file every `ms` and keep
   `n` rolled files (default 5)
 - `cmdQueueLimit=<n>` - Pending output commands per client before output is dropped (default 100)
@@ -655,8 +660,10 @@ string manipulation, basic math, thread info, and basic stack printing.
 Many functions in the sections below are **not** in `io.btrace.BTrace` and require
 `import static io.btrace.core.BTraceUtils.*;` — for example `printArray`, `classOf`,
 aggregation helpers, `timeNanos`, `jstack`, collection utilities, and `Jfr.*`.
-Adding that import suppresses the `io.btrace.BTrace.*` auto-import, so you must then
-import both explicitly.
+Adding that import suppresses the `io.btrace.BTrace.*` auto-import. `BTraceUtils` has its own
+`print`, `println`, `str` and `exit`; do not add both wildcard imports (the shared names such as
+`str` become ambiguous). Import a helper that only `io.btrace.BTrace` has by name instead, e.g.
+`import static io.btrace.BTrace.threadName;`.
 
 ### Output Functions
 ```java
@@ -664,7 +671,7 @@ println(String)           // Print line
 print(String)            // Print without newline
 printArray(Object[])     // Print array
 printMap(Map)            // Print map
-printf(String, ...)      // Formatted print
+printf(String, ...)      // Formatted print (io.btrace.BTrace; the varargs array is rejected by the verifier, so trusted scripts only)
 ```
 
 ### Reflection Functions
@@ -673,7 +680,7 @@ str(Object)              // Object to string
 name(Class)              // Class name
 probeClass()             // Get current probe class
 classOf(Object)          // Get object's class
-field(Class, String)     // Get field value
+field(Class, String)     // Look up a field (java.lang.reflect.Field)
 ```
 
 ### Time Functions
@@ -687,15 +694,15 @@ timestamp()              // Formatted timestamp
 ```java
 jstack()                 // Print stack trace
 jstack(int)              // Print N frames
-jstacks()                // Print all thread stacks
-threadId()               // Current thread ID
-threadName()             // Current thread name
+jstackAll()              // Print all thread stacks
+threadId(currentThread())    // Current thread ID
+name(currentThread())        // Current thread name (io.btrace.BTrace: threadName(Thread))
 ```
 
 ### Collection Functions
 ```java
 Collections.newHashMap()      // Create HashMap
-Collections.newArrayList()    // Create ArrayList
+Collections.newDeque()        // Create Deque
 Collections.put(Map, K, V)    // Put in map
 Collections.get(Map, K)       // Get from map
 Collections.size(Collection)  // Get size
@@ -711,7 +718,7 @@ Atomic.get(AtomicInteger)            // Get value
 ### System Functions
 ```java
 exit(int)                // Exit BTrace
-sys(String)              // System property
+property(String)         // System property
 getenv(String)           // Environment variable
 getInstrumentationLevel()  // Current level
 ```
@@ -748,10 +755,16 @@ BTrace scripts have safety restrictions:
 - No synchronization
 - No loops (for, while, do-while, enhanced for)
 - No external method calls (methods within same BTrace class are allowed)
+- No calls from one handler to another (`@OnMethod`, `@OnTimer`, `@OnEvent`, `@OnError`,
+  `@OnProbe`, `@PeriodicEvent`): the called handler would return without running, so the compiler
+  rejects the call. Put shared code in a plain `private static` method and call it from both.
+  `@OnExit` and `@OnLowMemory` handlers may call other handlers.
 - No file I/O (except via BTraceUtils)
 - No System.exit
 
-Use `-u` (unsafe mode) to bypass restrictions, but only in controlled environments.
+To bypass them, annotate the script `@BTrace(trusted = true)` and deploy it with `-u` (trusted mode); `-u`
+alone does not relax them, and a trusted script deployed without `-u` is refused. Use this only in
+controlled environments.
 
 ---
 

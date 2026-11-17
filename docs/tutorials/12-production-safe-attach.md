@@ -32,7 +32,8 @@ java -javaagent:$BTRACE_HOME/libs/btrace.jar=port=0 HotLoopApp.java
 ```
 
 **You should see**, after a couple of dozen `[main] INFO` lines in which the agent reports
-initializing its extension system and loading the bundled extensions (left out here; absolute
+initializing its extension system and loading the bundled extensions (left out here, like the
+repeated `Sharing is only supported for boot loader classes` JVM warning some JDKs print; absolute
 numbers depend on your machine, so yours will differ):
 
 ```

@@ -1,7 +1,8 @@
 # BTrace Hands-On Tutorials
 
 Scenario-driven, copy-paste-friendly walkthroughs. Each tutorial makes a time-boxed promise,
-uses the same zero-dependency [demo app](demo/DemoApp.java) (`java DemoApp.java`, JDK 11+), and
+uses a zero-dependency demo app (most use the same [DemoApp.java](demo/DemoApp.java),
+`java DemoApp.java`, JDK 11+; tutorials 05 and 10–12 use the apps under [`demos/`](../../demos/README.md)), and
 shows the expected output after every command, so you always know you're on track.
 
 These tutorials are hands-on labs; the concept-oriented companion is the
@@ -27,7 +28,7 @@ These tutorials are hands-on labs; the concept-oriented companion is the
 
 ## Demos
 
-Each tutorial's commands are also packaged as a self-contained, replayable scenario under
+The commands of tutorials 01, 03, 04, 05, 07, 11 and 12 are also packaged as self-contained, replayable scenarios under
 [`demos/`](../../demos/README.md): the target app, the probe, a `run.sh` that plays the whole story,
 and a README with the expected output. The `btrace-qe` harness replays those scenarios on every push,
 so what a tutorial promises is what the build checks.
@@ -35,6 +36,6 @@ so what a tutorial promises is what the build checks.
 ## Conventions
 
 - **"You should see"** blocks show realistic output; exact numbers will differ.
-- Commands are complete except for `<PID>` (get it with `jps`).
+- Commands are complete except for `<PID>` (get it with `jps -m`).
 - Every tutorial ends with a cleanup step and "Go deeper" links.
 - All commands are verified against the BTrace version noted in the tutorial before publishing.

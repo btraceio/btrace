@@ -126,36 +126,60 @@ class CompilerHelper {
   }
 
   /**
-   * Attempts to determine BTRACE_HOME from environment or compiler classpath.
+   * Attempts to determine BTRACE_HOME: {@code -Dbtrace.libs} (the parent of the named libs
+   * directory), then the BTRACE_HOME environment variable, then the compiler classpath.
    *
    * @return BTRACE_HOME path, or null if not found
    */
   private String getBTraceHome() {
-    // Try environment variable first
+    // An explicitly configured engine (the client's -Dbtrace.libs) wins, so a BTrace JAR that
+    // merely shares the classpath cannot substitute its own extensions for it
+    String libsProp = System.getProperty("btrace.libs");
+    if (libsProp != null && !libsProp.isEmpty()) {
+      File home = new File(libsProp).getAbsoluteFile().getParentFile();
+      return home != null ? home.getAbsolutePath() : null;
+    }
+
     String envHome = System.getenv("BTRACE_HOME");
     if (envHome != null && Files.isDirectory(Paths.get(envHome))) {
       return envHome;
     }
 
-    // Try to find from compiler classpath (look for btrace-compiler.jar or btrace-boot.jar)
-    String classPath = System.getProperty("java.class.path");
-    if (classPath != null) {
-      for (String entry : classPath.split(File.pathSeparator)) {
-        if (entry.contains("btrace-compiler") || entry.contains("btrace-boot")) {
-          File jarFile = new File(entry);
-          if (jarFile.exists()) {
-            File libsDir = jarFile.getParentFile();
-            if (libsDir != null && libsDir.getName().equals("libs")) {
-              File home = libsDir.getParentFile();
-              if (home != null && home.isDirectory()) {
-                return home.getAbsolutePath();
-              }
-            }
-          }
+    return btraceHomeFromClassPath(System.getProperty("java.class.path"));
+  }
+
+  /**
+   * Derives BTRACE_HOME from a classpath entry that is a BTrace jar inside a {@code libs}
+   * directory. The launchers put the single {@code <home>/libs/btrace.jar} on the classpath and do
+   * not export BTRACE_HOME, so without recognizing that jar a script that injects an extension
+   * fails to compile ("package io.btrace.metrics does not exist") unless the user exported it.
+   * {@code btrace-compiler*.jar} and {@code btrace-boot*.jar} are the pre-3.0 layout.
+   *
+   * @param classPath the classpath to search (may be null)
+   * @return BTRACE_HOME path, or null if no entry is a BTrace jar in a {@code libs} directory
+   */
+  static String btraceHomeFromClassPath(String classPath) {
+    if (classPath == null) {
+      return null;
+    }
+    for (String entry : classPath.split(File.pathSeparator)) {
+      File jarFile = new File(entry);
+      String name = jarFile.getName();
+      boolean btraceJar =
+          name.equals("btrace.jar")
+              || name.startsWith("btrace-compiler")
+              || name.startsWith("btrace-boot");
+      if (!btraceJar || !jarFile.isFile()) {
+        continue;
+      }
+      File libsDir = jarFile.getAbsoluteFile().getParentFile();
+      if (libsDir != null && libsDir.getName().equals("libs")) {
+        File home = libsDir.getParentFile();
+        if (home != null && home.isDirectory()) {
+          return home.getAbsolutePath();
         }
       }
     }
-
     return null;
   }
 

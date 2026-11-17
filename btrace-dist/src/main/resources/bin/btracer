@@ -18,7 +18,7 @@ usage() {
   echo "Options:"
   echo "    --version\t\t\tShow BTrace version"
   echo "    -v\t\t\t\tRun in verbose mode"
-  echo "    -u\t\t\t\tRun in unsafe mode"
+  echo "    -u\t\t\t\tRun in trusted mode (trusted=true)"
   echo "    -p <port>\t\t\tBTrace agent server port"
   echo "    -statsd <host>[:<port>]\tUse this StatsD server"
   echo "    -o <file>\t\t\tThe path to a file the btrace agent will store its output"
@@ -52,7 +52,7 @@ if [ -d "${JAVA_HOME}" ]; then
       OPTIONS="debug=true,$OPTIONS"
       ;;
     -u)
-      OPTIONS="unsafe=true,$OPTIONS"
+      OPTIONS="trusted=true,$OPTIONS"
       ;;
     -p)
       OPTIONS="port=$2,$OPTIONS"

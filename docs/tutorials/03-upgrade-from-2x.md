@@ -181,7 +181,7 @@ JAVA_TOOL_OPTIONS="-Dbtrace.suppressJavaDeprecationWarning=true" btrace <PID> do
 
 - **The migration script says "no such file"** — run it from a directory where the path you gave
   it actually resolves, or pass an absolute path.
-- **`-r` refuses a directory** — that's intentional: pass `-r` explicitly to recurse
+- **The script refuses a directory** — that's intentional: pass `-r` explicitly to recurse
   (`scripts/migrate-btrace-script.sh -r path/to/scripts/`), so you don't accidentally rewrite a
   directory you pointed at by mistake.
 - **A script still won't compile after migrating** — the migration only rewrites the package

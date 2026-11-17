@@ -14,7 +14,7 @@ Yes, with proper precautions:
 - **Monitor overhead**: Watch for performance impact
 
 **Not recommended in production:**
-- Unsafe mode (`-u` flag)
+- Trusted mode (`@BTrace(trusted = true)` scripts deployed with `-u`)
 - Tracing very high-frequency methods
 - Scripts without sampling on hot paths
 
@@ -92,7 +92,7 @@ Specify the fully qualified class name:
 
 ```java
 // Trace JDBC
-@OnMethod(clazz = "java.sql.Statement", method = "execute.*")
+@OnMethod(clazz = "+java.sql.Statement", method = "/execute.*/")
 
 // Trace HTTP clients
 @OnMethod(clazz = "org.apache.http.impl.client.CloseableHttpClient",
@@ -122,17 +122,15 @@ For runtime behavior modification, consider:
 
 ### How do I pass arguments to BTrace scripts?
 ```java
-// Script with property
+// Script reading a key=value argument
 import io.btrace.core.annotations.*;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MyTrace {
-    @Property
-    public static String filterValue = "default";
-
     @OnMethod(...)
     public static void handler(String arg) {
-        if (arg.equals(filterValue)) {
+        if (compare(arg, Sys.$("filterValue"))) {
             println("Matched: " + arg);
         }
     }
@@ -197,7 +195,7 @@ btrace <PID> script.java > output.txt
 btrace -o output.txt <PID> script.java
 ```
 
-For programmatic file writing (requires unsafe mode):
+For programmatic file writing (requires trusted mode: the script must declare `@BTrace(trusted = true)` and be deployed with `-u`; without `-u` the deployment is refused):
 ```bash
 btrace -u <PID> script.java
 ```
@@ -205,7 +203,7 @@ btrace -u <PID> script.java
 ```java
 import java.io.*;
 
-@BTrace(unsafe = true)
+@BTrace(trusted = true)
 public class UnsafeFileWriter {
     private static FileWriter fw;
 
@@ -247,7 +245,7 @@ detects how to construct injected services and extensions. If an extension requi
 context, it is initialized via `Extension.initialize(ExtensionContext)`.
 
 See also: Architecture → `architecture/ExtensionInvokeDynamicBridge.md` and
-Extension Development Guide → `btrace-extension-development-guide.md`.
+Extension Development Guide → `BTraceExtensionDevelopmentGuide.md`.
 
 ### What are BTrace anti-patterns?
 
@@ -289,7 +287,7 @@ public static void handler(Object obj) {
     println(str(obj));  // Could be megabytes
 }
 
-// GOOD
+// GOOD (needs import static io.btrace.core.BTraceUtils.*;)
 @OnMethod(...)
 public static void handler(Object obj) {
     println(name(classOf(obj)) + "@" + str(identityHashCode(obj)));
@@ -298,7 +296,7 @@ public static void handler(Object obj) {
 
 **5. Forgetting to detach**
 - BTrace keeps instrumentation active even after client disconnects
-- Always properly exit: Ctrl+C → type `exit`
+- Always properly exit: Ctrl+C → choose `1. exit`
 
 ### How do I organize BTrace scripts?
 
@@ -423,11 +421,11 @@ Quick checklist:
 
 ### How do I debug a BTrace script?
 ```java
-// Add debug output
+// Add debug output (needs import static io.btrace.core.BTraceUtils.*;)
 @OnMethod(...)
 public static void handler() {
     println("Handler called!");
-    println("Thread: " + threadName());
+    println("Thread: " + name(currentThread()));
     println("Stack:");
     jstack(3);
 }
@@ -440,15 +438,7 @@ public static void heartbeat() {
 ```
 
 ### Can I use BTrace with Java 17+?
-Yes. BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). For Java 9+ you may need to add module opens:
-
-```bash
-btrace --add-opens java.base/java.lang=ALL-UNNAMED \
-       --add-opens java.base/jdk.internal.misc=ALL-UNNAMED \
-       <PID> script.java
-```
-
-Or add to target JVM startup options.
+Yes. BTrace 3.0 runs on Java 8–27+. Running BTrace against a JVM older than Java 17 is deprecated: it continues to work throughout 3.x but emits a deprecation warning. Support for Java < 17 will be removed in the next major release (4.0). No `--add-opens` flags are needed on Java 9+: the `btrace` launcher adds the JVM options the client needs, and the agent handles module access in the target JVM itself.
 
 ### Why am I seeing a Java deprecation warning?
 If the target JVM runs a Java version older than 17, the BTrace agent prints a warning like this once to stderr (the client prints a similar warning when attaching):
@@ -505,6 +495,7 @@ BTrace has first-class support for Java Flight Recorder (JFR), allowing you to c
 
 **Example:**
 ```java
+import static io.btrace.core.BTraceUtils.*;
 import io.btrace.core.jfr.JfrEvent;
 
 @BTrace
@@ -756,28 +747,34 @@ env:
 
 ### How do I integrate BTrace with Prometheus/Grafana?
 
-BTrace doesn't have direct Prometheus integration, but you can use **StatSD** as a bridge:
+BTrace doesn't have direct Prometheus integration, but you can use **StatSD** (the bundled `btrace-statsd` extension) as a bridge:
 
 **Option 1: StatSD → Prometheus**
 ```java
+import io.btrace.statsd.Statsd;
+
 @BTrace
 public class MetricsExporter {
+    @Injected
+    private static Statsd statsd;
+
     @OnMethod(clazz = "com.example.Service", method = "handleRequest")
     public static void onRequest() {
         // Send to StatSD (configure with -statsd flag)
-        Statsd.increment("requests.total");
+        statsd.increment("requests.total");
     }
 
     @OnMethod(clazz = "com.example.Service", method = "handleRequest",
              location = @Location(Kind.ERROR))
     public static void onError() {
-        Statsd.increment("requests.errors");
+        statsd.increment("requests.errors");
     }
 }
 ```
 
-Run with:
+Run with (the extension must be allowed first):
 ```bash
+btracex policy set --allowExtensions btrace-statsd
 btrace -statsd statsd-exporter:8125 <PID> MetricsExporter.java
 ```
 

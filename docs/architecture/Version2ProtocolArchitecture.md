@@ -22,12 +22,12 @@
 
 ## Executive Summary
 
-The BTrace v2 binary protocol is a performance-optimized communication protocol that replaces Java Object Serialization with custom binary serialization. The v2 protocol delivers **3-6x faster** command transmission and **2-5x smaller** wire payloads while maintaining full backward compatibility with the existing v1 protocol through automatic protocol negotiation.
+The BTrace v2 binary protocol is a performance-optimized communication protocol that replaces Java Object Serialization with custom binary serialization. The v2 protocol avoids Java serialization on the command path and compresses large message text, while maintaining full backward compatibility with the existing v1 protocol through automatic protocol negotiation.
 
 **Key Features:**
 - Custom binary serialization (vs Java ObjectInputStream/ObjectOutputStream)
 - Automatic protocol negotiation (once per connection)
-- Compression support for large payloads (>1KB threshold)
+- Compression of message text larger than 1 KB
 - Thread-safe using a ReentrantLock per connection (vs synchronized blocks)
 - Heartbeats that detect a connection which went silent without being closed
 - Full backward compatibility with v1 protocol
@@ -81,27 +81,12 @@ The original BTrace protocol (v1) relies on Java Object Serialization for agent-
 - Performance degradation with multiple concurrent clients
 - Contention under high load
 
-### Real-World Scenario
+### Wire Size in Practice
 
-Consider a production environment with high-frequency tracing:
-
-**v1 Protocol:**
-```
-10,000 MessageCommands/second
-Average size: 512 bytes serialized
-Network: 5.12 MB/second
-CPU overhead: ~15% for serialization
-```
-
-**v2 Protocol:**
-```
-10,000 MessageCommands/second
-Average size: 170 bytes serialized (3x smaller with compression)
-Network: 1.7 MB/second (67% reduction)
-CPU overhead: ~3% for serialization (80% reduction)
-```
-
-**Result:** 67% less bandwidth, 80% less CPU overhead, same functionality
+`WireIO` (v1) already writes most command fields directly into the object stream, so for short
+commands the v1 and v2 wire sizes are close (a 100-character `MessageCommand` is 120 bytes in v1 and
+116 bytes in v2). v2 is markedly smaller only where compression applies: message text larger than
+1 KB. Measured sizes are listed under [Benefits](#benefits-and-trade-offs).
 
 ---
 
@@ -165,11 +150,12 @@ CPU overhead: ~3% for serialization (80% reduction)
 
 **Interface:**
 ```java
-public interface WireProtocol {
-    Command read(InputStream in) throws IOException;
-    void write(OutputStream out, Command cmd) throws IOException;
-    void reset() throws IOException;  // for ObjectOutputStream.reset() in v1
-    int getVersion();
+public interface WireProtocol extends Closeable {
+    Command read() throws IOException, ClassNotFoundException;
+    void write(Command command) throws IOException;
+    void flush() throws IOException;
+    ProtocolVersion getVersion();
+    void close() throws IOException;
 }
 ```
 
@@ -203,7 +189,7 @@ public interface WireProtocol {
 - **BinaryProtocol:** Low-level primitives (readInt, writeString, etc.)
 - **BinaryWireIO:** Wire format implementation (version + type + data)
 - **BinaryCommand:** Base class for all binary commands
-- **17 Command Implementations:** One per command type (Exit, Message, Instrument, etc.)
+- **19 Command Implementations:** One per command type (Exit, Message, Instrument, etc.)
 
 ---
 
@@ -323,7 +309,7 @@ Client (v1-only)                       Agent (v2-capable)
 
 ### Implementation Details
 
-**Agent Side (RemoteClient.getClient()):**
+**Agent Side (`RemoteClient.getClient()`, simplified pseudo-code):**
 ```java
 Socket sock = acceptConnection();
 InputStream in = sock.getInputStream();
@@ -346,7 +332,7 @@ Command cmd = wire.read(in);
 wire.write(out, statusResponse);
 ```
 
-**Client Side (Client.submit()):**
+**Client Side (`Client.createProtocol()`, simplified pseudo-code):**
 ```java
 Socket sock = new Socket(host, port);
 InputStream in = sock.getInputStream();
@@ -536,11 +522,11 @@ Bytes: [0x00, 0x00, 0x00, 0x04, 0xCA, 0xFE, 0xBA, 0xBE]
 
 **Structure:**
 ```
-┌─────────┬─────────┬──────────────┬─────────────────┬─────────────────┐
-│ Version │ Type    │ Urgent Flag  │ Timestamp (8B)  │ Message (String)│
-│ (1B)    │ (1B)    │ (1B)         │                 │                 │
-└─────────┴─────────┴──────────────┴─────────────────┴─────────────────┘
-  0x02      0x04      0x00/0x01      long              length + UTF-8
+┌─────────┬─────────┬─────────────────┬──────────────┬─────────────────┬─────────────────┐
+│ Version │ Type    │ Timestamp (8B)  │ Urgent Flag  │ Compressed Flag │ Message         │
+│ (1B)    │ (1B)    │                 │ (1B)         │ (1B)            │                 │
+└─────────┴─────────┴─────────────────┴──────────────┴─────────────────┴─────────────────┘
+  0x03      0x04      long              0x00/0x01      0x00/0x01         length + UTF-8
 ```
 
 **Example Bytes:**
@@ -550,34 +536,41 @@ Timestamp: 1638360000000
 Urgent: false
 
 Hex dump:
-02 04 00 00 00 00 01 7D 28 4F 2D 00 00 00 00 0E
+03 04 00 00 01 7D 75 DD A6 00 00 00 00 00 00 0E
 42 54 72 61 63 65 20 73 74 61 72 74 65 64
 
 Breakdown:
-02           - Version = 2
+03           - Version = 3
 04           - Type = MESSAGE (4)
+00 00 01 7D 75 DD A6 00 - Timestamp = 1638360000000
 00           - Urgent = false
-00 00 00 01 7D 28 4F 2D - Timestamp = 1638360000000
-00 00 00 0E  - String length = 14
+00           - Compressed = false
+00 00 00 0E  - Length = 14
 42 54 72 61 63 65 20 73 74 61 72 74 65 64 - "BTrace started" (UTF-8)
 ```
 
 ### Compression
 
-**Trigger:** Message size > 1024 bytes (configurable)
+**Trigger:** Message text larger than 1024 bytes of UTF-8 (a fixed threshold in
+`BinaryMessageCommand`). Only `MESSAGE` commands are compressed; instrumentation code is not.
 
 **Algorithm:** Java Deflater/Inflater (BEST_SPEED)
 
 **Format with Compression:**
 ```
-┌─────────┬─────────┬──────────────┬──────────────────┬────────────────────┐
-│ Version │ Type    │ Urgent Flag  │ Compressed Flag  │ Compressed/Raw Data│
-│ (1B)    │ (1B)    │ (1B)         │ (1B)             │                    │
-└─────────┴─────────┴──────────────┴──────────────────┴────────────────────┘
-  0x02      0x04      0x00/0x01      0x00/0x01          byte array
+┌─────────┬─────────┬────────────────┬──────────────┬──────────────────┬────────────────────┐
+│ Version │ Type    │ Timestamp (8B) │ Urgent Flag  │ Compressed Flag  │ Compressed/Raw Data│
+│ (1B)    │ (1B)    │                │ (1B)         │ (1B)             │                    │
+└─────────┴─────────┴────────────────┴──────────────┴──────────────────┴────────────────────┘
+  0x03      0x04      long             0x00/0x01      0x00/0x01          see below
 ```
 
-**Compressed Data:**
+**Raw Data (flag 0x00):**
+```
+[Length (4B)] [UTF-8 bytes]
+```
+
+**Compressed Data (flag 0x01):**
 ```
 [Original Length (4B)] [Compressed Length (4B)] [Deflated Bytes]
 ```
@@ -642,7 +635,7 @@ BinaryCommand v2Cmd = CommandAdapter.toBinaryCommand(v1Cmd);
 
 // Serialize to wire
 BinaryWireIO.write(outputStream, v2Cmd);
-// Wire: [0x02][0x04][urgent][timestamp][length][UTF-8 bytes]
+// Wire: [0x03][0x04][timestamp][urgent][compressed][length][UTF-8 bytes]
 ```
 
 **v2 → v1 (Agent receiving command):**
@@ -685,46 +678,48 @@ agent.onCommand(v1Cmd);
    - v2: flag (int) + success (boolean)
    - **Conversion:** `flag = abs(v1), success = (v1 > 0)`
 
-### WireProtocol Adapters
+### WireProtocol Implementations
 
-**WireIOV1Adapter:**
+**JavaSerializationProtocol (v1):**
 ```java
-public class WireIOV1Adapter implements WireProtocol {
-    private ObjectInputStream ois;
-    private ObjectOutputStream oos;
+public class JavaSerializationProtocol implements WireProtocol {
+    private final ObjectInputStream ois;
+    private final ObjectOutputStream oos;
 
-    public Command read(InputStream in) throws IOException {
+    public Command read() throws IOException, ClassNotFoundException {
         return WireIO.read(ois);  // Uses v1 protocol
     }
 
-    public void write(OutputStream out, Command cmd) throws IOException {
-        WireIO.write(oos, cmd);  // Uses v1 protocol
+    public void write(Command command) throws IOException {
+        WireIO.write(oos, command);  // Uses v1 protocol
     }
 
     public void reset() throws IOException {
-        oos.reset();  // ObjectOutputStream state management
+        oos.reset();  // ObjectOutputStream state management (v1 only, not part of WireProtocol)
     }
 }
 ```
 
-**WireIOV2Adapter:**
+**BinaryWireProtocol (v2):**
 ```java
-public class WireIOV2Adapter implements WireProtocol {
-    private InputStream in;
-    private OutputStream out;
+public class BinaryWireProtocol implements WireProtocol {
+    private final InputStream inputStream;
+    private final OutputStream outputStream;
+    private final ReentrantLock writeLock = new ReentrantLock();
 
-    public Command read(InputStream in) throws IOException {
-        BinaryCommand binaryCmd = BinaryWireIO.read(in);
+    public Command read() throws IOException {
+        BinaryCommand binaryCmd = BinaryWireIO.read(inputStream);
         return CommandAdapter.toBtraceCommand(binaryCmd);  // Convert v2→v1
     }
 
-    public void write(OutputStream out, Command cmd) throws IOException {
-        BinaryCommand binaryCmd = CommandAdapter.toBinaryCommand(cmd);  // Convert v1→v2
-        BinaryWireIO.write(out, binaryCmd);
-    }
-
-    public void reset() throws IOException {
-        // No-op: v2 has no state to reset
+    public void write(Command command) throws IOException {
+        BinaryCommand binaryCmd = CommandAdapter.toBinaryCommand(command);  // Convert v1→v2
+        writeLock.lock();
+        try {
+            BinaryWireIO.write(outputStream, binaryCmd);
+        } finally {
+            writeLock.unlock();
+        }
     }
 }
 ```
@@ -736,7 +731,7 @@ public class WireIOV2Adapter implements WireProtocol {
 ### Benefits
 
 #### 1. Performance: 3-6x Faster
-**Measurement:** 10,000 iterations, InstrumentCommand (100KB bytecode)
+**Measurement:** design-time estimate, 10,000 iterations, InstrumentCommand (100KB bytecode); not re-measured for 3.0
 
 | Metric | v1 (Java Serialization) | v2 (Binary) | Improvement |
 |--------|------------------------|-------------|-------------|
@@ -750,20 +745,21 @@ public class WireIOV2Adapter implements WireProtocol {
 - Direct byte manipulation
 - Optimized for BTrace command patterns
 
-#### 2. Size: 2-5x Smaller
-**Measurement:** Wire size comparison
+#### 2. Size: Compressed Large Messages
+**Measurement:** Wire size of one command, 3.0.0-SNAPSHOT (v1 through `WireIO` on a fresh
+`ObjectOutputStream`, so each v1 figure includes the 4-byte stream header)
 
-| Command Type | v1 Size | v2 Size | Reduction |
-|-------------|---------|---------|-----------|
-| ExitCommand | 45 bytes | 15 bytes | **3x smaller** |
-| MessageCommand (small) | 180 bytes | 60 bytes | **3x smaller** |
-| MessageCommand (large, 10KB) | 10,240 bytes | 2,150 bytes | **4.8x smaller** (compressed) |
-| InstrumentCommand (100KB) | 102,400 bytes | 34,100 bytes | **3x smaller** (compressed) |
+| Command Type | v1 Size | v2 Size |
+|-------------|---------|---------|
+| ExitCommand | 11 bytes | 6 bytes |
+| MessageCommand (100 characters) | 120 bytes | 116 bytes |
+| MessageCommand (10 KB of repetitive text) | 10,336 bytes | 175 bytes (compressed) |
+| InstrumentCommand (100 KB of incompressible bytes) | 102,915 bytes | 102,410 bytes |
 
 **Why:**
-- No Java serialization metadata
-- Efficient primitive encoding
-- Automatic compression for large payloads
+- Message text larger than 1 KB is deflated; how much that saves depends on the text
+- Everything else is about the same size as v1, whose `WireIO` already writes fields directly
+- Instrumentation code is not compressed
 - Minimal framing overhead
 
 #### 3. Thread Safety: ReentrantLock
@@ -844,14 +840,18 @@ never holds up another
 # Force the configured version without negotiation. Default: false
 # (cannot be combined with autoNegotiate=true)
 -Dbtrace.comm.forceVersion=true
+
+# Agent side: refuse v1 (Java serialization) connections. Default: true (v1 allowed)
+-Dbtrace.comm.allowV1=false
 ```
 
-The default behavior (v2 preferred, auto-negotiation enabled) requires no configuration.
+These are JVM system properties: the client reads them from its own JVM and the agent from the
+target JVM. The default behavior (v2 preferred, auto-negotiation enabled) requires no configuration.
 
 ### For Developers
 
 #### Completed
-- All 17 command types implemented and tested
+- All 19 command types implemented and tested
 - Protocol negotiation implemented
 - RemoteClient and Client refactored with WireProtocol abstraction
 - Backward compatibility verified (v1 clients work with v2 agents and vice versa)
@@ -874,6 +874,10 @@ The default behavior (v2 preferred, auto-negotiation enabled) requires no config
 ---
 
 ## Performance Characteristics
+
+The throughput, latency and allocation figures in this section are design-time estimates. They
+were not re-measured for 3.0; run the JMH benchmarks (`btrace-core/JMH_BENCHMARKS.md`) for numbers
+on your hardware.
 
 ### Throughput
 
@@ -916,21 +920,15 @@ The default behavior (v2 preferred, auto-negotiation enabled) requires no config
 
 ### Network Bandwidth
 
-**Scenario:** 10,000 MessageCommands (average 500 bytes text)
-
-| Protocol | Wire Size | Network Usage |
-|----------|-----------|---------------|
-| v1 | 8.2 MB | 100% baseline |
-| v2 (no compression) | 5.1 MB | 62% |
-| v2 (with compression) | 1.9 MB | 23% |
-
-**Benefit:** 77% bandwidth reduction with compression
+Message text of 1 KB or less is sent uncompressed, so for typical short probe output v2 uses about
+as much bandwidth as v1 (see the measured sizes under [Benefits](#benefits-and-trade-offs)). Only
+messages larger than 1 KB are compressed.
 
 ---
 
 ## Conclusion
 
-The BTrace v2 binary protocol delivers significant performance improvements (3-6x faster, 2-5x smaller) while maintaining full backward compatibility through automatic protocol negotiation. The architecture is clean, well-tested, and production-ready.
+The BTrace v2 binary protocol delivers significant performance improvements (faster serialization, and compressed large messages) while maintaining full backward compatibility through automatic protocol negotiation. The architecture is clean, well-tested, and production-ready.
 
 **Key Takeaways:**
 - Protocol negotiation happens once per connection (not per command)
@@ -940,7 +938,7 @@ The BTrace v2 binary protocol delivers significant performance improvements (3-6
 
 **Implementation status:**
 - Protocol version bumped to 3 after binary format changes
-- All 17 command types covered by unit tests (26+ tests)
+- All 19 command types covered by unit tests (26+ tests)
 - ErrorCommand preserves exception class, message, and stack trace via RemoteException
 - GridDataCommand preserves HistogramData and column names
 - NumberMapDataCommand preserves BigInteger and BigDecimal

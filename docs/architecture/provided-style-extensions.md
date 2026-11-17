@@ -13,7 +13,7 @@ This guide shows how to migrate profile-based integrations (e.g., Spark/Hadoop) 
 
 - `io.btrace.extension.util.ClassLoadingUtil`
   - Loaders: `tccl()`, `definingLoader(Object)`
-  - Class loading: `load(String, ClassLoader)`, `load(String, Object)`, `tryLoad(String, ClassLoader)`
+  - Class loading: `load(String, ClassLoader)`, `loadFromContext(String, Object)`, `tryLoad(String, ClassLoader)`
   - Context: `withTCCL(ClassLoader, Supplier<T>)`, `withTCCL(ClassLoader, Runnable)`, `withDefiningLoader(Object, Supplier<T>)`
   - Services: `loadService(Class<T>, ClassLoader)`, `loadServices(Class<T>, ClassLoader)`
   - Resources: `getResource(String, ClassLoader)`, `openResource(String, ClassLoader)`
@@ -93,18 +93,14 @@ MethodHandle constructor = MethodHandles.publicLookup().findConstructor(type, Me
 ## Role Detection & Config
 
 - Detect driver/executor via system properties or presence of marker classes using TCCL.
-- `extensions.conf` (examples):
+- `extensions.conf` only selects which extensions load. Per-extension keys (`<id>.<setting>`) are
+  parsed but not delivered to extensions in 3.0, so pass a role or classpath hint as an agent
+  argument (`ExtensionContext.getArgs()`) or a system property:
 
 ```properties
-# Spark
-btrace-spark.enabled=true
-btrace-spark.role=auto           # auto|driver|executor
-# optional: only if the app does not ship required libs
-btrace-spark.classpath=/opt/spark/jars
-
-# Hadoop
-btrace-hadoop.enabled=false
-# btrace-hadoop.classpath=/opt/hadoop/share/hadoop/common
+# Load the Spark extension, keep the Hadoop one out
+extensions.enabled=btrace-spark-example
+extensions.disabled=btrace-hadoop-example
 ```
 
 ## Permissions
@@ -131,9 +127,9 @@ public final class HadoopApiImpl implements HadoopApi {
 
 1. Extract minimal API for probes; avoid app types.
 2. Move environment-specific logic to impl; resolve app types via object hand-off/TCCL.
-3. Add extension config (role, optional classpath hints).
+3. Add extension config (role, optional classpath hints) as agent arguments or system properties.
 4. Request permissions; add no-op shims when unavailable.
-5. Prefer eager load if APIs must be present before probes start.
+5. Enabled extensions are loaded when the agent starts, so their APIs are present before probes start.
 
 ## Notes
 

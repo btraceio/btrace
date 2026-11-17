@@ -6,7 +6,7 @@ This package contains a new binary protocol implementation for BTrace that repla
 
 - **Improved Performance**: Custom binary serialization is significantly faster than Java serialization
 - **Reduced Memory Usage**: Binary format is more compact than Java serialization
-- **Compression Support**: Large messages and code payloads are automatically compressed
+- **Compression Support**: Message text larger than 1 KB is automatically compressed
 - **Thread Safety**: Uses ReentrantLock instead of synchronized blocks for better scalability
 - **Versioning**: Protocol includes version information for future compatibility
 - **Extensibility**: Registry pattern makes it easy to add new command types
@@ -22,11 +22,13 @@ Each command in the binary protocol has the following format:
 +----------------+----------------+--------------------+
 ```
 
+The protocol version byte is currently `3` (`BinaryProtocol.VERSION`).
+
 The Command Data format depends on the Command Type and is defined by each command implementation.
 
 ## Command Types
 
-The binary protocol supports all the command types from the original protocol:
+The binary protocol supports all the command types from the original protocol, plus `HEARTBEAT`:
 
 | Type | Command | Description |
 |------|---------|-------------|
@@ -62,7 +64,7 @@ The binary protocol supports the following data types:
 
 ## Compression
 
-Large payloads (like message text and instrumentation code) are automatically compressed using Java's Deflater/Inflater with BEST_SPEED setting. The compression threshold is configurable.
+Message text larger than 1024 bytes (UTF-8) is automatically compressed using Java's Deflater/Inflater with BEST_SPEED setting. The threshold is a fixed constant in `BinaryMessageCommand`; other payloads, including instrumentation code, are not compressed.
 
 ## Migration
 
@@ -91,12 +93,13 @@ client.commandLoop();
 
 ## Performance Comparison
 
-Performance tests show that the binary protocol is significantly more efficient than the original Java serialization-based protocol:
+The design target is 3-6x faster serialization than the original Java serialization-based protocol; measure it with the JMH benchmarks (`btrace-core/JMH_BENCHMARKS.md`). Wire size is about the same as the original protocol, except for compressed messages:
 
-| Command | Time Improvement | Size Improvement |
-|---------|-----------------|------------------|
-| InstrumentCommand | 3-5x faster | 2-3x smaller |
-| MessageCommand | 4-6x faster | 3-5x smaller (with compression) |
+| Command | Original size | Binary size |
+|---------|---------------|-------------|
+| InstrumentCommand (100 KB of incompressible bytes) | 102,915 bytes | 102,410 bytes |
+| MessageCommand (100 characters) | 120 bytes | 116 bytes |
+| MessageCommand (10 KB of repetitive text) | 10,336 bytes | 175 bytes (compressed) |
 
 ## Implementation
 

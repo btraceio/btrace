@@ -368,7 +368,7 @@ the [Migration guide](../Migration-2.x-to-3.0.md):
 
 ## Troubleshooting
 
-- **`Can not attach to PID ...`** - run `btrace` as the same OS user as the target JVM; see
+- **`Failed to attach to PID ...`** - run `btrace` as the same OS user as the target JVM; see
   [Troubleshooting](../Troubleshooting.md).
 - **Step 6 prints no report after restarting with the policy** - confirm you passed
   `-Dbtrace.permissions=permissions.properties` from `demos/03-metrics-and-permissions` and used

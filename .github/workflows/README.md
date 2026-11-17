@@ -29,9 +29,12 @@ This directory contains GitHub Actions workflows for continuous integration and 
   - Runs integration tests with `-Pintegration` flag
 - **qe:** Runs the `btrace-qe` harness (self tests plus every case surface, including the `demos`
   replay of `demos/`) on Java 21 with the Java 24 toolchain
-- **publish:** Publishes artifacts to Maven Central
+- **gradle-plugin:** Runs the `btrace-gradle-plugin` tests (`../gradlew test` in that directory)
+- **guardrails:** Runs the `scripts/guardrails` checks (agent configuration, documented commands and versions, layering, launchers, and the growth and swallow checks)
+- **tests-passed:** The single required check; fails unless build, every test lane, qe, guardrails and gradle-plugin succeeded
+- **publish:** Publishes snapshot artifacts (`./gradlew -x test :btrace-dist:publish`)
   - Only on `develop` branch
-  - Requires GPG signing credentials
+  - Skipped with a notice when the GPG signing or Sonatype credentials are not configured
 - **cleanup:** Removes temporary artifacts
 
 **Enhancements for V2 Protocol:**
@@ -55,7 +58,7 @@ protocol subset on every PR.
 #### **unit-tests**
 - Runs all v2 protocol unit tests on Java 11, 17, 21
 - Tests binary serialization/deserialization
-- Validates all 17 command types
+- Validates all 19 command types
 - Upload test reports as artifacts
 
 #### **protocol-negotiation-tests**
@@ -65,7 +68,7 @@ protocol subset on every PR.
 - Verifies magic byte detection
 
 #### **edge-case-tests**
-- Runs 35 edge case scenarios
+- Runs the 27 edge case tests (`BinaryProtocolEdgeCasesTest`)
 - Tests boundary conditions
 - Validates large message handling
 - Tests compression functionality
@@ -76,7 +79,8 @@ protocol subset on every PR.
 - Triggered by workflow dispatch. The job also tests for `[benchmark]` in `head_commit.message`, but
   that field exists only on push events, which this workflow does not handle, so a commit message
   cannot trigger it.
-- Quick benchmarks: warmup=1, iterations=2, fork=1
+- Passes `-Pjmh.warmupIterations=1 -Pjmh.iterations=2 -Pjmh.fork=1`, which `btrace-core/build.gradle`
+  reads in place of its defaults (warmup=3, iterations=5, fork=2)
 - Focuses on serialization performance
 - Uploads JMH results for 30 days
 
@@ -139,25 +143,32 @@ weekly schedule.
 - Waits up to 30 minutes for manual release via Central Portal
 - Creates GitHub release only after Maven artifacts are available
 - Updates SDKMan and manages milestones
-- Release candidates (`release_type: rc`, version `X.Y.Z-RCn`) publish to Maven Central and a GitHub pre-release only; see [Releasing: Release Candidates](../../docs/releasing.md#release-candidates)
+- Release candidates (`release_type: rc`, version `X.Y.Z-RCn`) publish to Maven Central, a GitHub pre-release and version-tagged container images only (no `latest` tags, Plugin Portal, JBang catalog or SDKMAN); see [Releasing: Release Candidates](../../docs/releasing.md#release-candidates)
 
 **Manual Checkpoint:** After staging, you must release via [Central Portal](https://central.sonatype.com/publishing/deployments). This allows reviewing artifacts before they become permanent.
+
+### 7. Other workflows
+
+- `pr-metadata.yml` - checks pull request metadata (`scripts/guardrails/check_pr_metadata.py`) when a PR is opened, edited or updated
+- `sdkman-set-default.yml` - manual dispatch; sets the given version as the SDKMAN default
+- `update-jdk-versions.yml` - weekly (Monday 06:00 UTC) and manual; checks for newer JDK test versions
+- `validate-renovate-config.yml` - validates the Renovate configuration when it changes
 
 ## V2 Protocol Test Coverage
 
 The workflows ensure comprehensive testing of the v2 protocol implementation:
 
-### Unit Tests (113 total)
-- ✅ Binary protocol serialization (26 tests)
-- ✅ Edge cases and boundaries (35 tests)
+### Unit Tests (109 total)
+- ✅ Binary protocol serialization (27 tests)
+- ✅ Edge cases and boundaries (27 tests)
 - ✅ Performance comparison (2 tests)
-- ✅ Protocol negotiation (16 tests)
+- ✅ Protocol negotiation (19 tests)
 - ✅ Configuration management (18 tests)
 - ✅ WireProtocol abstraction (16 tests)
 
 ### Test Categories
 1. **Command Serialization**
-   - All 17 BTrace command types
+   - All 19 BTrace command types
    - Round-trip serialization/deserialization
    - Compression testing
 
@@ -217,8 +228,8 @@ The workflows ensure comprehensive testing of the v2 protocol implementation:
 **Publish Job:**
 - `GPG_SIGNING_KEY`: GPG key for artifact signing
 - `GPG_SIGNING_PWD`: GPG key password
-- `BTRACE_SONATYPE_USER`: Sonatype credentials
-- `BTRACE_SONATYPE_PWD`: Sonatype credentials
+- `SONATYPE_USERNAME` (fallback `BTRACE_SONATYPE_USER`): Sonatype credentials
+- `SONATYPE_PASSWORD` (fallback `BTRACE_SONATYPE_PWD`): Sonatype credentials
 
 ### Gradle Properties for V2 Testing
 
@@ -229,8 +240,8 @@ The workflows ensure comprehensive testing of the v2 protocol implementation:
 # Run protocol negotiation tests
 ./gradlew :btrace-core:test --tests "*Protocol*"
 
-# Run specific JMH benchmarks
-./gradlew :btrace-core:jmh -PjmhInclude=".*MessageCommand.*"
+# Run specific JMH benchmarks (jmhInclude matches method names; the command type is a JMH parameter)
+./gradlew :btrace-core:jmh -PjmhInclude=".*Serialize" --jmhArgs="-p commandType=MessageCommand"
 
 # Generate coverage report
 ./gradlew :btrace-core:test jacocoTestReport
@@ -246,10 +257,8 @@ commit message does not trigger it; see the `jmh-benchmarks` job above.
 ### Benchmark Configuration
 
 **Quick Benchmarks (CI):**
-- Warmup: 1 iteration
-- Measurement: 2 iterations
-- Forks: 1
-- Focus: Serialization methods only
+- Warmup 1, measurement 2, forks 1 (`-Pjmh.warmupIterations`, `-Pjmh.iterations`, `-Pjmh.fork`)
+- Focus: Serialization methods only (`-PjmhInclude=".*Serialize.*"`)
 
 **Full Benchmarks (Local):**
 - Warmup: 3 iterations
@@ -300,7 +309,7 @@ commit message does not trigger it; see the `jmh-benchmarks` job above.
 
 ### Expected Metrics
 - Serialization: 3-6x faster than V1
-- Wire size: 2-5x smaller than V1
+- Wire size: about the same as V1, except compressed messages
 - Compression: 10-100x size reduction (large messages)
 
 ## Maintenance

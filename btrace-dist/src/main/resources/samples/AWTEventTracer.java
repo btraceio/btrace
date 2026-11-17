@@ -24,6 +24,7 @@ import java.awt.*;
 import java.awt.event.FocusEvent;
 
 import static io.btrace.BTrace.println;
+import static io.btrace.BTrace.str;
 
 /**
  * This simple script traces every AWT focus event in
@@ -37,7 +38,7 @@ public class AWTEventTracer {
     )
     public static void onevent(@Self EventQueue queue, AWTEvent event) {
         if (event instanceof FocusEvent) {
-            println(event);
+            println(str(event));
             println();
         }
     }

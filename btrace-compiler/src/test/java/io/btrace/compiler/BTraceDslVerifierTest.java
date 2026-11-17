@@ -144,6 +144,55 @@ public class BTraceDslVerifierTest {
         "Expected @OnLowMemory signature diagnostic: " + err);
   }
 
+  /**
+   * A guarded handler calling another handler compiled, but the called handler's re-entrancy guard
+   * made it return at once, so the call silently did nothing.
+   */
+  @Test
+  void handlerCallingHandlerFailsSourceVerifier() {
+    StringWriter err = new StringWriter();
+    Map<String, byte[]> result =
+        compileSource(
+            "HandlerCallProbe",
+            "  @OnTimer(1000) public static void tick() { println(\"tick\"); report(); }\n"
+                + "  @OnEvent public static void report() { println(\"report\"); }\n",
+            err);
+    assertNull(result, "Compilation should fail: " + err);
+    assertTrue(
+        err.toString().contains("a handler cannot call another handler"),
+        "Expected the handler-call diagnostic: " + err);
+  }
+
+  @Test
+  void sharedHelperAndOnExitCallsPassSourceVerifier() {
+    StringWriter err = new StringWriter();
+    Map<String, byte[]> result =
+        compileSource(
+            "SharedHelperProbe",
+            "  @OnTimer(1000) public static void tick() { summary(); }\n"
+                + "  @OnEvent public static void report() { summary(); }\n"
+                + "  @OnExit public static void exit(int code) { report(); }\n"
+                + "  private static void summary() { println(\"summary\"); }\n",
+            err);
+    assertNotNull(result, "Compilation should succeed: " + err);
+  }
+
+  private static Map<String, byte[]> compileSource(
+      String className, String body, StringWriter err) {
+    return new Compiler()
+        .compile(
+            className + ".java",
+            "import io.btrace.core.annotations.*;\n"
+                + "@BTrace public class "
+                + className
+                + " {\n"
+                + body
+                + "}\n",
+            new PrintWriter(err),
+            null,
+            System.getProperty("java.class.path"));
+  }
+
   private static Map<String, byte[]> compileLowMemoryProbe(String className, String params) {
     return compileLowMemoryProbe(className, params, new StringWriter());
   }

@@ -166,7 +166,8 @@ public final class Main {
             + "  btracex list [--json]\n"
             + "  btracex policy print [--policy-file <path>|--home|--classpath <outDir>] [--json]\n"
             + "  btracex policy set [--allowExtensions <ids>] [--denyExtensions <ids>] [--allowPrivileged <bool>] [--policy-file <path>|--home|--classpath <outDir>]\n"
-            + "  btracex install <groupId:artifactId:version> [--repo <url> ...] [--id <extId>] [--dry-run]\n");
+            + "  btracex install <groupId:artifactId:version|zip|url> [--repo <url> ...] [--id <extId>]"
+            + " [--dry-run]\n");
   }
 
   private static void err(String s) {

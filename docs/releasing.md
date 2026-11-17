@@ -8,7 +8,7 @@ BTrace uses an automated release process via GitHub Actions. The release is trig
 
 1. **GitHub CLI**: Install and authenticate with `gh auth login`
 2. **Clean working directory**: Commit or stash any local changes
-3. **Correct branch**: Be on `develop` for major/minor releases, or `release/X.Y` for patch releases
+3. **Correct branch**: Be on `develop` for major/minor releases, or `release/X.Y._` for patch releases
 
 ### Release Types
 
@@ -36,7 +36,7 @@ release it with `minor` (`3.0.0-SNAPSHOT → 3.0.0`, next develop `3.1.0-SNAPSHO
 ./scripts/release.sh major
 
 # Patch release from a release branch
-./scripts/release.sh patch release/2.3
+./scripts/release.sh patch release/2.3._
 
 # Release candidate of the current version from develop (3.0.0-RC1, then RC2, ...)
 ./scripts/release.sh rc
@@ -70,6 +70,12 @@ Maven Central artifacts are permanent, so a broken candidate is superseded by th
 (`RC2`), not deleted. When a candidate is good, release `X.Y.Z` from the same commit with the
 usual `minor` or `patch` type.
 
+The GitHub release body is `.github/release-notes/v<version>.md` from the tagged commit, followed
+by the generated pull-request list. The file name carries the full version, so a candidate needs
+its own `.github/release-notes/vX.Y.Z-RCn.md` (start from the previous candidate's file, or from
+`vX.Y.Z.md` with the links, download names, coordinates and image tags changed to the candidate);
+without it the pre-release has only the generated list.
+
 The workflow's internal `vX.Y.Z_RC` tag (created before the smoke tests and replaced by the final
 tag) is unrelated: it exists for every run, candidates included.
 
@@ -84,6 +90,7 @@ The release workflow performs these steps:
 5. **Stage to Maven Central**: Uploads artifacts to staging (requires manual release)
 6. **⏸️ MANUAL CHECKPOINT**: You must release artifacts via Central Portal
 7. **Wait for Maven Central**: Polls until artifacts are available (30 min timeout)
+7b. **Gradle Plugin Portal and JBang catalog**: Publishes `io.btrace.extension` and `io.btrace.fat-agent` and updates `btraceio/jbang-catalog` (both skipped for release candidates)
 8. **Build Distributions**: Creates tar.gz, zip, deb, rpm packages
 9. **Release Smoke**: Exercises acquisition, first-trace, prepared, migration, extension, protocol,
    archive, container, version, and license paths against the release candidate
@@ -124,7 +131,7 @@ This checkpoint allows you to verify the release before it becomes irreversible.
 BTrace uses trunk-based development with `develop` as the main branch:
 
 - **develop**: Main trunk - all development and releases start here
-- **release/X.Y**: Long-lived branches for patch releases (created automatically during major/minor releases)
+- **release/X.Y._**: Long-lived branches for patch releases, for example `release/3.0._` (created automatically during major/minor releases)
 - **Tags**: `vX.Y.Z` format (e.g., `v2.3.0`) - the latest release is always identifiable via tags
 
 ### Manual Verification (Optional)
@@ -170,8 +177,14 @@ The workflow does **not** auto-release - you must manually publish from the Cent
 
 Available artifacts:
 - `io.btrace:btrace` — the single masked JAR (agent + client + boot merged; see [Masked JAR Architecture](architecture/MaskedJarArchitecture.md)), with the default extensions embedded so that Maven and jbang users get the same capability a distribution install has
+- `io.btrace:<extension-id>` — one artifact per release extension (for example `io.btrace:btrace-metrics`)
 
-The release workflow publishes only the `:btrace-dist` publications (`./gradlew :btrace-dist:publishAllPublicationsToSonatypeRepository`); the legacy `btrace-agent`/`btrace-client`/`btrace-boot` artifacts are no longer published.
+Maven Central rejects a release component without a `-sources.jar` and a `-javadoc.jar`; snapshots are
+not checked. `./gradlew :btrace-dist:verifyBtracePublication verifyReleaseExtensionPublications` (both
+part of `check`, and prerequisites of the Sonatype upload) publish to a scratch repository and fail when
+one is missing.
+
+The release workflow publishes the `:btrace-dist` publications and the release extensions in one invocation (`./gradlew :btrace-dist:publishAllPublicationsToSonatypeRepository publishReleaseExtensionsToSonatype`); the legacy `btrace-agent`/`btrace-client`/`btrace-boot` artifacts are no longer published.
 
 ### Credentials
 
@@ -215,7 +228,12 @@ jbang btrace@btraceio <PID> script.java
 ```
 
 Release checklist for JBang:
-- The release workflow updates `btraceio/jbang-catalog` automatically when `JBANG_CATALOG_PAT` is configured.
+- The release workflow updates `btraceio/jbang-catalog` automatically when `JBANG_CATALOG_PAT` is configured:
+  `btrace.java` (the `btrace` alias) moves to the release; on a major or minor release
+  `btrace-latest.java` (the `btrace-latest` alias) moves to the next develop snapshot, with the
+  `//REPOS` line that lists Maven Central and the Central snapshot repository (a `//REPOS` line
+  replaces JBang's default repository). A patch release leaves `btrace-latest` alone, and a release
+  candidate leaves the catalog unchanged.
 - The release-smoke gate executes both `jbang io.btrace:btrace:<version> --version` and the
   `btrace@btraceio` catalog alias before the final release tag is created.
 - If the workflow cannot push, update `btrace.java` in `btraceio/jbang-catalog` to the new major/minor version.
@@ -228,16 +246,16 @@ If the workflow is waiting for Maven Central and you want to abort:
 
 1. **Cancel the workflow** in GitHub Actions
 2. **Drop the staging repository** via [Central Portal](https://central.sonatype.com/publishing/deployments)
-3. **Delete the tag** (if created):
+3. **Delete the tag** (if created). At this point only the workflow's internal `vX.Y.Z_RC` tag exists (the final `vX.Y.Z` tag is created after the release-smoke job), and the next run's validation fails while it is there:
    ```bash
-   git tag -d vX.Y.Z
-   git push origin :refs/tags/vX.Y.Z
+   git tag -d vX.Y.Z_RC
+   git push origin :refs/tags/vX.Y.Z_RC
    ```
 4. **Reset release branch** if needed:
    ```bash
-   git checkout release/X.Y
+   git checkout release/X.Y._
    git reset --hard <previous-commit>
-   git push --force origin release/X.Y
+   git push --force origin release/X.Y._
    ```
 
 ### After Maven Central release (irreversible)

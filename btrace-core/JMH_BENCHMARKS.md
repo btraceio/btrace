@@ -35,11 +35,17 @@ Use the `jmhInclude` property to filter which benchmarks to run:
 # Run only round-trip benchmarks
 ./gradlew :btrace-core:jmh -PjmhInclude=".*RoundTrip"
 
+```
+
+`jmhInclude` matches benchmark method names. The command type and the data size are JMH
+parameters (`commandType`, `dataSize`), not part of the name; select them with `-p`:
+
+```bash
 # Run benchmarks for specific command type
-./gradlew :btrace-core:jmh -PjmhInclude=".*InstrumentCommand.*"
+./gradlew :btrace-core:jmh --jmhArgs="-p commandType=InstrumentCommand"
 
 # Run benchmarks for specific data size
-./gradlew :btrace-core:jmh -PjmhInclude=".*small.*"
+./gradlew :btrace-core:jmh --jmhArgs="-p dataSize=small"
 ```
 
 ## Benchmark Structure
@@ -77,21 +83,21 @@ Each command type/size combination is tested with:
 
 ## Interpreting Results
 
-### Throughput (ops/us)
-Higher is better. Shows how many operations per microsecond.
+### Throughput (ops/ms)
+Higher is better. Shows how many operations per millisecond (`timeUnit = 'ms'` in `btrace-core/build.gradle` overrides the benchmark's own microsecond unit).
 
-### Average Time (us/op)
-Lower is better. Shows microseconds per operation.
+### Average Time (ms/op)
+Lower is better. Shows milliseconds per operation.
 
 ### Example Output
 
 ```
 Benchmark                                    (commandType)  (dataSize)  Mode  Cnt   Score   Error   Units
-BinaryProtocolBenchmark.binarySerialize     MessageCommand       small  avgt   10   5.234 ± 0.123   us/op
-BinaryProtocolBenchmark.javaSerialize       MessageCommand       small  avgt   10  12.456 ± 0.234   us/op
+BinaryProtocolBenchmark.binarySerialize     MessageCommand       small  avgt   10   0.005 ± 0.001   ms/op
+BinaryProtocolBenchmark.javaSerialize       MessageCommand       small  avgt   10   0.012 ± 0.001   ms/op
 ```
 
-This shows binary serialization is ~2.4x faster than Java serialization for small messages.
+In this illustrative output (not a recorded run) binary serialization would be ~2.4x faster than Java serialization for small messages.
 
 ## Expected Performance Improvements
 
@@ -101,7 +107,7 @@ Based on architecture design goals, the binary protocol should deliver:
 |--------|-------------------|
 | Serialization Speed | 3-6x faster |
 | Deserialization Speed | 3-6x faster |
-| Wire Size | 2-5x smaller |
+| Wire Size | About the same, except compressed messages |
 | Memory Allocation | Significantly reduced |
 
 With compression enabled (for messages >1KB):
@@ -114,11 +120,12 @@ Edit `btrace-core/build.gradle` to change JMH settings:
 
 ```gradle
 jmh {
-    warmupIterations = 3      // Number of warmup iterations
-    iterations = 5            // Number of measurement iterations
-    fork = 2                  // Number of forked JVM processes
+    warmupIterations = 3      // Number of warmup iterations (-Pjmh.warmupIterations=<n>)
+    iterations = 5            // Number of measurement iterations (-Pjmh.iterations=<n>)
+    fork = 2                  // Number of forked JVM processes (-Pjmh.fork=<n>)
     threads = 1               // Number of worker threads
     timeUnit = 'ms'          // Time unit for results
+    includes = ['.*BinaryProtocol.*'] // Benchmarks to run (overridden by -PjmhInclude)
     benchmarkMode = ['avgt', 'thrpt']  // Benchmark modes
 }
 ```
@@ -127,7 +134,7 @@ jmh {
 
 JMH results are written to:
 - Console output during execution
-- `btrace-core/build/reports/jmh/` (if configured)
+- `btrace-core/build/results/jmh/results.txt` (the JMH Gradle plugin's default results file)
 
 ## Best Practices
 
@@ -145,7 +152,7 @@ Pass JMH options directly:
 
 ```bash
 ./gradlew :btrace-core:jmh -PjmhInclude=".*Serialize" \
-  --args="-prof gc -prof stack -rf json -rff results.json"
+  --jmhArgs="-prof gc -prof stack -rf json -rff results.json"
 ```
 
 Common profilers:
@@ -162,23 +169,19 @@ Common profilers:
 ## Troubleshooting
 
 ### Out of Memory
-Increase heap size:
+Increase the heap of the forked benchmark JVMs:
 ```bash
-./gradlew :btrace-core:jmh -Dorg.gradle.jvmargs="-Xmx4g"
+./gradlew :btrace-core:jmh --jmhArgs="-jvmArgs -Xmx4g"
 ```
 
 ### Benchmarks Take Too Long
 Reduce iterations:
-```gradle
-jmh {
-    warmupIterations = 1
-    iterations = 2
-    fork = 1
-}
+```bash
+./gradlew :btrace-core:jmh -Pjmh.warmupIterations=1 -Pjmh.iterations=2 -Pjmh.fork=1
 ```
 
 ### Need More Detail
 Enable JMH verbose output:
 ```bash
-./gradlew :btrace-core:jmh --args="-v EXTRA"
+./gradlew :btrace-core:jmh --jmhArgs="-v EXTRA"
 ```

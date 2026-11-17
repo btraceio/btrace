@@ -144,6 +144,12 @@ public class Compiler {
       }
     }
 
+    if (trusted) {
+      // Trust is a property of the probe class, not of the compilation: the agent's bytecode
+      // verifier rejects an unannotated probe that breaks the safety rules even in trusted mode.
+      // The flag is still accepted so existing build scripts keep working.
+      System.err.println(Messages.get("btracec.trusted.ignored"));
+    }
     Compiler compiler = new Compiler(generatePack);
     classPath += File.pathSeparator + System.getProperty("java.class.path");
     try {

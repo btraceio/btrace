@@ -4,6 +4,33 @@
 
 This document describes the design for BTrace extension storage and loading mechanism. The goal is to move extensions from the boot JAR to a dedicated extension system with built-in and user-configurable locations.
 
+> **Status: original design proposal, kept for background.** The sections below describe the plan
+> as first written, not the 3.0 implementation. Where they differ, 3.0 behaves as follows:
+>
+> - **Layout:** the distribution has one masked `libs/btrace.jar` (no `btrace-agent.jar`,
+>   `btrace-boot.jar` or `btrace-client.jar`) and extensions live in `BTRACE_HOME/extensions/<id>/`,
+>   each directory holding `<id>-<version>-api.jar` and `<id>-<version>-impl.jar`. A JAR placed
+>   directly in an extensions directory is not discovered.
+> - **Locations:** embedded extensions (fat agent), `BTRACE_HOME/extensions/`,
+>   `~/.btrace/extensions/` and the directories in `$BTRACE_EXT_PATH` (platform path separator).
+>   A repository scanned later has higher priority; within one priority the higher version wins.
+>   `/etc/btrace/extensions/`, `--ext-path` and script-local directories are not implemented.
+> - **Metadata:** `BTrace-Extension-*` attributes in the API JAR manifest, written by the
+>   `io.btrace.extension` Gradle plugin; `META-INF/btrace-extension.properties` is only a fallback.
+>   See [ExtensionManifestFormat.md](ExtensionManifestFormat.md).
+> - **Loading:** every enabled extension is loaded when the agent discovers it; there is no lazy
+>   loading on script compilation.
+> - **Configuration:** `extensions.conf` (`extensions.enabled`, `extensions.disabled`), see
+>   [ExtensionConfiguration.md](ExtensionConfiguration.md). There is no `btrace.conf`, no
+>   `BTRACE_EXT_LAZY_LOAD`, and the `btrace` command has no `--ext-path`, `--no-builtin-ext` or
+>   `--ext` option.
+> - **Extension API:** `Extension` has `initialize(ExtensionContext)` and `close()`, not
+>   `onStart(BTraceRuntime)`. Build with the `io.btrace.extension` plugin and install with
+>   `btracex install`; see the [Extension Development Guide](../BTraceExtensionDevelopmentGuide.md).
+> - **Security:** linking is gated by the permission policy
+>   ([PermissionPolicy.md](../PermissionPolicy.md)); JAR signature checks, a `SecurityManager`
+>   sandbox and per-extension resource limits are not implemented.
+
 ## Current State
 
 Currently, extensions (like btrace-metrics) are packaged into the boot JAR (`btrace-boot.jar`) along with core BTrace runtime classes. This approach has several limitations:
