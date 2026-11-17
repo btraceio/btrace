@@ -758,11 +758,22 @@ jobs:
 
           cd catalog
 
-          # Update btrace.java dependency
+          # btrace (the release alias) follows the release
           sed -i.bak -E "s|//DEPS io.btrace:btrace(-client)?:.*|//DEPS io.btrace:btrace:${VERSION}|g" btrace.java
 
-          # Update btrace-latest.java dependency
-          sed -i.bak -E "s|//DEPS io.btrace:btrace(-client)?:.*|//DEPS io.btrace:btrace:${VERSION}|g" btrace-latest.java
+          # btrace-latest (the snapshot alias) follows develop: a major or minor release moves it to
+          # the next develop snapshot. A patch release leaves it alone; its next_snapshot is the
+          # release branch's, older than develop's. Snapshots resolve only from the snapshot
+          # repository, and any //REPOS line replaces JBang's default Maven Central, so the alias
+          # must list both.
+          if [[ "${{ inputs.release_type }}" == "major" || "${{ inputs.release_type }}" == "minor" ]]; then
+            NEXT="${{ inputs.next_snapshot }}"
+            sed -i.bak -E "s|//DEPS io.btrace:btrace(-client)?:.*|//DEPS io.btrace:btrace:${NEXT}|g" btrace-latest.java
+          fi
+          REPOS='//REPOS mavencentral,central-snapshots=https://central.sonatype.com/repository/maven-snapshots/'
+          if ! grep -q '^//REPOS ' btrace-latest.java; then
+            sed -i.bak -E "0,\|^//DEPS |s||${REPOS}\n//DEPS |" btrace-latest.java
+          fi
 
           # Clean up backup files
           rm -f *.bak

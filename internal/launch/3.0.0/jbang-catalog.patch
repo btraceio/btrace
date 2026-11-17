@@ -1,0 +1,22 @@
+diff --git a/btrace-latest.java b/btrace-latest.java
+index 140ce4b..2b504a1 100644
+--- a/btrace-latest.java
++++ b/btrace-latest.java
+@@ -1,5 +1,6 @@
+ ///usr/bin/env jbang "$0" "$@" ; exit $?
+ //JAVA 25+
++//REPOS mavencentral,central-snapshots=https://central.sonatype.com/repository/maven-snapshots/
+ //DEPS io.btrace:btrace:3.0.0-SNAPSHOT
+ //JAVA_OPTIONS -XX:+IgnoreUnrecognizedVMOptions
+ //JAVA_OPTIONS --add-modules=jdk.attach
+diff --git a/btrace.java b/btrace.java
+index bd6ff01..2974c6e 100644
+--- a/btrace.java
++++ b/btrace.java
+@@ -1,5 +1,6 @@
+ ///usr/bin/env jbang "$0" "$@" ; exit $?
+ //JAVA 25+
++//REPOS mavencentral,central-snapshots=https://central.sonatype.com/repository/maven-snapshots/
+ //DEPS io.btrace:btrace:3.0.0-SNAPSHOT
+ //JAVA_OPTIONS -XX:+IgnoreUnrecognizedVMOptions
+ //JAVA_OPTIONS --add-modules=jdk.attach

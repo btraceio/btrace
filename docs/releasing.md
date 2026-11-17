@@ -228,7 +228,12 @@ jbang btrace@btraceio <PID> script.java
 ```
 
 Release checklist for JBang:
-- The release workflow updates `btraceio/jbang-catalog` automatically when `JBANG_CATALOG_PAT` is configured.
+- The release workflow updates `btraceio/jbang-catalog` automatically when `JBANG_CATALOG_PAT` is configured:
+  `btrace.java` (the `btrace` alias) moves to the release; on a major or minor release
+  `btrace-latest.java` (the `btrace-latest` alias) moves to the next develop snapshot, with the
+  `//REPOS` line that lists Maven Central and the Central snapshot repository (a `//REPOS` line
+  replaces JBang's default repository). A patch release leaves `btrace-latest` alone, and a release
+  candidate leaves the catalog unchanged.
 - The release-smoke gate executes both `jbang io.btrace:btrace:<version> --version` and the
   `btrace@btraceio` catalog alias before the final release tag is created.
 - If the workflow cannot push, update `btrace.java` in `btraceio/jbang-catalog` to the new major/minor version.
