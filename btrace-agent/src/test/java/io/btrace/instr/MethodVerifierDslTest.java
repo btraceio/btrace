@@ -183,10 +183,15 @@ public class MethodVerifierDslTest {
       SharedSettings.GLOBAL.setTrusted(false);
       BTraceProbe restored =
           new BTraceProbeFactory(SharedSettings.GLOBAL).createProbe(bytes.toByteArray());
-      assertLowMemorySignatureRejected(restored::checkVerified);
+      // Restored untrusted, the probe's own request for trusted mode is refused first
+      VerifierException refused = assertThrows(VerifierException.class, restored::checkVerified);
+      assertTrue(refused.getMessage().contains("Trusted mode"), refused.getMessage());
     } finally {
       SharedSettings.GLOBAL.setTrusted(trusted);
     }
+    // The pack verifier itself checks handler signatures, whatever produced the pack
+    assertLowMemorySignatureRejected(
+        () -> PersistedProbeVerifier.verify(probeWithLowMemoryHandler(STRING_ARG), t -> false));
   }
 
   private static final String STRING_ARG = "(Ljava/lang/String;)V";
