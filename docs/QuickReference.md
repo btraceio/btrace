@@ -755,6 +755,10 @@ BTrace scripts have safety restrictions:
 - No synchronization
 - No loops (for, while, do-while, enhanced for)
 - No external method calls (methods within same BTrace class are allowed)
+- No calls from one handler to another (`@OnMethod`, `@OnTimer`, `@OnEvent`, `@OnError`,
+  `@OnProbe`, `@PeriodicEvent`): the called handler would return without running, so the compiler
+  rejects the call. Put shared code in a plain `private static` method and call it from both.
+  `@OnExit` and `@OnLowMemory` handlers may call other handlers.
 - No file I/O (except via BTraceUtils)
 - No System.exit
 

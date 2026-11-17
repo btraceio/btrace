@@ -349,5 +349,7 @@ final class PersistedProbeVerifier {
           }
         },
         ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+    // Last, so a handler that recurses is reported as the endless loop it is
+    HandlerCallVerifier.check(cr);
   }
 }

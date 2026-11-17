@@ -48,14 +48,19 @@ import io.btrace.core.annotations.BTrace;
 import io.btrace.core.annotations.Injected;
 import io.btrace.core.annotations.Kind;
 import io.btrace.core.annotations.OnError;
+import io.btrace.core.annotations.OnEvent;
 import io.btrace.core.annotations.OnExit;
 import io.btrace.core.annotations.OnLowMemory;
 import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.OnProbe;
+import io.btrace.core.annotations.OnTimer;
+import io.btrace.core.annotations.PeriodicEvent;
 import io.btrace.core.annotations.Sampled;
 import io.btrace.core.extensions.Permission;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -67,6 +72,7 @@ import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -166,6 +172,9 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
         String typeName = tm.toString();
 
         if (isSameClass(typeName)) {
+          if (isGuardedHandler(e) && !isUnguardedHandler(currentMethod)) {
+            reportError("no.handler.calls", node);
+          }
           if (currentMethod != null && btraceClass != null && parent.equals(btraceClass)) {
             callGraph
                 .computeIfAbsent(currentMethod, key -> new HashSet<>())
@@ -198,6 +207,37 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     }
     reportError("no.method.calls", node);
     return super.visitMethodInvocation(node, v);
+  }
+
+  /**
+   * Handlers the agent starts with a re-entrancy guard (io.btrace.instr.Preprocessor
+   * GUARDED_ANNOTS). Called from another such handler, the guard returns at once, so the call does
+   * nothing; HandlerCallVerifier refuses the same calls in bytecode.
+   */
+  private static final Set<String> GUARDED_HANDLER_ANNOTATIONS =
+      new HashSet<>(
+          Arrays.asList(
+              OnMethod.class.getName(),
+              OnTimer.class.getName(),
+              OnEvent.class.getName(),
+              OnError.class.getName(),
+              OnProbe.class.getName(),
+              PeriodicEvent.class.getName()));
+
+  private static boolean isGuardedHandler(Element method) {
+    for (AnnotationMirror am : method.getAnnotationMirrors()) {
+      if (GUARDED_HANDLER_ANNOTATIONS.contains(am.getAnnotationType().toString())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** {@code @OnExit} and {@code @OnLowMemory} handlers run unguarded and may call guarded ones. */
+  private static boolean isUnguardedHandler(ExecutableElement method) {
+    return method != null
+        && (method.getAnnotation(OnExit.class) != null
+            || method.getAnnotation(OnLowMemory.class) != null);
   }
 
   private boolean isServiceDerivedType(String typeName) {
