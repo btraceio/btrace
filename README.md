@@ -8,7 +8,7 @@
 
 BTrace dynamically instruments running Java applications to inject tracing code at runtime. No restarts. No recompilation. Built for use on production JVMs.
 
-> **Quick links:** [Quick Reference](docs/QuickReference.md) · [Step-by-Step Tutorial](docs/GettingStarted.md)
+> **Quick links:** [Project site](https://btrace.io/btrace/) · [Quick Reference](docs/QuickReference.md) · [Step-by-Step Tutorial](docs/GettingStarted.md)
 
 ---
 
@@ -99,6 +99,7 @@ Details for every option live in one place each:
 
 | Resource | Description |
 |----------|-------------|
+| [Project site](https://btrace.io/btrace/) | Overview of BTrace 3.0: one-line probes, coding-agent workflows, AI observability |
 | [Quick Reference](docs/QuickReference.md) | Cheat sheet for experienced users |
 | [Getting Started](docs/GettingStarted.md) | Step-by-step first trace tutorial |
 | [Full Tutorial](docs/BTraceTutorial.md) | Complete walkthrough of all features |
