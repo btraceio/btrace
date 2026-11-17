@@ -126,12 +126,20 @@ class CompilerHelper {
   }
 
   /**
-   * Attempts to determine BTRACE_HOME from environment or compiler classpath.
+   * Attempts to determine BTRACE_HOME: {@code -Dbtrace.libs} (the parent of the named libs
+   * directory), then the BTRACE_HOME environment variable, then the compiler classpath.
    *
    * @return BTRACE_HOME path, or null if not found
    */
   private String getBTraceHome() {
-    // Try environment variable first
+    // An explicitly configured engine (the client's -Dbtrace.libs) wins, so a BTrace JAR that
+    // merely shares the classpath cannot substitute its own extensions for it
+    String libsProp = System.getProperty("btrace.libs");
+    if (libsProp != null && !libsProp.isEmpty()) {
+      File home = new File(libsProp).getAbsoluteFile().getParentFile();
+      return home != null ? home.getAbsolutePath() : null;
+    }
+
     String envHome = System.getenv("BTRACE_HOME");
     if (envHome != null && Files.isDirectory(Paths.get(envHome))) {
       return envHome;

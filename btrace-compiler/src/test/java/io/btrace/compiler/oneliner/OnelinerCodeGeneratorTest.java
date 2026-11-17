@@ -174,7 +174,8 @@ class OnelinerCodeGeneratorTest {
     String generated = OnelinerCodeGenerator.generate(ast);
 
     assertTrue(generated.contains("args.length > 1"));
-    assertTrue(generated.contains("((Number)args[1]).longValue() > 100L"));
+    assertTrue(
+        generated.contains("BTraceUtils.parseDouble(BTraceUtils.str(args[1])) > 100.0"), generated);
   }
 
   @Test

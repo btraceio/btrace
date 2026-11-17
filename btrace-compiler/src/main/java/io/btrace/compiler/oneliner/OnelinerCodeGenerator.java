@@ -258,9 +258,13 @@ public class OnelinerCodeGenerator {
               "String comparison only supports == and !=, got: " + argFilter.comparator);
         }
       } else if (argFilter.value instanceof Integer) {
-        sb.append("((Number)args[").append(argFilter.argIndex).append("]).longValue() ");
+        // Number.longValue() is a method call the verifier refuses, so the generated probe did not
+        // compile. Parsing the argument's string form is allowed and covers every boxed number.
+        sb.append("BTraceUtils.parseDouble(BTraceUtils.str(args[")
+            .append(argFilter.argIndex)
+            .append("])) ");
         sb.append(comparatorToJava(argFilter.comparator));
-        sb.append(" ").append(argFilter.value).append("L");
+        sb.append(" ").append(argFilter.value).append(".0");
       }
     }
   }

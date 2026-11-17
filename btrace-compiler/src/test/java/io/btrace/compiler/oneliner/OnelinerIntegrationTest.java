@@ -83,6 +83,17 @@ class OnelinerIntegrationTest {
     assertTrue(bytecode.length > 0);
   }
 
+  /**
+   * A numeric argument filter used to generate {@code ((Number) args[i]).longValue()}, a method
+   * call the verifier refuses, so the documented {@code if args[0]>100} did not compile.
+   */
+  @Test
+  void testCompileNumericArgFilter() {
+    byte[] code = compileOneliner("com.example.Foo::bar @entry if args[0]>100 { print args }");
+    assertNotNull(code, "Compilation should succeed");
+    assertTrue(code.length > 0);
+  }
+
   @Test
   void testCompileRegexPattern() {
     String oneliner = "/com\\.myapp\\..*/::execute @entry { print }";
