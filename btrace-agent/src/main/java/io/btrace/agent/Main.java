@@ -455,11 +455,12 @@ public final class Main {
               "[BTrace Agent] Failed to instrument MethodHandleNatives: " + t.getMessage());
         log.debug("Failed to instrument MethodHandleNatives", t);
       }
+      // Extensions before the startup scripts: loading a probe checks that each required
+      // @Injected service links, which needs the extension bridge
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing extensions");
+      initExtensions(loadProbes);
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Starting scripts");
       int startedScripts = loadProbes ? startScripts() : 0;
-      // Thread.class retransform fires after startScripts() but before initExtensions()
-      // deliberately: retransformation only rewrites bytecode; extension service calls
-      // happen at invocation time (Thread.start events). No race with extension init.
       // Ensure early hooks (e.g., Thread.start) are applied even if Thread was already loaded
       if (startedScripts > 0) {
         try {
@@ -474,9 +475,6 @@ public final class Main {
         }
       }
 
-      // initialize extension system after transformer is installed so early app code is not delayed
-      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing extensions");
-      initExtensions(loadProbes);
       if (agentThread != null) {
         BTraceRuntime.enter();
         try {
@@ -962,10 +960,14 @@ public final class Main {
       log.debug("stdout is {}", traceToStdOut);
     }
 
+    Set<String> named = StartupScriptReport.namedScripts(argMap.get(SCRIPT));
     List<String> scripts = locateScripts(argMap);
     for (String script : scripts) {
-      if (loadBTraceScript(script, traceToStdOut) == ScriptLoad.LOADED) {
+      ScriptLoad result = loadBTraceScript(script, traceToStdOut);
+      if (result == ScriptLoad.LOADED) {
         scriptCount++;
+      } else if (result == ScriptLoad.FAILED && named.contains(script)) {
+        log.warn(StartupScriptReport.unloadableMessage(script));
       }
     }
     return scriptCount;
@@ -1536,10 +1538,8 @@ public final class Main {
 
     try {
       String scriptName = "";
-      String scriptParent = "";
       File traceScript = new File(filePath);
       scriptName = traceScript.getName();
-      scriptParent = traceScript.getParent();
 
       if (!traceScript.exists()) {
         traceScript = new File(Constants.EMBEDDED_BTRACE_SECTION_HEADER + filePath);
@@ -1558,12 +1558,9 @@ public final class Main {
         clientSettings.setOutputFile("::stdout");
       } else {
         String traceOutput = clientSettings.getOutputFile();
-        String outDir = clientSettings.getScriptOutputDir();
         if (traceOutput == null || traceOutput.isEmpty()) {
+          // Directory: see Client.setupWriter (not the script's directory: it may be read-only)
           clientSettings.setOutputFile("${client}-${agent}.${ts}.btrace[default]");
-          if (outDir == null || outDir.isEmpty()) {
-            clientSettings.setScriptOutputDir(scriptParent);
-          }
         }
       }
       ClientContext ctx = new ClientContext(inst, transformer, argMap, clientSettings);

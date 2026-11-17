@@ -167,8 +167,18 @@ abstract class Client implements CommandListener {
     if (outputFile == null || outputFile.equals("::null") || outputFile.equals("/dev/null")) return;
 
     if (!outputFile.equals("::stdout")) {
-      String outputDir = settings.getScriptDir();
-      String output = (outputDir != null ? outputDir + File.separator : "") + outputFile;
+      // scriptOutputDir= names the directory; it was parsed but never read here, so the argument
+      // had no effect. Without it the file goes where it always has: the scriptdir= directory,
+      // else the target's working directory. An absolute output file is used as it is.
+      String outputDir = settings.getScriptOutputDir();
+      if (outputDir == null || outputDir.isEmpty()) {
+        outputDir = settings.getScriptDir();
+      }
+      String output =
+          (outputDir != null && !new File(outputFile).isAbsolute()
+                  ? outputDir + File.separator
+                  : "")
+              + outputFile;
       outputFile = templateOutputFileName(output);
       log.info("Redirecting output to {}", outputFile);
     }
@@ -424,8 +434,9 @@ abstract class Client implements CommandListener {
     try {
       probe = load(btraceCode, ArgsMap.merge(argsMap, args));
       if (probe == null) {
-        log.debug("Failed to load BTrace probe code");
-        return null;
+        // The factory could not read the code as a BTrace probe; tell the client why it exits
+        throw new IOException(
+            "The agent could not read the submitted code as a BTrace probe class or pack");
       }
 
       if (!settings.isTrusted()) {
@@ -797,6 +808,9 @@ abstract class Client implements CommandListener {
           log.debug("{} failed verification", cn.getClassName());
         }
         failedVerification = true;
+        // Throws the verifier's own report, which loadClass sends to the client. Returning null
+        // here left the client with a closed socket and no reason (exit 255).
+        cn.checkVerified();
         return null;
       }
     }
@@ -879,6 +893,13 @@ abstract class Client implements CommandListener {
 
   protected void sendCommand(Command command) {
     if (runtime == null) {
+      if (command instanceof ErrorCommand) {
+        // No runtime yet: a startup probe that failed to load. Its reason has nowhere else to go.
+        Throwable cause = ((ErrorCommand) command).getCause();
+        log.warn(
+            "BTrace probe {} failed to load: {}", settings.getClientName(), String.valueOf(cause));
+        return;
+      }
       log.warn(
           "Cannot send command {}, runtime not initialized", command.getClass().getSimpleName());
       return;

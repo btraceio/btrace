@@ -151,8 +151,8 @@ class RemoteClient extends Client {
         negotiated = ProtocolVersion.V1;
       }
 
-      // V1 is disabled by default for safe deserialization; legacy clients may opt-in via
-      // -Dbtrace.comm.allowV1=true
+      // V1 (Java serialization) is allowed by default so 2.x clients can attach; an operator who
+      // sets -Dbtrace.comm.allowV1=false on the target accepts V2 clients only
       if (negotiated == ProtocolVersion.V1
           && !ProtocolConfig.fromSystemProperties().isV1Allowed()) {
         throw new IOException(
