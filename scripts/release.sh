@@ -553,19 +553,6 @@ check_tag_exists() {
         error "Tag v${tag} already exists on remote."
         exit 1
     fi
-
-    # Check for leftover RC tag (locally and on remote)
-    if git rev-parse "v${tag}_RC" &> /dev/null; then
-        error "RC tag v${tag}_RC already exists locally."
-        error "Clean up with: git tag -d v${tag}_RC"
-        exit 1
-    fi
-
-    if git ls-remote --tags origin "refs/tags/v${tag}_RC" | grep -q .; then
-        error "RC tag v${tag}_RC already exists on remote."
-        error "Clean up with: git push origin :refs/tags/v${tag}_RC && git tag -d v${tag}_RC"
-        exit 1
-    fi
 }
 
 #######################################

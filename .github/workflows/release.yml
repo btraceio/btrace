@@ -67,7 +67,6 @@ defaults:
 env:
   RELEASE_VERSION: ${{ inputs.release_version }}
   RELEASE_TAG: v${{ inputs.release_version }}
-  RC_TAG: v${{ inputs.release_version }}_RC
   IS_RC: ${{ inputs.release_type == 'rc' }}
 
 jobs:
@@ -136,15 +135,6 @@ jobs:
           fi
           if git ls-remote --tags origin "refs/tags/v${{ inputs.release_version }}" | grep -q .; then
             echo "::error::Tag v${{ inputs.release_version }} already exists on remote"
-            exit 1
-          fi
-          # Check for leftover RC tag
-          if git rev-parse "${RC_TAG}" >/dev/null 2>&1; then
-            echo "::error::RC tag ${RC_TAG} already exists locally. Clean up with: git tag -d ${RC_TAG}"
-            exit 1
-          fi
-          if git ls-remote --tags origin "refs/tags/${RC_TAG}" | grep -q .; then
-            echo "::error::RC tag ${RC_TAG} already exists on remote. Clean up with: git push origin :refs/tags/${RC_TAG}"
             exit 1
           fi
           echo "Tag does not exist - OK"
@@ -505,28 +495,35 @@ jobs:
           echo "sha=${SHA}" >> $GITHUB_OUTPUT
           echo "Release commit: ${SHA}"
 
-      - name: Create RC tag
-        if: ${{ inputs.dry_run != true }}
+      # The release commit travels to the later jobs as a git bundle, not as a pushed tag. The
+      # workflow used to push an intermediate vX.Y.Z_RC tag here and delete it once the final tag
+      # existed, but the repository's tag rules refuse tag deletion ("GH013: Cannot delete this
+      # tag"), so every release left one behind. Only the final vX.Y.Z tag is pushed now
+      # (finalize-tag), after the smoke tests pass.
+      - name: Bundle the release commit
         run: |
-          git tag -a "${RC_TAG}" -m "Release candidate ${RELEASE_TAG}"
-          echo "Created RC tag ${RC_TAG}"
+          git bundle create release-commit.bundle "${{ inputs.commit_sha }}..HEAD"
+          git bundle verify release-commit.bundle
 
-      - name: Push branch and RC tag
-        if: ${{ inputs.dry_run != true }}
+      - name: Upload the release commit
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-commit
+          retention-days: 1
+          path: release-commit.bundle
+
+      - name: Push release branch
+        if: ${{ inputs.dry_run != true && inputs.release_type != 'rc' }}
         run: |
-          if [[ "${IS_RC}" != "true" ]]; then
-            git push origin "${{ inputs.release_branch }}"
-          fi
-          git push origin "${RC_TAG}"
-          echo "Pushed release commit and RC tag"
+          git push origin "${{ inputs.release_branch }}"
+          echo "Pushed release branch ${{ inputs.release_branch }}"
 
       - name: Dry run summary
         if: ${{ inputs.dry_run == true }}
         run: |
-          echo "::warning::DRY RUN - Branch and tag NOT pushed"
+          echo "::warning::DRY RUN - Branch NOT pushed"
           echo "Would have pushed:"
           echo "  - Branch: ${{ inputs.release_branch }}"
-          echo "  - RC Tag: ${RC_TAG}"
 
   # ============================================================
   # Job 5: Stage to Maven Central (does NOT release)
@@ -537,10 +534,25 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.dry_run != true }}
     steps:
-      - name: Checkout RC tag
+      - name: Checkout source commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ env.RC_TAG }}
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
+
+      - name: Download the release commit
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-commit
+          path: release-commit
+
+      - name: Check out the release commit
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
+        run: |
+          git fetch release-commit/release-commit.bundle
+          git checkout --detach "${RELEASE_SHA}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA}"
 
       - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
@@ -671,10 +683,25 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.dry_run != true }}
     steps:
-      - name: Checkout RC tag
+      - name: Checkout source commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ env.RC_TAG }}
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
+
+      - name: Download the release commit
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-commit
+          path: release-commit
+
+      - name: Check out the release commit
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
+        run: |
+          git fetch release-commit/release-commit.bundle
+          git checkout --detach "${RELEASE_SHA}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA}"
 
       - name: Set up JDK 17
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
@@ -810,7 +837,7 @@ jobs:
           fi
 
   # ============================================================
-  # Job 5d: Finalize release tag (RC -> final)
+  # Job 5d: Push the release tag (only after the smoke tests pass)
   # ============================================================
   finalize-tag:
     name: Finalize Release Tag
@@ -818,12 +845,26 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.dry_run != true }}
     steps:
-      - name: Checkout at release SHA
+      - name: Checkout source commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ needs.prepare-release.outputs.release_sha }}
+          ref: ${{ inputs.commit_sha }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download the release commit
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-commit
+          path: release-commit
+
+      - name: Check out the release commit
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
+        run: |
+          git fetch release-commit/release-commit.bundle
+          git checkout --detach "${RELEASE_SHA}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA}"
 
       - name: Fetch tags
         run: git fetch origin --tags
@@ -834,20 +875,17 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Create final tag
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
         run: |
-          git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}"
-          echo "Created final tag ${RELEASE_TAG}"
+          git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}" "${RELEASE_SHA}"
+          echo "Created final tag ${RELEASE_TAG} at ${RELEASE_SHA}"
 
       - name: Push final tag
         run: |
-          git push origin "${RELEASE_TAG}"
+          # Pushing the tag also pushes the release commit it points to
+          git push origin "refs/tags/${RELEASE_TAG}"
           echo "Pushed final tag ${RELEASE_TAG}"
-
-      - name: Delete RC tag
-        run: |
-          git tag -d "${RC_TAG}" || true
-          git push origin ":refs/tags/${RC_TAG}" || true
-          echo "Deleted RC tag ${RC_TAG}"
 
   # ============================================================
   # Job 6: Build distribution packages
@@ -857,10 +895,25 @@ jobs:
     needs: prepare-release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout release commit
+      - name: Checkout source commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.dry_run == true && inputs.commit_sha || env.RC_TAG }}
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
+
+      - name: Download the release commit
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-commit
+          path: release-commit
+
+      - name: Check out the release commit
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
+        run: |
+          git fetch release-commit/release-commit.bundle
+          git checkout --detach "${RELEASE_SHA}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA}"
 
       - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
@@ -928,10 +981,25 @@ jobs:
     timeout-minutes: 25
     if: ${{ inputs.dry_run != true }}
     steps:
-      - name: Checkout release commit
+      - name: Checkout source commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ needs.prepare-release.outputs.release_sha }}
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
+
+      - name: Download the release commit
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-commit
+          path: release-commit
+
+      - name: Check out the release commit
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
+        run: |
+          git fetch release-commit/release-commit.bundle
+          git checkout --detach "${RELEASE_SHA}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA}"
 
       - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
@@ -1068,6 +1136,22 @@ jobs:
           echo "::error::Failed to download Maven JAR after ${MAX_ATTEMPTS} attempts (~20 minutes)."
           exit 1
 
+      - name: Name the deb and rpm assets without '~'
+        run: |
+          # The packages carry the version X.Y.Z~RCn so that package managers sort a candidate
+          # before X.Y.Z, and their file names follow. GitHub rewrites special characters in asset
+          # names, so btrace_3.0.0~RC1-1_all.deb was published as btrace_3.0.0.RC1-1_all.deb,
+          # neither the name the release notes gave nor the release version. Upload them as
+          # btrace_X.Y.Z-RCn-1_all.deb and btrace-X.Y.Z-RCn-1.noarch.rpm instead; the version
+          # inside the packages is unchanged. Final releases have no '~' and keep their names.
+          shopt -s nullglob
+          for f in distributions/*.deb distributions/*.rpm; do
+            n="${f//\~/-}"
+            if [[ "$f" != "$n" ]]; then
+              mv -v "$f" "$n"
+            fi
+          done
+
       - name: Check for no-release-notes label
         id: check-label
         run: |
@@ -1124,8 +1208,8 @@ jobs:
             "btrace-${RELEASE_VERSION}.jar"; do
             grep -Fx "$asset" github-release-assets.log
           done
-          grep -E '\.deb$' github-release-assets.log
-          grep -E '\.rpm$' github-release-assets.log
+          grep -Fx "btrace_${RELEASE_VERSION}-1_all.deb" github-release-assets.log
+          grep -Fx "btrace-${RELEASE_VERSION}-1.noarch.rpm" github-release-assets.log
 
   # ============================================================
   # Job 7b: Publish container images to GitHub Container Registry
@@ -1141,10 +1225,25 @@ jobs:
     env:
       IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/btrace
     steps:
-      - name: Checkout release commit
+      - name: Checkout source commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ needs.prepare-release.outputs.release_sha }}
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
+
+      - name: Download the release commit
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-commit
+          path: release-commit
+
+      - name: Check out the release commit
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
+        run: |
+          git fetch release-commit/release-commit.bundle
+          git checkout --detach "${RELEASE_SHA}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA}"
 
       - name: Download release distributions
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
@@ -1520,3 +1619,4 @@ jobs:
           name: |
             dist-build
             test-trace
+            release-commit

@@ -53,6 +53,9 @@ reference's `build.gradle`, numbered after the existing `vX.Y.Z-RCn` tags (overr
 and release-smoke stages as a release, so `io.btrace:btrace:X.Y.Z-RCn` and every bundled
 extension's `io.btrace:<id>:X.Y.Z-RCn` can be installed and tested before `X.Y.Z` exists. The
 deb and rpm packages are versioned `X.Y.Z~RCn`, which both package managers sort before `X.Y.Z`.
+GitHub rewrites `~` in asset names, so the release uploads them as `btrace_X.Y.Z-RCn-1_all.deb`
+and `btrace-X.Y.Z-RCn-1.noarch.rpm`; the version inside the packages stays `X.Y.Z~RCn`. (3.0.0-RC1
+predates this and was published as `btrace_3.0.0.RC1-1_all.deb` and `btrace-3.0.0.RC1-1.noarch.rpm`.)
 
 A candidate stays out of every channel that tracks the latest release:
 
@@ -76,8 +79,11 @@ its own `.github/release-notes/vX.Y.Z-RCn.md` (start from the previous candidate
 `vX.Y.Z.md` with the links, download names, coordinates and image tags changed to the candidate);
 without it the pre-release has only the generated list.
 
-The workflow's internal `vX.Y.Z_RC` tag (created before the smoke tests and replaced by the final
-tag) is unrelated: it exists for every run, candidates included.
+The workflow pushes no tag until the release-smoke job has passed: the release commit travels
+between jobs as the run's `release-commit` artifact (a git bundle), and `finalize-tag` pushes only
+the final `vX.Y.Z` tag, which carries the commit with it. (Earlier runs pushed an internal
+`vX.Y.Z_RC` tag and tried to delete it at the end; the repository's tag rules refuse deletion, so
+`v3.0.0-RC1_RC` was left behind and can be removed by a maintainer the rules allow.)
 
 ### What Happens During Release
 
@@ -246,11 +252,7 @@ If the workflow is waiting for Maven Central and you want to abort:
 
 1. **Cancel the workflow** in GitHub Actions
 2. **Drop the staging repository** via [Central Portal](https://central.sonatype.com/publishing/deployments)
-3. **Delete the tag** (if created). At this point only the workflow's internal `vX.Y.Z_RC` tag exists (the final `vX.Y.Z` tag is created after the release-smoke job), and the next run's validation fails while it is there:
-   ```bash
-   git tag -d vX.Y.Z_RC
-   git push origin :refs/tags/vX.Y.Z_RC
-   ```
+3. **No tag to delete**: no tag is pushed before the release-smoke job passes, so nothing blocks the next run. The release commit exists only in the run's `release-commit` artifact.
 4. **Reset release branch** if needed:
    ```bash
    git checkout release/X.Y._
