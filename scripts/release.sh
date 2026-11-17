@@ -553,7 +553,6 @@ check_tag_exists() {
         error "Tag v${tag} already exists on remote."
         exit 1
     fi
-
 }
 
 #######################################

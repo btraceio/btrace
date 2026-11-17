@@ -495,21 +495,22 @@ jobs:
           echo "sha=${SHA}" >> $GITHUB_OUTPUT
           echo "Release commit: ${SHA}"
 
-      # Later jobs need the release commit before any tag names it, and a release candidate has
-      # no branch to carry it. Rather than an internal tag (the repository's tag rules forbid
-      # deleting one afterwards), hand it over as a bundle of the commits GitHub does not have.
-      # Created before the branch push below, which would leave nothing to bundle.
+      # The release commit travels to the later jobs as a git bundle, not as a pushed tag. The
+      # workflow used to push an intermediate vX.Y.Z_RC tag here and delete it once the final tag
+      # existed, but the repository's tag rules refuse tag deletion ("GH013: Cannot delete this
+      # tag"), so every release left one behind. Only the final vX.Y.Z tag is pushed now
+      # (finalize-tag), after the smoke tests pass.
       - name: Bundle the release commit
         run: |
-          git bundle create "${RUNNER_TEMP}/release-commit.bundle" HEAD --not --remotes=origin
-          git bundle list-heads "${RUNNER_TEMP}/release-commit.bundle"
+          git bundle create release-commit.bundle "${{ inputs.commit_sha }}..HEAD"
+          git bundle verify release-commit.bundle
 
       - name: Upload the release commit
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-commit
-          retention-days: 7
-          path: ${{ runner.temp }}/release-commit.bundle
+          retention-days: 1
+          path: release-commit.bundle
 
       - name: Push release branch
         if: ${{ inputs.dry_run != true && inputs.release_type != 'rc' }}
@@ -520,8 +521,9 @@ jobs:
       - name: Dry run summary
         if: ${{ inputs.dry_run == true }}
         run: |
-          echo "::warning::DRY RUN - release branch NOT pushed"
-          echo "Would have pushed branch: ${{ inputs.release_branch }}"
+          echo "::warning::DRY RUN - Branch NOT pushed"
+          echo "Would have pushed:"
+          echo "  - Branch: ${{ inputs.release_branch }}"
 
   # ============================================================
   # Job 5: Stage to Maven Central (does NOT release)
@@ -542,15 +544,15 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: release-commit
-          path: ${{ runner.temp }}/release-commit
+          path: release-commit
 
       - name: Check out the release commit
-        # prepare-release pushes no ref for it (a release candidate has no branch); it travels
-        # as a bundle whose prerequisites are on GitHub, hence the full-history checkout above
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
         run: |
-          git fetch --no-tags "${RUNNER_TEMP}/release-commit/release-commit.bundle"
-          git checkout --detach "${{ needs.prepare-release.outputs.release_sha }}"
-          test "$(git rev-parse HEAD)" = "${{ needs.prepare-release.outputs.release_sha }}"
+          git fetch release-commit/release-commit.bundle
+          git checkout --detach "${RELEASE_SHA}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA}"
 
       - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
@@ -691,15 +693,15 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: release-commit
-          path: ${{ runner.temp }}/release-commit
+          path: release-commit
 
       - name: Check out the release commit
-        # prepare-release pushes no ref for it (a release candidate has no branch); it travels
-        # as a bundle whose prerequisites are on GitHub, hence the full-history checkout above
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
         run: |
-          git fetch --no-tags "${RUNNER_TEMP}/release-commit/release-commit.bundle"
-          git checkout --detach "${{ needs.prepare-release.outputs.release_sha }}"
-          test "$(git rev-parse HEAD)" = "${{ needs.prepare-release.outputs.release_sha }}"
+          git fetch release-commit/release-commit.bundle
+          git checkout --detach "${RELEASE_SHA}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA}"
 
       - name: Set up JDK 17
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
@@ -835,7 +837,7 @@ jobs:
           fi
 
   # ============================================================
-  # Job 5d: Finalize release tag (RC -> final)
+  # Job 5d: Push the release tag (only after the smoke tests pass)
   # ============================================================
   finalize-tag:
     name: Finalize Release Tag
@@ -854,15 +856,15 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: release-commit
-          path: ${{ runner.temp }}/release-commit
+          path: release-commit
 
       - name: Check out the release commit
-        # prepare-release pushes no ref for it (a release candidate has no branch); it travels
-        # as a bundle whose prerequisites are on GitHub, hence the full-history checkout above
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
         run: |
-          git fetch --no-tags "${RUNNER_TEMP}/release-commit/release-commit.bundle"
-          git checkout --detach "${{ needs.prepare-release.outputs.release_sha }}"
-          test "$(git rev-parse HEAD)" = "${{ needs.prepare-release.outputs.release_sha }}"
+          git fetch release-commit/release-commit.bundle
+          git checkout --detach "${RELEASE_SHA}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA}"
 
       - name: Fetch tags
         run: git fetch origin --tags
@@ -873,14 +875,16 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Create final tag
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
         run: |
-          git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}"
-          echo "Created final tag ${RELEASE_TAG}"
+          git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}" "${RELEASE_SHA}"
+          echo "Created final tag ${RELEASE_TAG} at ${RELEASE_SHA}"
 
       - name: Push final tag
-        # Pushing the tag also uploads the release commit, which for a candidate is on no branch
         run: |
-          git push origin "${RELEASE_TAG}"
+          # Pushing the tag also pushes the release commit it points to
+          git push origin "refs/tags/${RELEASE_TAG}"
           echo "Pushed final tag ${RELEASE_TAG}"
 
   # ============================================================
@@ -901,15 +905,15 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: release-commit
-          path: ${{ runner.temp }}/release-commit
+          path: release-commit
 
       - name: Check out the release commit
-        # prepare-release pushes no ref for it (a release candidate has no branch); it travels
-        # as a bundle whose prerequisites are on GitHub, hence the full-history checkout above
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
         run: |
-          git fetch --no-tags "${RUNNER_TEMP}/release-commit/release-commit.bundle"
-          git checkout --detach "${{ needs.prepare-release.outputs.release_sha }}"
-          test "$(git rev-parse HEAD)" = "${{ needs.prepare-release.outputs.release_sha }}"
+          git fetch release-commit/release-commit.bundle
+          git checkout --detach "${RELEASE_SHA}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA}"
 
       - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
@@ -975,15 +979,15 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: release-commit
-          path: ${{ runner.temp }}/release-commit
+          path: release-commit
 
       - name: Check out the release commit
-        # prepare-release pushes no ref for it (a release candidate has no branch); it travels
-        # as a bundle whose prerequisites are on GitHub, hence the full-history checkout above
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
         run: |
-          git fetch --no-tags "${RUNNER_TEMP}/release-commit/release-commit.bundle"
-          git checkout --detach "${{ needs.prepare-release.outputs.release_sha }}"
-          test "$(git rev-parse HEAD)" = "${{ needs.prepare-release.outputs.release_sha }}"
+          git fetch release-commit/release-commit.bundle
+          git checkout --detach "${RELEASE_SHA}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA}"
 
       - name: Set up Java 8 (Gradle toolchain; the ubuntu-26.04 runner image has no JDK 8)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
@@ -1120,6 +1124,22 @@ jobs:
           echo "::error::Failed to download Maven JAR after ${MAX_ATTEMPTS} attempts (~20 minutes)."
           exit 1
 
+      - name: Name the deb and rpm assets without '~'
+        run: |
+          # The packages carry the version X.Y.Z~RCn so that package managers sort a candidate
+          # before X.Y.Z, and their file names follow. GitHub rewrites special characters in asset
+          # names, so btrace_3.0.0~RC1-1_all.deb was published as btrace_3.0.0.RC1-1_all.deb,
+          # neither the name the release notes gave nor the release version. Upload them as
+          # btrace_X.Y.Z-RCn-1_all.deb and btrace-X.Y.Z-RCn-1.noarch.rpm instead; the version
+          # inside the packages is unchanged. Final releases have no '~' and keep their names.
+          shopt -s nullglob
+          for f in distributions/*.deb distributions/*.rpm; do
+            n="${f//\~/-}"
+            if [[ "$f" != "$n" ]]; then
+              mv -v "$f" "$n"
+            fi
+          done
+
       - name: Check for no-release-notes label
         id: check-label
         run: |
@@ -1176,8 +1196,8 @@ jobs:
             "btrace-${RELEASE_VERSION}.jar"; do
             grep -Fx "$asset" github-release-assets.log
           done
-          grep -E '\.deb$' github-release-assets.log
-          grep -E '\.rpm$' github-release-assets.log
+          grep -Fx "btrace_${RELEASE_VERSION}-1_all.deb" github-release-assets.log
+          grep -Fx "btrace-${RELEASE_VERSION}-1.noarch.rpm" github-release-assets.log
 
   # ============================================================
   # Job 7b: Publish container images to GitHub Container Registry
@@ -1203,15 +1223,15 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: release-commit
-          path: ${{ runner.temp }}/release-commit
+          path: release-commit
 
       - name: Check out the release commit
-        # prepare-release pushes no ref for it (a release candidate has no branch); it travels
-        # as a bundle whose prerequisites are on GitHub, hence the full-history checkout above
+        env:
+          RELEASE_SHA: ${{ needs.prepare-release.outputs.release_sha }}
         run: |
-          git fetch --no-tags "${RUNNER_TEMP}/release-commit/release-commit.bundle"
-          git checkout --detach "${{ needs.prepare-release.outputs.release_sha }}"
-          test "$(git rev-parse HEAD)" = "${{ needs.prepare-release.outputs.release_sha }}"
+          git fetch release-commit/release-commit.bundle
+          git checkout --detach "${RELEASE_SHA}"
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA}"
 
       - name: Download release distributions
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
