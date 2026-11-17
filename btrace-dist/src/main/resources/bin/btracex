@@ -8,6 +8,8 @@ if [ -z "$BTRACE_HOME" -o ! -d "$BTRACE_HOME" ]; then
   BTRACE_HOME=$(dirname "$PRG")/..
   BTRACE_HOME=$(cd "$BTRACE_HOME" && pwd)
 fi
+# btracex finds the installed extensions through the BTRACE_HOME environment variable
+export BTRACE_HOME
 
 JAVA_ARGS="-XX:+IgnoreUnrecognizedVMOptions"
 

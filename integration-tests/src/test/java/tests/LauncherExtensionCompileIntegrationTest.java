@@ -94,6 +94,31 @@ public class LauncherExtensionCompileIntegrationTest extends RuntimeTest {
         "btracec produced no UsesMetrics.class; output:\n" + output);
   }
 
+  /**
+   * {@code btracex list} reads the installed extensions from the BTRACE_HOME environment variable.
+   * The launcher resolved the home but did not export it, so the list came out empty.
+   */
+  @Test
+  void btracexListsBundledExtensionsWithoutBtraceHome() throws Exception {
+    Path home = Paths.get(System.getProperty("btrace.libs")).toAbsolutePath().getParent();
+    ProcessBuilder pb =
+        new ProcessBuilder(Arrays.asList("sh", home.resolve("bin/btracex").toString(), "list"))
+            .directory(work.toFile())
+            .redirectErrorStream(true);
+    pb.environment().remove("BTRACE_HOME");
+    pb.environment().remove("JAVA_TOOL_OPTIONS");
+    pb.environment().put("JAVA_HOME", javaHome);
+    // keep a user's ~/.btrace out of the listing
+    pb.environment().put("HOME", work.toString());
+    Process p = pb.start();
+    String output = readAll(p);
+    assertTrue(p.waitFor(2, TimeUnit.MINUTES), "btracex did not finish; output:\n" + output);
+    assertEquals(0, p.exitValue(), "btracex list failed; output:\n" + output);
+    assertTrue(
+        output.contains("btrace-metrics"),
+        "btracex list did not list the bundled btrace-metrics; output:\n" + output);
+  }
+
   private static String readAll(Process p) throws IOException {
     byte[] bytes = new byte[8192];
     StringBuilder sb = new StringBuilder();
