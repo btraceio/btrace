@@ -87,7 +87,7 @@ The release workflow performs these steps:
 2. **Build & Test**: Runs full build and unit tests
 3. **Integration Tests**: Tests on JDK 8, 11, 17, 21, 25, 27, and the configured OpenJDK EA build
 4. **Prepare Release**: Creates/updates release branch, updates version, creates tag
-5. **Stage to Maven Central**: Uploads artifacts to staging (requires manual release)
+5. **Stage to Maven Central**: Uploads artifacts to a staging repository on the Central Portal's OSSRH Staging API and closes it, which hands it to the Portal as a deployment awaiting your release (without the close, nothing appears under Deployments)
 6. **⏸️ MANUAL CHECKPOINT**: You must release artifacts via Central Portal
 7. **Wait for Maven Central**: Polls until artifacts are available (30 min timeout)
 7b. **Gradle Plugin Portal and JBang catalog**: Publishes `io.btrace.extension` and `io.btrace.fat-agent` and updates `btraceio/jbang-catalog` (both skipped for release candidates)

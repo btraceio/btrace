@@ -585,8 +585,14 @@ jobs:
           echo "Staging artifacts to Central Portal..."
           echo "After this job completes, go to https://central.sonatype.com/publishing/deployments"
           echo "to review and release the staged artifacts."
-          # One invocation, so the distribution and the release extensions share a deployment
-          ./gradlew :btrace-dist:publishAllPublicationsToSonatypeRepository publishReleaseExtensionsToSonatype --no-daemon
+          # One invocation, so the distribution and the release extensions share a deployment.
+          # closeSonatypeStagingRepository hands the staging repository to the Central Portal:
+          # "A repository is uploaded to the Central Publisher Portal once the repository is
+          # closed" (https://central.sonatype.org/publish/publish-portal-ossrh-staging-api/).
+          # Without it the upload stays in an open staging repository that the Portal never shows.
+          # It closes without releasing, so publishing stays the manual step below.
+          ./gradlew :btrace-dist:publishAllPublicationsToSonatypeRepository publishReleaseExtensionsToSonatype \
+            closeSonatypeStagingRepository --no-daemon
 
       - name: Staging complete
         run: |
