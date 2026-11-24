@@ -44,15 +44,14 @@ import java.util.concurrent.ConcurrentMap;
  * invocation until resolution succeeds.
  *
  * <p><b>Why always MutableCallSite</b> (and not {@code ConstantCallSite} even for the
- * immediate-success path): BTrace does not retransform target classes on probe detach, so the
- * INVOKEDYNAMIC call sites woven into instrumented methods persist after the probe is gone. A
- * {@code ConstantCallSite} cannot be relinked, so once it is pinned to a resolved handler handle,
- * unregistering the probe is <i>impossible</i> — the handler keeps firing even after {@code
- * BTraceRuntime} state is torn down, leading to NPEs inside the instrumented application. By making
- * every dispatch site mutable we can re-point the target to a noop when {@link
- * #invalidateProbe(String)} is called from the agent at detach time. (Note: probe classes
- * themselves are unloadable — they live in per-probe ClassLoaders / hidden classes — but the
- * residual call sites in target classes are what force the mutable choice.)
+ * immediate-success path): on detach, {@code Client.onExit()} retransforms only modifiable matching
+ * loaded classes, and only when the probe is transforming and {@code startupRetransform} is
+ * enabled. Call sites can therefore remain in target methods after the probe is gone. A {@code
+ * ConstantCallSite} cannot be relinked, so a residual site pinned to a handler would keep invoking
+ * it after {@code BTraceRuntime} state is torn down. Mutable sites let {@link
+ * #invalidateProbe(String)} redirect those sites to a noop. Probe classes themselves are unloadable
+ * — they live in per-probe ClassLoaders / hidden classes — but residual target-class call sites can
+ * outlive the probe.
  *
  * <p><b>No logging here.</b> This class is loaded by the bootstrap class loader and does not log;
  * handler resolution failures are logged by {@code HandlerRepositoryImpl.resolveHandler()} on the

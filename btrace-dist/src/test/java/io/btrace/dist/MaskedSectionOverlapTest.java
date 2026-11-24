@@ -91,9 +91,9 @@ class MaskedSectionOverlapTest {
     layout.get(AGENT).add("a/Shared");
     assertEquals(
         Collections.singletonList(
-            "a/Shared is in the shared section and also in the agent section; MaskedClassLoader"
-                + " finds it in the shared section, so drop the agent copy in"
-                + " btrace-dist/build.gradle"),
+            "a/Shared is in the shared section and also in the agent section; the agent loader"
+                + " checks its own section first, so the shared copy is shadowed; remove the"
+                + " unintended duplicate in btrace-dist/build.gradle"),
         overlapErrors(layout));
   }
 
@@ -211,9 +211,10 @@ class MaskedSectionOverlapTest {
             className
                 + " is in the shared section and also in the "
                 + section
-                + " section; MaskedClassLoader finds it in the shared section, so drop the "
+                + " section; the "
                 + section
-                + " copy in btrace-dist/build.gradle");
+                + " loader checks its own section first, so the shared copy is shadowed; remove the"
+                + " unintended duplicate in btrace-dist/build.gradle");
       }
     }
     return errors;
